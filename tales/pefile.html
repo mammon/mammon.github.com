@@ -1,0 +1,1816 @@
+<HTML>
+<HEAD> 
+<TITLE>Mammon_'s Tales To His Grandson</TITLE> 
+</HEAD> 
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000"> 
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font> 
+<center><i>Illustrations of an skeleton</i></center> <PR><BR> 
+<center><a href="#PEHeader">PE File Format</a> * <a href="#CProggy">C++ Example</a> * 
+<a href="#ASMProggy">Assembly Example</a> * <a href="#BINProggy">Disassembled Example</a></center> 
+<P><BR> 
+When faced with a "live" or "dead" listing of the target program, the reverse-engineer 
+is like a surgeon to whom the most intricate details of the physiology of his patient 
+must be known, if there is to be any chance of success. What follows below is the 
+equivalent of an anatomy primer for the reverse engineer: a summary of the Win32 PE file 
+header and format, and three examples of the source code of a PE executable: the first 
+a simple C++ program, the second a rudimentary Windows program written in assembly 
+language, and the third being a disassembly--via W32Dasm--of the C++ program. It is hoped 
+that by reviewing and comparing these the reverse-engineer will become familiar with 
+the fundamental structures and "organs" of his target, and thus be prepared to patch and 
+"heal" effectively any crippled programs that come his way. 
+<P><BR> 
+<a name="PEHeader"></a><HR> 
+<font size=+1><B>PE File Format</b></font><P> 
+"In the beginning", there were two types of executable files: .COM files (single-segment 
+executables), and .EXE files (multiple-segment executables). COM files needed no file 
+header as they were only a single segment in size, and thus were written directly into 
+the first segment of memory available. EXE files, however, would often cover multiple segments; 
+as a result, they contained a 64-byte file header which provided the OS with information about 
+how many segments were needed and how they would be allocated.<P> 
+The Windows OS was developed with the idea that executable files would rely on a core collection 
+of OS functions (an "API"); as the programs were no longer handling things like keyboard input, mouse tracking, 
+and screen output internally, and as they were expected to share memory with multiple other programs 
+runninf simultaneously, they needed to provide more information to the OS in order to make 
+communication with the OS both possible and efficient (whereas DOS programs often ignored the OS 
+entirely). Thus came about the NE, LZ and now the PE file formats and their subsequent headers: 
+the file format imposes structure on the executable file, and the file header diagrams that structure. Armed with 
+a firm knowledge of the PE file header and format, one can make a surprising number of changes on a PE 
+file with only a hex editor (hopefully one that parses the PE header, such as Hiew 5.66).<P> 
+The PE file header begins with the MS-DOS MZ Header: 
+<pre><font > 
+<b>MZ Header</b> 
+WORD e_magic;         // Magic number 
+WORD e_cblp;          // Bytes on last page of file 
+WORD e_cp;            // Pages in file 
+WORD e_crlc;          // Relocations 
+WORD e_cparhdr;       // Size of header in paragraphs 
+WORD e_minalloc;      // Minimum extra paragraphs needed 
+WORD e_maxalloc;      // Maximum extra paragraphs needed 
+WORD e_ss;            // Initial (relative) SS value 
+WORD e_sp;            // Initial SP value 
+WORD e_csum;          // Checksum 
+WORD e_ip;            // Initial IP value 
+WORD e_cs;            // Initial (relative) CS value 
+WORD e_lfarlc;        // File address of relocation table 
+WORD e_ovno;          // Overlay number 
+WORD e_res[4];        // Reserved words 
+WORD e_oemid;         // OEM identifier (for e_oeminfo) 
+WORD e_oeminfo;       // OEM information; e_oemid specific 
+WORD e_res2[10];      // Reserved words 
+DWORD   e_lfanew;        // File address of new exe header 
+</pre></font> 
+This is followed by a "stub" program (such as winstub.exe) that executes if the program is run 
+outside of Windows; usually this is a simple "This program require MS-Windows to run." message, but 
+it can be cusomized by the programmer to say or do anything--in fact one could even write a DOS-mode version 
+of the program that executes whenever the file is run in DOS, thus making it more portable (funny, 
+no-one ever seems to take the time to do this). After the "stub" comes the signature 
+00004550 (which in a hex editor will appear Hex 50 45 00 00, ASCII "PE.."), then the PE file header: 
+<pre><font > 
+<B>PE File Header</b> examples given are from Notepad.exe) 
+WORD  Machine Type ( 014C ); 
+WORD  Number of Sections ( 0006 ); 
+DWORD  Time/Date Stamp ( 2FF3548D ); 
+DWORD  Pointer To Symbol Table ( 00000000 ); 
+DWORD  Number Of Symbols ( 00000000 ); 
+WORD  Size Of Optional Header ( 00E0 ); 
+WORD Characteristics ( 010E ); 
+<b>PE Optional Header</b> 
+WORD  Magic ( 010B ); 
+BYTE   MajorLinkerVersion ( 02 ); 
+BYTE   MinorLinkerVersion ( 32 ); 
+DWORD   SizeOfCode ( 00003A00 ); 
+DWORD   SizeOfInitializedData ( 00004800 ); 
+DWORD   SizeOfUninitializedData ( 00000600 ); 
+DWORD   AddressOfEntryPoint ( 00001000 ); 
+DWORD   BaseOfCode ( 00001000 ); 
+DWORD   BaseOfData ( 00005000 ); 
+----NT Optional Fields (used only by Windows NT)---- 
+DWORD   ImageBase; 
+DWORD   SectionAlignment; 
+DWORD   FileAlignment; 
+WORD  MajorOperatingSystemVersion; 
+WORD  MinorOperatingSystemVersion; 
+WORD  MajorImageVersion; 
+WORD  MinorImageVersion; 
+WORD  MajorSubsystemVersion; 
+WORD  MinorSubsystemVersion; 
+DWORD   Reserved1; 
+DWORD   SizeOfImage; 
+DWORD   SizeOfHeaders; 
+DWORD   CheckSum; 
+WORD  Subsystem; 
+WORD  DllCharacteristics; 
+DWORD   SizeOfStackReserve; 
+DWORD   SizeOfStackCommit; 
+DWORD   SizeOfHeapReserve; 
+DWORD   SizeOfHeapCommit; 
+DWORD   LoaderFlags; 
+DWORD   NumberOfRvaAndSizes; 
+</pre></font> 
+Immediately after the PE File Header (remember to add the Header Size to the offset 
+of the start of the header in order to jump over the 00 bytes filling in the NT optional 
+fields) come the Section Headers: 
+<pre><font > 
+<b>Section Header</b> 
+BYTE   Name[IMAGE_SIZEOF_SHORT_NAME]; 
+DWORD   PhysicalAddress; 
+DWORD   VirtualSize; 
+DWORD   VirtualAddress; 
+DWORD   SizeOfRawData; 
+DWORD   PointerToRawData; 
+DWORD   PointerToRelocations; 
+DWORD   PointerToLinenumbers; 
+WORD  NumberOfRelocations; 
+WORD  NumberOfLinenumbers; 
+DWORD   Characteristics; 
+</pre></font> 
+Note that there is one Section Header per section; thus, according to the PE 
+Header for Notepad.exe, there will be 06 Section Headers. Each section contains its 
+name in ASCII (e.g. ".text") and a pointer to its location; the headers are 40 bytes apiece and there 
+is no "padding" between them. The sections that are commonly present in an executable are: 
+<LI><a href="#text">Executable Code Section</a>, named .text 
+<LI><a href="#data">Data Sections</a>, named .data, .rdata, or .bss 
+<LI><a href="#rsrc">Resources Section</a>, named .rsrc 
+<LI><a href="#edata">Export Data Section</a>, named .edata 
+<LI><a href="#idata">Import Data Section</a>, named .idata 
+<LI><a href="#debug">Debug Information Section</a>, named .debug<P> 
+Note that not all of these sections need be present. When searching for a specific section, 
+it is possible to bypass the PE header entirely and start parsing the section headers by 
+searching for the section name in the ASCII window of a hex editor. 
+<P> 
+ <a name="text"></a><b>Executable code section: .text</b><P> 
+ This section contains the program code as well as the "fixup" jump table. There is no format to 
+ the .text section saving that imposed upon the binary code itself.<P> 
+ <a name="data"></a><b>Data sections: .bss, .rdata, .data</b><P> 
+ There are three types of data sections: .bss, which contains uninitialized data (including all variables 
+ declared as static); .rata, which contains read-only data (such as strings, and constants); and .data, 
+ which contains global variables for the program. These sections have no real structure.<P> 
+ <a name="rsrc"></a><B>Resources section: .rsrc</b><P> 
+ The .rsrc section contains all of the resources for the application. The first 16 bytes of the 
+ .rsrc section contain the Resource Directory Header: 
+ <pre><font > 
+ <b>Resource Directory</b> 
+ DWORD   Characteristics; 
+ DWORD   TimeDateStamp; 
+ WORD  MajorVersion; 
+ WORD  MinorVersion; 
+ WORD  NumberOfNamedEntries; 
+ WORD  NumberOfIdEntries; 
+ </pre></font> 
+ Which is immediately followed by the number of Directory Entries specified in NumberOfNamedEntries + NumberOfIdEntries: 
+ <pre><font> 
+ <b>Resource Directory Entry</b> 
+ DWORD   Name; 
+ DWORD   OffsetToData; 
+ </pre></font> 
+ The Name of a Directory Entry determines the type of the resource (as defined in winuser.h), while the 
+ Offset points either to another Resource Directory Entry (the usual structure is 1 Resource Directory containing 
+ the Resource type pointing to 1 Resource Directory (or subdirectory) containing the Resource ID # and pointing to 
+ the Resource Data Entry), or to a Resource Data Entry: 
+ <pre><font> 
+ <b>Resource Data Entry</b> 
+ DWORD   OffsetToData; 
+ DWORD   Size; 
+ DWORD   CodePage; 
+ DWORD   Reserved; 
+ </pre></font> 
+ The Resource Data Entry contains the size and offset of the actual resource data, which will be a 
+ list of unicode strings for a String Table, a binary image for a bitmap, or a list of values and strings 
+ for a dialog box. Information on the format of the binary resource content can be found in 
+ Micro$oft's <a href="http://www.eccentrica.org/Mammon/Text/resfmt.txt">Win32 Binary Resource Formats</a> document.<P> 
+ 
+ <a name="edata"></a><b>Export data section: .edata</b><P> 
+ The .edata section contains the exported data and functions for an application or library (.DLL). 
+ The section begins with the Export Directory: 
+ <pre><font > 
+ <b>Export Directory</b> 
+ DWORD   Characteristics; 
+ DWORD   TimeDateStamp; 
+ WORD  MajorVersion; 
+ WORD  MinorVersion; 
+ DWORD   Name; 
+ DWORD   Base; 
+ DWORD   NumberOfFunctions; 
+ DWORD   NumberOfNames; 
+ DWORD  *AddressOfFunctions; 
+ DWORD  *AddressOfNames; 
+ WORD *AddressOfNameOrdinals; 
+ </pre></font> 
+ The last three fields contain pointers to a list of exported function entry points, 
+ a null-seperated list of function names, and a list of ordinal values for the functions. Note that 
+ these pointers assume the program is loaded; to find the lists within the file, one has to subtract the 
+ Section Header Virtual Address from the AddressOf... field, then add the PointerToRawData address to the 
+ result.<P> 
+ 
+ <a name="idata"></a><b>Import data section: .idata</b><P> 
+ This section contains the list of functions imported into the program. It begins with the 
+ Import Directory: 
+ <pre><font > 
+ <b>Import Directory</b> 
+ DWORD    dwRVAFunctionNameList; 
+ DWORD    dwUseless1; 
+ DWORD    dwUseless2; 
+ DWORD    dwRVAModuleName; 
+ DWORD    dwRVAFunctionAddressList; 
+ </pre></font> 
+ The last two fields are repeated for each application or library that the program imports from; the order is a little 
+ strange as one may notice in a hexeditor: the name of the first function imported from a module is given, then the 
+ module name is given, then any remaining functions imported from that module are given. The list of imports repeats 
+ until there is a null entry.<P> 
+ 
+ <a name="debug"></a><b>Debug information section: .debug</b><P> 
+ This section contains the debug information for the program, if the compiler was set to provide this. 
+ It begins with a Debug Directory: 
+ <pre><font > 
+<b>Debug Directory</b> 
+DWORD   Characteristics; 
+DWORD   TimeDateStamp; 
+WORD  MajorVersion; 
+WORD  MinorVersion; 
+DWORD   Type; 
+DWORD   SizeOfData; 
+DWORD   AddressOfRawData; 
+DWORD   PointerToRawData; 
+</pre></font> 
+The different types of debug information are defined in winuser.h; any further structure 
+imposed on each type of debug information is defined there as well.<P> 
+<b>Modifying the PE File Header</b><P> 
+Since the PE Header gives the starting address and size of each of its various sections 
+(and, as in the case of the .rsrc section, the size of the actual data), it is a simple enough 
+if tedious matter to modify the contents of the PE Header beyond its original size by 
+adjusting the offset fields of each section following that which was modified. To add 
+additional code one must extend the .text section and repair every section thereafter; to add or 
+modify resources one must modify each subdirectory of the .rsrc section and repair every section 
+that comes afterwards (this is how BRW and Resource Studio work). It would make sense, then, when 
+changing any section to move its Virtual Address to the end of the PE file, and extend the section before 
+it to cover the resultant gap which should, of course, be padded with 00 bytes. Note that this is 
+somewhat dicey, especially with the .text and .idata sections, and it increases the size of the executable 
+quite a bit...however it is the quickets and easiest method in some cases, as only two sections need 
+to be repaired (one padded & extended, the other "moved" one modified in every "offset to..." field). 
+An alternative, if the added information is to be data referenced directly by the program (and this may 
+make it desireable to place executable code in the data directories, then refer to it by offset from 
+within the program and insert it into the executable), is to append the data to the last section and extend that 
+section to cover the data.<P> 
+ 
+<P><BR> 
+ 
+<a name="CProggy"></a> 
+<HR> 
+<font size=+1><B>Win32 File Structure: .CPP Files</b></font><P> 
+What follows is a typical C++ "hello world" program, snagged from the source 
+code of some book or another on Windows 95 programming. It contains the essential 
+components of any Windows 95 application, notably: 
+ 
+<li>A <a href="#winmainC">WinMain</a> Procedure that registers and creates the main 
+  window and its subordinate resources 
+<LI>A  <a href="#MessageLoopC">Message Loop</a> that receives messages from the Windows 
+  operating system (such as LB_BUTTONDOWN and WM_GETTEXT) and dispatches them to the 
+  callback function specified in WinMain 
+<LI>A <a href="#callbackC">Callback Function</a> that receives the Windows messages and calls 
+  functions and/or subroutines to respond to each different message. Note that every child window will 
+  handle its own messages 
+<LI>A <a href="#switchC">Message Handler</a> routine (often a switch statement) that determines 
+  which function or routine is called to handle each message 
+<P> 
+<pre> 
+// winhello.asm *** displays an idiotic "Hello World!" message in an otherwise empty window. 
+#define IDM_NEW         1 
+#define IDM_OPEN        2 
+#define IDM_SAVE        3 
+#define IDM_SAVEAS      4 
+#define IDM_PRINT       5 
+#define IDM_EXIT        6 
+#define IDM_CUT         10 
+#define IDM_COPY        11 
+#define IDM_PASTE       12 
+#define IDM_ABOUT       20 
+#include <windows.h> 
+#include <string.h> 
+#include <commdlg.h> 
+#include "hello3.h" 
+HMODULE ghModule; 
+LRESULT CALLBACK WndProc(HWND, UINT, UINT, LONG); 
+BOOL CALLBACK AboutDlgProc(HWND, UINT, UINT, LONG); 
+<a name="winmainC"></a> 
+int APIENTRY WinMain(HMODULE hModule, HINSTANCE hNull, 
+        PSTR pszCmdLine, int nCmdShow) 
+{ 
+    WNDCLASS wc; 
+    MSG msg; 
+    HWND hWnd; 
+    wc.style = CS_HREDRAW | CS_VREDRAW; 
+    wc.lpfnWndProc = (WNDPROC)WndProc; 
+    wc.cbClsExtra = 0; 
+    wc.cbWndExtra = 0; 
+    wc.hInstance = hModule; 
+    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION); 
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW); 
+    wc.hbrBackground = GetStockObject(WHITE_BRUSH); 
+    wc.lpszMenuName = "Hello3Menu"; 
+    wc.lpszClassName = "Hello3"; 
+    RegisterClass(&wc); 
+    ghModule = hModule; 
+    hWnd = CreateWindow("Hello3", "HELLO3", WS_OVERLAPPEDWINDOW, 
+        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 
+        NULL, NULL, hModule, NULL); 
+    ShowWindow(hWnd, nCmdShow); 
+    UpdateWindow(hWnd); 
+    <a name="MessageLoopC"></a> 
+    while ( GetMessage(&msg, NULL, 0, 0) ) 
+    { 
+        TranslateMessage(&msg); 
+        DispatchMessage(&msg); 
+    } 
+    return msg.wParam; 
+} 
+<a name="callbackC"></a> 
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, UINT wParam, LONG lParam) 
+{ 
+    OPENFILENAME ofn; 
+    PRINTDLG pd; 
+    HDC hDC; 
+    PAINTSTRUCT ps; 
+    RECT rect; 
+    char szTitle[20]; 
+    <a name="switchC"></a> 
+    switch(uMsg) 
+    { 
+        case WM_COMMAND: 
+            switch(LOWORD(wParam)) 
+            { 
+                case IDM_NEW: 
+                    strcpy(szTitle, "New"); 
+                    break; 
+                case IDM_OPEN: 
+                    memset(&ofn, 0, sizeof(OPENFILENAME)); 
+                    ofn.lStructSize = sizeof(OPENFILENAME); 
+                    ofn.hwndOwner = hWnd; 
+                    ofn.lpstrFilter = "All Files\0*.*\0"; 
+                    GetOpenFileName(&ofn); 
+                    return 0; 
+                case IDM_SAVE: 
+                    strcpy(szTitle, "Save"); 
+                    break; 
+                case IDM_SAVEAS: 
+                    memset(&ofn, 0, sizeof(OPENFILENAME)); 
+                    ofn.lStructSize = sizeof(OPENFILENAME); 
+                    ofn.hwndOwner = hWnd; 
+                    ofn.lpstrFilter = "All Files\0*.*\0"; 
+                    GetSaveFileName(&ofn); 
+                    return 0; 
+                case IDM_PRINT: 
+                    memset(&pd, 0, sizeof(PRINTDLG)); 
+                    pd.lStructSize = sizeof(PRINTDLG); 
+                    pd.hwndOwner = hWnd; 
+                    PrintDlg(&pd); 
+                    return 0; 
+               case IDM_EXIT: 
+                    SendMessage(hWnd, WM_CLOSE, 0, 0L); 
+                    return 0; 
+               case IDM_CUT: 
+                    strcpy(szTitle, "Cut"); 
+                    break; 
+                case IDM_COPY: 
+                    strcpy(szTitle, "Copy"); 
+                    break; 
+                case IDM_PASTE:  // grayed 
+                    break; 
+                case IDM_ABOUT: 
+                    DialogBox(ghModule, "AboutBox", hWnd, AboutDlgProc); 
+                    return 0; 
+            } 
+            MessageBox(hWnd, "Not Implemented", szTitle, 
+                MB_ICONINFORMATION | MB_OK); 
+            return 0; 
+        case WM_PAINT: 
+            hDC = BeginPaint(hWnd, &ps); 
+            GetClientRect(hWnd, &rect); 
+            DrawText(hDC, "Hello, World!", -1, &rect, 
+                DT_SINGLELINE | DT_CENTER | DT_VCENTER); 
+            EndPaint(hWnd, &ps); 
+            return 0; 
+        case WM_DESTROY: 
+            PostQuitMessage(0); 
+            return 0; 
+    } 
+    return DefWindowProc(hWnd, uMsg, wParam, lParam); 
+} 
+ 
+BOOL CALLBACK AboutDlgProc(HWND hDlg, UINT uMsg, UINT wParam, LONG lParam) 
+{ 
+    switch(uMsg) 
+    { 
+        case WM_INITDIALOG: 
+            return TRUE; 
+        case WM_COMMAND: 
+            switch(LOWORD(wParam)) 
+            { 
+                case IDOK: 
+                case IDCANCEL: 
+                    EndDialog(hDlg, TRUE); 
+                    return TRUE; 
+            } 
+            break; 
+    } 
+    return FALSE; 
+} 
+</PRE> 
+<P> 
+Below is the assembly-code generated from the above C++ program by using the "compile 
+as ASM" option on the C++ compiler to generate assembly language output. Note the difference 
+between this and <a href="#ASMProggy">Human generated assembly</a> and <a href="#BINProggy"> 
+decompiler-generated assembly</a>. The compiler-generated assembly code has the following structures 
+to match the C++ source: 
+<li>A <a href="#winmainASMC">WinMain</a> Procedure that registers and creates the main 
+  window and its subordinate resources 
+<LI>A  <a href="#MssgLoopASMC">Message Loop</a> that receives messages from the Windows 
+  operating system (such as LB_BUTTONDOWN and WM_GETTEXT) and dispatches them to the 
+  callback function specified in WinMain 
+<LI>A <a href="#callbackASMC">Callback Function</a> that receives the Windows messages and calls 
+  functions and/or subroutines to respond to each different message. Note that every child window will 
+  handle its own messages 
+<LI>A <a href="#switchASMC">Message Handler</a> routine (often a switch statement) that determines 
+  which function or routine is called to handle each message 
+ 
+<pre> 
+_TEXT   segment dword use32 public 'CODE'       ;size is 848 
+_TEXT	ends 
+_DATA	segment dword use32 public 'DATA'	;size is 180 
+_DATA	ends 
+CONST	segment dword use32 public 'CONST'	;size is 0 
+CONST	ends 
+_BSS	segment dword use32 public 'BSS'	;size is 0 
+_BSS	ends 
+FLAT	group 
+	comm	near _ghModule:byte:04h 
+includelib SNN.lib 
+	extrn	__acrtused 
+	extrn	__imp__EndDialog@8 
+	extrn	__imp__DialogBoxParamA@20 
+	extrn	_strcpy 
+	extrn	__imp__SendMessageA@16 
+	extrn	_PrintDlgA@4 
+	extrn	_memset 
+	extrn	_GetSaveFileNameA@4 
+	extrn	_GetOpenFileNameA@4 
+	extrn	__imp__DefWindowProcA@16 
+	extrn	__imp__PostQuitMessage@4 
+	extrn	__imp__EndPaint@8 
+	extrn	__imp__DrawTextA@20 
+	extrn	__imp__GetClientRect@8 
+	extrn	__imp__BeginPaint@8 
+	extrn	__imp__MessageBoxA@16 
+	extrn	__imp__GetMessageA@16 
+	extrn	__imp__DispatchMessageA@4 
+	extrn	__imp__TranslateMessage@4 
+	extrn	__imp__UpdateWindow@4 
+	extrn	__imp__ShowWindow@8 
+	extrn	__imp__CreateWindowExA@48 
+	extrn	__imp__RegisterClassA@4 
+	extrn	__imp__GetStockObject@4 
+	extrn	__imp__LoadCursorA@8 
+	extrn	__imp__LoadIconA@8 
+ 
+	public	_WinMain@16,_WndProc@16,_AboutDlgProc@16 
+_TEXT	segment 
+	assume	CS:_TEXT 
+<a name="winmainASMC"></a> 
+_WinMain@16: 
+		push	EBP 
+		mov	EBP,ESP 
+		sub	ESP,044h 
+		push	EBX 
+		push	ESI 
+		mov	EBX,8[EBP] 
+		mov	dword ptr -044h[EBP],3 
+		mov	ECX,offset FLAT:_WndProc@16 
+		mov	-040h[EBP],ECX 
+		xor	ECX,ECX 
+		mov	-03Ch[EBP],ECX 
+		mov	-038h[EBP],ECX 
+		mov	-034h[EBP],EBX 
+		push	07F00h 
+		push	ECX 
+		call	dword ptr __imp__LoadIconA@8 
+		mov	-030h[EBP],EAX 
+		push	07F00h 
+		push	0 
+		call	dword ptr __imp__LoadCursorA@8 
+		mov	-02Ch[EBP],EAX 
+		push	0 
+		call	dword ptr __imp__GetStockObject@4 
+		mov	-028h[EBP],EAX 
+		mov	dword ptr -024h[EBP],offset FLAT:_DATA[0Eh] 
+		mov	dword ptr -020h[EBP],offset FLAT:_DATA 
+		lea	ECX,-044h[EBP] 
+		push	ECX 
+		call	dword ptr __imp__RegisterClassA@4 
+		mov	_ghModule,EBX 
+		push	dword ptr 014h[EBP] 
+		push	0 
+		push	EBX 
+		push	0 
+		push	0 
+		push	080000000h 
+		push	080000000h 
+		push	080000000h 
+		push	080000000h 
+		push	0CF0000h 
+		push	offset FLAT:_DATA[7] 
+		push	offset FLAT:_DATA 
+		push	0 
+		call	dword ptr __imp__CreateWindowExA@48 
+		mov	ESI,EAX 
+		push	ESI 
+		call	dword ptr __imp__ShowWindow@8 
+		push	ESI 
+		call	dword ptr __imp__UpdateWindow@4 
+<a name="MssgLoopASMC"></a> 
+		push	0 
+		push	0 
+		push	0 
+		lea	ECX,-01Ch[EBP] 
+		push	ECX 
+		call	dword ptr __imp__GetMessageA@16 
+		test	EAX,EAX 
+		je	LEE 
+LC6:		lea	EAX,-01Ch[EBP] 
+		push	EAX 
+		call	dword ptr __imp__TranslateMessage@4 
+		lea	EAX,-01Ch[EBP] 
+		push	EAX 
+		call	dword ptr __imp__DispatchMessageA@4 
+		push	0 
+		push	0 
+		push	0 
+		lea	EAX,-01Ch[EBP] 
+		push	EAX 
+		call	dword ptr __imp__GetMessageA@16 
+		test	EAX,EAX 
+		jne	LC6 
+LEE:		mov	EAX,-014h[EBP] 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+    ret 010h 
+<a name="callbackASMC"></a> 
+_WndProc@16: 
+		push	EBP 
+		mov	EBP,ESP 
+		sub	ESP,0F4h 
+		push	EBX 
+		push	ESI 
+		mov	ESI,8[EBP] 
+<a name="switchASMC"></a> 
+		mov	EAX,0Ch[EBP] 
+		cmp	EAX,0111h 
+		je	L124 
+		cmp	EAX,0Fh 
+		je	L164 
+		cmp	EAX,2 
+		je	L1A5 
+		jmp	near ptr L1B7 
+L124:		movzx	EBX,word ptr 010h[EBP] 
+		sub	EBX,1 
+		cmp	EBX,013h 
+		ja	L148 
+		jmp	dword ptr FLAT:_DATA[064h][EBX*4] 
+		push	offset FLAT:_DATA[019h] 
+		lea	EAX,-014h[EBP] 
+		push	EAX 
+		call	near ptr _strcpy 
+		add	ESP,8 
+L148:		push	040h 
+		lea	EAX,-014h[EBP] 
+		push	EAX 
+		push	offset FLAT:_DATA[01Dh] 
+		push	ESI 
+		call	dword ptr __imp__MessageBoxA@16 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+L164:		lea	ECX,-064h[EBP] 
+		push	ECX 
+		push	ESI 
+		call	dword ptr __imp__BeginPaint@8 
+		mov	EBX,EAX 
+		lea	ECX,-024h[EBP] 
+		push	ECX 
+		push	ESI 
+		call	dword ptr __imp__GetClientRect@8 
+		push	025h 
+		lea	ECX,-024h[EBP] 
+		push	ECX 
+		push	0FFFFFFFFh 
+		push	offset FLAT:_DATA[02Dh] 
+		push	EBX 
+		call	dword ptr __imp__DrawTextA@20 
+		lea	ECX,-064h[EBP] 
+		push	ECX 
+		push	ESI 
+		call	dword ptr __imp__EndPaint@8 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+L1A5:		push	0 
+		call	dword ptr __imp__PostQuitMessage@4 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+L1B7:		push	dword ptr 014h[EBP] 
+		push	dword ptr 010h[EBP] 
+		push	dword ptr 0Ch[EBP] 
+		push	ESI 
+		call	dword ptr __imp__DefWindowProcA@16 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+		push	04Ch 
+		push	0 
+		lea	EAX,-0F4h[EBP] 
+		push	EAX 
+		call	near ptr _memset 
+		mov	dword ptr -0F4h[EBP],04Ch 
+		mov	-0F0h[EBP],ESI 
+		mov	dword ptr -0E8h[EBP],offset FLAT:_DATA[03Bh] 
+		lea	EAX,-0F4h[EBP] 
+		push	EAX 
+		call	near ptr _GetOpenFileNameA@4 
+		add	ESP,0Ch 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+		push	offset FLAT:_DATA[04Ah] 
+		lea	EAX,-014h[EBP] 
+		push	EAX 
+		call	near ptr _strcpy 
+		add	ESP,8 
+		jmp	near ptr L148 
+		push	04Ch 
+		push	0 
+		lea	EAX,-0F4h[EBP] 
+		push	EAX 
+		call	near ptr _memset 
+		mov	dword ptr -0F4h[EBP],04Ch 
+		mov	-0F0h[EBP],ESI 
+		mov	dword ptr -0E8h[EBP],offset FLAT:_DATA[03Bh] 
+		lea	EAX,-0F4h[EBP] 
+		push	EAX 
+		call	near ptr _GetSaveFileNameA@4 
+		add	ESP,0Ch 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+		push	042h 
+		push	0 
+		lea	EAX,-0A8h[EBP] 
+		push	EAX 
+		call	near ptr _memset 
+		mov	dword ptr -0A8h[EBP],042h 
+		mov	-0A4h[EBP],ESI 
+		lea	EAX,-0A8h[EBP] 
+		push	EAX 
+		call	near ptr _PrintDlgA@4 
+		add	ESP,0Ch 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+		push	0 
+		push	0 
+		push	010h 
+		push	ESI 
+		call	dword ptr __imp__SendMessageA@16 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+		push	offset FLAT:_DATA[04Fh] 
+		lea	EAX,-014h[EBP] 
+		push	EAX 
+		call	near ptr _strcpy 
+		add	ESP,8 
+		jmp	near ptr L148 
+		push	offset FLAT:_DATA[053h] 
+		lea	EAX,-014h[EBP] 
+		push	EAX 
+		call	near ptr _strcpy 
+		add	ESP,8 
+		jmp	near ptr L148 
+		push	0 
+		push	offset FLAT:_AboutDlgProc@16 
+		push	ESI 
+		push	offset FLAT:_DATA[058h] 
+		push	dword ptr _ghModule 
+		call	dword ptr __imp__DialogBoxParamA@20 
+		xor	EAX,EAX 
+		pop	ESI 
+		pop	EBX 
+		mov	ESP,EBP 
+		pop	EBP 
+		ret	010h 
+_AboutDlgProc@16: 
+		mov	EAX,8[ESP] 
+		cmp	EAX,0110h 
+		je	L31E 
+		cmp	EAX,0111h 
+		je	L326 
+		jmp short	L34B 
+L31E:		mov	EAX,1 
+		ret	010h 
+L326:		movzx	EAX,word ptr 0Ch[ESP] 
+		cmp	EAX,1 
+		je	L337 
+		cmp	EAX,2 
+		je	L337 
+		jmp short	L34B 
+L337:		push	1 
+		push	dword ptr 8[ESP] 
+		call	dword ptr __imp__EndDialog@8 
+		mov	EAX,1 
+		ret	010h 
+L34B:		xor	EAX,EAX 
+		ret	010h 
+_TEXT	ends 
+_DATA	segment 
+D0	db	048h,065h,06ch,06ch,06fh,033h,000h 
+D7	db	048h 
+	db	045h,04ch,04ch,04fh,033h,000h 
+DE	db	048h,065h 
+	db	06ch,06ch,06fh,033h,04dh,065h,06eh,075h 
+	db	000h 
+D19	db	04eh,065h,077h,000h 
+D1D	db	04eh,06fh,074h 
+	db	020h,049h,06dh,070h,06ch,065h,06dh,065h 
+	db	06eh,074h,065h,064h,000h 
+D2D	db	048h,065h,06ch 
+	db	06ch,06fh,02ch,020h,057h,06fh,072h,06ch 
+	db	064h,021h,000h 
+D3B	db	041h,06ch,06ch,020h,046h 
+	db	069h,06ch,065h,073h,000h,02ah,02eh,02ah 
+	db	000h,000h 
+D4A	db	053h,061h,076h,065h,000h 
+D4F	db	043h 
+	db	075h,074h,000h 
+D53	db	043h,06fh,070h,079h,000h 
+D58	db	041h,062h,06fh,075h,074h,042h,06fh,078h 
+	db	000h,000h,000h,000h 
+	dd	offset FLAT:_WndProc@16[0137h] 
+	dd	offset FLAT:_WndProc@16[01CFh] 
+	dd	offset FLAT:_WndProc@16[0212h] 
+	dd	offset FLAT:_WndProc@16[0228h] 
+	dd	offset FLAT:_WndProc@16[026Bh] 
+	dd	offset FLAT:_WndProc@16[02A4h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[02BBh] 
+	dd	offset FLAT:_WndProc@16[02D1h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[0148h] 
+	dd	offset FLAT:_WndProc@16[02E7h] 
+_DATA	ends 
+CONST	segment 
+CONST	ends 
+_BSS	segment 
+_BSS	ends 
+        end 
+</Pre> 
+<P> 
+<a name="ASMProggy"></a><HR> 
+<font size=+1><B>Win32 File Structure: .ASM Files</b></font><P> 
+The following is the "hello3.asm" file from Barry Kauler's fantastic book (requires 
+<a href="Windows.inc">windows.inc</a>). 
+It too contains the essential components of any Windows 95 application, 
+though they of course look a little different: 
+ 
+<li>A <a href="#winmainASM">WinMain</a> Procedure that registers and creates the main 
+  window and its subordinate resources 
+<LI>A  <a href="#MessageLoopASM">Message Loop</a> that receives messages from the Windows 
+  operating system (such as LB_BUTTONDOWN and WM_GETTEXT) and dispatches them to the 
+  callback function specified in WinMain 
+<LI>A <a href="#callbackASM">Callback Function</a> that receives the Windows messages and calls 
+  functions and/or subroutines to respond to each different message. Note that every child window will 
+  handle its own messages 
+<LI>A <a href="#switchASM">Message Handler</a> routine (often a switch statement) that determines 
+  which function or routine is called to handle each message 
+<P> 
+<pre> 
+--------------[ Header File ]------------------- 
+#define IDM_QUIT  100 
+#define IDM_ABOUT	101 
+winhullo    MENU 
+    BEGIN 
+      POPUP "File" 
+        BEGIN 
+             MENUITEM "Quit",  IDM_QUIT 
+             MENUITEM "About...",  IDM_ABOUT 
+        END 
+    END 
+------------------------------------------------ 
+.MODEL SMALL 
+INCLUDE WINDOWS.INC 
+IDM_QUIT		EQU	100		;menu-identifiers -- must be 
+IDM_ABOUT		EQU	101		;same as defined in .RC file. 
+ 
+.DATA 
+szwintitle	DB	'HULLO DEMO PROGRAM',0 
+szwinhulloname	DB	'WINHULLO',0 
+hOemFont	DW	0			;handle to OEM font. 
+soutstring 	DB	'Hullo World' 
+szaboutstr	DB	'Assembly Language Windows Demo',0	;messagebox 
+sztitlestr	DB	'Karda Prints',0			;	/ 
+ 
+.CODE 
+<a name="winmainASM"></a> 
+	PUBLIC 	WINMAIN 
+WINMAIN	PROC NEAR PASCAL, hInstance:WORD,hPrevInstance:WORD,lpCmdLine:LPSTR, \ 
+								nCmdShow:SWORD 
+;Define all 'automatic' data... 
+	LOCAL	@hWnd:HWND 
+;window class structure for REGISTERCLASS().... 
+	LOCAL	s1:WNDCLASS 
+;message structure for GETMESSAGE()... 
+	LOCAL	s2:MSG 
+	cmp	hPrevInstance,0		;=0 if no previous instance. 
+	je	yes1st 
+	jmp	createwin 
+yes1st: 
+;Setup the window class structure for REGISTERCLASS()... 
+	mov 	s1.Style,3 
+	lea	di,s1.lpfnwndproc 
+	mov 	[di],OFFSET WinHulloProc 
+	mov 	[di+2],SEG WinHulloProc 
+	mov 	s1.CbClsExtra,0 
+	mov 	s1.CbWndExtra,0 
+	mov	ax,hInstance 
+	mov 	s1.HInstance,ax 
+  invoke LOADICON,null, IDI_APPLICATION 
+	mov 	s1.@HIcon,ax 
+  invoke LOADCURSOR,null, IDC_ARROW 
+	mov 	s1.@HCursor,ax 
+	mov 	s1.hbrBackground,COLOR_BACKGROUND 
+	mov	ax,OFFSET szwinhulloname 
+	lea	di,s1.lpszmenuname 
+	mov 	[di],ax 
+	mov 	[di+2],ds 
+	lea	di,s1.lpszclassname 
+	mov 	[di],ax 
+	mov 	[di+2],ds 
+	lea	ax,s1 
+  invoke REGISTERCLASS,ss::ax 
+	or	ax,ax 
+	jne	createwin 
+	jmp	quitwinmain 
+createwin: 
+ invoke CREATEWINDOW, ADDR szwinhulloname, ADDR szwintitle, 00CF0000h,\ 
+				   150, 0, 400, 300, 0, 0, hInstance, 0 
+	mov 	@hWnd,ax 
+  invoke SHOWWINDOW,ax,nCmdShow 
+  invoke UPDATEWINDOW,@hWnd 
+	jmp	SHORT messageloop			;go to the main message-loop. 
+<a name="MessageLoopASM"></a> 
+;This is the main message loop, in which Windows waits for messages 
+mainloop: 
+	lea	ax,s2 
+	invoke	TRANSLATEMESSAGE,ss::ax 
+	lea	ax,s2 
+	invoke	DISPATCHMESSAGE,ss::ax 
+messageloop: 
+	lea 	ax,s2 
+	invoke GETMESSAGE, ss::ax, null, null, null 
+	or	ax,ax 
+	jne	mainloop 
+ 
+;GetMessage() returns FALSE (AX=0) if a "quit" message... 
+;so here we are quiting.... 
+	mov	ax,s2.WPARAM		;return wparam to windows OS. 
+quitwinmain: 
+	ret 
+WINMAIN	ENDP 
+ 
+	@hwnd	TEXTEQU	<WORD PTR [bp+14]> 
+	msgtype	TEXTEQU	<WORD PTR [bp+12]> 
+	wparam	TEXTEQU	<WORD PTR [bp+10]> 
+	lparam	TEXTEQU	<DWORD PTR [bp+6]> 
+	dummy	TEXTEQU	<WORD PTR [bp-10]> 
+	@hdc	TEXTEQU	<WORD PTR [bp-12]> 
+	s3	TEXTEQU	<[bp-(12+SIZE PAINTSTRUCT)]> 
+<a name="callbackASM"></a> 
+;WINHULLOPROC PROC FAR PASCAL, @hWnd:HWND,msgtype:WORD,wParam:WORD, \ 
+;							    lParam:DWORD 
+;	LOCAL	dummy [5]:WORD	;4 or less here can cause a crash. 
+;	LOCAL	@hDC:HDC 
+;	LOCAL	s3:PAINTSTRUCT 
+	PUBLIC	WINHULLOPROC 
+WINHULLOPROC PROC FAR 
+	push	ds	;prolog code 
+	pop	ax 
+	nop 
+	inc	bp 
+	push	bp 
+	mov	bp,sp 
+	push	ds 
+	mov	ds,ax 
+;	sub	sp,100	;leave sufficient space for local data. 
+;no, you can do it more precisely... 
+ lea	sp,s3	;move stack to beyond local data. 
+<a name="switchASM"></a> 
+	mov	ax,msgtype		;get message-type. 
+	cmp	ax,WM_CREATE		;message received after CreateWindow() 
+	je	xcreate			;function is called. 
+	cmp	ax,WM_DESTROY		;message received if a window is closed. 
+	je	xquitmessage 
+	cmp	ax,WM_PAINT		;message received if Windows has (already) 
+						;redrawn any part of the window (due to 
+						;a size-change for example). 
+	je	xpaint 
+	cmp	ax,WM_COMMAND		;any selection of the menu will produce 
+	jne	notwmcommand 
+	jmp	xmenu			;this message. 
+notwmcommand: 
+	cmp	ax,WM_LBUTTONDOWN	;one of many mouse messages. 
+	jne	notwmlbutton 
+	jmp	xbreak 
+notwmlbutton: 
+	cmp	ax,WM_CHAR		;message that a key pressed. 
+	je	xchar 
+defhandler: 
+;Default handling of messages.... 
+  invoke DEFWINDOWPROC,@hWnd,msgtype,wParam, lParam 
+	jmp	xreturn 
+xcreate: 
+  invoke	GETSTOCKOBJECT,OEM_FIXED_FONT 
+	mov	hOemFont,ax		;handle to font. 
+	jmp	xbreak 
+xquitmessage: 
+  invoke	POSTQUITMESSAGE,0 
+	jmp	xbreak 
+xchar: 
+	jmp 	xbreak 
+xpaint: 
+	lea	ax,s3  			;ss:ax -- far-addr of paint-structure. 
+  invoke BEGINPAINT,@hWnd,ss::ax 
+	mov	@hDC,ax			;hDC -- display-context, required 
+					;before can output to screen. 
+;For this simple demo, any redraw of the Window will cause output of our 
+;"hullo world" string.... 
+  invoke	SELECTOBJECT,ax,hOemFont 
+  invoke	TEXTOUT,@hDC,10,20, ADDR soutstring,11 
+	lea	ax,s3  			; -- far-addr of paint-structure. 
+  invoke	ENDPAINT,@hWnd,ss::ax 
+	jmp	SHORT xbreak 
+xmenu: 
+	cmp	WORD PTR lParam,0	;low-half of lParam 
+	jne	xbreak			;test if a menu-message. 
+	cmp	wParam,IDM_QUIT		;wParam. 
+	jne	notquit 
+	jmp	xquitmessage 
+notquit: 
+	cmp	wParam,IDM_ABOUT 
+	jne	xbreak			;no other menu items. 
+		;let's put up a message about this program... 
+ invoke MESSAGEBOX, @hWnd, ADDR szaboutstr, ADDR sztitlestr, MB_OK 
+xbreak: 
+	sub	ax,ax			;returns 0 in DX:AX.  (callback functions 
+	cwd					;return a 32-bit (long) value). 
+xreturn: 
+	dec	bp	;Windows epilog 
+	dec	bp 
+	mov	sp,bp 
+	pop	ds 
+	pop	bp 
+	dec	bp 
+	ret	10 
+WINHULLOPROC	ENDP 
+ 
+ END 
+</pre> 
+<P> <BR> 
+ 
+<a name="BINProggy"></a><HR> 
+<font size=+1><B>Win32 File Structure: .EXE Files</b></font><P> 
+The following is the disassembled listing of the .cpp file listed above. It is, 
+as you will notice, quite huge: ten times as long as the .asm file given above. 
+Once again, it contains the essential components of any Windows 95 application: 
+ 
+<li>A <a href="#winmainBIN">WinMain</a> Procedure that registers and creates the main 
+  window and its subordinate resources 
+<LI>A  <a href="#MessageLoopBIN">Message Loop</a> that receives messages from the Windows 
+  operating system (such as LB_BUTTONDOWN and WM_GETTEXT) and dispatches them to the 
+  callback function specified in WinMain 
+<LI>A <a href="#callbackBIN">Callback Function</a> that receives the Windows messages and calls 
+  functions and/or subroutines to respond to each different message. Note that every child window will 
+  handle its own messages 
+<LI>A <a href="#switchBIN">Message Handler</a> routine (often a switch statement) that determines 
+  which function or routine is called to handle each message 
+<P> 
+The "full version" includes all of the (somewhat lengthy) code added by the Win32 
+compiler, including <a href="#winentryBIN">Entrance</a> and <a href="#winexitBIN">Exit</a> routines. 
+ 
+<pre> 
+<a name="winmainBIN"></a> 
+:00401000 83EC44                  sub esp, 00000044 
+:00401003 C744241C03000000        mov [esp+1C], 00000003 
+:0040100B C744242010114000        mov [esp+20], 00401110 
+:00401013 53                      push ebx 
+:00401014 56                      push esi 
+:00401015 57                      push edi 
+:00401016 33F6                    xor esi, esi 
+:00401018 8B7C2454                mov edi, dword ptr [esp+54] 
+:0040101C 68007F0000              push 00007F00 
+:00401021 89742434                mov dword ptr [esp+34], esi 
+:00401025 56                      push esi 
+:00401026 8974243C                mov dword ptr [esp+3C], esi 
+:0040102A 897C2440                mov dword ptr [esp+40], edi 
+* Reference To: USER32.LoadIconA, Ord:016Ah 
+:0040102E FF1590614000            Call dword ptr [00406190] 
+:00401034 8944243C                mov dword ptr [esp+3C], eax 
+:00401038 68007F0000              push 00007F00 
+:0040103D 56                      push esi 
+* Reference To: USER32.LoadCursorA, Ord:0166h 
+:0040103E FF1588614000            Call dword ptr [00406188] 
+:00401044 89442440                mov dword ptr [esp+40], eax 
+:00401048 56                      push esi 
+* Reference To: GDI32.GetStockObject, Ord:00DCh 
+:401049 FF1514614000            Call dword ptr [00406114] 
+* Possible StringData Ref from Data Obj ->"Hello3Menu" 
+:0040104F C744244810504000        mov [esp+48], 00405010 
+* Possible StringData Ref from Data Obj ->"Hello3" 
+:00401057 C744244C08504000        mov [esp+4C], 00405008 
+:0040105F 89442444                mov dword ptr [esp+44], eax 
+:00401063 8D442428                lea eax, dword ptr [esp+28] 
+:00401067 50                      push eax 
+* Reference To: USER32.RegisterClassA, Ord:01AAh 
+:00401068 FF1598614000            Call dword ptr [00406198] 
+:0040106E 56                      push esi 
+:0040106F 893D04314000            mov dword ptr [00403104], edi 
+:00401075 57                      push edi 
+:00401076 56                      push esi 
+:00401077 56                      push esi 
+:00401078 6800000080              push 80000000 
+:0040107D 6800000080              push 80000000 
+:00401082 6800000080              push 80000000 
+:00401087 6800000080              push 80000000 
+:0040108C 680000CF00              push 00CF0000 
+* Possible StringData Ref from Data Obj ->"HELLO3" 
+:00401091 6800504000              push 00405000 
+* Possible StringData Ref from Data Obj ->"Hello3" 
+:00401096 6808504000              push 00405008 
+:0040109B 56                      push esi 
+* Reference To: USER32.CreateWindowExA, Ord:0052h 
+:0040109C FF159C614000            Call dword ptr [0040619C] 
+:004010A2 8BF8                    mov edi, eax 
+:004010A4 8B442460                mov eax, dword ptr [esp+60] 
+:004010A8 50                      push eax 
+:004010A9 57                      push edi 
+* Reference To: USER32.ShowWindow, Ord:0215h 
+:004010AA FF1594614000            Call dword ptr [00406194] 
+:004010B0 57                      push edi 
+* Reference To: USER32.UpdateWindow, Ord:0236h 
+:004010B1 FF15A4614000            Call dword ptr [004061A4] 
+<a name="MessageLoopBIN"></a> 
+:004010B7 8D44240C                lea eax, dword ptr [esp+0C] 
+:004010BB 56                      push esi 
+:004010BC 56                      push esi 
+:004010BD 56                      push esi 
+:004010BE 50                      push eax 
+* Reference To: USER32.GetMessageA, Ord:010Dh 
+:004010BF 8B35A8614000            mov esi, dword ptr [004061A8] 
+:004010C5 FFD6                    call esi 
+:004010C7 85C0                    test eax, eax 
+:004010C9 742B                    je 004010F6 
+* Reference To: USER32.TranslateMessage, Ord:022Bh 
+:004010CB 8B3DA0614000            mov edi, dword ptr [004061A0] 
+* Reference To: USER32.DispatchMessageA, Ord:008Ch 
+:004010D1 8B1DAC614000            mov ebx, dword ptr [004061AC] 
+* Referenced by: 
+|:004010F4(C) 
+| 
+:004010D7 8D44240C                lea eax, dword ptr [esp+0C] 
+:004010DB 50                      push eax 
+:004010DC FFD7                    call edi 
+:004010DE 8D44240C                lea eax, dword ptr [esp+0C] 
+:004010E2 50                      push eax 
+:004010E3 FFD3                    call ebx 
+:004010E5 8D44240C                lea eax, dword ptr [esp+0C] 
+:004010E9 6A00                    push 00000000 
+:004010EB 6A00                    push 00000000 
+:004010ED 6A00                    push 00000000 
+:004010EF 50                      push eax 
+:004010F0 FFD6                    call esi 
+:004010F2 85C0                    test eax, eax 
+:004010F4 75E1                    jne 004010D7 
+* Referenced by: 
+|:004010C9(C) 
+| 
+:004010F6 8B442414                mov eax, dword ptr [esp+14] 
+:004010FA 5F                      pop edi 
+:004010FB 5E                      pop esi 
+:004010FC 5B                      pop ebx 
+:004010FD 83C444                  add esp, 00000044 
+:00401100 C21000                  ret 0010 
+ 
+:00401103 CC                      int 03 
+:00401104 CC                      int 03 
+:00401105 CC                      int 03 
+:00401106 CC                      int 03 
+:00401107 CC                      int 03 
+:00401108 CC                      int 03 
+:00401109 CC                      int 03 
+:0040110A CC                      int 03 
+:0040110B CC                      int 03 
+:0040110C CC                      int 03 
+:0040110D CC                      int 03 
+:0040110E CC                      int 03 
+:0040110F CC                      int 03 
+<a name="callbackBIN"></a> 
+:00401110 8B4C2408                mov ecx, dword ptr [esp+08] 
+:00401114 81ECF4000000            sub esp, 000000F4 
+<a name="switchBIN"></a> 
+:0040111A 83F902                  cmp ecx, 00000002 
+:0040111D 56                      push esi 
+:0040111E 57                      push edi 
+:0040111F 743B                    je 0040115C 
+:00401121 83F90F                  cmp ecx, 0000000F 
+:00401124 744B                    je 00401171 
+:00401126 81F911010000            cmp ecx, 00000111 
+:0040112C 0F848E000000            je 004011C0 
+:00401132 8B84240C010000          mov eax, dword ptr [esp+0000010C] 
+:00401139 8B942408010000          mov edx, dword ptr [esp+00000108] 
+:00401140 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:00401147 50                      push eax 
+:00401148 52                      push edx 
+:00401149 51                      push ecx 
+:0040114A 56                      push esi 
+* Reference To: USER32.DefWindowProcA, Ord:007Dh 
+:0040114B FF156C614000            Call dword ptr [0040616C] 
+:00401151 5F                      pop edi 
+:00401152 5E                      pop esi 
+:00401153 81C4F4000000            add esp, 000000F4 
+:00401159 C21000                  ret 0010 
+:0040115C 6A00                    push 00000000 
+* Reference To: USER32.PostQuitMessage, Ord:01A4h 
+:0040115E FF1564614000            Call dword ptr [00406164] 
+:00401164 33C0                    xor eax, eax 
+:00401166 5F                      pop edi 
+:00401167 5E                      pop esi 
+:00401168 81C4F4000000            add esp, 000000F4 
+:0040116E C21000                  ret 0010 
+:00401171 8D44242C                lea eax, dword ptr [esp+2C] 
+:00401175 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:0040117C 50                      push eax 
+:0040117D 56                      push esi 
+* Reference To: USER32.BeginPaint, Ord:0009h 
+:0040117E FF1574614000            Call dword ptr [00406174] 
+:00401184 8BF8                    mov edi, eax 
+:00401186 8D442408                lea eax, dword ptr [esp+08] 
+:0040118A 50                      push eax 
+:0040118B 56                      push esi 
+* Reference To: USER32.GetClientRect, Ord:00DBh 
+:0040118C FF1578614000            Call dword ptr [00406178] 
+:00401192 8D4C2408                lea ecx, dword ptr [esp+08] 
+:00401196 6A25                    push 00000025 
+:00401198 51                      push ecx 
+:00401199 6AFF                    push FFFFFFFF 
+* Possible StringData Ref from Data Obj ->"Hello, World!" 
+:0040119B 681C504000              push 0040501C 
+:004011A0 57                      push edi 
+* Reference To: USER32.DrawTextA, Ord:00A3h 
+:004011A1 FF1570614000            Call dword ptr [00406170] 
+:004011A7 8D4C242C                lea ecx, dword ptr [esp+2C] 
+:004011AB 51                      push ecx 
+:004011AC 56                      push esi 
+* Reference To: USER32.EndPaint, Ord:00AFh 
+:004011AD FF1580614000            Call dword ptr [00406180] 
+:004011B3 33C0                    xor eax, eax 
+:004011B5 5F                      pop edi 
+:004011B6 5E                      pop esi 
+:004011B7 81C4F4000000            add esp, 000000F4 
+:004011BD C21000                  ret 0010 
+:004011C0 8B842408010000          mov eax, dword ptr [esp+00000108] 
+:004011C7 25FFFF0000              and eax, 0000FFFF 
+:004011CC 48                      dec eax 
+:004011CD 83F813                  cmp eax, 00000013 
+:004011D0 7718                    ja 004011EA 
+:004011D2 33C9                    xor ecx, ecx 
+:004011D4 8A88A0134000            mov cl, byte ptr [eax+004013A0] 
+:004011DA FF248D78134000          jmp dword ptr [4*ecx+00401378] 
+:004011E1 A16C504000              mov eax, dword ptr [0040506C] 
+:004011E6 89442418                mov dword ptr [esp+18], eax 
+:004011EA 8D442418                lea eax, dword ptr [esp+18] 
+:004011EE 6A40                    push 00000040 
+:004011F0 8BB42404010000          mov esi, dword ptr [esp+00000104] 
+:004011F7 50                      push eax 
+* Possible StringData Ref from Data Obj ->"Not Implemented" 
+:004011F8 682C504000              push 0040502C 
+:004011FD 56                      push esi 
+* Reference To: USER32.MessageBoxA, Ord:0186h 
+:004011FE FF1584614000            Call dword ptr [00406184] 
+:00401204 33C0                    xor eax, eax 
+:00401206 5F                      pop edi 
+:00401207 5E                      pop esi 
+:00401208 81C4F4000000            add esp, 000000F4 
+:0040120E C21000                  ret 0010 
+ 
+:00401211 8DBC24B0000000          lea edi, dword ptr [esp+000000B0] 
+:00401218 33C0                    xor eax, eax 
+:0040121A B913000000              mov ecx, 00000013 
+:0040121F F3                      repz 
+:00401220 AB                      stosd 
+:00401221 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:00401228 8D8424B0000000          lea eax, dword ptr [esp+000000B0] 
+:0040122F 89B424B4000000          mov dword ptr [esp+000000B4], esi 
+:00401236 50                      push eax 
+:00401237 C78424B40000004C000000  mov dword ptr [esp+000000B4], 0000004C 
+* Possible StringData Ref from Data Obj ->"All Files" 
+:00401242 C78424C00000005C504000  mov dword ptr [esp+000000C0], 0040505C 
+* Reference To: comdlg32.GetOpenFileNameA, Ord:0012h 
+:0040124D E8C2010000              Call 00401414 
+:00401252 33C0                    xor eax, eax 
+:00401254 5F                      pop edi 
+:00401255 5E                      pop esi 
+:00401256 81C4F4000000            add esp, 000000F4 
+:0040125C C21000                  ret 0010 
+ 
+:0040125F 8B1554504000            mov edx, dword ptr [00405054] 
+* Possible StringData Ref from Data Obj ->"Save" 
+:00401265 B854504000              mov eax, 00405054 
+:0040126A 8D4C2418                lea ecx, dword ptr [esp+18] 
+:0040126E 8A4004                  mov al, byte ptr [eax+04] 
+:00401271 8911                    mov dword ptr [ecx], edx 
+:00401273 884104                  mov byte ptr [ecx+04], al 
+:00401276 E96FFFFFFF              jmp 004011EA 
+:0040127B 8DBC24B0000000          lea edi, dword ptr [esp+000000B0] 
+:00401282 33C0                    xor eax, eax 
+:00401284 B913000000              mov ecx, 00000013 
+:00401289 F3                      repz 
+:0040128A AB                      stosd 
+:0040128B 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:00401292 8D8424B0000000          lea eax, dword ptr [esp+000000B0] 
+:00401299 89B424B4000000          mov dword ptr [esp+000000B4], esi 
+:004012A0 50                      push eax 
+:004012A1 C78424B40000004C000000  mov dword ptr [esp+000000B4], 0000004C 
+* Possible StringData Ref from Data Obj ->"All Files" 
+:004012AC C78424C00000005C504000  mov dword ptr [esp+000000C0], 0040505C 
+* Reference To: comdlg32.GetSaveFileNameA, Ord:0014h 
+:004012B7 E852010000              Call 0040140E 
+:004012BC 33C0                    xor eax, eax 
+:004012BE 5F                      pop edi 
+:004012BF 5E                      pop esi 
+:004012C0 81C4F4000000            add esp, 000000F4 
+:004012C6 C21000                  ret 0010 
+ 
+:004012C9 8D7C246C                lea edi, dword ptr [esp+6C] 
+:004012CD 33C0                    xor eax, eax 
+:004012CF B910000000              mov ecx, 00000010 
+:004012D4 F3                      repz 
+:004012D5 AB                      stosd 
+:004012D6 66AB                    stosw 
+:004012D8 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:004012DF 8D44246C                lea eax, dword ptr [esp+6C] 
+:004012E3 89742470                mov dword ptr [esp+70], esi 
+:004012E7 50                      push eax 
+:004012E8 C744247042000000        mov [esp+70], 00000042 
+* Reference To: comdlg32.PrintDlgA, Ord:0017h 
+:004012F0 E813010000              Call 00401408 
+:004012F5 33C0                    xor eax, eax 
+:004012F7 5F                      pop edi 
+:004012F8 5E                      pop esi 
+:004012F9 81C4F4000000            add esp, 000000F4 
+:004012FF C21000                  ret 0010 
+ 
+:00401302 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:00401309 6A00                    push 00000000 
+:0040130B 6A00                    push 00000000 
+:0040130D 6A10                    push 00000010 
+:0040130F 56                      push esi 
+* Reference To: USER32.SendMessageA, Ord:01C5h 
+:00401310 FF157C614000            Call dword ptr [0040617C] 
+:00401316 33C0                    xor eax, eax 
+:00401318 5F                      pop edi 
+:00401319 5E                      pop esi 
+:0040131A 81C4F4000000            add esp, 000000F4 
+:00401320 C21000                  ret 0010 
+ 
+:00401323 A150504000              mov eax, dword ptr [00405050] 
+:00401328 E9B9FEFFFF              jmp 004011E6 
+:0040132D 8B1548504000            mov edx, dword ptr [00405048] 
+* Possible StringData Ref from Data Obj ->"Copy" 
+:00401333 B848504000              mov eax, 00405048 
+:00401338 8D4C2418                lea ecx, dword ptr [esp+18] 
+:0040133C 8A4004                  mov al, byte ptr [eax+04] 
+:0040133F 8911                    mov dword ptr [ecx], edx 
+:00401341 884104                  mov byte ptr [ecx+04], al 
+:00401344 E9A1FEFFFF              jmp 004011EA 
+:00401349 8BB42400010000          mov esi, dword ptr [esp+00000100] 
+:00401350 6A00                    push 00000000 
+:00401352 68C0134000              push 004013C0 
+:00401357 A104314000              mov eax, dword ptr [00403104] 
+:0040135C 56                      push esi 
+* Possible Reference to Dialog: ABOUTBOX 
+:0040135D 683C504000              push 0040503C 
+:00401362 50                      push eax 
+* Reference To: USER32.DialogBoxParamA, Ord:008Ah 
+:00401363 FF158C614000            Call dword ptr [0040618C] 
+:00401369 33C0                    xor eax, eax 
+:0040136B 5F                      pop edi 
+:0040136C 5E                      pop esi 
+:0040136D 81C4F4000000            add esp, 000000F4 
+:00401373 C21000                  ret 0010 
+ 
+:00401376 8BFF                    mov edi, edi 
+:00401378 E1114000                DWORD 004011E1 
+:0040137C 11124000                DWORD 00401211 
+:00401380 5F124000                DWORD 0040125F 
+:00401384 7B124000                DWORD 0040127B 
+:00401388 C9124000                DWORD 004012C9 
+:0040138C 02134000                DWORD 00401302 
+:00401390 23134000                DWORD 00401323 
+:00401394 2D134000                DWORD 0040132D 
+* Referenced by: 
+|:00401384(C) 
+| 
+:00401398 49134000                DWORD 00401349 
+:0040139C EA114000                DWORD 004011EA 
+ 
+:004013A0 0001                    add byte ptr [ecx], al 
+:004013A2 0203                    add al, byte ptr [ebx] 
+:004013A4 0405                    add al, 05 
+:004013A6 0909                    or dword ptr [ecx], ecx 
+:004013A8 0906                    or dword ptr [esi], eax 
+:004013AA 07                      pop es 
+:004013AB 0909                    or dword ptr [ecx], ecx 
+:004013AD 0909                    or dword ptr [ecx], ecx 
+:004013AF 0909                    or dword ptr [ecx], ecx 
+:004013B1 0909                    or dword ptr [ecx], ecx 
+:004013B3 08CC                    or ah, cl 
+:004013B5 CC                      int 03 
+:004013B6 CC                      int 03 
+:004013B7 CC                      int 03 
+:004013B8 CC                      int 03 
+:004013B9 CC                      int 03 
+:004013BA CC                      int 03 
+:004013BB CC                      int 03 
+:004013BC CC                      int 03 
+:004013BD CC                      int 03 
+:004013BE CC                      int 03 
+:004013BF CC                      int 03 
+:004013C0 8B442408                mov eax, dword ptr [esp+08] 
+:004013C4 3D10010000              cmp eax, 00000110 
+:004013C9 740C                    je 004013D7 
+:004013CB 3D11010000              cmp eax, 00000111 
+:004013D0 740D                    je 004013DF 
+:004013D2 33C0                    xor eax, eax 
+:004013D4 C21000                  ret 0010 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:004013D7 B801000000              mov eax, 00000001 
+:004013DC C21000                  ret 0010 
+:004013DF 8B44240C                mov eax, dword ptr [esp+0C] 
+:004013E3 25FFFF0000              and eax, 0000FFFF 
+:004013E8 83F801                  cmp eax, 00000001 
+:004013EB 7CE5                    jl 004013D2 
+:004013ED 83F802                  cmp eax, 00000002 
+:004013F0 7FE0                    jg 004013D2 
+:004013F2 8B442404                mov eax, dword ptr [esp+04] 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:004013F6 6A01                    push 00000001 
+:004013F8 50                      push eax 
+* Reference To: USER32.EndDialog, Ord:00ADh 
+:004013F9 FF1568614000            Call dword ptr [00406168] 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:004013FF B801000000              mov eax, 00000001 
+:00401404 C21000                  ret 0010 
+ 
+:00401407 CC                      int 03 
+* Reference To: comdlg32.PrintDlgA, Ord:0017h 
+:00401408 FF25BC614000            Jmp dword ptr [004061BC] 
+* Reference To: comdlg32.GetSaveFileNameA, Ord:0014h 
+:0040140E FF25B8614000            Jmp dword ptr [004061B8] 
+* Reference To: comdlg32.GetOpenFileNameA, Ord:0012h 
+:00401414 FF25B4614000            Jmp dword ptr [004061B4] 
+<a name="winentryBIN"></a> 
+//******************** Program Entry Point ******** 
+:0040141A 64A100000000            mov eax, dword ptr fs:[00000000] 
+:00401420 55                      push ebp 
+:00401421 8BEC                    mov ebp, esp 
+:00401423 6AFF                    push FFFFFFFF 
+:00401425 6800404000              push 00404000 
+:0040142A 682C204000              push 0040202C 
+:0040142F 50                      push eax 
+:00401430 64892500000000          mov dword ptr fs:[00000000], esp 
+:00401437 83EC60                  sub esp, 00000060 
+:0040143A 53                      push ebx 
+:0040143B 56                      push esi 
+:0040143C 57                      push edi 
+:0040143D 8965E8                  mov dword ptr [ebp-18], esp 
+* Reference To: KERNEL32.GetVersion, Ord:0132h 
+:00401440 FF154C614000            Call dword ptr [0040614C] 
+:00401446 A398504000              mov dword ptr [00405098], eax 
+:0040144B 8AC4                    mov al, ah 
+:0040144D 25FF000000              and eax, 000000FF 
+:00401452 A3A4504000              mov dword ptr [004050A4], eax 
+:00401457 A198504000              mov eax, dword ptr [00405098] 
+:0040145C C12D9850400010          shr dword ptr [00405098], 10 
+:00401463 25FF000000              and eax, 000000FF 
+:00401468 A3A0504000              mov dword ptr [004050A0], eax 
+:0040146D C1E008                  shl eax, 08 
+:00401470 0305A4504000            add eax, dword ptr [004050A4] 
+:00401476 A39C504000              mov dword ptr [0040509C], eax 
+:0040147B E8010B0000              call 00401F81 
+:00401480 C745FC00000000          mov [ebp-04], 00000000 
+:00401487 E8070A0000              call 00401E93 
+:0040148C E8F7090000              call 00401E88 
+* Reference To: KERNEL32.GetCommandLineA, Ord:00A1h 
+:00401491 FF1544614000            Call dword ptr [00406144] 
+:00401497 A31C344000              mov dword ptr [0040341C], eax 
+:0040149C E85B050000              call 004019FC 
+* Reference To: KERNEL32.GetEnvironmentStrings, Ord:00D2h 
+:004014A1 FF1548614000            Call dword ptr [00406148] 
+:004014A7 A370504000              mov dword ptr [00405070], eax 
+:004014AC E880040000              call 00401931 
+:004014B1 E8FC000000              call 004015B2 
+:004014B6 8B351C344000            mov esi, dword ptr [0040341C] 
+:004014BC 8A06                    mov al, byte ptr [esi] 
+:004014BE 3C22                    cmp al, 22 
+:004014C0 740C                    je 004014CE 
+:004014C2 3C20                    cmp al, 20 
+:004014C4 7634                    jbe 004014FA 
+:004014C6 46                      inc esi 
+:004014C7 803E20                  cmp byte ptr [esi], 20 
+:004014CA 77FA                    ja 004014C6 
+:004014CC EB2C                    jmp 004014FA 
+:004014CE 46                      inc esi 
+:004014CF 803E22                  cmp byte ptr [esi], 22 
+:004014D2 7425                    je 004014F9 
+:004014D4 8A5DD8                  mov bl, byte ptr [ebp-28] 
+:004014D7 8A1E                    mov bl, byte ptr [esi] 
+:004014D9 84DB                    test bl, bl 
+:004014DB 7417                    je 004014F4 
+:004014DD 0FB6C3                  movzx eax, bl 
+:004014E0 50                      push eax 
+:004014E1 E808040000              call 004018EE 
+:004014E6 83C404                  add esp, 00000004 
+:004014E9 85C0                    test eax, eax 
+:004014EB 7401                    je 004014EE 
+:004014ED 46                      inc esi 
+:004014EE 46                      inc esi 
+:004014EF 803E22                  cmp byte ptr [esi], 22 
+:004014F2 75E3                    jne 004014D7 
+:004014F4 803E22                  cmp byte ptr [esi], 22 
+:004014F7 7501                    jne 004014FA 
+:004014F9 46                      inc esi 
+:004014FA 803E00                  cmp byte ptr [esi], 00 
+:004014FD 740B                    je 0040150A 
+:004014FF 803E20                  cmp byte ptr [esi], 20 
+:00401502 7706                    ja 0040150A 
+:00401504 46                      inc esi 
+:00401505 803E00                  cmp byte ptr [esi], 00 
+:00401508 75F5                    jne 004014FF 
+:0040150A C745BC00000000          mov [ebp-44], 00000000 
+:00401511 8D4590                  lea eax, dword ptr [ebp-70] 
+:00401514 50                      push eax 
+* Reference To: KERNEL32.GetStartupInfoA, Ord:0111h 
+:00401515 FF155C614000            Call dword ptr [0040615C] 
+:0040151B F645BC01                test [ebp-44], 01 
+* Possible Ref to Menu: HELLO3MENU, Item: "Cut" 
+:0040151F B80A000000              mov eax, 0000000A 
+:00401524 7404                    je 0040152A 
+:00401526 0FB745C0                movzx eax, word ptr [ebp-40] 
+:0040152A 50                      push eax 
+:0040152B 56                      push esi 
+:0040152C 6A00                    push 00000000 
+:0040152E 6A00                    push 00000000 
+* Reference To: KERNEL32.GetModuleHandleA, Ord:00EDh 
+:00401530 FF1550614000            Call dword ptr [00406150] 
+:00401536 50                      push eax 
+:00401537 E8C4FAFFFF              call 00401000 
+:0040153C 50                      push eax 
+:0040153D E8A0000000              call 004015E2 
+:00401542 EB22                    jmp 00401566 
+:00401544 8B45EC                  mov eax, dword ptr [ebp-14] 
+:00401547 8B00                    mov eax, dword ptr [eax] 
+:00401549 8B00                    mov eax, dword ptr [eax] 
+:0040154B 8945E0                  mov dword ptr [ebp-20], eax 
+:0040154E FF75EC                  push [ebp-14] 
+:00401551 50                      push eax 
+:00401552 E80C020000              call 00401763 
+:00401557 83C408                  add esp, 00000008 
+:0040155A C3                      ret 
+ 
+:0040155B 8B65E8                  mov esp, dword ptr [ebp-18] 
+:0040155E FF75E0                  push [ebp-20] 
+:00401561 E88D000000              call 004015F3 
+:00401566 83C404                  add esp, 00000004 
+:00401569 C745FCFFFFFFFF          mov [ebp-04], FFFFFFFF 
+:00401570 8B45F0                  mov eax, dword ptr [ebp-10] 
+:00401573 5F                      pop edi 
+:00401574 64A300000000            mov dword ptr fs:[00000000], eax 
+:0040157A 5E                      pop esi 
+:0040157B 5B                      pop ebx 
+:0040157C 8BE5                    mov esp, ebp 
+:0040157E 5D                      pop ebp 
+:0040157F C3                      ret 
+<a name="errorBIN"></a> 
+:00401580 FF742404                push [esp+04] 
+:00401584 E86C0B0000              call 004020F5 
+:00401589 83C404                  add esp, 00000004 
+:0040158C 85C0                    test eax, eax 
+:0040158E 7413                    je 004015A3 
+:00401590 6800000100              push 00010000 
+* Possible StringData Ref from Data Obj ->"runtime error" 
+:00401595 687C504000              push 0040507C 
+:0040159A 50                      push eax 
+:0040159B 6A00                    push 00000000 
+* Reference To: USER32.MessageBoxA, Ord:0186h 
+:0040159D FF1584614000            Call dword ptr [00406184] 
+:004015A3 68FF000000              push 000000FF 
+:004015A8 FF1578504000            call dword ptr [00405078] 
+:004015AE 83C404                  add esp, 00000004 
+:004015B1 C3                      ret 
+:004015B2 A114344000              mov eax, dword ptr [00403414] 
+:004015B7 85C0                    test eax, eax 
+:004015B9 7402                    je 004015BD 
+:004015BB FFD0                    call eax 
+:004015BD 68C0594000              push 004059C0 
+:004015C2 68BC594000              push 004059BC 
+:004015C7 E8B7000000              call 00401683 
+:004015CC 83C408                  add esp, 00000008 
+:004015CF 68B8594000              push 004059B8 
+:004015D4 68B4594000              push 004059B4 
+:004015D9 E8A5000000              call 00401683 
+:004015DE 83C408                  add esp, 00000008 
+:004015E1 C3                      ret 
+ 
+:004015E2 6A00                    push 00000000 
+:004015E4 6A00                    push 00000000 
+:004015E6 FF74240C                push [esp+0C] 
+:004015EA E815000000              call 00401604 
+:004015EF 83C40C                  add esp, 0000000C 
+:004015F2 C3                      ret 
+ 
+:004015F3 6A00                    push 00000000 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:004015F5 6A01                    push 00000001 
+:004015F7 FF74240C                push [esp+0C] 
+:004015FB E804000000              call 00401604 
+:00401600 83C40C                  add esp, 0000000C 
+:00401603 C3                      ret 
+ 
+<a name="winexitBIN"></a> 
+:00401604 C705D050400001000000    mov dword ptr [004050D0], 00000001 
+:0040160E 837C240800              cmp dword ptr [esp+08], 00000000 
+:00401613 53                      push ebx 
+:00401614 56                      push esi 
+:00401615 8B5C2414                mov ebx, dword ptr [esp+14] 
+:00401619 881DCC504000            mov byte ptr [004050CC], bl 
+:0040161F 753F                    jne 00401660 
+:00401621 833D1834400000          cmp dword ptr [00403418], 00000000 
+:00401628 7424                    je 0040164E 
+:0040162A 8B3510344000            mov esi, dword ptr [00403410] 
+:00401630 83EE04                  sub esi, 00000004 
+:00401633 393518344000            cmp dword ptr [00403418], esi 
+:00401639 7713                    ja 0040164E 
+:0040163B 8B06                    mov eax, dword ptr [esi] 
+:0040163D 85C0                    test eax, eax 
+:0040163F 7402                    je 00401643 
+:00401641 FFD0                    call eax 
+:00401643 83EE04                  sub esi, 00000004 
+:00401646 393518344000            cmp dword ptr [00403418], esi 
+:0040164C 76ED                    jbe 0040163B 
+:0040164E 68C8594000              push 004059C8 
+:00401653 68C4594000              push 004059C4 
+:00401658 E826000000              call 00401683 
+:0040165D 83C408                  add esp, 00000008 
+:00401660 68D0594000              push 004059D0 
+:00401665 68CC594000              push 004059CC 
+:0040166A E814000000              call 00401683 
+:0040166F 83C408                  add esp, 00000008 
+:00401672 85DB                    test ebx, ebx 
+:00401674 750A                    jne 00401680 
+:00401676 FF74240C                push [esp+0C] 
+* Reference To: KERNEL32.ExitProcess, Ord:0064h 
+:0040167A FF153C614000            Call dword ptr [0040613C] 
+:00401680 5E                      pop esi 
+:00401681 5B                      pop ebx 
+:00401682 C3                      ret 
+ 
+:00401683 56                      push esi 
+:00401684 57                      push edi 
+:00401685 8B7C2410                mov edi, dword ptr [esp+10] 
+:00401689 8B74240C                mov esi, dword ptr [esp+0C] 
+:0040168D 3BFE                    cmp edi, esi 
+:0040168F 760F                    jbe 004016A0 
+:00401691 8B06                    mov eax, dword ptr [esi] 
+:00401693 85C0                    test eax, eax 
+:00401695 7402                    je 00401699 
+:00401697 FFD0                    call eax 
+:00401699 83C604                  add esi, 00000004 
+:0040169C 3BFE                    cmp edi, esi 
+:0040169E 77F1                    ja 00401691 
+:004016A0 5F                      pop edi 
+:004016A1 5E                      pop esi 
+:004016A2 C3                      ret 
+ 
+:004016A3 CC                      int 03 
+:004016A4 55                      push ebp 
+:004016A5 8BEC                    mov ebp, esp 
+:004016A7 53                      push ebx 
+:004016A8 56                      push esi 
+:004016A9 57                      push edi 
+:004016AA 55                      push ebp 
+:004016AB 6A00                    push 00000000 
+:004016AD 6A00                    push 00000000 
+* Possible StringData Ref from Code Obj ->"]_^[" 
+:004016AF 68BC164000              push 004016BC 
+:004016B4 FF7508                  push [ebp+08] 
+* Reference To: KERNEL32.RtlUnwind, Ord:01BBh 
+:004016B7 E872110000              Call 0040282E 
+:004016BC 5D                      pop ebp 
+:004016BD 5F                      pop edi 
+:004016BE 5E                      pop esi 
+:004016BF 5B                      pop ebx 
+:004016C0 8BE5                    mov esp, ebp 
+:004016C2 5D                      pop ebp 
+:004016C3 C3                      ret 
+ 
+:004016C4 8B4C2404                mov ecx, dword ptr [esp+04] 
+* Possible Ref to Menu: HELLO3MENU, Item: "Exit" 
+:004016C8 F7410406000000          test [ecx+04], 00000006 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:004016CF B801000000              mov eax, 00000001 
+:004016D4 740F                    je 004016E5 
+:004016D6 8B442408                mov eax, dword ptr [esp+08] 
+:004016DA 8B542410                mov edx, dword ptr [esp+10] 
+:004016DE 8902                    mov dword ptr [edx], eax 
+* Possible Ref to Menu: HELLO3MENU, Item: "Save" 
+:004016E0 B803000000              mov eax, 00000003 
+:004016E5 C3                      ret 
+:004016E6 53                      push ebx 
+:004016E7 56                      push esi 
+:004016E8 57                      push edi 
+:004016E9 8B442410                mov eax, dword ptr [esp+10] 
+:004016ED 50                      push eax 
+:004016EE 6AFE                    push FFFFFFFE 
+:004016F0 68C4164000              push 004016C4 
+:004016F5 64FF3500000000          push dword ptr fs:[00000000] 
+:004016FC 64892500000000          mov dword ptr fs:[00000000], esp 
+:00401703 8B442420                mov eax, dword ptr [esp+20] 
+:00401707 8B5808                  mov ebx, dword ptr [eax+08] 
+:0040170A 8B700C                  mov esi, dword ptr [eax+0C] 
+:0040170D 83FEFF                  cmp esi, FFFFFFFF 
+:00401710 7420                    je 00401732 
+:00401712 3B742424                cmp esi, dword ptr [esp+24] 
+:00401716 741A                    je 00401732 
+:00401718 8D3476                  lea esi, dword ptr [esi+2*esi] 
+:0040171B 8B0CB3                  mov ecx, dword ptr [ebx+4*esi] 
+:0040171E 894C2408                mov dword ptr [esp+08], ecx 
+:00401722 89480C                  mov dword ptr [eax+0C], ecx 
+:00401725 837CB30400              cmp dword ptr [ebx+4*esi+04], 00000000 
+:0040172A 7504                    jne 00401730 
+:0040172C FF54B308                call [ebx+4*esi+08] 
+:00401730 EBD1                    jmp 00401703 
+:00401732 648F0500000000          pop dword ptr fs:[00000000] 
+:00401739 83C40C                  add esp, 0000000C 
+:0040173C 5F                      pop edi 
+:0040173D 5E                      pop esi 
+:0040173E 5B                      pop ebx 
+:0040173F C3                      ret 
+ 
+:00401740 33C0                    xor eax, eax 
+:00401742 648B0D00000000          mov ecx, dword ptr fs:[00000000] 
+:00401749 817904C4164000          cmp dword ptr [ecx+04], 004016C4 
+:00401750 7510                    jne 00401762 
+:00401752 8B510C                  mov edx, dword ptr [ecx+0C] 
+:00401755 8B520C                  mov edx, dword ptr [edx+0C] 
+:00401758 395108                  cmp dword ptr [ecx+08], edx 
+:0040175B 7505                    jne 00401762 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:0040175D B801000000              mov eax, 00000001 
+:00401762 C3                      ret 
+ 
+:00401763 56                      push esi 
+:00401764 57                      push edi 
+:00401765 FF74240C                push [esp+0C] 
+:00401769 E853010000              call 004018C1 
+:0040176E 83C404                  add esp, 00000004 
+:00401771 85C0                    test eax, eax 
+:00401773 0F843B010000            je 004018B4 
+:00401779 8B5008                  mov edx, dword ptr [eax+08] 
+:0040177C 85D2                    test edx, edx 
+:0040177E 0F8430010000            je 004018B4 
+:00401784 83FA05                  cmp edx, 00000005 
+:00401787 7511                    jne 0040179A 
+:00401789 C7400800000000          mov [eax+08], 00000000 
+* Possible Ref to Menu: HELLO3MENU, Item: "New" 
+:00401790 B801000000              mov eax, 00000001 
+:00401795 E924010000              jmp 004018BE 
+:0040179A 83FA01                  cmp edx, 00000001 
+:0040179D 750A                    jne 004017A9 
+:0040179F B8FFFFFFFF              mov eax, FFFFFFFF 
+:004017A4 E915010000              jmp 004018BE 
+:004017A9 8B3560514000            mov esi, dword ptr [00405160] 
+:004017AF 8B4C2410                mov ecx, dword ptr [esp+10] 
+:004017B3 890D60514000            mov dword ptr [00405160], ecx 
+:004017B9 83780408                cmp dword ptr [eax+04], 00000008 
+:004017BD 0F85D5000000            jne 00401898 
+:004017C3 8B0D54514000            mov ecx, dword ptr [00405154] 
+:004017C9 030D50514000            add ecx, dword ptr [00405150] 
+:004017CF 3B0D50514000            cmp ecx, dword ptr [00405150] 
+:004017D5 7E21                    jle 004017F8 
+* Possible Ref to Menu: HELLO3MENU, Item: "Save" 
+:004017D7 8B0D50514000            mov ecx, dword ptr [00405150] 
+:004017DD 6BC90C                  imul ecx, 0000000C 
+:004017E0 8DB9E0504000            lea edi, dword ptr [ecx+004050E0] 
+:004017E6 8B0D54514000            mov ecx, dword ptr [00405154] 
+:004017EC C70700000000            mov dword ptr [edi], 00000000 
+:004017F2 83C70C                  add edi, 0000000C 
+:004017F5 49                      dec ecx 
+:004017F6 75F4                    jne 004017EC 
+:004017F8 8B3D5C514000            mov edi, dword ptr [0040515C] 
+:004017FE 8B00                    mov eax, dword ptr [eax] 
+:00401800 3D8E0000C0              cmp eax, C000008E 
+:00401805 750C                    jne 00401813 
+:00401807 C7055C51400083000000    mov dword ptr [0040515C], 00000083 
+:00401811 EB70                    jmp 00401883 
+:00401813 3D900000C0              cmp eax, C0000090 
+:00401818 750C                    jne 00401826 
+:0040181A C7055C51400081000000    mov dword ptr [0040515C], 00000081 
+:00401824 EB5D                    jmp 00401883 
+:00401826 3D910000C0              cmp eax, C0000091 
+:0040182B 750C                    jne 00401839 
+:0040182D C7055C51400084000000    mov dword ptr [0040515C], 00000084 
+:00401837 EB4A                    jmp 00401883 
+:00401839 3D930000C0              cmp eax, C0000093 
+:0040183E 750C                    jne 0040184C 
+:00401840 C7055C51400085000000    mov dword ptr [0040515C], 00000085 
+:0040184A EB37                    jmp 00401883 
+:0040184C 3D8D0000C0              cmp eax, C000008D 
+:00401851 750C                    jne 0040185F 
+:00401853 C7055C51400082000000    mov dword ptr [0040515C], 00000082 
+:0040185D EB24                    jmp 00401883 
+:0040185F 3D8F0000C0              cmp eax, C000008F 
+:00401864 750C                    jne 00401872 
+:00401866 C7055C51400086000000    mov dword ptr [0040515C], 00000086 
+:00401870 EB11                    jmp 00401883 
+:00401872 3D920000C0              cmp eax, C0000092 
+:00401877 750A                    jne 00401883 
+:00401879 C7055C5140008A000000    mov dword ptr [0040515C], 0000008A 
+:00401883 A15C514000              mov eax, dword ptr [0040515C] 
+:00401888 50                      push eax 
+:00401889 6A08                    push 00000008 
+:0040188B FFD2                    call edx 
+:0040188D 83C408                  add esp, 00000008 
+:00401890 893D5C514000            mov dword ptr [0040515C], edi 
+:00401896 EB0F                    jmp 004018A7 
+:00401898 C7400800000000          mov [eax+08], 00000000 
+:0040189F FF7004                  push [eax+04] 
+:004018A2 FFD2                    call edx 
+:004018A4 83C404                  add esp, 00000004 
+:004018A7 B8FFFFFFFF              mov eax, FFFFFFFF 
+:004018AC 893560514000            mov dword ptr [00405160], esi 
+:004018B2 EB0A                    jmp 004018BE 
+:004018B4 FF742410                push [esp+10] 
+* Reference To: KERNEL32.UnhandledExceptionFilter, Ord:0219h 
+:004018B8 FF1540614000            Call dword ptr [00406140] 
+:004018BE 5F                      pop edi 
+:004018BF 5E                      pop esi 
+:004018C0 C3                      ret 
+--------110K Output truncated. The rest of the file is available <a href="pefile2.txt">here</a>-------- 
+</pre> 
+ 
+<P> 
+ 
+<HR> 
+
+</BODY> 
+
+</HTML> 

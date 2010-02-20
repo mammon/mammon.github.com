@@ -1,0 +1,330 @@
+                                        X-Windows in Assembly Language: Part II
+                                        by mammon_
+
+
+
+OK, let's face it: you've seen the tedium of XLib, one *has* to use widgets in 
+order to get any programming done in XWindows. 'But this is assembly langauge', 
+the masochist might point out. 'Aren't widgets a little Visual-Basicy?'
+
+Not in the slightest. A widget is simply a C++ class exported for use --much 
+like the windows API functions, only a little more object oriented...maybe a 
+good comparison would be MFC or VCL. Xt, or 'X toolkit Intrinsics', is the 
+interface that widget sets [such as Athena, Qt or GTK] use to interface with 
+XLib. The Xt include files are in /usr/X11R6/include/X11, its libraries are in 
+/usr/X11R6/lib, and its exported functions are all prefixed with "Xt".
+
+For the following examples I will be using the Atehna widget set, which is 
+supplied with XFree86. The include files for Athena are in /usr/X11R6/include/Xaw
+and the libraries are in /usr/X11R6/lib.
+
+A barebones Xt/Athena app in C would run as follows:
+//====================================================================-xthell.c
+
+#include <X11/Intrinsic.h>
+#include <X11/StringDefs.h>
+#include <X11/Xaw/Command.h>
+
+void Quit(w, client_data, call_data)        //CallBack function
+Widget w;
+XtPointer client_data, call_data;
+{
+	exit(0);
+}
+
+main(argc,argv)
+int argc;
+char **argv;
+{
+	XtAppContext app_context;
+    Widget ShellWidge, ButtnWidge;
+    ShellWidge = XtVaAppInitialize( &app_context, "toplevel", NULL, 0, &argc, \
+                argv, NULL, NULL);
+    ButtnWidge = XtVaCreateManagedWidget("hellbutton", commandWidgetClass, \
+                 ShellWidge, NULL);
+    XtAddCallback(ButtnWidge, XtNcallback, Quit, 0);
+    XtRealizeWidget(ShellWidge);
+	XtAppMainLoop(app_context);
+}
+// compile with cc -o xthell xthello.c -lXmu -lXaw -lXt -lX11 -L/usr/X11R6/lib
+//=========================================================================-EOF
+
+Pretty ugly, eh?  This boils down to the following steps:
+ 1) Create the top-level 'Canvas' widget [the window]
+    ShellWidge = XtVaAppInitialize( &app_context, "toplevel", ..... )
+ 2) Create the button widget
+    ButtnWidge = XtVaCreateManagedWidget("hellbutton", ..... )
+ 3) Register a callback for the button
+    XtAddCallback(ButtnWidge, XtNcallback, Quit, 0);
+ 4) Show the top-level widget
+    XtRealizeWidget(ShellWidge);
+ 5) Transfer control to the Xt message loop
+    XtAppMainLoop(app_context);
+The most interesting thing about Xt programming is in fact the callbacks. 
+Instead of writing a message processing loop, you register a callback function 
+for each widget and then pass control to Xt, which processes the messages for  
+you and dispatches each message to the appropriate callback function. The call- 
+back receives a pointer to the widget that sent the message [the same argument  
+as passed to XtAddCallback], a client_data pointer [the last argument passed to 
+XtAddCallback, used to pass data from the main routine to the callback], and a
+call_data pointer, which contains information from the message [such as cursor 
+or scrollbar position].
+
+The calls themselves are pretty straightforward:
+XtVaAppInitialize initializes [sic] the X app and takes as its arguments a 
+pointer to an XtAppContext structure, the class name of the application, 
+application-specific command line options {args 3 and 4], argc, argv, a default 
+resource-settings file, and a NULL to terminate the arguments list [the 
+XtVaAppInitialize function actually takes a number of different parameters]; it 
+returns a handle to the 'canvas' or 'top-level' widget, on which all other 
+widgets will be painted.
+
+XtVaCreateManagedWidget is used to create any of the Xt widgets [Athena, GTK, 
+etc], and takes as its parameters the instance name, the widget class, the 
+parent widget, and a NULL to terminate the arguments list; it returns a pointer 
+to the created widget.
+ 
+XtAddCallback is used to register a callback function with a specific widget; 
+it takes as its parameters a pointer to the Widget, the callback type, the 
+function being registered, and a pointer to client_data which will be passed to
+the callback.
+
+XtRealizeWidget is simply used like ShowWindow in Windows; it takes a single 
+parameter which is the widget to 'show'; it displays that widget and its 
+children.
+
+XtAppMainLoop takes the current application context [which was filled with the 
+XtVaAppInitialize call] and turns control over to the Xt message processing 
+loop. Note that the program does not have to return; in this example, the exit 
+call is placed in the callback function.      
+
+Here is the same application written for NASM:
+;===================================================================-xthell.asm
+BITS    32
+GLOBAL 	main
+GLOBAL 	bail
+EXTERN	XtVaAppInitialize
+EXTERN	XtVaCreateManagedWidget
+EXTERN	XtAddCallback
+EXTERN	XtRealizeWidget
+EXTERN	XtAppMainLoop
+EXTERN commandWidgetClass
+EXTERN exit
+
+SECTION .data
+AppContext	DD	0
+ShellWidge	DD	0
+ButtnWidge	DD	0
+ARGC	times 128	DB	0
+ClassName   DB  "toplevel",0
+ButtnName	DB	"hellbutton",0
+XtNcallback    DB  "callback",0    ;XtNcallback
+
+SECTION .text                   
+bail:
+	pop eax      ; Xt_Pointer call_data
+	pop ebx      ; Xt_Pointer client_data
+	pop ecx      ; Xt_Pointer widget
+	push dword 0
+	call exit
+;--------------------------  main
+main:
+	 mov eax, esp
+     push dword 0               ;Number of Args
+     push dword 0               ;Args
+     push dword 0               ;Fallback Resources
+     push dword 0               ;argv
+     push dword ARGC            ;&argc
+     push dword 0               ;Number of Options
+     push dword 0               ;Options Array
+	 push dword ClassName		;Class Name (String)		
+	 push dword AppContext		;Application Context (Ptr)
+	 call XtVaAppInitialize
+	 add  esp, 36
+	mov  [ShellWidge], eax
+	push dword 0
+    push eax                        ;Button parent (ShellWidge)
+	push dword [commandWidgetClass]	;Button widget type
+    push dword ButtnName            ;Button class name
+	call XtVaCreateManagedWidget
+	add  esp, 16
+	mov  [ButtnWidge], eax
+    push dword 0                    ; client_data
+    push dword bail                 ;CallBack function
+    push dword XtNcallback          ; callback type
+    push eax                        ;CallBack widget (ButtonWidge)
+	call XtAddCallback
+	add  esp, 16
+    push dword [ShellWidge]         ;Widget Handle
+	call XtRealizeWidget
+	add  esp, 4
+	push dword [AppContext]
+	call XtAppMainLoop
+	add esp, 4
+	ret
+;==========================================================================-EOF
+This can be compiled with the following commands:    
+    nasm -f elf xthell.asm
+    gcc -o xthell xthell.o -lXaw -lXt -lX11 -L/usr/X11R6/lib
+
+Most of the operation is the same as the C file; naturally you must push dword 
+0's instead of NULLs...and do not forget to push the arguments in reverse 
+order and to clean up the stack afterwards; this is C after all and not stdcall 
+is used in Windows.
+
+You will have to study up on Athena to learn what the names of the various 
+widgets are ... I found it helpful to use
+    grep extern /usr/X11R6/include/Xaw/*
+for a general overview. Note that the class names are strings in assembly; also
+each of the various 'handles' [widgets, contexts, etc] is simply defined with a
+DD 0 -- your generic 32-bit variable. The Callback type turned out to be a 
+string defined in the Xt header files; I simply recreated it above. 
+
+Another interesting gemis the need to call 'exit' rather than simply using a 
+'ret' as you would in console mode; the latter causes segmentation faults, most 
+likely due to the XtAppMainLoop call. In addition you *must* provide a pointer 
+to ARGC whether you check the command line or not; hence the 'ARGC: DB 128'.
+
+In case you didn't notice, the Xt asm example is huge and clunky, with a lot of 
+not-so-obvious variable definitions. Having included a lengthy introduction to 
+NASM macros in this issue, I took the opportunity to create an xt.mac file 
+which will take some of the burden off of experimenting with small Xt apps. The 
+InitXt and RegisterCallback macros probably are not ready for prime-time just 
+yet, but they will do for testing purposes.  
+
+;=======================================================================-xt.mac
+%macro CLASS 2
+%1:	DB	%2,0
+%endmacro
+%macro WDGTPTR 1
+%1:	DD	0
+%endmacro
+%macro CONTEXT 1
+%1:	DD	0
+%endmacro
+%macro CHARSTR 2
+%1:	DB	%2,0
+%endmacro
+%define WIDGET EXTERN
+%define XLibAPI EXTERN
+%define XtAPI	EXTERN
+%define PUBLIC GLOBAL
+%define NULL dword 0
+%define TERM_VARARGS dword 0
+%macro InitXt 2
+SECTION .data
+CONTEXT AppContext
+CLASS XtShell, "XtShell"
+SECTION .text
+EXTERN	 XtVaAppInitialize
+	 push dword 0		;Number of Args
+	 push dword 0		;Args
+	 push dword 0		;Fallback Resources
+	 push dword 0		;argv
+	 push dword %2		;&argc
+	 push dword 0		;Number of Options
+	 push dword 0		;Options Array
+	 push dword XtShell		;Class Name (String)		
+	 push dword AppContext		;Application Context (Ptr)
+	 call XtVaAppInitialize
+	 add  esp, 36
+	 mov  [%1], eax
+%endmacro
+%macro XtMsgLoop 0
+EXTERN	XtAppMainLoop
+	push dword [AppContext]
+	call XtAppMainLoop
+	add esp, 4
+%endmacro
+%macro RegisterCallback 1
+SECTION .data
+CBType:	DB	"callback",0
+SECTION .code	
+	push NULL			;
+	push dword %1			;CallBack function
+	push dword CBType		;
+	push eax			;CallBack parent (ButtonWidge)
+	call XtAddCallback
+	add  esp, 16
+%endmacro	
+%macro CALLBACK 1
+SECTION .data
+Call_Data_%1:	DD	0
+Client_Data_%1:	DD	0
+Widget_%1:	DD	0
+GLOBAL %1
+SECTION .text
+%1:
+	pop eax
+	mov [Call_Data_%1], eax
+	pop ebx
+	mov [Client_Data_%1], ebx
+	pop ecx
+	mov [Widget_%1], ecx
+%endmacro
+%define ENDCALLBACK nop
+%macro ENTRYPOINT 1
+GLOBAL %1
+%1:
+%endmacro
+;==========================================================================-EOF
+Most of the macro file should be readily apparent if you are familiar with the 
+NASM macro facility. I did take the opportunity to clean up the callback 
+function, so that the parameters to the callback are saved in variables, but for 
+the most part it does the same as the equivalent code in the preceding asm 
+example.
+
+Now the xthell.asm sample will look as follows:
+
+;===================================================================-xthell.asm
+BITS 32
+%INCLUDE "xt.mac"
+;========================================================XTRN=====
+XtAPI	XtVaCreateManagedWidget
+XtAPI	XtAddCallback
+XtAPI	XtRealizeWidget
+WIDGET  commandWidgetClass
+EXTERN  exit
+
+;========================================================DATA=====
+SECTION .data
+;------------
+WDGTPTR ptrShell
+WDGTPTR ptrButton
+CLASS XHELL, "XHell"
+CLASS HellButton, "HellButton"
+CallbackType	DB "callback",0	;XtNcallback
+ARGC		times 128	DB	0
+;========================================================CODE=====
+SECTION .text
+;------------
+CALLBACK bail
+	push dword 0
+	call exit
+ENDCALLBACK
+
+
+ENTRYPOINT main
+	InitXt ptrShell, ARGC
+	
+	push TERM_VARARGS
+	push eax			;Button parent (ShellWidge)
+	push dword [commandWidgetClass]	;Button widget type
+	push dword HellButton		;Button class name
+	call XtVaCreateManagedWidget
+	add  esp, 16
+	mov  [ptrButton], eax
+	
+	RegisterCallback bail
+	
+	push dword [ptrShell]		;Widget Handle
+	call XtRealizeWidget
+	add  esp, 4
+	
+	XtMsgLoop
+	ret
+;==========================================================================-EOF    
+Much prettier and hey, only twice as long as the C version! ;)
+
+Next issue I will dwell on Xt/Athena a little longer and come up with some more 
+practical methods of automating the coding process.

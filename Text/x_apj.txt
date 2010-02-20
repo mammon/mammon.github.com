@@ -1,0 +1,437 @@
+                                         X-Windows in Assembly Language: Part I
+                                         by mammon_
+
+
+The sensible way to write programs for X-Windows is to use a toolkit such as Xt
+or Gtk; the easy way would be to use a scripting package such as Python or 
+Tcl/Tk. Modern assembly language coders, however, are known for sacrificing 
+ease and sensibility in the name of curiosity and execution speed; it is in 
+this spirit that the potential for programming X-Windows in assembly language 
+will now be investigated.
+
+
+X-Windows Programming
+---------------------
+Like other GUIs, X-Windows uses an event-driven programming style in which an 
+application registers itself with the system, displays its main user interface, 
+and waits for system events signalling that the user has interacted with the 
+program. There are four main 'levels' of X-Windows Programming: XProtocol, 
+XLib, Xt or 'toolkit' programming, and scripting.
+
+XProtocol
+X-Windows consists of the X Server which handles graphics output, keyboard and 
+mouse input, event signalling, and commands sent from client programs (Window 
+Managers, applications). Clients communicate with the X Server using XProtocol, 
+which consists of byte streams exchanged between the client and the server -- 
+in a sense, like the packets that a network client exchanges with a network
+server. XProtocol is virtually useless for application programming, for the 
+coding overhead for each server request makes development impractical. The 
+details of XProtocol requests can be found in '/usr/include/X11/Xproto.h'.
+
+XLib
+The equivalent of the Win32 API in X-Windows is XLib. Even if one uses toolkits
+for application coding, there is no way to escape XLib coding. XLib serves as 
+an interface between the client programs and the X Server; essentially, it is a 
+library of XProtocol functions exported for use by applications.
+
+Xt
+Toolkit programming is similar to using class libraries (like MFC, OWL, or VCL)
+on the Win32 platform. There are a number of toolkits available, such as Qt, 
+Gtk, Xt Intrinsics, Athena, and the Motif toolkit. Each toolkit consists of 
+extensible widgets (like resources in Win32) that define basic window types: 
+buttons, scrollbars, dialogs, edit windows, etc.
+
+Scripting
+A wide variety of scripting languages are available for the Unix platorm, and 
+many of these have windowing toolkits that enable them to produce X-Windows 
+applications. The most popular are Tcl/Tk, Python, and Java; needless to say, 
+these programming methods may not be implemented in assembly language.
+
+
+The XLib Programming Model
+--------------------------
+An application written for the XLib interface demonstrates the basic principles 
+of X-Windows programming as a whole. These principles make up a 5-step method:
+
+Step I : Connect to the Display
+The first step of an X-Windows application is also the most simple: a call is 
+made to XOpenDisplay; the result --returned in eax of course-- is a pointer to 
+a Display structure. This should be saved, as it will be required for just 
+about every subsequent call: 
+  p_disp = XOpenDisplay( NULL );
+Note: I am providing the sample source in C for this section; the assembler 
+reconstruction will be presented later.
+
+Step II : Initialize Application Resources (Colors and Fonts)
+Before a window can be displayed, it requires a Graphic Context (similar to the 
+Win32 DC); before the GC can be created, it requires that the colors and fonts 
+to be used by the window be initialized.
+
+The simplest way to do this is to use the XLoadQueryFont and the WhitePixel and 
+BlackPixel macros: 
+  mfontstruct = XLoadQueryFont( p_disp, "fixed");
+  WhitePix = WhitePixel( p_disp, DefaultScreen(p_disp));
+  BlackPix = BlackPixel( p_disp, DefaultScreen(p_disp));
+Once again, the values are saved for later use. Note that a more complex method 
+of allocating colors will be used in the assembly code later; there, a handle 
+to the default X Windows colormap is obtained via a call to XDefaultColormap, 
+and XAllocNamedColor is used to allocate white and black pixel values: this 
+accomplishes the same as the above code, but without using the macros.
+
+Step III : Create Window(s)
+There are four things that must be done to create a window: the window itself 
+is registered with the X Server and given a Resource ID, the GC is registered 
+with the X Server and given its own Resource ID, the window must specify which 
+events it will respond to, and finally the window must be mapped into the X 
+display.
+
+Creating the window requires a call to XCreateWindow or XCreateSimpleWindow. 
+XCreateSimpleWindow, used below, requires the display, parent window, x and y 
+screen coordinates, window width and height, border width, border pixel value, 
+and background pixel value. XCreateWindow, used in the assembly version, is
+passed the display, parent window, x & y, width & height, border width, color 
+depth, window class, visual attribute, value mask, and an XSetWindowAttributes 
+structure. A handle to the created window is returned.
+  Main = XCreateSimpleWindow( p_disp, DefaultRootWindow( p_disp ), 100, 100,
+                       100, 50, 1, BlackPix, WhitePix);
+Creating a GC is not strictly necessary; however doing without one causes the 
+application appearance to be unpredicatable (I found that the background of my 
+window became transparent). A GC is created by calling XCreateGC, which is 
+passed the display, window handle, value mask, and a GraphicsContextValues 
+structure:
+  theGC = XCreateGC(p_disp, Main,(GCFont | GCForeground | GCBackground), &gcv);
+Input events are selected using the XSelectInput function, which is passed the 
+display, window handle, and the ORed values of event masks:
+  XSelectInput( p_disp, Main, ExposureMask );
+Finally, the window is mapped onto the display (and therefore displayed) with 
+the XMapWindow call, which is relatively self-explanatory:
+  XMapWindow( p_disp, Main );
+
+At this point, the procedure must be created for each child window (buttons, 
+scrollbars, etc); the following shows the creation of a button with its own GC,
+and selection of the Exposure and ButtonPress event masks:
+  Exit = XCreateSimpleWindow(p_disp, Main, 15, 1, 60, 15, 1,
+                             WhitePix, BlackPix);
+  XSelectInput(p_disp, Exit, ExposureMask | ButtonPressMask );
+  XMapWindow(p_disp, Exit);
+  exitGC = XCreateGC(p_disp, Exit,(GCFont | GCForeground | GCBackground),&gcv);
+Note that a separate GC is not needed for each window if they will be sharing 
+the same background, foreground, and font colors.
+
+Step IV : Event Loop
+The event loop is the 'meat' of the program, where the application responds to 
+user events. This loop calls XNextEvent to get the next system event, and 
+responds to the ones sent to its windows. The following loop catches the Expose
+event and draws text into each window using XDrawString on the initial exposure 
+of each window (xexpose.count ==0). In addition, when the Exit button is 
+pressed, the while loop exits and the application terminates.
+  while( !Done ){
+    XNextEvent(p_disp, &theEvent);
+    if( theEvent.xany.window == Main){
+      if( theEvent.type == Expose && theEvent.xexpose.count == 0){
+        XDrawString(p_disp, Main, theGC, 1, 40, msgtext, strlen(msgtext));
+      }  }
+    if( theEvent.xany.window == Exit){
+      switch(theEvent.type){
+       case Expose:
+         if( theEvent.xexpose.count == 0){
+           XDrawString(p_disp, Exit, exitGC, 2, 11, extext, strlen(extext) );
+         }
+         break;
+       case ButtonPress:
+         Done = 1; }  }  }
+
+Step V : Clean Up and Close Display
+At this point the application is over; the various handles must be freed, the 
+windows destroyed, and the display closed. The functions typically used for 
+this are demonstrated below:
+  XFreeGC(p_disp, theGC);
+  XFreeGC(p_disp, exitGC);
+  XUnloadFont(p_disp, mfontstruct->fid);
+  XDestroyWindow(p_disp, Main);
+  XCloseDisplay(p_disp);
+  exit(0);
+
+Note that sll of the functions, structures, and messages used above are defined 
+in '/usr/include/X11/Xlib.h', './X11/Xutil.h' and './X11/X.h'.
+
+
+Inline Assembler With GCC
+-------------------------
+Due to the presence of the GAS assembler within GCC, inline assembler is pretty
+straightforward. In GCC, the 'asm' keyword is used to prefix a block of asm 
+instructions; the format of 'asm' is as follows:
+   asm( statements : output vars : input vars : modified registers);
+Note that the last three parameters are usually used only if you are writing an 
+entire function in assembly language, or if you are modifying registers that 
+you do not save (it is better to save all the registers that you will modify, 
+if they contain values that will be needed later).
+
+The asm statements are passed directly to GAS, and thus they need to be in a 
+format that GAS will recognize. For this reason, multiline asm statements will 
+require a newline (and, optionally, a tab) after each statement, like so:
+
+  asm(  "
+        statement1 \n
+        statement2 \n
+        statement3 \n
+        statement4"
+    : "g" (outvar)
+    : "g" (invar)
+    : eax, ebx, ecx
+    );
+or, as I have used below:
+  asm(  "statement1 \n\t"
+        "statement2 \n\t"
+        "statement3 \n\t"
+        "statement4 \n\t");
+Other than that there are no real restrictions. Structures do not pass well 
+between C and GAS; if you need to reference specific structure variables from 
+inline assembly code, it is better to place those variables into temporary C 
+variables, whcih can then be accessed from the assembler block as normal. The 
+following demonstrates this:
+    fid = mfontstruct->fid;
+    asm(    "
+            push fid\n
+            push mainGC\n
+            push p_disp\n
+            call XSetFont\n
+            add $12, %esp");
+More information on the GCC inline assembler can be found at: 
+Avly's Programming Page (http://www.castle.net/~avly/djasm.html)
+CodeX Software (http://www.gameprog.com/codex/tut/att_asm.html)
+Brennan's DGPP Resources (http://brennan.home.ml.org/djgpp/) [Currently Down]
+
+
+The XHell Sample Program
+------------------------
+In order to be able to use the C header files for X-Windows, the following 
+program has been written in C for GCC, using C code for the data declarations 
+and assembler for the 'meat' of the program. In Part II of this article (next 
+issue) I will convert this program to the Xt model and implement it in NASM.
+// xhell.c ============================================================
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+/* ==================== Global Variable Declarations ===================== */
+char	*msgtext = "You are in XHell",
+        *extext = "Exit XHell",
+		*m_font = "fixed",
+        *app_name = "xhello",
+        *window_title = "XHell",
+        *szWhite = "white",
+        *szBlack = "black";
+XFontStruct *mfontstruct;
+Display *p_disp;
+Window Main, Exit;
+GC mainGC, exitGC;
+XEvent theEvent;
+Font fid;
+Colormap cmap;
+int Done = 0;
+unsigned long pxBlack, pxWhite;
+XSetWindowAttributes xswa;
+XColor pixBlack, pixWhite;
+XGCValues gcv;
+/* ================ Start of Main Function ==================== */
+main()
+{
+/* ===== Connect to Display ===== */
+  asm(  "push $0\n\t"
+		  "call XOpenDisplay\n\t"
+		  "movl %eax, p_disp\n\t"
+		  "add $4, %esp\n\t");
+/* ===== Setup Colors n' Fonts ===== */
+	asm( "push m_font\n\t"
+		  "push p_disp\n\t"
+		  "call XLoadQueryFont\n\t"
+		  "add $8, %esp\n\t"
+		  "movl %eax, mfontstruct");
+/* ===== Prepare Main Window ===== */
+	fid = mfontstruct->fid;
+/* ===== Create Main Graphics Context ===== */
+	// Obtain Colormap Handle
+	asm(	"push p_disp\n\t"
+			"call XDefaultScreen\n\t"
+			"add $4, %esp\n\t"
+			"push %eax\n\t"
+			"push p_disp\n\t"
+			"call XDefaultColormap\n\t"
+			"add $8, %esp\n\t"
+			"movl %eax, cmap");
+	// Allocate White and Black Colors
+	asm(	"push $pixWhite\n\t"
+			"push $pixWhite\n\t"
+			"push szWhite\n\t"
+			"push cmap\n\t"
+			"push p_disp\n\t"
+			"call XAllocNamedColor\n\t"
+			"add $20, %esp");
+	asm(	"push $pixBlack\n\t"
+			"push $pixBlack\n\t"
+			"push szBlack\n\t"
+			"push cmap\n\t"
+			"push p_disp\n\t"
+			"call XAllocNamedColor\n\t"
+			"add $20, %esp");
+  xswa.background_pixel = pixWhite.pixel;
+  asm(    "push $xswa\n\t"
+            "movl $1, %ebx\n\t"
+            "shl $1, %ebx\n\t"        //CWBackPixel = 1 << 1
+            "push %ebx\n\t"
+            "push $0\n\t"            //CopyFromParent = 0 (X.h)
+            "push $1\n\t"            //InputOutput = 1 (X.h)
+            "push $0\n\t"            //CopyFromParent = 0 (X.h)
+            "push $1\n\t"
+            "push $50\n\t"
+            "push $100\n\t"
+            "push $100\n\t"
+            "push $100\n\t"
+            "push p_disp\n\t"
+            "call XDefaultRootWindow\n\t"
+            "add $4, %esp\n\t"
+            "push %eax\n\t"
+            "push p_disp\n\t"
+            "call XCreateWindow\n\t"
+            "add $48, %esp\n\t"
+            "movl %eax, Main");
+  	gcv.font = fid;
+    asm(    "push $gcv\n\t"
+			"movl $1, %ebx\n\t"
+		  	"shl $14, %ebx\n\t"		//GCFont = 1 << 14
+		  	"push %ebx\n\t"
+			"push  Main\n\t"
+			"push p_disp\n\t"
+			"call XCreateGC\n\t"
+			"add $16, %esp\n\t"
+			"movl %eax, mainGC");
+	pxBlack = pixBlack.pixel;
+	pxWhite = pixWhite.pixel;
+    asm(    "push fid\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetFont\n\t"
+            "push pxBlack\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetForeground\n\t"
+            "push pxWhite\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetBackground\n\t"
+            "add $36, %esp");
+	asm( 	"movl $1, %ebx\n\t"
+		  	"shl $15, %ebx\n\t"		//ExposureMask = 1 << 15
+		  	"push %ebx\n\t"
+			"push Main\n\t"
+			"push p_disp\n\t"
+			"call XSelectInput\n\t"
+			"add $12, %esp");
+    asm(    "push Main\n\t"
+			"push p_disp\n\t"
+			"call XMapWindow\n\t"
+			"add $8, %esp");
+/* ===== Create Child Windows ===== */
+	asm(	"push pxWhite\n\t"
+			"push pxBlack\n\t"
+			"push $1\n\t"
+			"push $15\n\t"
+			"push $60\n\t"
+			"push $1\n\t"
+			"push $15\n\t"
+			"push Main\n\t"
+			"push p_disp\n\t"
+			"call XCreateSimpleWindow\n\t"
+			"movl %eax, Exit\n\t"
+			"add $36, %esp");
+	asm(	"movl $1, %ebx\n\t"
+		  	"shl $15, %ebx\n\t"		//ExposureMask = 1 << 15
+			"movl $1, %ecx\n\t"
+			"shl $2, %ecx\n\t"		//ButtonPressMask = 1 << 2
+			"or %ecx, %ebx\n\t"
+		  	"push %ebx\n\t"
+			"push Exit\n\t"
+			"push p_disp\n\t"
+			"call XSelectInput\n\t"
+			"add $12, %esp");
+  	gcv.foreground = pxBlack;
+  	gcv.background = pxWhite;
+    asm(    "push $gcv\n\t"
+			"movl $1, %ebx\n\t"
+		  	"shl $14, %ebx\n\t"		//GCFont = 1 << 14
+			"movl $1, %ecx\n\t"
+			"shl $2, %ecx\n\t"		//GCForeground = 1 << 2
+			"or %ecx, %ebx\n\t"
+			"movl $1, %ecx\n\t"
+			"shl $3, %ecx\n\t"		//GCBackground = 1 << 3
+			"or %ecx, %ebx\n\t"
+		  	"push %ebx\n\t"
+			"push  Exit\n\t"
+			"push p_disp\n\t"
+			"call XCreateGC\n\t"
+			"add $16, %esp\n\t"
+			"movl %eax, exitGC");
+	asm(  "push Exit\n\t"
+			"push p_disp\n\t"
+			"call XMapWindow\n\t"
+			"add $8, %esp");
+  /* ===== Event Loop ===== */
+  while( !Done ){                 //Implemented in C to save space ;)
+    XNextEvent(p_disp, &theEvent);
+    if( theEvent.xany.window == Main){
+      if( theEvent.type == Expose && theEvent.xexpose.count == 0){
+			asm(	"push $16\n\t"
+					"push msgtext\n\t"
+					"push $40\n\t"
+					"push $1\n\t"
+					"push mainGC\n\t"
+					"push Main\n\t"
+					"push p_disp\n\t"
+					"call XDrawString\n\t"
+					"add $28, %esp");
+      }
+    }
+    if( theEvent.xany.window == Exit){
+      switch(theEvent.type){
+       case Expose:
+         if( theEvent.xexpose.count == 0){
+           XDrawString(p_disp, Exit, exitGC, 2, 11, extext, strlen(extext) );
+         }
+         break;
+       case ButtonPress:
+         Done = 1;
+      }
+    }
+  }
+/* ===== Close Display ===== */
+  asm(    "push mainGC\n\t"
+		  "push p_disp\n\t"
+		  "call XFreeGC\n\t"
+		  "add $8, %esp\n\t"
+		  "push exitGC\n\t"
+		  "push p_disp\n\t"
+		  "call XFreeGC\n\t"
+		  "add $8, %esp\n\t"
+		  "push fid\n\t"
+		  "push p_disp\n\t"
+		  "call XUnloadFont\n\t"
+		  "add $8, %esp\n\t"
+		  "push Main\n\t"
+		  "push p_disp\n\t"
+		  "call XDestroyWindow\n\t"
+		  "call XCloseDisplay\n\t"
+		  "add $8, %esp");
+}
+; EOF =================================================================
+As you can see, producing an XLib program in assembly language is rather 
+unwieldly. The code produced is primarily data manipulations and C calls; there
+is not a lot that assembly has to offer, even in the event loop. In fact, the 
+only real optimization --aside from overhead added by the compiler, which in 
+the above case we do not bypass-- is in the use of straight calls rather than 
+the macros my original C "hello world" relied on.
+
+While this in itself is somewhat of a triumph --for by coding the C application 
+in assembler you learn exactly how much superfluous code there was to get rid
+of-- it is not enough. In the next issue, I will cover Xt programming in 
+assembler, which will use widgets/resources rather than create windows from 
+scratch, therefore placing the bulk of the code in existing system libraries 
+and therefore making the resultant application much smaller.

@@ -1,0 +1,226 @@
+                                                     Using the Gnu AS Assembler
+                                                     by mammon_
+
+
+Using the Gnu AS Assembler
+mammon_
+
+GAS is the GNU project port of the Unix AS assembler; it is available as part
+of the binutils package which is included with any of the GNU compilers (for
+example, GCC). GAS support is built into the various GNU compilers, and so GAS
+can be invoked by invoking the compiler on a .S (asm source) file; however it
+can also be run on any source file (for example, .asm files) by using the 'as'
+command.
+
+The GAS documentation is available on Linux installations in info (.gz) format,
+and is viewed using the command 'info as' or 'info -f as.info'. For the
+novice, a crash course in info: Info files are designed in a tree structure,
+with each page or section being considered a 'node'; h gets help, q quits
+info, SPACE scrolls down the screen, DEL scrolls up the screen, b jumps to the
+beginning of the node, e jumps to the end of the node, n jumps to the next
+node, p jumps to the previous node, g jumps to a specified node, m jumps to a
+specified menu item, s searches the info file, and l steps back 1 node.
+
+The sections of the most interest in the manual will be the Directives 
+('g Pseudo Ops'), Symbols ('g Symbols'), Constants ('g Constants'), and 
+Sections ('g Sections') nodes. For more immediate references, the Intel 386-
+specific topics can be consulted: 'g i386-Syntax', 'g i386-Opcodes', 
+'g i386-Regs', 'g i386-prefixes', 'g i386-Memory', 'g i386-jumps'.
+
+
+The AT&T Syntax
+---------------
+GAS uses the AT&T syntax, which is known to be confusing for those used to the 
+Intel assembler syntax. It has been said that the AT&T syntax is less ambiguous 
+than the Intel, and thus it has its own appeal.
+
+Registers
+One of the most obvious differences in syntax is that the registers in the AT&T
+syntax are prefixed with %. Thus, 'eax ax al ah' would be written '%eax %ax %al
+%ah' for GAS.
+
+Opcode Format and Order
+Unlike the Intel syntax which uses the format 'opcode dest, src', AT&T syntax 
+uses the format 'opcode src, dest'; thus the command 'mov eax, ebx' in Intel 
+would be 'mov %ebx, %eax' in AT&T. In addition, the opcodes in AT&T syntax all 
+take suffixes to specify the size of the operand (note that these suffixes can 
+be ignored usually, as GAS will guess the operand size by the size of the 
+register being accessed)-- thus one would add 'w' to an opcode to specify a 
+word operand, 'b' to specify a byte operand, and 'l' to specify a long operand. 
+The Intel 'mov' opcode would then be specified in AT&T syntax by using 'movb', 
+'movw', or 'movl' as circumstances warrant. Note that this carries over into 
+far calls; as the 'FAR" keyword is not present in GAS, one must prefix (not 
+suffix) the call or jump with "l": thus a 'far call' becomes 'lcall', 'far 
+jmp' becomes 'ljmp', and 'ret far' becomes 'lret'.
+
+Immediate and Absolute values
+Immediate values are prefixed with a $ in the AT&T syntax, while in the Intel 
+syntax they are unmarked. Thus a 'push 4' statement becomes a 'push $4' in 
+AT$T. Also, an absolute value is prefixed by a *, while in Intel it would be 
+unmarked.
+
+Memory Referencing
+This is the part that is most likely to cause trouble for those used to the
+Intel syntax. Intel uses the following syntax for memory references:
+SECTION:[BASE + INDEX*SCALE + DISP]
+where BASE is the register used as a base in the reference, INDEX is a register 
+used to calculate an offset, SCALE is the multiplier used to calculate the 
+offset from the INDEX register, and DISP is the displacement from the BASE or 
+INDEX register. Some examples from the GAS manual:
+[ebp - 4]       [BASE DISP]     (Note: DISP is -4)
+[foo + eax*4]   [DISP + INDEX*SCALE] 
+[foo]           [DISP]          (Value pointed to by 'foo')
+gs:foo          SECTION:DISP    (Contents of variable 'foo')
+AT&T syntax uses the following syntax for memoory references:
+SECTION:DISP(BASE, INDEX, SCALE)
+As with the Intel syntax, all of these are optional (and it appears that BASE 
+and INDEX are rarely used together). The GAS manual provides the following 
+examples equivalent to the above Intel examples:
+-4(%ebp)        DISP(BASE)
+foo(,%eax,4)    DISP(,INDEX,SCALE)
+foo(,1)         DISP(,SCALE)        (Note: the single comma is intentional)
+%gs:foo         SECTION:DISP
+Note that you must provide commas within the parentheses whenever you skip an 
+element (e.g., if you do not use BASE).
+
+To illustrate, here are some examples of memory references mixed in with asm
+opcodes (from http://www.castle.net/~avly/djasm.html):
+        __AT&T______________________    __Intel_________________________
+        movl 4(%ebp), %eax               mov eax, [ebp+4])
+        addl (%eax,%eax,4), %ecx         add ecx, [eax + eax*4])
+        movb $4, %fs:(%eax)              mov fs:eax, 4
+        movl _array(,%eax,4), %eax       mov eax, [4*eax + array])
+        movw _array(%ebx,%eax,4), %cx    mov cx, [ebx + 4*eax + array])
+
+
+Labels & Symbols
+Labels in GAS are the same as in other assemblers: the name of the label 
+followed by a colon. All symbol names must begin with a letter, a period, or an 
+underscore. Local symbols are defined using the digits 0-9 followed by a colon,
+and are referred to using that digit followed by a b (for a backward reference) 
+or f (for a forward reference); note that this allows only 10 local symbols. A 
+symbol can be assigned a value using the equals sign (e.g. 'TRUE = 1') or by 
+using the .set or .equ directives.
+
+
+Directives
+----------
+GAS allows most of the standard assembler directives; what follows are the most 
+commonly used.
+
+.align
+Pad the section to a specified alignment (e.g. 4 bytes); this directive takes 
+as an argument the alignment sized, as well as an optional argument specifying 
+the byte used to fill the pad areas (default is 00).
+
+.ascii, .asciz, .string
+Each of these directives takes one or more strings separated by commas; in the 
+.ascii directive, the strings are not terminated, in the .asciz and .string 
+directives the strings are zero-terminated.
+
+.byte, .double, .int, .word
+Each of these directives takes as an argument an expression (for example, 
+value1 + value2) and defines the specified number of bytes (byte, int, word, 
+etc) at the current location to the result of the expression.
+
+.data, .section, .text 
+The .section directive allows segments or sections of the target program to be 
+defined for the linker. The .section directive takes a section name, as well as
+section flags (b = bss, w = writable, d = data, r = read-only, x = executable 
+for COFF files; a = allocatable, w = writable, x = executable, @progbits =  
+data, @nobits = no data for ELF files). The .data and .text directives are 
+pre-defined .section directives for data and code sections.
+ 
+.equ, .set 
+Each of these sets the first argument (a symbol) with the result of the second 
+argument (an expression), for example
+.equ TRUE 1
+sets the Symbol TRUE to the value 1.
+
+.extern 
+The traditional EXTERN directive is available but ignored; GAS treats all 
+undefined symbols as externs.
+
+.global, .globl
+These directives define global (exported) symbols; each takes as an argument 
+the symbol to be made global.
+
+.if /.endif
+GAS provides the usual IF...ENDIF directives for conditional assembly; the .if 
+directive is followed by an expression, and all code between the .if and the 
+.endif directive is assembled only if that expression returns non-zero.
+ 
+.include 
+This directive includes a file at the current location; it takes as an argument 
+the name of the file in quotes, for example
+.include "stdio.inc"
+
+
+Assembling a Program
+--------------------
+A GAS program can ge assembled by invoking GCC with the O2 (optimize: level 2) 
+option. Note that all GAS programs must have a .text section and a global 
+"main" label.
+
+Here is an example of a 'hello world'-style program in GAS:
+; gashello.S ==========================================================
+.text
+message:
+.ascii "Helloooo, nurse!\0"
+.globl main
+main:
+	pushl $message
+	call puts
+	popl %eax
+	ret
+; EOF =================================================================
+This can be compiled with the command
+gcc -02 gashello.S -o ghello
+or with
+as gashello.S -o gashello.o
+ld -o gashello gashello.o -lc -s -defsym _start=main
+Note that it is much easier to use GCC than to use AS, as you will have to 
+explicitly specify the librarys to link to (hence the -lc parameter) when you 
+call LD.
+
+The Int80 "pid.asm" program from last month's Liux article would be written for 
+GAS as follows:
+;pid.S====================================================================
+.global main
+.text
+szText1:
+.asciz "Getting Current Process ID..." 
+szDone:
+.asciz "Done!"
+szError:
+.asciz "Error in int 80!"
+szOutput:
+.string "%d\n"
+
+main:
+	pushl $szText1
+	call puts
+	popl %ecx
+	mov $20, %eax
+	int $128
+	cmp $0, %eax
+	je Error
+	pushl %eax
+ 	pushl $szOutput
+	call printf
+	popl %ecx
+	popl %ecx
+	pushl $szDone
+	call puts
+	jmp Exit
+Error:
+	pushl $szError
+	call puts
+Exit:
+	popl %ecx
+    ret
+; EOF ====================================================================
+This can be compiled in the same manner as the previous example; note, though, 
+the need to use decimal numbers when calling interrupts (the 0x?? syntax for 
+specifying a hexadecimal integer causes the opcode to not be recognized by the 
+assembler).

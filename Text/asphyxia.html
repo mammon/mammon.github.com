@@ -1,0 +1,488 @@
+<html>
+<head>
+<title>VGA Trainer Part 19: Asm Tutorial & Fire</title>
+</head>
+<body>
+
+
+<pre><tt>
+                           <b>--==[ PART 19 ]==--</b>
+
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <b>Introduction</b>
+
+Hi there. As promised in Tut 18, this trainer is on assembler. For those
+people who already know assembler quite well, this tut is also on the flame
+effect.
+
+Okay, here is the total list of ways to get my trainers :
+
+http://goth.vironix.co.za/~denthor                     (WWW)
+ftp.eng.ufl.edu pub/msdos/demos/code/graph/tutor       (FTP)
+denthor@beastie.cs.und.ac.za  Subject : request-list   (EMAIL)
+
+As well as the BBS numbers shown at the end ... I will add a few ftp sits
+to that list (x2ftp.oulu.fi etc.)
+
+Tut 20? How about 3d shading, hidden surface removal etc? Mail me :)
+
+
+If you would like to contact me, or the team, there are many ways you
+can do it : 1) Write a message to Grant Smith/Denthor/Asphyxia in private mail
+                  on the ASPHYXIA BBS.
+            2) Write to :  Grant Smith
+                           P.O.Box 270 Kloof
+                           3640
+                           Natal
+                           South Africa
+            3) Call me (Grant Smith) at (031) 73 2129 (leave a message if you
+                  call during varsity). Call +27-31-73-2129 if you call
+                  from outside South Africa. (It's YOUR phone bill ;-))
+            4) Write to denthor@beastie.cs.und.ac.za in E-Mail.
+            5) Write to asphyxia@beastie.cs.und.ac.za to get to all of
+               us at once.
+
+NB : If you are a representative of a company or BBS, and want ASPHYXIA
+       to do you a demo, leave mail to me; we can discuss it.
+NNB : If you have done/attempted a demo, SEND IT TO ME! We are feeling
+        quite lonely and want to meet/help out/exchange code with other demo
+        groups. What do you have to lose? Leave a message here and we can work
+        out how to transfer it. We really want to hear from you!
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  <b>Assembler - the short version</b>
+
+Okay, there are many assembler trainers out there, many of which are
+probably better then this one. I will focus on the areas of assembler that
+I find important ... if you want more, go buy a book (go for the Michael
+Abrash ones), or scour the 'net for others.
+
+First, let us start off with the basic set up of an assembler program.
+
+DOSSEG
+
+This tells your assembler program to order your segments in the same manner
+that high level languages do.
+
+.MODEL <MODEL>
+
+<MODEL> can be : Tiny       Code + Data < 64k   (Can be made a COM file)
+                 Small      Code "-.class" tppabs="-.class" 64k          Data < 64k
+                 Medium     Code > 64k          Data < 64k
+                 Compact    Code "-.class" tppabs="-.class" 64k          Data > 64k
+                 Large      Code > 64k          Data > 64k
+                 Huge       Arrays > 64k
+
+.286
+
+Enable 286 instructions ... can be .386 ; .386P etc.
+
+.STACK <size>
+
+<size> will be the size of your stack. I usually use 200h
+
+.DATA
+
+Tells the program that the data is about to follow. (Everything after this
+will be placed in the data segment)
+
+.CODE
+
+Tells the program that the code is about to follow. (Everything after this
+will be placed in the code segment)
+
+START :
+
+Tells the program that this is where the code begins.
+
+END START
+
+Tells the program that this is where the code ends.
+
+To compile and run an assembler file, we run
+tasm bob
+tlink bob
+
+I personally use tasm, you will have to find out how your assembler works.
+
+Now, if we ran the above file as follows :
+
+DOSSEG
+.MODEL SMALL
+.286
+.STACK 200h
+.DATA
+.CODE
+
+START
+END START
+
+You would think that is would just exit to dos immediately, right? Wrong.
+You have to specifically give dos back control, by doing the following :
+
+START
+        mov     ax,4c00h
+        int     21h
+END START
+
+Now if you compiled it, it would run and do nothing.
+
+Okay, let us kick off with registers.
+
+Firstly : A bit is a value that is either 1 or 0
+
+This is obviously quite limited, but if we start counting in them, we can
+get larger numbers. Counting with ones and zeros is known as binary, and we
+call it base 2. Counting in normal decimal is known as base 10, and
+counting in hexidecimal is known as base 16.
+
+    Base 2 (Binary)     Base 10 (Decimal)    Base 16 (Hexidecimal)
+         0                      0                       0
+         1                      1                       1
+         10                     2                       2
+         11                     3                       3
+         100                    4                       4
+         101                    5                       5
+         110                    6                       6
+         111                    7                       7
+         1000                   8                       8
+         1001                   9                       9
+         1010                   10                      A
+         1011                   11                      B
+         1100                   12                      C
+         1101                   13                      D
+         1110                   14                      E
+         1111                   15                      F
+
+As you can see, you need four bits to count up to 15, and we call this a
+nibble. With eight bits, we can count up to 255, and we call this a byte.
+With sixteen bits, we can count up to 65535, and we call this a word. With
+thirty two bits, we can count up to lots, and we call this a double word. :)
+
+A quick note : Converting from binary to hex is actually quite easy. You
+break up the binary into groups of four bits, starting on the right, and
+convers these groups of four to hex.
+
+      1010 0010 1111 0001
+  =      A    2    F    1
+
+Converting to decimal is a bit more difficult. What you do, is you multiply
+each number by it's base to the power of it's index ...
+
+  A2F1 hex
+= (A*16^3) + (2*16^2) + (F*16^1) + (1*16^0)
+= (10*4096) + (2*256) + (15*16) + (1)
+= 40960 + 512 + 240 + 1
+= 41713 decimal
+
+The same system can be used for binary.
+
+To convert from decimal to another base, you divide the decimal value by the
+desired base, keeping a note of the remainders, and then reading the results
+backwards.
+
+               16   |   41713
+               16   |   2607    r   1       (41713 / 16 = 2607 r 1)
+               16   |   162     r   F       (2607 / 16 = 162 r 15)
+               16   |   10      r   2       (162 / 16 = 10 r 2)
+                    |   0       r   A       (10 / 16 = 0 r 10)
+
+Read the remainders bacckwards, our number is : A2F1 hex. Again, the same
+method can be used for binary.
+
+The reason why hex is popular is obvious ... using bits, it is impossible
+to get a reasonable base 10 (decimal) system going, and binary get's unwieldly
+at high values. Don't worry too much though : most assemblers (like Tasm)
+will convert all your decimal values to hex for you.
+
+You have four general purpose registers : AX, BX, CX and DX
+Think of them as variables that you will always have. On a 286, these
+registers are 16 bytes long, or one word.
+
+As you know, a word consists of two bytes, and in assembler you can access
+these bytes individualy. They are separated into high bytes and low bytes per
+word.
+
+   High Byte |  Low Byte
+   0000 0000 | 0000 0000  bits
+   [--------Word-------]
+
+The method of access is easy. The high byte of AX is AH, and the low byte is
+AL ... you can also access BH, BL, CH, CL, DH and DL.
+
+A 386 has extended registers : EAX, EBX, ECX, EDX ... you can access the
+lower word normally (as AX, with bytes AH and AL), but you cannot access the
+high word directly ... you must ror EAX,16 (rotate the binary value through
+16 bits), after which the high word and low word swap ... do it again to
+return them. Acessing EAX as a whole is no problem ... mov eax,10 ;
+add eax,ebx ... these are all vaild.
+
+Next come segments. As you have probably heard, computer memory is divided
+into various 64k segments (note : 64k = 65536 bytes, sound familiar?) A
+segment register points to which segment you are looking at. An offset
+register points to how far into that segment you are looking. One way
+of looking at it is like looking at a 2d array ... the segments are your
+columns and your offsets are your rows. Segments and offsets are displayed
+as Segment:Offset ... so $a000:50 would mean the fiftieth byte in segment
+$a000.
+
+The segment registers are ES, DS, SS and CS. A 386 also has FS an GS.
+These values are words (0-65535), and you cannot access the high or low bytes
+separately. CS points to you your code segment, and usually if you touch this
+your program will explode. SS points to your stack segment, again, this
+baby is dangerous. DS points to your data segment, and can be altered, if
+you put it back after you use it, and don't use any global variables while
+it is altered. ES is your extra segment, and you can do what you want with
+it.
+
+The offset registers are DI, SI, IP, SP, BP. Offset registers are generally
+asscociated with specific segment registers, as follows :
+ES:DI  DS:SI  CS:IP  SS:SP ... On a 286, BX can be used instead of the above
+offset registers, and on a 386, any register may be used. DS:BX is therefore
+valid.
+
+If you create a global variable (let's say bob), when you access that
+variable, the compiler will actually look for it in the data segment.
+This means that the statement :
+
+ax = bob
+could be
+ax = ds:[15]
+
+A quick note : A value may be signed or unsigned. An unsigned word has a
+range from 0 to 65535. A signed word is called an integer and has a range
+-32768 to 32767. With a signed value, if the leftmost bit is equal to 1,
+the value is in the negative.
+
+Next, let us have a look at the stack. Let us say that you want to save the
+value in ax, use ax to do other things, then restore it to it's origional
+value afterwards. This is done by utilising the stack. Have a look at the
+following code :
+
+mov   ax, 50      ; ax is equal to 50
+push  ax          ; push ax onto the stack
+mov   ax, 27      ; ax is equal to 27
+pop   ax          ; pop ax off the stack
+At this point, ax is equal to 50.
+
+Remember we defined the stack to be 200h further up? This is part of the
+reason we have it. When you push a value onto the stack, that value is
+recorded on the stack heap (referenced by SS:SP, SP is incremented) When you
+pop a value off the stack, the value is placed into the variable you are
+poping it back in to, SP is decremented and so forth. Note that the computer
+does not care what you pop the value back in to ...
+
+mov   ax, 50
+push  ax
+pop   bx
+
+Would set the values of both ax and bx to 50. (there are faster ways of doing
+this, pushing and poping are fairly fast though)
+
+push ax
+push bx
+pop  ax
+pop  bx
+
+would swap the values of ax and bx. As you can see, to pop the values back
+in to the origional variables, you must pop them back in the opposite
+direction to which you pushed them.
+
+push ax
+push bx
+push cx
+
+pop cx
+pop bx
+pop ax
+
+would result in no change for any of the registers.
+
+When a procedure is called, all the parameters for that procedure are pushed
+onto the stack. These can actually be read right off the stack, if you want
+to.
+
+As you have already seen, the mov command moves a value...
+
+mov  <dest>, <source>
+
+Note that dest and source must be the same number of bits long...
+
+mov  ax, dl
+
+would not work, and neither would
+
+mov  cl,bx
+
+However, mov  cx,dx
+         mov  ax,50
+         mov  es,ax
+are all valid.
+
+Shl I have explained before, it is where all the bits in a register are
+shifted one to the left and a zero added on to the right. This is the
+eqivalent of multiplying the value by two. Shr works in the opposite
+direction.
+
+Rol does the same, except that the bit that is removed from the left is
+replaced on the right hand side. Ror works in the opposite direction.
+
+div <value> divides the value in ax by value and returns the result in
+al if value is a byte, placing the remainder in ah. If value is a word,
+the double word DX:AX is divided by value, the result being placed in ax
+and the remainder in dx. Note that this only works for unsigned values.
+
+idiv <value> does the same as above, but for signed variables.
+
+mul <value>  If value is a byte, al is multiplied by value and the result
+is stored in ax. If value is a word, ax is multiplied by value and the
+result is stored in the double word DX:AX
+
+imul <value> does the same as above, but for signed variables.
+
+The j* commands are fairly simple : if a condition is met, jump to a certain
+lable.
+
+jz  <label>   Jump if zero
+ja  <label>   Jump above     (unsigned)
+jg  <label>   Jump greater   (signed)
+
+and so forth.
+
+An example ...
+
+cmp  ax,50    ; Compare ax to 50
+je   @Equal   ; If they are equal, jump to label @equal
+
+call MyProc   Runs procedure MyProc and then returns to the next line of code.
+
+Procedures are declared as follows :
+
+MyProc   proc near
+           ret    ; Must be here to return from where it was called
+MyProc   endp
+
+Variables are also easy :
+
+bob  db 50
+
+creates a variable bob, a byte, with an initial value of 50.
+
+bob2 dw 50
+
+creates a variable bob2, a word, with an initial value of 50.
+
+bob3 db 1,2,3,4,5,65,23
+
+creates bob3, an array of 7 bytes.
+
+bob4 db 100 dup (?)
+
+creates bob4, an array of 100 bytes, with no starting value.
+
+Go back and look at tut 7 for a whole lot more assembler commands, and get
+some sort of reference guide to help you out with others. I personally use
+the Norton Guides help file to program assembler.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  <b>Fire Routines</b>
+
+To demonstrate how to write an assembler program, we will write a fire
+routine in 100% assembler. The theory is simple...
+
+Set the pallette to go from white to yellow to red to blue to black.
+Create a 2d array representing the screen on the computer.
+Place high values at the bottom of the array (screen)
+for each element, do the following :
+  Take the average of the four elements under it
+
+                         * Current element
+                        123
+                         4  Other elements
+  Get the average of the four elements, and place the result in the current
+  element.
+Repeat
+
+Easy, no? I first saw a fire routine in the Iguana demo, and I just had to
+do one ;) ... it looks very effective.
+
+With the sample file, I have created a batch file, make.bat ... it basically
+says :
+        tasm fire
+        tlink fire
+
+So to build and run the fire program, type :
+make
+fire
+
+The source file is commented quite well, so there shouldn't be any problems.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+  <b>In closing</b>
+
+As you can see, the sample program is in 100% assembler. For the next tut
+I will return to Pascal, and hopefully your new found assembler skills will
+help you there too.
+
+
+
+Byeeeee....
+  - Denthor
+
+
+</pre>
+
+Leave me mail if you want to become an official Asphyxia BBS
+distribution site.
+</tt></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

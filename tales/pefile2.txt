@@ -1,0 +1,1470 @@
+:004018C1 BAD8504000              mov edx, 004050D8
+:004018C6 8B4C2404                mov ecx, dword ptr [esp+04]
+:004018CA 390A                    cmp dword ptr [edx], ecx
+:004018CC 7414                    je 004018E2
+:004018CE 83C20C                  add edx, 0000000C
+* Possible Ref to Menu: HELLO3MENU, Item: "Cut"
+:004018D1 A158514000              mov eax, dword ptr [00405158]
+:004018D6 6BC00C                  imul eax, 0000000C
+:004018D9 05D8504000              add eax, 004050D8
+:004018DE 3BC2                    cmp eax, edx
+:004018E0 77E8                    ja 004018CA
+:004018E2 8B02                    mov eax, dword ptr [edx]
+:004018E4 2BC1                    sub eax, ecx
+:004018E6 83F801                  cmp eax, 00000001
+:004018E9 1BC0                    sbb eax, eax
+:004018EB 23C2                    and eax, edx
+:004018ED C3                      ret
+
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:004018EE 6A04                    push 00000004
+:004018F0 33D2                    xor edx, edx
+:004018F2 8B4C2408                mov ecx, dword ptr [esp+08]
+:004018F6 E801000000              call 004018FC
+:004018FB C3                      ret
+
+:004018FC 56                      push esi
+:004018FD 0FB6C1                  movzx eax, cl
+:00401900 0FB6B069514000          movzx esi, byte ptr [eax+00405169]
+:00401907 85742408                test dword ptr [esp+08], esi
+:0040190B 751B                    jne 00401928
+:0040190D 85D2                    test edx, edx
+:0040190F 740C                    je 0040191D
+:00401911 0FB70445AA574000        movzx eax, word ptr [2*eax+004057AA]
+:00401919 23C2                    and eax, edx
+:0040191B EB02                    jmp 0040191F
+:0040191D 33C0                    xor eax, eax
+:0040191F 85C0                    test eax, eax
+:00401921 B800000000              mov eax, 00000000
+:00401926 7405                    je 0040192D
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401928 B801000000              mov eax, 00000001
+:0040192D 5E                      pop esi
+:0040192E C20400                  ret 0004
+
+:00401931 83EC04                  sub esp, 00000004
+:00401934 8B1570504000            mov edx, dword ptr [00405070]
+:0040193A 53                      push ebx
+:0040193B 56                      push esi
+:0040193C 57                      push edi
+:0040193D 33F6                    xor esi, esi
+:0040193F 55                      push ebp
+:00401940 803A00                  cmp byte ptr [edx], 00
+:00401943 741A                    je 0040195F
+:00401945 803A3D                  cmp byte ptr [edx], 3D
+:00401948 7401                    je 0040194B
+:0040194A 46                      inc esi
+:0040194B 8BFA                    mov edi, edx
+:0040194D B9FFFFFFFF              mov ecx, FFFFFFFF
+:00401952 2BC0                    sub eax, eax
+:00401954 F2                      repnz
+:00401955 AE                      scasb
+:00401956 F7D1                    not ecx
+:00401958 03D1                    add edx, ecx
+:0040195A 803A00                  cmp byte ptr [edx], 00
+:0040195D 75E6                    jne 00401945
+:0040195F 8D04B504000000          lea eax, dword ptr [4*esi+00000004]
+:00401966 50                      push eax
+:00401967 E8BE070000              call 0040212A
+:0040196C A3B4504000              mov dword ptr [004050B4], eax
+:00401971 83C404                  add esp, 00000004
+:00401974 8BE8                    mov ebp, eax
+:00401976 85ED                    test ebp, ebp
+:00401978 750A                    jne 00401984
+:0040197A 6A09                    push 00000009
+:0040197C E8FFFBFFFF              call 00401580
+:00401981 83C404                  add esp, 00000004
+:00401984 8B1D70504000            mov ebx, dword ptr [00405070]
+:0040198A 803B00                  cmp byte ptr [ebx], 00
+:0040198D 745E                    je 004019ED
+:0040198F 8BFB                    mov edi, ebx
+:00401991 B9FFFFFFFF              mov ecx, FFFFFFFF
+:00401996 2BC0                    sub eax, eax
+:00401998 F2                      repnz
+:00401999 AE                      scasb
+:0040199A F7D1                    not ecx
+:0040199C 894C2410                mov dword ptr [esp+10], ecx
+:004019A0 803B3D                  cmp byte ptr [ebx], 3D
+:004019A3 743F                    je 004019E4
+:004019A5 51                      push ecx
+:004019A6 E87F070000              call 0040212A
+:004019AB 83C404                  add esp, 00000004
+:004019AE 894500                  mov dword ptr [ebp+00], eax
+:004019B1 85C0                    test eax, eax
+:004019B3 750A                    jne 004019BF
+:004019B5 6A09                    push 00000009
+:004019B7 E8C4FBFFFF              call 00401580
+:004019BC 83C404                  add esp, 00000004
+:004019BF 8BFB                    mov edi, ebx
+:004019C1 B9FFFFFFFF              mov ecx, FFFFFFFF
+:004019C6 2BC0                    sub eax, eax
+:004019C8 F2                      repnz
+:004019C9 AE                      scasb
+:004019CA F7D1                    not ecx
+:004019CC 2BF9                    sub edi, ecx
+:004019CE 8BC1                    mov eax, ecx
+:004019D0 C1E902                  shr ecx, 02
+:004019D3 8BF7                    mov esi, edi
+:004019D5 8B7D00                  mov edi, dword ptr [ebp+00]
+:004019D8 F3                      repz
+:004019D9 A5                      movsd
+:004019DA 8BC8                    mov ecx, eax
+:004019DC 83C504                  add ebp, 00000004
+:004019DF 83E103                  and ecx, 00000003
+:004019E2 F3                      repz
+:004019E3 A4                      movsb
+:004019E4 035C2410                add ebx, dword ptr [esp+10]
+:004019E8 803B00                  cmp byte ptr [ebx], 00
+:004019EB 75A2                    jne 0040198F
+:004019ED C7450000000000          mov [ebp+00], 00000000
+:004019F4 5D                      pop ebp
+:004019F5 5F                      pop edi
+:004019F6 5E                      pop esi
+:004019F7 5B                      pop ebx
+:004019F8 83C404                  add esp, 00000004
+:004019FB C3                      ret
+
+:004019FC 55                      push ebp
+:004019FD 8BEC                    mov ebp, esp
+:004019FF 83EC08                  sub esp, 00000008
+:00401A02 56                      push esi
+:00401A03 57                      push edi
+:00401A04 6804010000              push 00000104
+:00401A09 BE00304000              mov esi, 00403000
+:00401A0E 56                      push esi
+:00401A0F 6A00                    push 00000000
+* Reference To: KERNEL32.GetModuleFileNameA, Ord:00EBh
+:00401A11 FF1530614000            Call dword ptr [00406130]
+:00401A17 A11C344000              mov eax, dword ptr [0040341C]
+:00401A1C 8935C4504000            mov dword ptr [004050C4], esi
+:00401A22 803800                  cmp byte ptr [eax], 00
+:00401A25 7406                    je 00401A2D
+:00401A27 8B351C344000            mov esi, dword ptr [0040341C]
+:00401A2D 8D45F8                  lea eax, dword ptr [ebp-08]
+:00401A30 8D4DFC                  lea ecx, dword ptr [ebp-04]
+:00401A33 50                      push eax
+:00401A34 51                      push ecx
+:00401A35 6A00                    push 00000000
+:00401A37 6A00                    push 00000000
+:00401A39 56                      push esi
+:00401A3A E853000000              call 00401A92
+:00401A3F 83C414                  add esp, 00000014
+:00401A42 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401A45 C1E002                  shl eax, 02
+:00401A48 0345F8                  add eax, dword ptr [ebp-08]
+:00401A4B 50                      push eax
+:00401A4C E8D9060000              call 0040212A
+:00401A51 83C404                  add esp, 00000004
+:00401A54 8BF8                    mov edi, eax
+:00401A56 85FF                    test edi, edi
+:00401A58 750A                    jne 00401A64
+:00401A5A 6A08                    push 00000008
+:00401A5C E81FFBFFFF              call 00401580
+:00401A61 83C404                  add esp, 00000004
+:00401A64 8D45F8                  lea eax, dword ptr [ebp-08]
+:00401A67 8D4DFC                  lea ecx, dword ptr [ebp-04]
+:00401A6A 50                      push eax
+:00401A6B 8B55FC                  mov edx, dword ptr [ebp-04]
+:00401A6E 51                      push ecx
+:00401A6F 8D0497                  lea eax, dword ptr [edi+4*edx]
+:00401A72 50                      push eax
+:00401A73 57                      push edi
+:00401A74 56                      push esi
+:00401A75 E818000000              call 00401A92
+:00401A7A 83C414                  add esp, 00000014
+:00401A7D 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401A80 48                      dec eax
+:00401A81 893DAC504000            mov dword ptr [004050AC], edi
+:00401A87 5F                      pop edi
+:00401A88 A3A8504000              mov dword ptr [004050A8], eax
+:00401A8D 5E                      pop esi
+:00401A8E 8BE5                    mov esp, ebp
+:00401A90 5D                      pop ebp
+:00401A91 C3                      ret
+
+:00401A92 8B4C2414                mov ecx, dword ptr [esp+14]
+:00401A96 53                      push ebx
+:00401A97 8B542414                mov edx, dword ptr [esp+14]
+:00401A9B 56                      push esi
+:00401A9C 8B74240C                mov esi, dword ptr [esp+0C]
+:00401AA0 57                      push edi
+:00401AA1 8B442418                mov eax, dword ptr [esp+18]
+:00401AA5 55                      push ebp
+:00401AA6 837C241800              cmp dword ptr [esp+18], 00000000
+:00401AAB C70100000000            mov dword ptr [ecx], 00000000
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401AB1 C70201000000            mov dword ptr [edx], 00000001
+:00401AB7 740B                    je 00401AC4
+:00401AB9 8B542418                mov edx, dword ptr [esp+18]
+:00401ABD 8344241804              add dword ptr [esp+18], 00000004
+:00401AC2 8902                    mov dword ptr [edx], eax
+:00401AC4 803E22                  cmp byte ptr [esi], 22
+:00401AC7 7445                    je 00401B0E
+:00401AC9 FF01                    inc dword ptr [ecx]
+:00401ACB 85C0                    test eax, eax
+:00401ACD 7405                    je 00401AD4
+:00401ACF 8A16                    mov dl, byte ptr [esi]
+:00401AD1 8810                    mov byte ptr [eax], dl
+:00401AD3 40                      inc eax
+:00401AD4 8A16                    mov dl, byte ptr [esi]
+:00401AD6 46                      inc esi
+:00401AD7 0FB6FA                  movzx edi, dl
+:00401ADA F6876951400004          test byte ptr [edi+00405169], 04
+:00401AE1 740C                    je 00401AEF
+:00401AE3 FF01                    inc dword ptr [ecx]
+:00401AE5 85C0                    test eax, eax
+:00401AE7 7405                    je 00401AEE
+:00401AE9 8A1E                    mov bl, byte ptr [esi]
+:00401AEB 8818                    mov byte ptr [eax], bl
+:00401AED 40                      inc eax
+:00401AEE 46                      inc esi
+:00401AEF 80FA20                  cmp dl, 20
+:00401AF2 7409                    je 00401AFD
+:00401AF4 84D2                    test dl, dl
+:00401AF6 7409                    je 00401B01
+:00401AF8 80FA09                  cmp dl, 09
+:00401AFB 75CC                    jne 00401AC9
+:00401AFD 84D2                    test dl, dl
+:00401AFF 7503                    jne 00401B04
+:00401B01 4E                      dec esi
+:00401B02 EB53                    jmp 00401B57
+:00401B04 85C0                    test eax, eax
+:00401B06 744F                    je 00401B57
+:00401B08 C640FF00                mov [eax-01], 00
+:00401B0C EB49                    jmp 00401B57
+:00401B0E 46                      inc esi
+:00401B0F 803E22                  cmp byte ptr [esi], 22
+:00401B12 7433                    je 00401B47
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:00401B14 BB04000000              mov ebx, 00000004
+:00401B19 8A16                    mov dl, byte ptr [esi]
+:00401B1B 84D2                    test dl, dl
+:00401B1D 7428                    je 00401B47
+:00401B1F 0FB6D2                  movzx edx, dl
+:00401B22 849A69514000            test byte ptr [edx+00405169], bl
+:00401B28 740C                    je 00401B36
+:00401B2A FF01                    inc dword ptr [ecx]
+:00401B2C 85C0                    test eax, eax
+:00401B2E 7406                    je 00401B36
+:00401B30 8A16                    mov dl, byte ptr [esi]
+:00401B32 46                      inc esi
+:00401B33 8810                    mov byte ptr [eax], dl
+:00401B35 40                      inc eax
+:00401B36 FF01                    inc dword ptr [ecx]
+:00401B38 85C0                    test eax, eax
+:00401B3A 7405                    je 00401B41
+:00401B3C 8A16                    mov dl, byte ptr [esi]
+:00401B3E 8810                    mov byte ptr [eax], dl
+:00401B40 40                      inc eax
+:00401B41 46                      inc esi
+:00401B42 803E22                  cmp byte ptr [esi], 22
+:00401B45 75D2                    jne 00401B19
+:00401B47 FF01                    inc dword ptr [ecx]
+:00401B49 85C0                    test eax, eax
+:00401B4B 7404                    je 00401B51
+:00401B4D C60000                  mov byte ptr [eax], 00
+:00401B50 40                      inc eax
+:00401B51 803E22                  cmp byte ptr [esi], 22
+:00401B54 7501                    jne 00401B57
+:00401B56 46                      inc esi
+:00401B57 33FF                    xor edi, edi
+:00401B59 803E00                  cmp byte ptr [esi], 00
+:00401B5C 0F84DE000000            je 00401C40
+:00401B62 8A16                    mov dl, byte ptr [esi]
+:00401B64 80FA20                  cmp dl, 20
+:00401B67 7405                    je 00401B6E
+:00401B69 80FA09                  cmp dl, 09
+:00401B6C 7503                    jne 00401B71
+:00401B6E 46                      inc esi
+:00401B6F EBF1                    jmp 00401B62
+:00401B71 803E00                  cmp byte ptr [esi], 00
+:00401B74 0F84C6000000            je 00401C40
+:00401B7A 837C241800              cmp dword ptr [esp+18], 00000000
+:00401B7F 740B                    je 00401B8C
+:00401B81 8B542418                mov edx, dword ptr [esp+18]
+:00401B85 8344241804              add dword ptr [esp+18], 00000004
+:00401B8A 8902                    mov dword ptr [edx], eax
+:00401B8C 8B542420                mov edx, dword ptr [esp+20]
+:00401B90 FF02                    inc dword ptr [edx]
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401B92 BB01000000              mov ebx, 00000001
+:00401B97 33ED                    xor ebp, ebp
+:00401B99 803E5C                  cmp byte ptr [esi], 5C
+:00401B9C 7507                    jne 00401BA5
+:00401B9E 46                      inc esi
+:00401B9F 45                      inc ebp
+:00401BA0 803E5C                  cmp byte ptr [esi], 5C
+:00401BA3 74F9                    je 00401B9E
+:00401BA5 803E22                  cmp byte ptr [esi], 22
+:00401BA8 7523                    jne 00401BCD
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401BAA F7C501000000            test ebp, 00000001
+:00401BB0 7519                    jne 00401BCB
+:00401BB2 85FF                    test edi, edi
+:00401BB4 740C                    je 00401BC2
+:00401BB6 8D5601                  lea edx, dword ptr [esi+01]
+:00401BB9 803A22                  cmp byte ptr [edx], 22
+:00401BBC 7504                    jne 00401BC2
+:00401BBE 8BF2                    mov esi, edx
+:00401BC0 EB02                    jmp 00401BC4
+:00401BC2 33DB                    xor ebx, ebx
+:00401BC4 83FF01                  cmp edi, 00000001
+:00401BC7 1BFF                    sbb edi, edi
+:00401BC9 F7DF                    neg edi
+:00401BCB D1ED                    shr ebp, 1
+:00401BCD 8BD5                    mov edx, ebp
+:00401BCF 4D                      dec ebp
+:00401BD0 85D2                    test edx, edx
+:00401BD2 7411                    je 00401BE5
+:00401BD4 85C0                    test eax, eax
+:00401BD6 7404                    je 00401BDC
+:00401BD8 C6005C                  mov byte ptr [eax], 5C
+:00401BDB 40                      inc eax
+:00401BDC 8BD5                    mov edx, ebp
+:00401BDE FF01                    inc dword ptr [ecx]
+:00401BE0 4D                      dec ebp
+:00401BE1 85D2                    test edx, edx
+:00401BE3 75EF                    jne 00401BD4
+:00401BE5 8A16                    mov dl, byte ptr [esi]
+:00401BE7 84D2                    test dl, dl
+:00401BE9 7446                    je 00401C31
+:00401BEB 85FF                    test edi, edi
+:00401BED 750A                    jne 00401BF9
+:00401BEF 80FA20                  cmp dl, 20
+:00401BF2 743D                    je 00401C31
+:00401BF4 80FA09                  cmp dl, 09
+:00401BF7 7438                    je 00401C31
+:00401BF9 85DB                    test ebx, ebx
+:00401BFB 742E                    je 00401C2B
+:00401BFD 85C0                    test eax, eax
+:00401BFF 7419                    je 00401C1A
+:00401C01 0FB6DA                  movzx ebx, dl
+:00401C04 F6836951400004          test byte ptr [ebx+00405169], 04
+:00401C0B 7406                    je 00401C13
+:00401C0D 46                      inc esi
+:00401C0E 8810                    mov byte ptr [eax], dl
+:00401C10 40                      inc eax
+:00401C11 FF01                    inc dword ptr [ecx]
+:00401C13 8A16                    mov dl, byte ptr [esi]
+:00401C15 8810                    mov byte ptr [eax], dl
+:00401C17 40                      inc eax
+:00401C18 EB0F                    jmp 00401C29
+:00401C1A 0FB6D2                  movzx edx, dl
+:00401C1D F6826951400004          test byte ptr [edx+00405169], 04
+:00401C24 7403                    je 00401C29
+:00401C26 46                      inc esi
+:00401C27 FF01                    inc dword ptr [ecx]
+:00401C29 FF01                    inc dword ptr [ecx]
+:00401C2B 46                      inc esi
+:00401C2C E961FFFFFF              jmp 00401B92
+:00401C31 85C0                    test eax, eax
+:00401C33 7404                    je 00401C39
+:00401C35 C60000                  mov byte ptr [eax], 00
+:00401C38 40                      inc eax
+:00401C39 FF01                    inc dword ptr [ecx]
+:00401C3B E919FFFFFF              jmp 00401B59
+:00401C40 837C241800              cmp dword ptr [esp+18], 00000000
+:00401C45 740A                    je 00401C51
+:00401C47 8B542418                mov edx, dword ptr [esp+18]
+:00401C4B C70200000000            mov dword ptr [edx], 00000000
+:00401C51 8B542420                mov edx, dword ptr [esp+20]
+:00401C55 5D                      pop ebp
+:00401C56 5F                      pop edi
+:00401C57 5E                      pop esi
+:00401C58 5B                      pop ebx
+:00401C59 FF02                    inc dword ptr [edx]
+:00401C5B C3                      ret
+
+:00401C5C C7058452400000000000    mov dword ptr [00405284], 00000000
+:00401C66 8B442404                mov eax, dword ptr [esp+04]
+:00401C6A 83F8FE                  cmp eax, FFFFFFFE
+:00401C6D 7512                    jne 00401C81
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401C6F C7058452400001000000    mov dword ptr [00405284], 00000001
+* Reference To: KERNEL32.GetOEMCP, Ord:00F8h
+:00401C79 FF1534614000            Call dword ptr [00406134]
+:00401C7F EB15                    jmp 00401C96
+:00401C81 83F8FD                  cmp eax, FFFFFFFD
+:00401C84 7510                    jne 00401C96
+:00401C86 C7058452400001000000    mov dword ptr [00405284], 00000001
+* Reference To: KERNEL32.GetACP, Ord:0094h
+:00401C90 FF252C614000            Jmp dword ptr [0040612C]
+:00401C96 C3                      ret
+
+:00401C97 8B442404                mov eax, dword ptr [esp+04]
+:00401C9B 3DA4030000              cmp eax, 000003A4
+:00401CA0 7419                    je 00401CBB
+:00401CA2 3DA8030000              cmp eax, 000003A8
+:00401CA7 7419                    je 00401CC2
+:00401CA9 3DB5030000              cmp eax, 000003B5
+:00401CAE 7419                    je 00401CC9
+:00401CB0 3DB6030000              cmp eax, 000003B6
+:00401CB5 7419                    je 00401CD0
+:00401CB7 33C0                    xor eax, eax
+:00401CB9 EB1A                    jmp 00401CD5
+:00401CBB B811040000              mov eax, 00000411
+:00401CC0 EB13                    jmp 00401CD5
+:00401CC2 B804080000              mov eax, 00000804
+:00401CC7 EB0C                    jmp 00401CD5
+:00401CC9 B812040000              mov eax, 00000412
+:00401CCE EB05                    jmp 00401CD5
+:00401CD0 B804040000              mov eax, 00000404
+:00401CD5 C3                      ret
+
+:00401CD6 57                      push edi
+:00401CD7 33C0                    xor eax, eax
+:00401CD9 BF68514000              mov edi, 00405168
+:00401CDE B940000000              mov ecx, 00000040
+:00401CE3 F3                      repz
+:00401CE4 AB                      stosd
+:00401CE5 AA                      stosb
+:00401CE6 BF78524000              mov edi, 00405278
+:00401CEB A36C524000              mov dword ptr [0040526C], eax
+:00401CF0 A370524000              mov dword ptr [00405270], eax
+:00401CF5 AB                      stosd
+:00401CF6 AB                      stosd
+:00401CF7 AB                      stosd
+:00401CF8 5F                      pop edi
+:00401CF9 C3                      ret
+
+:00401CFA 55                      push ebp
+:00401CFB 8BEC                    mov ebp, esp
+:00401CFD 83EC1C                  sub esp, 0000001C
+:00401D00 53                      push ebx
+:00401D01 56                      push esi
+:00401D02 57                      push edi
+:00401D03 FF7508                  push [ebp+08]
+:00401D06 E851FFFFFF              call 00401C5C
+:00401D0B 83C404                  add esp, 00000004
+:00401D0E 8BF0                    mov esi, eax
+:00401D10 39356C524000            cmp dword ptr [0040526C], esi
+:00401D16 0F8463010000            je 00401E7F
+:00401D1C 85F6                    test esi, esi
+:00401D1E 0F8456010000            je 00401E7A
+:00401D24 C745FC00000000          mov [ebp-04], 00000000
+:00401D2B B890524000              mov eax, 00405290
+:00401D30 3930                    cmp dword ptr [eax], esi
+:00401D32 0F8493000000            je 00401DCB
+:00401D38 83C030                  add eax, 00000030
+:00401D3B FF45FC                  inc [ebp-04]
+:00401D3E 3D80534000              cmp eax, 00405380
+:00401D43 72EB                    jb 00401D30
+:00401D45 8D45E4                  lea eax, dword ptr [ebp-1C]
+:00401D48 50                      push eax
+:00401D49 56                      push esi
+* Reference To: KERNEL32.GetCPInfo, Ord:009Ah
+:00401D4A FF1524614000            Call dword ptr [00406124]
+:00401D50 83F801                  cmp eax, 00000001
+:00401D53 0F8513010000            jne 00401E6C
+:00401D59 BF68514000              mov edi, 00405168
+:00401D5E 33C0                    xor eax, eax
+:00401D60 B940000000              mov ecx, 00000040
+:00401D65 F3                      repz
+:00401D66 AB                      stosd
+:00401D67 AA                      stosb
+:00401D68 837DE401                cmp dword ptr [ebp-1C], 00000001
+:00401D6C 0F86E2000000            jbe 00401E54
+:00401D72 8D4DEA                  lea ecx, dword ptr [ebp-16]
+:00401D75 3845EA                  cmp byte ptr [ebp-16], al
+:00401D78 7429                    je 00401DA3
+:00401D7A 8A4101                  mov al, byte ptr [ecx+01]
+:00401D7D 84C0                    test al, al
+:00401D7F 7422                    je 00401DA3
+:00401D81 0FB611                  movzx edx, byte ptr [ecx]
+:00401D84 0FB6C0                  movzx eax, al
+:00401D87 3BC2                    cmp eax, edx
+:00401D89 7210                    jb 00401D9B
+:00401D8B 808A6951400004          or byte ptr [edx+00405169], 04
+:00401D92 0FB64101                movzx eax, byte ptr [ecx+01]
+:00401D96 42                      inc edx
+:00401D97 3BC2                    cmp eax, edx
+:00401D99 73F0                    jnb 00401D8B
+:00401D9B 83C102                  add ecx, 00000002
+:00401D9E 803900                  cmp byte ptr [ecx], 00
+:00401DA1 75D7                    jne 00401D7A
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401DA3 B801000000              mov eax, 00000001
+:00401DA8 80886951400008          or byte ptr [eax+00405169], 08
+:00401DAF 40                      inc eax
+:00401DB0 3DFF000000              cmp eax, 000000FF
+:00401DB5 72F1                    jb 00401DA8
+:00401DB7 56                      push esi
+:00401DB8 89356C524000            mov dword ptr [0040526C], esi
+:00401DBE E8D4FEFFFF              call 00401C97
+:00401DC3 83C404                  add esp, 00000004
+:00401DC6 E990000000              jmp 00401E5B
+:00401DCB BF68514000              mov edi, 00405168
+:00401DD0 33C0                    xor eax, eax
+:00401DD2 B940000000              mov ecx, 00000040
+:00401DD7 33D2                    xor edx, edx
+:00401DD9 F3                      repz
+:00401DDA AB                      stosd
+:00401DDB AA                      stosb
+:00401DDC 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401DDF 6BC006                  imul eax, 00000006
+:00401DE2 8945F8                  mov dword ptr [ebp-08], eax
+:00401DE5 8B45F8                  mov eax, dword ptr [ebp-08]
+:00401DE8 03C2                    add eax, edx
+:00401DEA 8D3CC5A0524000          lea edi, dword ptr [8*eax+004052A0]
+:00401DF1 803F00                  cmp byte ptr [edi], 00
+:00401DF4 742E                    je 00401E24
+:00401DF6 8A4F01                  mov cl, byte ptr [edi+01]
+:00401DF9 84C9                    test cl, cl
+:00401DFB 7427                    je 00401E24
+:00401DFD 0FB607                  movzx eax, byte ptr [edi]
+:00401E00 0FB6C9                  movzx ecx, cl
+:00401E03 3BC8                    cmp ecx, eax
+:00401E05 7215                    jb 00401E1C
+:00401E07 8A8A88524000            mov cl, byte ptr [edx+00405288]
+:00401E0D 088869514000            or byte ptr [eax+00405169], cl
+:00401E13 40                      inc eax
+:00401E14 0FB65F01                movzx ebx, byte ptr [edi+01]
+:00401E18 3BD8                    cmp ebx, eax
+:00401E1A 73F1                    jnb 00401E0D
+:00401E1C 83C702                  add edi, 00000002
+:00401E1F 803F00                  cmp byte ptr [edi], 00
+:00401E22 75D2                    jne 00401DF6
+:00401E24 42                      inc edx
+:00401E25 83FA04                  cmp edx, 00000004
+:00401E28 72BB                    jb 00401DE5
+:00401E2A 56                      push esi
+:00401E2B 89356C524000            mov dword ptr [0040526C], esi
+:00401E31 BF78524000              mov edi, 00405278
+:00401E36 E85CFEFFFF              call 00401C97
+:00401E3B 83C404                  add esp, 00000004
+:00401E3E A370524000              mov dword ptr [00405270], eax
+:00401E43 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401E46 6BC030                  imul eax, 00000030
+:00401E49 8DB094524000            lea esi, dword ptr [eax+00405294]
+:00401E4F A5                      movsd
+:00401E50 A5                      movsd
+:00401E51 A5                      movsd
+:00401E52 EB2B                    jmp 00401E7F
+:00401E54 33C0                    xor eax, eax
+:00401E56 A36C524000              mov dword ptr [0040526C], eax
+:00401E5B BF78524000              mov edi, 00405278
+:00401E60 A370524000              mov dword ptr [00405270], eax
+:00401E65 33C0                    xor eax, eax
+:00401E67 AB                      stosd
+:00401E68 AB                      stosd
+:00401E69 AB                      stosd
+:00401E6A EB15                    jmp 00401E81
+:00401E6C 833D8452400000          cmp dword ptr [00405284], 00000000
+:00401E73 B8FFFFFFFF              mov eax, FFFFFFFF
+:00401E78 7407                    je 00401E81
+:00401E7A E857FEFFFF              call 00401CD6
+:00401E7F 33C0                    xor eax, eax
+:00401E81 5F                      pop edi
+:00401E82 5E                      pop esi
+:00401E83 5B                      pop ebx
+:00401E84 8BE5                    mov esp, ebp
+:00401E86 5D                      pop ebp
+:00401E87 C3                      ret
+
+:00401E88 6AFD                    push FFFFFFFD
+:00401E8A E86BFEFFFF              call 00401CFA
+:00401E8F 83C404                  add esp, 00000004
+:00401E92 C3                      ret
+
+:00401E93 55                      push ebp
+:00401E94 8BEC                    mov ebp, esp
+:00401E96 83EC48                  sub esp, 00000048
+:00401E99 53                      push ebx
+:00401E9A 8D45B8                  lea eax, dword ptr [ebp-48]
+:00401E9D 56                      push esi
+:00401E9E 57                      push edi
+:00401E9F 50                      push eax
+* Reference To: KERNEL32.GetStartupInfoA, Ord:0111h
+:00401EA0 FF155C614000            Call dword ptr [0040615C]
+:00401EA6 837DEC00                cmp dword ptr [ebp-14], 00000000
+:00401EAA 7455                    je 00401F01
+:00401EAC 8D7DFC                  lea edi, dword ptr [ebp-04]
+:00401EAF 8B75EC                  mov esi, dword ptr [ebp-14]
+:00401EB2 A5                      movsd
+:00401EB3 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401EB6 83F840                  cmp eax, 00000040
+:00401EB9 7C05                    jl 00401EC0
+:00401EBB B840000000              mov eax, 00000040
+:00401EC0 8B75EC                  mov esi, dword ptr [ebp-14]
+:00401EC3 BF88534000              mov edi, 00405388
+:00401EC8 83C604                  add esi, 00000004
+:00401ECB 8BC8                    mov ecx, eax
+:00401ECD C1E902                  shr ecx, 02
+:00401ED0 F3                      repz
+:00401ED1 A5                      movsd
+:00401ED2 8BC8                    mov ecx, eax
+:00401ED4 83E103                  and ecx, 00000003
+:00401ED7 F3                      repz
+:00401ED8 A4                      movsb
+:00401ED9 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401EDC 83F840                  cmp eax, 00000040
+:00401EDF 7C05                    jl 00401EE6
+:00401EE1 B840000000              mov eax, 00000040
+:00401EE6 8D0C8500000000          lea ecx, dword ptr [4*eax+00000000]
+:00401EED 8B55EC                  mov edx, dword ptr [ebp-14]
+:00401EF0 C1E902                  shr ecx, 02
+:00401EF3 8B45FC                  mov eax, dword ptr [ebp-04]
+:00401EF6 BFC8534000              mov edi, 004053C8
+:00401EFB 8D741004                lea esi, dword ptr [eax+edx+04]
+:00401EFF F3                      repz
+:00401F00 A5                      movsd
+:00401F01 33DB                    xor ebx, ebx
+:00401F03 BEC8534000              mov esi, 004053C8
+* Reference To: KERNEL32.GetFileType, Ord:00DEh
+:00401F08 8B3D28614000            mov edi, dword ptr [00406128]
+:00401F0E 833EFF                  cmp dword ptr [esi], FFFFFFFF
+:00401F11 7554                    jne 00401F67
+:00401F13 B8F6FFFFFF              mov eax, FFFFFFF6
+:00401F18 81FEC8534000            cmp esi, 004053C8
+:00401F1E 740E                    je 00401F2E
+:00401F20 8D43FF                  lea eax, dword ptr [ebx-01]
+:00401F23 83F801                  cmp eax, 00000001
+:00401F26 B8F5FFFFFF              mov eax, FFFFFFF5
+:00401F2B 83D0FF                  adc eax, FFFFFFFF
+:00401F2E 50                      push eax
+* Reference To: KERNEL32.GetStdHandle, Ord:0113h
+:00401F2F FF1520614000            Call dword ptr [00406120]
+:00401F35 8906                    mov dword ptr [esi], eax
+:00401F37 83F8FF                  cmp eax, FFFFFFFF
+:00401F3A 7432                    je 00401F6E
+:00401F3C C6838853400081          mov byte ptr [ebx+00405388], 81
+:00401F43 50                      push eax
+:00401F44 FFD7                    call edi
+:00401F46 25FF000000              and eax, 000000FF
+:00401F4B 83F802                  cmp eax, 00000002
+:00401F4E 7509                    jne 00401F59
+:00401F50 808B8853400040          or byte ptr [ebx+00405388], 40
+:00401F57 EB15                    jmp 00401F6E
+:00401F59 83F803                  cmp eax, 00000003
+:00401F5C 7510                    jne 00401F6E
+:00401F5E 808B8853400008          or byte ptr [ebx+00405388], 08
+:00401F65 EB07                    jmp 00401F6E
+:00401F67 808B8853400080          or byte ptr [ebx+00405388], 80
+:00401F6E 83C604                  add esi, 00000004
+:00401F71 43                      inc ebx
+:00401F72 81FED0534000            cmp esi, 004053D0
+:00401F78 7694                    jbe 00401F0E
+:00401F7A 5F                      pop edi
+:00401F7B 5E                      pop esi
+:00401F7C 5B                      pop ebx
+:00401F7D 8BE5                    mov esp, ebp
+:00401F7F 5D                      pop ebp
+:00401F80 C3                      ret
+
+:00401F81 F6059950400080          test byte ptr [00405099], 80
+:00401F88 741D                    je 00401FA7
+:00401F8A 833DA050400004          cmp dword ptr [004050A0], 00000004
+:00401F91 7314                    jnb 00401FA7
+:00401F93 C7052455400000400000    mov dword ptr [00405524], 00004000
+:00401F9D C7052855400000000001    mov dword ptr [00405528], 01000000
+:00401FA7 C3                      ret
+
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:00401FA8 6A04                    push 00000004
+:00401FAA 6800100000              push 00001000
+:00401FAF 6800100000              push 00001000
+:00401FB4 6A00                    push 00000000
+* Reference To: KERNEL32.VirtualAlloc, Ord:0224h
+:00401FB6 FF1554614000            Call dword ptr [00406154]
+:00401FBC 85C0                    test eax, eax
+:00401FBE 7504                    jne 00401FC4
+:00401FC0 33C0                    xor eax, eax
+:00401FC2 EB39                    jmp 00401FFD
+:00401FC4 8B0D08314000            mov ecx, dword ptr [00403108]
+:00401FCA 8908                    mov dword ptr [eax], ecx
+:00401FCC A308314000              mov dword ptr [00403108], eax
+:00401FD1 83C008                  add eax, 00000008
+:00401FD4 8BC8                    mov ecx, eax
+:00401FD6 A310554000              mov dword ptr [00405510], eax
+:00401FDB 05F00F0000              add eax, 00000FF0
+:00401FE0 8D5108                  lea edx, dword ptr [ecx+08]
+:00401FE3 3BC1                    cmp eax, ecx
+:00401FE5 760B                    jbe 00401FF2
+:00401FE7 8911                    mov dword ptr [ecx], edx
+:00401FE9 8BCA                    mov ecx, edx
+:00401FEB 83C208                  add edx, 00000008
+:00401FEE 3BC1                    cmp eax, ecx
+:00401FF0 77F5                    ja 00401FE7
+:00401FF2 C70000000000            mov dword ptr [eax], 00000000
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:00401FF8 B801000000              mov eax, 00000001
+:00401FFD C3                      ret
+:00401FFE 833D1055400000          cmp dword ptr [00405510], 00000000
+:00402005 750E                    jne 00402015
+:00402007 E89CFFFFFF              call 00401FA8
+:0040200C 85C0                    test eax, eax
+:0040200E B800000000              mov eax, 00000000
+:00402013 740D                    je 00402022
+:00402015 A110554000              mov eax, dword ptr [00405510]
+:0040201A 8B10                    mov edx, dword ptr [eax]
+:0040201C 891510554000            mov dword ptr [00405510], edx
+:00402022 C3                      ret
+
+:00402023 CC                      int 03
+:00402024 56                      push esi
+:00402025 43                      inc ebx
+:00402026 3230                    xor dh, byte ptr [eax]
+:00402028 58                      pop eax
+:00402029 43                      inc ebx
+:0040202A 3030                    xor byte ptr [eax], dh
+:0040202C 55                      push ebp
+:0040202D 8BEC                    mov ebp, esp
+:0040202F 83EC08                  sub esp, 00000008
+:00402032 53                      push ebx
+:00402033 56                      push esi
+:00402034 57                      push edi
+:00402035 55                      push ebp
+:00402036 FC                      cld
+:00402037 8B5D0C                  mov ebx, dword ptr [ebp+0C]
+:0040203A 8B4508                  mov eax, dword ptr [ebp+08]
+* Possible Ref to Menu: HELLO3MENU, Item: "Exit"
+:0040203D F7400406000000          test [eax+04], 00000006
+:00402044 7577                    jne 004020BD
+:00402046 8945F8                  mov dword ptr [ebp-08], eax
+:00402049 8B4510                  mov eax, dword ptr [ebp+10]
+:0040204C 8945FC                  mov dword ptr [ebp-04], eax
+:0040204F 8D45F8                  lea eax, dword ptr [ebp-08]
+:00402052 8943FC                  mov dword ptr [ebx-04], eax
+:00402055 8B730C                  mov esi, dword ptr [ebx+0C]
+:00402058 8B7B08                  mov edi, dword ptr [ebx+08]
+:0040205B 83FEFF                  cmp esi, FFFFFFFF
+:0040205E 7456                    je 004020B6
+:00402060 8D0C76                  lea ecx, dword ptr [esi+2*esi]
+:00402063 837C8F0400              cmp dword ptr [edi+4*ecx+04], 00000000
+:00402068 743A                    je 004020A4
+:0040206A 56                      push esi
+:0040206B 55                      push ebp
+:0040206C 8D6B10                  lea ebp, dword ptr [ebx+10]
+:0040206F FF548F04                call [edi+4*ecx+04]
+:00402073 5D                      pop ebp
+:00402074 5E                      pop esi
+:00402075 8B5D0C                  mov ebx, dword ptr [ebp+0C]
+:00402078 0BC0                    or eax, eax
+:0040207A 7428                    je 004020A4
+:0040207C 7831                    js 004020AF
+:0040207E 8B7B08                  mov edi, dword ptr [ebx+08]
+:00402081 53                      push ebx
+:00402082 E81DF6FFFF              call 004016A4
+:00402087 83C404                  add esp, 00000004
+:0040208A 8D6B10                  lea ebp, dword ptr [ebx+10]
+:0040208D 56                      push esi
+:0040208E 53                      push ebx
+:0040208F E852F6FFFF              call 004016E6
+:00402094 83C408                  add esp, 00000008
+:00402097 8D0C76                  lea ecx, dword ptr [esi+2*esi]
+:0040209A 8B048F                  mov eax, dword ptr [edi+4*ecx]
+:0040209D 89430C                  mov dword ptr [ebx+0C], eax
+:004020A0 FF548F08                call [edi+4*ecx+08]
+:004020A4 8B7B08                  mov edi, dword ptr [ebx+08]
+:004020A7 8D0C76                  lea ecx, dword ptr [esi+2*esi]
+:004020AA 8B348F                  mov esi, dword ptr [edi+4*ecx]
+:004020AD EBAC                    jmp 0040205B
+:004020AF B800000000              mov eax, 00000000
+:004020B4 EB1C                    jmp 004020D2
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:004020B6 B801000000              mov eax, 00000001
+:004020BB EB15                    jmp 004020D2
+:004020BD 55                      push ebp
+:004020BE 8D6B10                  lea ebp, dword ptr [ebx+10]
+:004020C1 6AFF                    push FFFFFFFF
+:004020C3 53                      push ebx
+:004020C4 E81DF6FFFF              call 004016E6
+:004020C9 83C408                  add esp, 00000008
+:004020CC 5D                      pop ebp
+* Possible Ref to Menu: HELLO3MENU, Item: "New"
+:004020CD B801000000              mov eax, 00000001
+:004020D2 5D                      pop ebp
+:004020D3 5F                      pop edi
+:004020D4 5E                      pop esi
+:004020D5 5B                      pop ebx
+:004020D6 8BE5                    mov esp, ebp
+:004020D8 5D                      pop ebp
+:004020D9 C3                      ret
+
+:004020DA 55                      push ebp
+:004020DB 8B4C2408                mov ecx, dword ptr [esp+08]
+:004020DF 8B29                    mov ebp, dword ptr [ecx]
+:004020E1 8B411C                  mov eax, dword ptr [ecx+1C]
+:004020E4 50                      push eax
+:004020E5 8B4118                  mov eax, dword ptr [ecx+18]
+:004020E8 50                      push eax
+:004020E9 E8F8F5FFFF              call 004016E6
+:004020EE 83C408                  add esp, 00000008
+:004020F1 5D                      pop ebp
+:004020F2 C20400                  ret 0004
+
+:004020F5 33C9                    xor ecx, ecx
+:004020F7 B820574000              mov eax, 00405720
+:004020FC 8B542404                mov edx, dword ptr [esp+04]
+:00402100 3910                    cmp dword ptr [eax], edx
+:00402102 740B                    je 0040210F
+:00402104 83C008                  add eax, 00000008
+:00402107 41                      inc ecx
+:00402108 3D98574000              cmp eax, 00405798
+:0040210D 72F1                    jb 00402100
+:0040210F 3914CD20574000          cmp dword ptr [8*ecx+00405720], edx
+:00402116 8D04CD00000000          lea eax, dword ptr [8*ecx+00000000]
+:0040211D 7508                    jne 00402127
+:0040211F 8B8024574000            mov eax, dword ptr [eax+00405724]
+:00402125 EB02                    jmp 00402129
+:00402127 33C0                    xor eax, eax
+:00402129 C3                      ret
+:0040212A A1B0594000              mov eax, dword ptr [004059B0]
+:0040212F 50                      push eax
+:00402130 FF742408                push [esp+08]
+:00402134 E804000000              call 0040213D
+:00402139 83C408                  add esp, 00000008
+:0040213C C3                      ret
+
+:0040213D 53                      push ebx
+:0040213E 56                      push esi
+:0040213F 57                      push edi
+:00402140 55                      push ebp
+:00402141 8B7C2414                mov edi, dword ptr [esp+14]
+:00402145 81FF00D0FFFF            cmp edi, FFFFD000
+:0040214B 7607                    jbe 00402154
+:0040214D 33C0                    xor eax, eax
+:0040214F E9A3000000              jmp 004021F7
+:00402154 83C703                  add edi, 00000003
+:00402157 8B5C2418                mov ebx, dword ptr [esp+18]
+:0040215B 83E7FC                  and edi, FFFFFFFC
+:0040215E 33ED                    xor ebp, ebp
+:00402160 57                      push edi
+:00402161 E8E6000000              call 0040224C
+:00402166 83C404                  add esp, 00000004
+:00402169 8BF0                    mov esi, eax
+:0040216B 85F6                    test esi, esi
+:0040216D 7540                    jne 004021AF
+:0040216F 57                      push edi
+:00402170 E8C7010000              call 0040233C
+:00402175 83C404                  add esp, 00000004
+:00402178 83F8FF                  cmp eax, FFFFFFFF
+:0040217B 7414                    je 00402191
+:0040217D 57                      push edi
+:0040217E E8C9000000              call 0040224C
+:00402183 83C404                  add esp, 00000004
+:00402186 85C0                    test eax, eax
+:00402188 75D6                    jne 00402160
+:0040218A E8B2000000              call 00402241
+:0040218F EBCF                    jmp 00402160
+:00402191 85DB                    test ebx, ebx
+:00402193 7416                    je 004021AB
+:00402195 392DAC594000            cmp dword ptr [004059AC], ebp
+:0040219B 740E                    je 004021AB
+:0040219D 57                      push edi
+:0040219E FF15AC594000            call dword ptr [004059AC]
+:004021A4 83C404                  add esp, 00000004
+:004021A7 85C0                    test eax, eax
+:004021A9 75B5                    jne 00402160
+:004021AB 33C0                    xor eax, eax
+:004021AD EB48                    jmp 004021F7
+:004021AF 8B06                    mov eax, dword ptr [esi]
+:004021B1 8B4E04                  mov ecx, dword ptr [esi+04]
+:004021B4 80E1FC                  and cl, FC
+:004021B7 8B4004                  mov eax, dword ptr [eax+04]
+:004021BA 24FC                    and al, FC
+:004021BC 2BC1                    sub eax, ecx
+:004021BE 2BC7                    sub eax, edi
+:004021C0 83F804                  cmp eax, 00000004
+:004021C3 741A                    je 004021DF
+:004021C5 57                      push edi
+:004021C6 56                      push esi
+:004021C7 E830000000              call 004021FC
+:004021CC 83C408                  add esp, 00000008
+:004021CF 85C0                    test eax, eax
+:004021D1 740C                    je 004021DF
+:004021D3 8B4804                  mov ecx, dword ptr [eax+04]
+:004021D6 80E1FD                  and cl, FD
+:004021D9 80C901                  or cl, 01
+:004021DC 894804                  mov dword ptr [eax+04], ecx
+:004021DF 8B4604                  mov eax, dword ptr [esi+04]
+:004021E2 24FC                    and al, FC
+:004021E4 894604                  mov dword ptr [esi+04], eax
+:004021E7 8B0E                    mov ecx, dword ptr [esi]
+:004021E9 890D0C554000            mov dword ptr [0040550C], ecx
+:004021EF 8B4604                  mov eax, dword ptr [esi+04]
+:004021F2 24FC                    and al, FC
+:004021F4 83C004                  add eax, 00000004
+:004021F7 5D                      pop ebp
+:004021F8 5F                      pop edi
+:004021F9 5E                      pop esi
+:004021FA 5B                      pop ebx
+:004021FB C3                      ret
+
+:004021FC 56                      push esi
+:004021FD 57                      push edi
+:004021FE 8B74240C                mov esi, dword ptr [esp+0C]
+:00402202 8B06                    mov eax, dword ptr [esi]
+:00402204 8B4E04                  mov ecx, dword ptr [esi+04]
+:00402207 80E1FC                  and cl, FC
+:0040220A 8B7C2410                mov edi, dword ptr [esp+10]
+:0040220E 8B4004                  mov eax, dword ptr [eax+04]
+:00402211 24FC                    and al, FC
+:00402213 2BC1                    sub eax, ecx
+:00402215 83E804                  sub eax, 00000004
+:00402218 3BC7                    cmp eax, edi
+:0040221A 7620                    jbe 0040223C
+:0040221C E8DDFDFFFF              call 00401FFE
+:00402221 85C0                    test eax, eax
+:00402223 7417                    je 0040223C
+:00402225 8B4E04                  mov ecx, dword ptr [esi+04]
+:00402228 80E1FC                  and cl, FC
+:0040222B 8D4C3904                lea ecx, dword ptr [ecx+edi+04]
+:0040222F 894804                  mov dword ptr [eax+04], ecx
+:00402232 8901                    mov dword ptr [ecx], eax
+:00402234 8B16                    mov edx, dword ptr [esi]
+:00402236 8910                    mov dword ptr [eax], edx
+:00402238 8906                    mov dword ptr [esi], eax
+:0040223A EB02                    jmp 0040223E
+:0040223C 33C0                    xor eax, eax
+:0040223E 5F                      pop edi
+:0040223F 5E                      pop esi
+:00402240 C3                      ret
+
+:00402241 6A12                    push 00000012
+:00402243 E838F3FFFF              call 00401580
+:00402248 83C404                  add esp, 00000004
+:0040224B C3                      ret
+
+:0040224C 53                      push ebx
+:0040224D 33C0                    xor eax, eax
+:0040224F 56                      push esi
+:00402250 57                      push edi
+:00402251 55                      push ebp
+:00402252 8B350C554000            mov esi, dword ptr [0040550C]
+:00402258 81FE14554000            cmp esi, 00405514
+:0040225E 7450                    je 004022B0
+:00402260 8B4E04                  mov ecx, dword ptr [esi+04]
+:00402263 80E103                  and cl, 03
+:00402266 80F901                  cmp cl, 01
+:00402269 753B                    jne 004022A6
+:0040226B 8B3E                    mov edi, dword ptr [esi]
+:0040226D 8B5E04                  mov ebx, dword ptr [esi+04]
+:00402270 80E3FC                  and bl, FC
+:00402273 8B5704                  mov edx, dword ptr [edi+04]
+:00402276 8BCA                    mov ecx, edx
+:00402278 80E1FC                  and cl, FC
+:0040227B 2BCB                    sub ecx, ebx
+:0040227D 83E904                  sub ecx, 00000004
+:00402280 3B4C2414                cmp ecx, dword ptr [esp+14]
+:00402284 0F83A2000000            jnb 0040232C
+:0040228A 80E203                  and dl, 03
+:0040228D 80FA01                  cmp dl, 01
+:00402290 7514                    jne 004022A6
+:00402292 8B0F                    mov ecx, dword ptr [edi]
+:00402294 890E                    mov dword ptr [esi], ecx
+:00402296 8B1510554000            mov edx, dword ptr [00405510]
+:0040229C 8917                    mov dword ptr [edi], edx
+:0040229E 893D10554000            mov dword ptr [00405510], edi
+:004022A4 EBC5                    jmp 0040226B
+:004022A6 8B36                    mov esi, dword ptr [esi]
+:004022A8 81FE14554000            cmp esi, 00405514
+:004022AE 75B0                    jne 00402260
+:004022B0 8B1508554000            mov edx, dword ptr [00405508]
+:004022B6 3B150C554000            cmp edx, dword ptr [0040550C]
+:004022BC 7469                    je 00402327
+:004022BE 8D7204                  lea esi, dword ptr [edx+04]
+:004022C1 8B0E                    mov ecx, dword ptr [esi]
+:004022C3 80E103                  and cl, 03
+:004022C6 80F901                  cmp cl, 01
+:004022C9 7565                    jne 00402330
+:004022CB 8B3A                    mov edi, dword ptr [edx]
+:004022CD 8B2E                    mov ebp, dword ptr [esi]
+:004022CF 83E5FC                  and ebp, FFFFFFFC
+:004022D2 8B4F04                  mov ecx, dword ptr [edi+04]
+:004022D5 8BD9                    mov ebx, ecx
+:004022D7 80E3FC                  and bl, FC
+:004022DA 2BDD                    sub ebx, ebp
+:004022DC 83EB04                  sub ebx, 00000004
+:004022DF 3B5C2414                cmp ebx, dword ptr [esp+14]
+:004022E3 7340                    jnb 00402325
+:004022E5 80E103                  and cl, 03
+:004022E8 80F901                  cmp cl, 01
+:004022EB 7543                    jne 00402330
+:004022ED 8B0F                    mov ecx, dword ptr [edi]
+:004022EF 890A                    mov dword ptr [edx], ecx
+:004022F1 8B1D10554000            mov ebx, dword ptr [00405510]
+:004022F7 891F                    mov dword ptr [edi], ebx
+:004022F9 893D10554000            mov dword ptr [00405510], edi
+:004022FF 3B3D0C554000            cmp edi, dword ptr [0040550C]
+:00402305 75C4                    jne 004022CB
+:00402307 89150C554000            mov dword ptr [0040550C], edx
+:0040230D 8B0A                    mov ecx, dword ptr [edx]
+:0040230F 8B36                    mov esi, dword ptr [esi]
+:00402311 83E6FC                  and esi, FFFFFFFC
+:00402314 8B4904                  mov ecx, dword ptr [ecx+04]
+:00402317 80E1FC                  and cl, FC
+:0040231A 2BCE                    sub ecx, esi
+:0040231C 83E904                  sub ecx, 00000004
+:0040231F 3B4C2414                cmp ecx, dword ptr [esp+14]
+:00402323 7202                    jb 00402327
+:00402325 8BC2                    mov eax, edx
+:00402327 5D                      pop ebp
+:00402328 5F                      pop edi
+:00402329 5E                      pop esi
+:0040232A 5B                      pop ebx
+:0040232B C3                      ret
+
+:0040232C 8BC6                    mov eax, esi
+:0040232E EBF7                    jmp 00402327
+:00402330 8B12                    mov edx, dword ptr [edx]
+:00402332 3B150C554000            cmp edx, dword ptr [0040550C]
+:00402338 7584                    jne 004022BE
+:0040233A EBEB                    jmp 00402327
+:0040233C 53                      push ebx
+:0040233D BAFFFFFFFF              mov edx, FFFFFFFF
+:00402342 8B442408                mov eax, dword ptr [esp+08]
+:00402346 56                      push esi
+:00402347 57                      push edi
+:00402348 0503100000              add eax, 00001003
+:0040234D 2500F0FFFF              and eax, FFFFF000
+:00402352 33C9                    xor ecx, ecx
+:00402354 BE18314000              mov esi, 00403118
+:00402359 33FF                    xor edi, edi
+:0040235B 8B1E                    mov ebx, dword ptr [esi]
+:0040235D 2B5EFC                  sub ebx, dword ptr [esi-04]
+:00402360 3BD8                    cmp ebx, eax
+:00402362 7328                    jnb 0040238C
+:00402364 83FAFF                  cmp edx, FFFFFFFF
+:00402367 7507                    jne 00402370
+:00402369 397EF8                  cmp dword ptr [esi-08], edi
+:0040236C 7502                    jne 00402370
+:0040236E 8BD1                    mov edx, ecx
+:00402370 83C60C                  add esi, 0000000C
+:00402373 41                      inc ecx
+:00402374 81FE18344000            cmp esi, 00403418
+:0040237A 72DF                    jb 0040235B
+:0040237C 85D2                    test edx, edx
+:0040237E 7C18                    jl 00402398
+:00402380 50                      push eax
+:00402381 52                      push edx
+:00402382 E81A000000              call 004023A1
+:00402387 83C408                  add esp, 00000008
+:0040238A EB11                    jmp 0040239D
+:0040238C 50                      push eax
+:0040238D 51                      push ecx
+:0040238E E892000000              call 00402425
+:00402393 83C408                  add esp, 00000008
+:00402396 EB05                    jmp 0040239D
+:00402398 B8FFFFFFFF              mov eax, FFFFFFFF
+:0040239D 5F                      pop edi
+:0040239E 5E                      pop esi
+:0040239F 5B                      pop ebx
+:004023A0 C3                      ret
+
+:004023A1 53                      push ebx
+:004023A2 A124554000              mov eax, dword ptr [00405524]
+:004023A7 56                      push esi
+:004023A8 57                      push edi
+:004023A9 8DB0FF0F0000            lea esi, dword ptr [eax+00000FFF]
+:004023AF 81E600F0FFFF            and esi, FFFFF000
+:004023B5 390528554000            cmp dword ptr [00405528], eax
+:004023BB 7607                    jbe 004023C4
+:004023BD 03C0                    add eax, eax
+:004023BF A324554000              mov dword ptr [00405524], eax
+:004023C4 8B7C2414                mov edi, dword ptr [esp+14]
+:004023C8 3BF7                    cmp esi, edi
+:004023CA 7302                    jnb 004023CE
+:004023CC 8BF7                    mov esi, edi
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:004023CE 6A04                    push 00000004
+:004023D0 6800200000              push 00002000
+:004023D5 56                      push esi
+:004023D6 6A00                    push 00000000
+* Reference To: KERNEL32.VirtualAlloc, Ord:0224h
+:004023D8 FF1554614000            Call dword ptr [00406154]
+:004023DE 85C0                    test eax, eax
+:004023E0 7436                    je 00402418
+:004023E2 8B5C2410                mov ebx, dword ptr [esp+10]
+:004023E6 57                      push edi
+:004023E7 8BCB                    mov ecx, ebx
+:004023E9 53                      push ebx
+:004023EA 6BC90C                  imul ecx, 0000000C
+:004023ED 898110314000            mov dword ptr [ecx+00403110], eax
+:004023F3 89B118314000            mov dword ptr [ecx+00403118], esi
+:004023F9 C7811431400000000000    mov dword ptr [ebx+00403114], 00000000
+:00402403 E81D000000              call 00402425
+:00402408 83C408                  add esp, 00000008
+:0040240B 85C0                    test eax, eax
+:0040240D 7412                    je 00402421
+:0040240F 53                      push ebx
+:00402410 E8BD000000              call 004024D2
+:00402415 83C404                  add esp, 00000004
+:00402418 B8FFFFFFFF              mov eax, FFFFFFFF
+:0040241D 5F                      pop edi
+:0040241E 5E                      pop esi
+:0040241F 5B                      pop ebx
+:00402420 C3                      ret
+
+:00402421 33C0                    xor eax, eax
+:00402423 EBF8                    jmp 0040241D
+:00402425 53                      push ebx
+:00402426 56                      push esi
+:00402427 57                      push edi
+:00402428 55                      push ebp
+:00402429 8B7C2414                mov edi, dword ptr [esp+14]
+:0040242D 6BFF0C                  imul edi, 0000000C
+:00402430 8B8714314000            mov eax, dword ptr [edi+00403114]
+:00402436 8B8F18314000            mov ecx, dword ptr [edi+00403118]
+:0040243C 2BC8                    sub ecx, eax
+:0040243E 8B9F10314000            mov ebx, dword ptr [edi+00403110]
+:00402444 03D8                    add ebx, eax
+:00402446 394C2418                cmp dword ptr [esp+18], ecx
+:0040244A 777C                    ja 004024C8
+:0040244C 8B2D20554000            mov ebp, dword ptr [00405520]
+:00402452 8B442418                mov eax, dword ptr [esp+18]
+:00402456 81C5FF0F0000            add ebp, 00000FFF
+:0040245C 2BD2                    sub edx, edx
+:0040245E 81E500F0FFFF            and ebp, FFFFF000
+:00402464 F7F5                    div ebp
+:00402466 8B442418                mov eax, dword ptr [esp+18]
+:0040246A 83FA01                  cmp edx, 00000001
+:0040246D 1BF6                    sbb esi, esi
+:0040246F 2BD2                    sub edx, edx
+:00402471 F7F5                    div ebp
+:00402473 46                      inc esi
+:00402474 03F0                    add esi, eax
+:00402476 0FAFF5                  imul esi, ebp
+:00402479 3BCE                    cmp ecx, esi
+:0040247B 7302                    jnb 0040247F
+:0040247D 8BF1                    mov esi, ecx
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:0040247F 6A04                    push 00000004
+:00402481 6800100000              push 00001000
+:00402486 56                      push esi
+:00402487 53                      push ebx
+* Reference To: KERNEL32.VirtualAlloc, Ord:0224h
+:00402488 FF1554614000            Call dword ptr [00406154]
+:0040248E 85C0                    test eax, eax
+:00402490 B800000000              mov eax, 00000000
+:00402495 7506                    jne 0040249D
+* Reference To: KERNEL32.GetLastError, Ord:00E3h
+:00402497 FF1558614000            Call dword ptr [00406158]
+:0040249D 85C0                    test eax, eax
+:0040249F 740A                    je 004024AB
+:004024A1 83F808                  cmp eax, 00000008
+:004024A4 7422                    je 004024C8
+:004024A6 E896FDFFFF              call 00402241
+:004024AB 56                      push esi
+:004024AC 01B714314000            add dword ptr [edi+00403114], esi
+:004024B2 53                      push ebx
+:004024B3 E854000000              call 0040250C
+:004024B8 83C408                  add esp, 00000008
+:004024BB 85C0                    test eax, eax
+:004024BD 7405                    je 004024C4
+:004024BF E87DFDFFFF              call 00402241
+:004024C4 33C0                    xor eax, eax
+:004024C6 EB05                    jmp 004024CD
+:004024C8 B8FFFFFFFF              mov eax, FFFFFFFF
+:004024CD 5D                      pop ebp
+:004024CE 5F                      pop edi
+:004024CF 5E                      pop esi
+:004024D0 5B                      pop ebx
+:004024D1 C3                      ret
+
+:004024D2 56                      push esi
+:004024D3 6800800000              push 00008000
+:004024D8 8B74240C                mov esi, dword ptr [esp+0C]
+:004024DC 6A00                    push 00000000
+:004024DE 6BF60C                  imul esi, 0000000C
+:004024E1 FFB610314000            push dword ptr [esi+00403110]
+* Reference To: KERNEL32.VirtualFree, Ord:0226h
+:004024E7 FF151C614000            Call dword ptr [0040611C]
+:004024ED 85C0                    test eax, eax
+:004024EF 7505                    jne 004024F6
+:004024F1 E84BFDFFFF              call 00402241
+:004024F6 33C0                    xor eax, eax
+:004024F8 898610314000            mov dword ptr [esi+00403110], eax
+:004024FE 898618314000            mov dword ptr [esi+00403118], eax
+:00402504 898614314000            mov dword ptr [esi+00403114], eax
+:0040250A 5E                      pop esi
+:0040250B C3                      ret
+
+:0040250C 55                      push ebp
+:0040250D 8BEC                    mov ebp, esp
+:0040250F 83EC18                  sub esp, 00000018
+:00402512 56                      push esi
+:00402513 57                      push edi
+:00402514 33F6                    xor esi, esi
+:00402516 8D45E8                  lea eax, dword ptr [ebp-18]
+:00402519 8975E8                  mov dword ptr [ebp-18], esi
+:0040251C 8975EC                  mov dword ptr [ebp-14], esi
+:0040251F 8975F0                  mov dword ptr [ebp-10], esi
+:00402522 8975F4                  mov dword ptr [ebp-0C], esi
+:00402525 8945FC                  mov dword ptr [ebp-04], eax
+:00402528 E8D1FAFFFF              call 00401FFE
+:0040252D 8945E8                  mov dword ptr [ebp-18], eax
+:00402530 3BC6                    cmp eax, esi
+:00402532 0F84E7010000            je 0040271F
+:00402538 E8C1FAFFFF              call 00401FFE
+:0040253D 8945EC                  mov dword ptr [ebp-14], eax
+:00402540 3BC6                    cmp eax, esi
+:00402542 0F84D7010000            je 0040271F
+:00402548 E8B1FAFFFF              call 00401FFE
+:0040254D 8945F0                  mov dword ptr [ebp-10], eax
+:00402550 3BC6                    cmp eax, esi
+:00402552 0F84C7010000            je 0040271F
+:00402558 8D45F8                  lea eax, dword ptr [ebp-08]
+:0040255B 8B7D08                  mov edi, dword ptr [ebp+08]
+:0040255E 50                      push eax
+:0040255F 57                      push edi
+:00402560 E85E020000              call 004027C3
+:00402565 83C408                  add esp, 00000008
+:00402568 85C0                    test eax, eax
+:0040256A 7517                    jne 00402583
+:0040256C 8B4DF8                  mov ecx, dword ptr [ebp-08]
+:0040256F 8B4904                  mov ecx, dword ptr [ecx+04]
+:00402572 80E103                  and cl, 03
+:00402575 80F902                  cmp cl, 02
+:00402578 0F85A1010000            jne 0040271F
+:0040257E 8B75F8                  mov esi, dword ptr [ebp-08]
+:00402581 EB09                    jmp 0040258C
+:00402583 8B4DFC                  mov ecx, dword ptr [ebp-04]
+:00402586 8B31                    mov esi, dword ptr [ecx]
+:00402588 8345FC04                add dword ptr [ebp-04], 00000004
+:0040258C 8BCF                    mov ecx, edi
+:0040258E 897E04                  mov dword ptr [esi+04], edi
+:00402591 80E1FD                  and cl, FD
+:00402594 80C901                  or cl, 01
+:00402597 83F8FD                  cmp eax, FFFFFFFD
+:0040259A 894E04                  mov dword ptr [esi+04], ecx
+:0040259D 8937                    mov dword ptr [edi], esi
+:0040259F 0F8484000000            je 00402629
+:004025A5 83F8FE                  cmp eax, FFFFFFFE
+:004025A8 0F84AA000000            je 00402658
+:004025AE 83F8FF                  cmp eax, FFFFFFFF
+:004025B1 0F84EC000000            je 004026A3
+:004025B7 85C0                    test eax, eax
+:004025B9 8B45F8                  mov eax, dword ptr [ebp-08]
+:004025BC 0F84FF000000            je 004026C1
+:004025C2 8B4004                  mov eax, dword ptr [eax+04]
+:004025C5 2403                    and al, 03
+:004025C7 3C02                    cmp al, 02
+:004025C9 0F8550010000            jne 0040271F
+:004025CF 8B45F8                  mov eax, dword ptr [ebp-08]
+:004025D2 813814554000            cmp dword ptr [eax], 00405514
+:004025D8 7519                    jne 004025F3
+:004025DA 8B4604                  mov eax, dword ptr [esi+04]
+:004025DD 8B550C                  mov edx, dword ptr [ebp+0C]
+:004025E0 24FC                    and al, FC
+:004025E2 03C2                    add eax, edx
+:004025E4 3B0518554000            cmp eax, dword ptr [00405518]
+:004025EA 760A                    jbe 004025F6
+:004025EC A318554000              mov dword ptr [00405518], eax
+:004025F1 EB03                    jmp 004025F6
+:004025F3 8B550C                  mov edx, dword ptr [ebp+0C]
+:004025F6 8D45FC                  lea eax, dword ptr [ebp-04]
+:004025F9 8B4DF8                  mov ecx, dword ptr [ebp-08]
+:004025FC 50                      push eax
+:004025FD FF31                    push dword ptr [ecx]
+:004025FF 52                      push edx
+:00402600 56                      push esi
+:00402601 E854010000              call 0040275A
+:00402606 83C410                  add esp, 00000010
+:00402609 8D4DFC                  lea ecx, dword ptr [ebp-04]
+:0040260C 8B45F8                  mov eax, dword ptr [ebp-08]
+:0040260F 51                      push ecx
+:00402610 56                      push esi
+:00402611 8B10                    mov edx, dword ptr [eax]
+:00402613 8B4004                  mov eax, dword ptr [eax+04]
+:00402616 8B4A04                  mov ecx, dword ptr [edx+04]
+:00402619 80E1FC                  and cl, FC
+:0040261C 24FC                    and al, FC
+:0040261E 2BC8                    sub ecx, eax
+:00402620 51                      push ecx
+:00402621 FF75F8                  push [ebp-08]
+:00402624 E9BC000000              jmp 004026E5
+:00402629 8B550C                  mov edx, dword ptr [ebp+0C]
+:0040262C 8D4DFC                  lea ecx, dword ptr [ebp-04]
+:0040262F 51                      push ecx
+:00402630 6814554000              push 00405514
+:00402635 8D0417                  lea eax, dword ptr [edi+edx]
+:00402638 52                      push edx
+:00402639 56                      push esi
+:0040263A A318554000              mov dword ptr [00405518], eax
+:0040263F E816010000              call 0040275A
+:00402644 83C410                  add esp, 00000010
+:00402647 89350C554000            mov dword ptr [0040550C], esi
+:0040264D 893508554000            mov dword ptr [00405508], esi
+:00402653 E995000000              jmp 004026ED
+:00402658 8D45F8                  lea eax, dword ptr [ebp-08]
+:0040265B 50                      push eax
+:0040265C A118554000              mov eax, dword ptr [00405518]
+:00402661 48                      dec eax
+:00402662 50                      push eax
+:00402663 E85B010000              call 004027C3
+:00402668 83C408                  add esp, 00000008
+:0040266B 83F801                  cmp eax, 00000001
+:0040266E 7405                    je 00402675
+:00402670 E8CCFBFFFF              call 00402241
+:00402675 8B45F8                  mov eax, dword ptr [ebp-08]
+:00402678 8B10                    mov edx, dword ptr [eax]
+:0040267A 8B4004                  mov eax, dword ptr [eax+04]
+:0040267D 24FC                    and al, FC
+:0040267F 8B4A04                  mov ecx, dword ptr [edx+04]
+:00402682 80E1FC                  and cl, FC
+:00402685 8B550C                  mov edx, dword ptr [ebp+0C]
+:00402688 2BC8                    sub ecx, eax
+:0040268A 03D7                    add edx, edi
+:0040268C 8D45FC                  lea eax, dword ptr [ebp-04]
+:0040268F 891518554000            mov dword ptr [00405518], edx
+:00402695 50                      push eax
+:00402696 C70614554000            mov dword ptr [esi], 00405514
+:0040269C 56                      push esi
+:0040269D 51                      push ecx
+:0040269E FF75F8                  push [ebp-08]
+:004026A1 EB42                    jmp 004026E5
+:004026A3 8D45FC                  lea eax, dword ptr [ebp-04]
+:004026A6 50                      push eax
+:004026A7 FF3508554000            push dword ptr [00405508]
+:004026AD FF750C                  push [ebp+0C]
+:004026B0 56                      push esi
+:004026B1 E8A4000000              call 0040275A
+:004026B6 83C410                  add esp, 00000010
+:004026B9 893508554000            mov dword ptr [00405508], esi
+:004026BF EB2C                    jmp 004026ED
+:004026C1 8B00                    mov eax, dword ptr [eax]
+:004026C3 3D14554000              cmp eax, 00405514
+:004026C8 7512                    jne 004026DC
+:004026CA 8B45F8                  mov eax, dword ptr [ebp-08]
+:004026CD 8B4004                  mov eax, dword ptr [eax+04]
+:004026D0 24FC                    and al, FC
+:004026D2 03450C                  add eax, dword ptr [ebp+0C]
+:004026D5 A318554000              mov dword ptr [00405518], eax
+:004026DA EB11                    jmp 004026ED
+:004026DC 8D4DFC                  lea ecx, dword ptr [ebp-04]
+:004026DF 51                      push ecx
+:004026E0 50                      push eax
+:004026E1 FF750C                  push [ebp+0C]
+:004026E4 56                      push esi
+:004026E5 E870000000              call 0040275A
+:004026EA 83C410                  add esp, 00000010
+:004026ED A10C554000              mov eax, dword ptr [0040550C]
+:004026F2 8B4004                  mov eax, dword ptr [eax+04]
+:004026F5 24FC                    and al, FC
+:004026F7 3BC7                    cmp eax, edi
+:004026F9 7620                    jbe 0040271B
+:004026FB 8B06                    mov eax, dword ptr [esi]
+:004026FD 8B4E04                  mov ecx, dword ptr [esi+04]
+:00402700 80E1FC                  and cl, FC
+:00402703 8B4004                  mov eax, dword ptr [eax+04]
+:00402706 24FC                    and al, FC
+:00402708 2BC1                    sub eax, ecx
+:0040270A 83E804                  sub eax, 00000004
+:0040270D 3B051C554000            cmp eax, dword ptr [0040551C]
+:00402713 7206                    jb 0040271B
+:00402715 89350C554000            mov dword ptr [0040550C], esi
+:0040271B 33C0                    xor eax, eax
+:0040271D EB35                    jmp 00402754
+:0040271F 8B45FC                  mov eax, dword ptr [ebp-04]
+:00402722 833800                  cmp dword ptr [eax], 00000000
+:00402725 7428                    je 0040274F
+* Possible Ref to Menu: HELLO3MENU, Item: "Save As..."
+:00402727 BA04000000              mov edx, 00000004
+:0040272C 8B0D10554000            mov ecx, dword ptr [00405510]
+:00402732 8B45FC                  mov eax, dword ptr [ebp-04]
+:00402735 8B30                    mov esi, dword ptr [eax]
+:00402737 890E                    mov dword ptr [esi], ecx
+:00402739 8B45FC                  mov eax, dword ptr [ebp-04]
+:0040273C 8B30                    mov esi, dword ptr [eax]
+:0040273E 893510554000            mov dword ptr [00405510], esi
+:00402744 0155FC                  add dword ptr [ebp-04], edx
+:00402747 8B45FC                  mov eax, dword ptr [ebp-04]
+:0040274A 833800                  cmp dword ptr [eax], 00000000
+:0040274D 75DD                    jne 0040272C
+:0040274F B8FFFFFFFF              mov eax, FFFFFFFF
+:00402754 5F                      pop edi
+:00402755 5E                      pop esi
+:00402756 8BE5                    mov esp, ebp
+:00402758 5D                      pop ebp
+:00402759 C3                      ret
+
+:0040275A 8B542404                mov edx, dword ptr [esp+04]
+:0040275E 53                      push ebx
+:0040275F 56                      push esi
+:00402760 57                      push edi
+:00402761 8B7A04                  mov edi, dword ptr [edx+04]
+:00402764 8B742418                mov esi, dword ptr [esp+18]
+:00402768 8BC7                    mov eax, edi
+:0040276A 2403                    and al, 03
+:0040276C 3C02                    cmp al, 02
+:0040276E 744D                    je 004027BD
+:00402770 8B4E04                  mov ecx, dword ptr [esi+04]
+:00402773 8BC1                    mov eax, ecx
+:00402775 2403                    and al, 03
+:00402777 3C02                    cmp al, 02
+:00402779 7515                    jne 00402790
+:0040277B 83E7FC                  and edi, FFFFFFFC
+:0040277E 8B442414                mov eax, dword ptr [esp+14]
+:00402782 03C7                    add eax, edi
+:00402784 894604                  mov dword ptr [esi+04], eax
+:00402787 24FE                    and al, FE
+:00402789 0C02                    or al, 02
+:0040278B 894604                  mov dword ptr [esi+04], eax
+:0040278E EB2D                    jmp 004027BD
+:00402790 83E7FC                  and edi, FFFFFFFC
+:00402793 8B5C2414                mov ebx, dword ptr [esp+14]
+:00402797 03DF                    add ebx, edi
+:00402799 80E1FC                  and cl, FC
+:0040279C 3BCB                    cmp ecx, ebx
+:0040279E 741D                    je 004027BD
+:004027A0 8B4C241C                mov ecx, dword ptr [esp+1C]
+:004027A4 8B01                    mov eax, dword ptr [ecx]
+:004027A6 8B38                    mov edi, dword ptr [eax]
+:004027A8 83C004                  add eax, 00000004
+:004027AB 8901                    mov dword ptr [ecx], eax
+:004027AD 895F04                  mov dword ptr [edi+04], ebx
+:004027B0 80E3FE                  and bl, FE
+:004027B3 80CB02                  or bl, 02
+:004027B6 895F04                  mov dword ptr [edi+04], ebx
+:004027B9 893A                    mov dword ptr [edx], edi
+:004027BB 8BD7                    mov edx, edi
+:004027BD 5F                      pop edi
+:004027BE 8932                    mov dword ptr [edx], esi
+:004027C0 5E                      pop esi
+:004027C1 5B                      pop ebx
+:004027C2 C3                      ret
+
+:004027C3 813D0855400014554000    cmp dword ptr [00405508], 00405514
+:004027CD 56                      push esi
+:004027CE 7507                    jne 004027D7
+:004027D0 B8FDFFFFFF              mov eax, FFFFFFFD
+:004027D5 EB54                    jmp 0040282B
+:004027D7 A108554000              mov eax, dword ptr [00405508]
+:004027DC 8B542408                mov edx, dword ptr [esp+08]
+:004027E0 8B4004                  mov eax, dword ptr [eax+04]
+:004027E3 24FC                    and al, FC
+:004027E5 3BC2                    cmp eax, edx
+:004027E7 7607                    jbe 004027F0
+:004027E9 B8FFFFFFFF              mov eax, FFFFFFFF
+:004027EE EB3B                    jmp 0040282B
+:004027F0 A118554000              mov eax, dword ptr [00405518]
+:004027F5 24FC                    and al, FC
+:004027F7 3BC2                    cmp eax, edx
+:004027F9 7707                    ja 00402802
+:004027FB B8FEFFFFFF              mov eax, FFFFFFFE
+:00402800 EB29                    jmp 0040282B
+:00402802 8B3508554000            mov esi, dword ptr [00405508]
+:00402808 8B06                    mov eax, dword ptr [esi]
+:0040280A 8B4804                  mov ecx, dword ptr [eax+04]
+:0040280D 80E1FC                  and cl, FC
+:00402810 3BCA                    cmp ecx, edx
+:00402812 7704                    ja 00402818
+:00402814 8BF0                    mov esi, eax
+:00402816 EBF0                    jmp 00402808
+:00402818 8B44240C                mov eax, dword ptr [esp+0C]
+:0040281C 8930                    mov dword ptr [eax], esi
+:0040281E 8B4604                  mov eax, dword ptr [esi+04]
+:00402821 24FC                    and al, FC
+:00402823 2BC2                    sub eax, edx
+:00402825 83F801                  cmp eax, 00000001
+:00402828 1BC0                    sbb eax, eax
+:0040282A 40                      inc eax
+:0040282B 5E                      pop esi
+:0040282C C3                      ret
+
+:0040282D CC                      int 03
+:0040282E FF2538614000            Jmp dword ptr [00406138]
+
+
+

@@ -1,0 +1,562 @@
+                                                                 Extending NASM
+                                                                 by mammon_
+
+
+Programmers transitioning to NASM from a commercial assembler such as MASM or 
+TASM immediately notice the lack of any high-level language structures -- the 
+assembly syntax accepted by NASM is only slightly more sophisticated than what 
+you would find in a debugger. While this has its good side --smaller code size, 
+nothing hidden from the programmer-- it does make coding a bit more tedious.
+
+For this reason NASM comes with a preprocessor that is both simple and powerful;
+by writing NASM macros, the high-level functionality of other assemblers can be 
+emulated rather easily. As thw following macros will demonstrate, most of the 
+high-level asm features in commercial assemblers really do not do anything very
+elaborate; they simply are more convenient for the programmer.
+
+The macros that I will detail below provide some basic C and ASM constructs for
+use in NASM. I have made the complete file available at
+  http://www.eccentrica.org/Mammon/macros.asm
+The macro file can be included in a .asm file with the NASM directive
+  %INCLUDE "macros.asm"
+Comments on the usage of each macro are included in the file.
+
+Macro Basics
+------------
+The fundamenal structure of a NASM macro is
+%macro {macroname} {# parameters}
+%endmacro
+The actual code resides on the line between the %macro and %endmacro tags; this 
+code will be inserted into your program wherever NASM finds {macroname}. Thus 
+you could create a macro to push the contents of each register such as:
+%macro SAVE_REGS 0
+    push eax
+    push ebx
+    push ecx
+    push edx
+%endmacro
+Once you have defined this macro, you can use it in your code like:
+    SAVE_REGS
+    call ReadFile
+...which the preprocessor will expand to
+    push eax
+    push ebx
+    push ecx
+    push edx
+    call ReadFile
+before assembling. It should be noted that all preprocessing takes place in a 
+single stage immediately  before compiling starts; to preview what the pre-
+processor will send to the assembler, you can invoke nasm with the -e option.
+
+The %macro tag requires that you declare the number of paramters that will be 
+passed to the macro. This can be a single number or a range, with a few quirks:
+    %macro LilMac 0             ; takes 0 arguments
+    %macro LilMac 5             ; takes 5 arguments
+    %macro LilMac 0-3           ; takes 0-3 arguments
+    %macro LilMac 1-*           ; takes 1 to unlimited arguments
+    %macro LilMac 1-2+          ; takes 1-2 arguments
+    %macro LilMac 1-3 0, "OK"   ; takes 1-3 arguments, 2-3 default to 0 & "OK"
+The last three examples bear some explanation. The "-*" operator in the %macro 
+tag specifies that the macro can handle any number of parameters; in other 
+words, there is no maximum number, and the minimum is whatever number is to the 
+left of the "-*" operator. The "+" operator means that any additional arguments 
+will be appended to the last argument instead of causing an error, so that:
+    LilMac 0, OK, This argument is one too many
+will result in argument 1 being 0 and argument 2 being "OK, This argument is 
+one too many." Note that this is a good way to pass commas as part of an argu-
+ment (normally they are only separators). Providing defualt arguments after the 
+number of arguments allows a macro to be called with fewer arguments than it 
+expects.
+    %macro SAVE_VARS 1-4 ecx, ebx, eax
+will fill a missing 4th argument with eax, 3rd with ebx, and 2nd with ecx. Note 
+that you have to provide defaults starting with the last argument and working 
+backwards.
+
+The parameters to the macro are available as %1 for the first argument, %2 for 
+the second, and so on, with %0 containing a count of all the arguments. There 
+is an equivalent to the DOS "SHIFT" command called %rotate which will rotate 
+the parameters to either the left or to the right depending on whether a 
+positive or negative value was supplied:
+   Before: %1 %2 %3 %4      Before: %1 %2 %3 %4     Before: %1 %2 %3 %4 
+   %rotate 1                %rotate -1              %rotate 2
+   After:  %4 %1 %2 %3      After:  %2 %3 %4 %1     After:  %3 %4 %1 %2
+So that rotating by 1 will put the value at %1 into %4, and rotating by -1 will
+put the value of %1 into %2.
+
+
+High-Level Calls
+----------------
+Perhaps the buggest complaint about NASM is its primitive call syntax. In MASM 
+and TASM, the parameters to a call may be appended to the call itself:
+    call MessageBox, hOwner, lpszText, lpszTitle, fuStyle
+where in NASM the parameters must be pushed onto the stack prior to the call:
+    push fuStyle
+    push lpszTitle
+    push lpszText
+    push hOwner
+    call MessageBox
+Using NASM's "-*" macro feature along with the %rep directive make a high-level 
+call easy to replicate:
+ %macro call 2-*
+ %define _func %1
+ %rep &0-1
+   %rotate 1
+   push %1
+ %endrep
+   call _func
+ %endmacro
+The %define directive simply defines the variable _func [underscores should 
+prefix variable names in macros so you do not mistakenly use the same name 
+later in the program] as %1, the name of the function to call. The %rep and 
+%endrep directives enclose the instructions to be repeated, and %rep takes as a 
+parameter the number of repetitions [in this case set to the number of macro 
+parameters minus 1]. Thus, the above macro cycles through the arguments to call 
+and pushes them last-argument first [C syntax] before making the call.
+
+Overloading an existing instruction such as call will cause warnings at compile 
+time [remember, the preprocessor thinks you are doing a recursive macro invoke] 
+so usually you will want to name the macro "c_call" or something similar. The 
+following macros provide facilities for C, Pascal, fastcall, and stdcall call
+syntaxes.
+;==============================================================-High-Level Call
+;   ccall    FuncName, param1, param2, param 3... ;Pascal: 1st-1st, no clean
+;   pcall    FuncName, param1, param2, param 3... ;C: Last-1st, stack cleanup
+;   stdcall  FuncName, param1, param2, param 3... ;StdCall: last-1st, no clean
+;   fastcall FuncName, param1, param2, param 3... ;FastCall: registers/stack
+%macro pcall 2-*               
+%define _j %1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+%endmacro
+
+%macro ccall 2-*                        
+%define _j %1
+%assign __params %0-1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+    %assign __params __params * 4
+    add esp, __params
+%endmacro
+
+%macro stdcall 2-*          
+%define _j %1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+%endmacro
+
+%macro fastcall 2-*                
+%define _j %1
+%assign __pnum 1
+%rep %0-4
+    %rotate -1
+    %if __pnum = 1
+     mov eax, %1
+    %elif __pnum = 2
+     mov edx, %1
+    %elif __pnum = 3
+     mov ebx, %1
+    %else
+     push %1
+    %endif
+    %assign __pnum __pnum+1
+%endrep
+    call _j
+%endmacro
+;==========================================================================-END
+
+
+Switch-Case Blocks
+------------------
+One of the most awkward C constructs to code in assembly is the SWITCH-CASE 
+block. It is also rather difficult to re-create as a macro due to variable 
+number and length of CASE statements.
+
+NASM's preprocessor has a context stack which allows you to create a set of 
+local variables and addresses which is specific to a particular invocation of a
+macro. Thus it becomes possible to refer to labels which will be created in a 
+future macro by giving them context-dependent names:
+ %macro MacPart1 0
+  %push mac             ;create a context called "mac"
+    jmp %$loc           ;jump to context-specific label "loc"
+ %endmacro
+
+ %macro MacPart2 0
+  %ifctx mac            ;if we are in context 'mac'
+%$loc:                  ;define label 'loc'
+    xor eax, eax        ;code at this label...
+    ret
+  %endif                ;end the if block
+  %pop                  ;destroy the 'mac' context
+ %endmacro
+As you can see, the context is created and named with a %push directive, and 
+destroyed with a $pop directive. NASM has a number of preprocessor conditional 
+IF/ELSE statements; in the above example, the %ifctx [if current context equals]
+directive is used to determine if a 'mac' context has been created [Note that 
+the 'base' NASM conditionals include %if, %elif, %else, and %endif; these carry
+over to the %ifctx directive, such that there is available %ifctx, %ifnctx, 
+%elifctx, %elifnctx, %else, and %endif; all %if directives must be closed with 
+an %endif directive]. Finally, %$ is used to prefix the name of a context-
+specific variable or label. Non-context-specific local labels use the %% prefix:
+%macro LOOP_XOR
+%%loop:
+    pop eax
+    xor eax, ebx
+    test eax, eax
+    jnz %%loop
+%endmacro
+
+The SWITCH-CASE macro that follows uses the syntax:
+   SWITCH Variable
+   CASE Int
+        BREAK
+   CASE Int
+        BREAK
+   DEFAULT
+   ENDSWITCH 
+Which could be implemented as follows:
+card    db  0   ;card_variable
+Jack    EQU 11
+Queen   EQU 12
+King    EQU 13
+...   
+    SWITCH card
+    CASE Jack
+        add edx, Jack
+        BREAK
+    CASE Queen
+        add edx, Queen
+        BREAK
+    CASE King
+        add edx, King
+        BREAK
+    DEFAULT
+        add d, [card]
+    ENDSWITCH
+Note that SWITCH moves the variable into eax and CASE moves the value into ebx.
+;===========================================================-SWITCH-CASE Blocks
+%macro SWITCH 1
+%push switch            
+%assign __curr 1
+    mov eax, %1
+    jmp %$loc(__curr)
+%endmacro
+
+%macro CASE 1
+%ifctx switch
+    %$loc(__curr):
+    %assign __curr __curr+1
+    mov ebx, %1
+    cmp eax, ebx
+    jne %$loc(__curr)
+%endif
+%endmacro
+
+%macro DEFAULT 0
+%ifctx switch
+    %$loc(__curr):
+%endif
+%endmacro
+
+%macro BREAK 0
+    jmp %$endswitch
+%endmacro
+
+%macro ENDSWITCH 0
+    %ifctx switch
+    %$endswitch:
+    %pop
+    %endif
+%endmacro
+;==========================================================================-END
+
+
+If-Then Blocks
+--------------
+While the preprocessor provides support for if-then directives, it is a slight 
+bit of work to cause that to generate the equivalent assembly language 'if' 
+code [ the preprocessor 'if' is resolved before compile time, not at run time].
+Using macros, you can create if-then blocks with the following structure:
+   IF Value, Cond, Value
+        ;if code here
+   ELSIF Value, Cond, Value
+        ;else-if code here
+   ELSE
+        ;else code here
+   ENDIF
+An example being:
+    IF [Passwd], e, [GoodVal]       ;e == equals or je
+        jmp Registered
+    ELSE
+        jmp FormatHardDrive
+    ENDIF
+The trickiest part about this macro sequence is the 'Cond' parameter. NASM 
+allows condition codes [the 'cc' in 'jcc' that you findin opcode refs] to be 
+passed to macros; these condition codes are simply the 'jcc' with the 'j' cut 
+off --  'jnz' becomes 'nz', 'jne' becomes 'ne', 'je' becomes 'e', and so on. 
+The reason for this is that the condition code is appended to a 'j' later in 
+the macro:
+ %macro Jumper %1 %2 %3    ;JUMPER Reg1, cc, Reg2
+    cmp %1, %3
+    j%+2 Gotcha
+    jmp error
+ %endmacro
+The above code appends %2 to the 'j' with the directive j%+2. Note that if you 
+use j%- instead of j%+, NASM will insert the *inverse* condition code, so that
+jz becomes jnz, etc. For example, calling the macro
+ %macro Jumper2 %1
+    j%-1 JmpHandler
+ %endmacro
+with the invocation 'Jumper2 nz' would assemble the code 'jz JmpHandler'.
+
+The condition codes can be a bit tricky to work with; it is advisable to add a 
+sequence such as the following to the macro file:
+%define EQUAL       e
+%define NOTEQUAL    ne
+%define G-THAN      g
+%define L-THAN      l
+%define G-THAN-EQ   ge
+%define L-THAN-EQ   le
+%define ZERO        z
+%DEFINE NOTZERO     nz
+so that you could call the IF macro as follows:
+    IF PassWd, EQUAL, GoodVal
+        ;if code here
+...etc etc. Note also that the IF-THEN-ELSE macros put the passed values into 
+eax and ebx for compatison, so these registers will need to be preserved.
+
+;===========================================================-IF-THEN-ELSE Loops
+%macro IF 3
+ %push if
+ %assign __curr 1
+    mov eax, %1
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%if_code
+    jmp %$loc(__curr)
+%%if_code:
+%endmacro
+
+%macro ELSIF 3
+  %ifctx if
+    jmp %$end_if
+%$loc(__curr):
+  %assign __curr __curr+1
+    mov eax, %1
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%elsif_code
+    jmp %$loc(__curr)
+%%elsif_code:
+ %else
+   %error "'ELSIF' can only be used following 'IF'"
+ %endif
+%endmacro
+
+%macro ELSE 0
+ %ifctx if
+    jmp %$end_if
+%$loc(__curr):
+%assign __curr __curr+1
+ %else
+  %error "'ELSE' can only be used following an 'IF'"
+ %endif
+%endmacro
+
+%macro ENDIF 0
+%$loc(__curr):
+%$end_if:
+%pop
+%endmacro
+;==========================================================================-END
+
+For/While Loops
+---------------
+The DO...FOR and DO...WHILE do nothing differnet from the previous macros, but 
+are simply a different application of the same principles. The syntax for 
+calling these macros is:
+   DO
+    ;code to do here
+   FOR min, Cond, max, step
+
+   DO
+    ;code to do here
+   WHILE variable, Cond, value
+It is perhaps easiest to illustrate this by comparing the macros with C code.
+    for( x = 0; x <= 100; x++) { SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  FOR 0, l, 100, 1
+Likewise, 
+    for( x = 0; x != 100; x--) { SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  FOR 0, e, 100, -1
+The WHILE macro is similar:
+    while( CurrByte != BadAddr) {SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  WHILE CurrByte, ne, BadAddr
+Once again, eax and ebx are used in the FOR and WHILE macros.
+
+;====================================================-DO-FOR and DO-WHILE Loops
+%macro DO 0
+ %push do
+    jmp %$init_loop
+%$start_loop:
+    push eax
+%endmacro
+
+%macro FOR 4
+ %ifctx do
+    pop eax
+    add eax, %4
+    cmp eax, %3
+    j%-2 %%end_loop
+    jmp %$start_loop
+%$init_loop:
+    mov eax, %1
+    jmp %$start_loop
+%%end_loop:
+ %pop
+ %endif
+%endmacro
+
+%macro WHILE 3
+ %ifctx do
+    pop eax
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%end_loop
+    jmp %$start_loop
+%$init_loop:
+    mov eax, %1
+    jmp %$start_loop
+%%end_loop:
+ %pop
+ %endif
+%endmacro
+;==========================================================================-END
+
+
+Data Declarations
+-----------------
+Declaring data is relatively simple in assembly, but sometimes it helps to make 
+code more clear if you create macros that assign meaningful data types to 
+variables, even if those macros simply resolve to a DB or a DD. The following 
+macros demonstrate this concept. They are invoked as follows:
+ CHAR   Name, String            ;e.g. CHAR  UserName, "Joe User"
+ INT    Name, Byte              ;e.g. INT   Timeout,  30
+ WORD   Name, Word              ;e.g. WORD Logins
+ DWORD  Name, Dword             ;e.g. DWORD Password
+Note that when invoked with a name but not a value, these macros create empty 
+[DB 0] variables.
+;============================================================-Data Declarations
+%macro CHAR 1-2 0
+%1: DB   %2,0
+%endmacro
+
+%macro INT 1-2 0
+%1: DB   %2
+%endmacro
+
+%macro WORD 1-2 0
+%1: DW   %2
+%endmacro
+
+%macro DWORD 1-2 0
+%1: DD   %2
+%endmacro
+;==========================================================================-END
+
+Procedure Declarations
+----------------------
+Procedure declarations are another matter of convenience. It is often useful in 
+your code to clearly delineate the start and end of a procedure; each of the 
+PROC macros below does that, as well as creating a stack fram for the procedure.
+The ENTRYPROC macro creates a procedure named 'main' and declares main as a 
+global symbol; the standard PROC declares the provided name as global. These 
+macros can be used as follows: 
+PROC ProcName Parameter1, Parameter2, Parameter3
+   ;procedure code here
+ENDP
+
+ENTRYPROC
+    ;entry-procedure code here
+ENDP
+Note that the Parameters to PROC are set up to EQU to offsets from ebp, e.g. 
+ebp-4, ebp-8, etc. I have also included support for local variables, which 
+will EQU to positive offsets from ebp' these may be used as follows:
+PROC ProcName Parameter1, Parameter2, Parameter3...
+    LOCALDD Dword_Variable
+    LOCALDW Word_Variable 
+    LOCALDB Byte_Variable 
+        ;procedure code here
+ENDP 
+
+;=======================================================-Procedure Declarations
+%macro PROC 1-9
+GLOBAL %1
+%1:
+ %assign _i 4
+ %rep %0-1
+    %2 equ [ebp-_i]
+ %assign _i _i+4
+ %rotate 1
+ %endrep
+    push ebp
+    mov ebp, esp
+ %push local
+ %assign __ll 0
+%endmacro
+
+%macro ENDP 0
+ %ifctx local
+  %pop
+ %endif
+    pop ebp
+%endmacro
+
+%macro ENTRYPROC 0
+PROC main
+%endmacro
+
+%macro LOCALVAR 1
+    sub esp, 4
+    %1 equ [ebp + __ll]
+%endmacro
+
+%macro LOCALDB 1
+  %assign __ll __ll+1
+  LOCALVAR %1
+%endmacro
+
+%macro LOCALDW 1
+  %assign __ll __ll+2
+  LOCALVAR %1
+%endmacro
+
+%macro LOCALDD 1
+  %assign __ll __ll+4
+  LOCALVAR %1
+%endmacro
+;==========================================================================-END
+
+Further Extension
+-----------------
+Continued experimentation will of course prove fruitful. It is recommended that 
+you read/print out chapter 4 of the NASM manual for reference. In addition, it 
+is very helpful to test your macros by cpmpiling the source with "nasm -e", 
+which will output the preprocessed source code to stdout and will not compile
+the program.

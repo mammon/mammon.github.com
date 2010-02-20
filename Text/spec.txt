@@ -1,0 +1,201 @@
+             Visual Assembler Development Projects
+
+This is a preliminary sketch awaiting the project Spec that KD and I are
+working on. It should give some idea of what is being worked on and what is
+in development. Any new developments/ideas/programs should be added under the
+appropriate section and given a Status/Comment/Coder.
+
+SECTION I: Binaries
+ A. IDE
+    Status: In progress   Coder: mammon_ tom Calaban ReZiDeNt
+    Comment: Need to add special tasks in here [e.g. proj, syntax hi]
+ B. Utilities/Plug-Ins
+    1. Debugger
+       Status: In progress. Coder: mammon_
+    2. Disassembler
+       Status: Using Borg by Cronos
+    3. Resource Editor
+       Status: Not started
+    4. Hex Editor
+       Status: Not started
+    5. Text Editor
+       Status: Completed. Coded by hutch.
+    6. Calculator
+       Status: In progress. Coder: PhaZer
+    7. Code Browser
+       Status: Completed. Coded by hutch.
+    8. SCR Tools
+       a. SCR Library
+          Status: Completed. Coded by n00se.
+       b. SCR Manager
+          Status: Completed. Coded by n00se
+    9. Miscellaneous Tools
+       a. b2hedit Binary-to-HexDump converter
+          Status: Completed. Coded by hutch.
+       b. makemenu Menu code generator
+          Status: Completed. Coded by hutch.
+       c. rc2case Resource Callback code generator
+          Status: Completed. Coded by hutch.
+       d. vasmbcnv  Binary-to-DB file converter
+          Status: Completed. Coded by hutch.
+       e. toolmenu IDE Extender
+          Status: Completed. Coded by hutch.
+       f. mnemonix Opcode-to-mnemonic reference
+          Status: Completed. Coded by hutch.
+       g. basemap Keyboard Extender
+          Status: Completed. Coded by tom.
+ C. Third-Party
+    1. Nasm Assembler
+    2. ALINK Linker
+    3. GORC Resource Compiler
+    4. DUMPBIN Binary File Dump Utility
+
+SECTION II: Assembly Language Support
+ A. Libraries
+    1. Win32.lib
+       Status: Using win32.lib from ALINK
+    2. Debug.lib
+       Status: Not started
+       Comment: Win32 and DOS debug routines
+    3. Exception.lib
+       Status: Not started
+       Comment: Win32 and DOS Structred Exception Handling
+    4. Memory.lib
+       Status: In progress    Coder: <anybody>
+       Comment: Memory alloc routines [from INC below]
+    5. Strings.lib
+       Status: Not started
+       Comment: String manipulation [strcopy, strtok, etc]
+    6. DynData.lib
+       Status: Not started
+       Comment: Dynamic Data structures [list, queue, etc] + sort/search
+    7. Dos.lib
+       Status: Not started
+       Comment: Useful DOS routines [command line param, stdio, etc]
+
+ B. Include Files
+    1. C.inc
+       Status: In progress Coder:  mammon_  <anybody>
+       Comments: C-style macros
+    2. Datatype.inc
+       Status: In progress Coder:  mammon_
+       Comments: Win32 data types
+    3. DDE.inc
+       Status: In progress Coder:  mammon_
+       Comments: Win32 DDE header
+    4. KopleVan.inc
+       Status: In progress Coder: <anybody>
+       Comments: Visasm high-leve macros [replaces C.inc]
+    5. Lang.inc
+       Status: In progress Coder:  mammon_
+       Comments: Win32 Language support
+    6. Mem.inc
+       Status: In progress Coder: <anybody>
+       Comments: Memory allocation routines/header
+    7. Messages.inc
+       Status: In progress Coder:  mammon_
+       Comments: Win32 Window Messages
+    8. Misc.inc
+       Status: In progress Coder: <anybody>
+       Comments: Miscellaeous win32 functions
+    9. MMedia.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 MultiMedia header
+    10. Network.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 Network header
+    11. OLE.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 OLE header
+    12. System.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 System Info header
+    13. Visasm.inc
+       Status: In progress Coder: mammon_ <anybody>
+       Comments: Visual Assembler automation [macros]
+    14. VKeys.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 Virtual Key Codes
+    15. Win32.inc
+       Status: In progress Coder: mammon_ <anybody>
+       Comments: Win32 Base header file
+    16. Winerr.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 Error Codes
+    17. Winhelp.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 Help header
+    18. Winsock.inc
+       Status: In progress Coder: <anybody>
+       Comments: Winsock header
+    19. Winstyles.inc
+       Status: In progress Coder: mammon_
+       Comments: Win32 window styles
+ C. Sample Projects
+    Status: Not started
+    Comments: Project interface needs designing
+ D. Components
+    Status: Not started
+    Comments: Component interface needs designing
+ E. Wizards
+    Status: Not started
+    Comments: Wizard interface needs designing
+ F. Templates
+    Status: Not started
+    Comments: Open for suggestions
+
+SECTION III: Documentation
+ A. IDE Documentation
+    Status: Not started   Format: .HLP
+ B. Library Documentation
+    Status: Not started   Format: .HLP
+ C. Component Documentation
+    Status: Not started   Format: .HLP
+ D. Third Party Documentation
+    1. Nasm Docs -- avail in HTML
+    2. ALINK Docs -- avail in TXT
+    3. GORC Docs
+ E. Assembly Language Reference
+    1. Instruction Reference
+       Status: Using Opcodes.hlp
+    2. DOS Interrupt Reference
+       Status: Not started    Format: .HLP
+    3. DPMI Interrupt Reference
+       Status: Not started    Format: .HLP
+ F. Win32 Reference
+    Status: Using win32.HLP
+ G. Tutorials
+    1. Using Visual Assembler
+       Status: Not started    Format: .HLP
+    2. Win32 Assembly Coding
+       Status: Not started    Format: .HLP
+       Comments: Win32 asm tutorials, if possible NASM-specific
+    3. Miscellaneous
+       Status: Not started    Format: .HLP
+       Comments: Various asm tutes in HLP format, poss also AoA
+ H. "Programmer's Bookshelf"
+    Status: Not started    Format: .HLP
+    Comments: A 'Contents' section to bring together the previous docs. E.g.:
+                Visual Assembler Help Contents
+    Visual Assembler Online Reference Manual
+    *ASM in 20 minutes [visasm crash course]
+    *Using the IDE     [visasm extended tutorial]
+    *Tools Reference [NASM, ALINK, GORC, Plugins]
+    *ASM Library Reference
+    *Visual Assembler Components
+
+    Assembly Language Reference Material
+    *Interrupt List [DOS]
+    *Interrupt List [DPMI]
+    *Intel x86 Opcodes
+
+    Assembly Language Tutorials [subject to approval, natch]
+    *Ancient Art of Assembly
+    *Tomcat's Win32 Samples
+    *Iczelion's Win32 Tutes
+    *Adam's Assembler Tutorial
+    *VGA Programming
+    *etc etc
+
+
+

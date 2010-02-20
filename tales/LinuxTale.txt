@@ -1,0 +1,1479 @@
+                      Mammon_'s Tales to  Tux's Grandson
+                    Scalable Demand-Paged World Domination
+
+
+It should be a fair assumption that any person reading this will have some 
+concept of what the Linux operating system is, and what its installation and 
+operation in general entail. The purpose of this document is not to provide a 
+quick how-to for installation of the various linux distributions, nor to fully 
+document the countless networking and programming utilities that are shipped 
+with a standard linux product; rather, this document is intended to demonstrate 
+the degree of control which the user/admin will have over all aspects of the 
+linux environment, and to provide an encapsulated "post-installation guide" 
+detailing the changes that must be made to the typical linux installation in 
+order to make the OS more usable, secure, and efficient than the default 
+installation will provide.
+
+This document was prepared while installing Slackware 4.0 on a Dell Latitude 
+connected to a 5-node LAN; however an attempt has been made to strip all 
+machine- and distribution-specific changes from what follows.
+
+
+
+
+Kernel Compilation
+------------------
+This should be the very first thing you do. Compiling the kernel sounds complex 
+and intimidating; in reality it is a simple process requiring about 4 commands, 
+a lot of help file perusing, a LILO MBR update, and a reboot. Compiling the 
+kernel is the only way to get the majority of linux's optional features [and a 
+large number of 'nonstandard' devices] to work; it is required in order to get 
+any degree of processor optimization in the kernel; and since it is done some-
+what frequently, it has become a very simple, very streamlined process.
+
+To begin with, change to the kernel source code directory:
+   root@local>cd /usr/src/linux
+This should be a link to /usr/src/linux-[version#], although occasionally one 
+will come across a linux distribution [Caldera] that neglects this standard.
+   root@local>make menuconfig
+This will launch an ncurses menu-based kernel configuration utility; note that 
+one can use 'make config' for a pure text-based version, or 'make xconfig' for 
+an X-windows version of the same utility. The options chosen here depend largely
+on machine hardware and administrator preference, but here are some general 
+guidelines:
+ Code Maturity: Defaults are OK.
+ Processor Type: set this to the appropriate Intel version number; also, enable 
+                MTRR support in this section.
+ Loadable Module Support: Enable these and the kernel module loader
+ General Setup: Enable APM if your motherboard supports it; the rest of the 
+               defaults should suffice.
+ Plug an Play Support: Defaults are OK.
+ Block devices: Remove unused devices [RAID, XT drive support, etc], even if 
+               they are modules, in order to save compile time.
+ Network Options: Enable syn cookies. If you plan to use your box as a firewall 
+                 then read up on the various networking options. For general 
+		 internet dialup firewalling, enable the IP:firewalling option 
+		 and select the packet netlink device.
+ SCSI and Network Devices: Remove all unused devices. 
+ Amateur Radio Support: Disable everything.
+ IrDA: Configure these for infrared port devices.
+ ISDN, Old CD-ROM: Disable unless necessary.
+ Character Devices: Make sure virtual terminals are enabled; most of the dumb 
+           terminal options can be disabled. The nvram and enhanced RTC 
+           options [access to the CMOS and Realtime Clock] are good for 
+           system programmers; the video capture ["video for linux"], 
+           joystick, and floppy tape drivers may be configured if 
+           necessary.
+ File Systems: Enable Quotas, FAT/VFAT/NTFS support [if needed], and ISO9660 
+           filesystems -- the rest of the file systems and code pages can be 
+           added to taste.
+ Console Drivers: Remove Frame Buffer Support.
+ Sound: Configure as needed.
+
+A few general notes: Always implement devices as modules if possible; the kernel
+should be kept small [exceptions being the primary NIC driver and any funda-
+mental SCSI/CDROM drivers needed to boot the system]. Also, during the 
+configuration always be sure to check the 'help' text on unfamiliar or unclear 
+kernel options to be certain whether or not to enable them.  
+
+At this point the kernel and modules can be compiled using the following 
+commands:
+   root@local>make dep
+   root@local>make zImage
+   root@local>make modules
+   root@local>make modules_install
+or they can be combined into one line:
+   root@local>make dep; make zImage; make modules; make modules_install
+This will put the kernel in /usr/src/linux/arch/i386/boot/zImage; the kernel 
+should be copied to /boot and a new LILO entry added [edit /etc/lilo.conf and 
+run lilo -v to add the new kernel entry] -- it is good to keep the kernel 
+created by the distribution install as a "backup" kernel. Note that each time 
+the kernel is compiled, LILO should be run to update the bootsector. It should 
+also be noted that the modules will be stored in /lib/modules/[version#]; since 
+some distributions [Slackware] probe existing modules at startup, this directory
+should be renamed to /lib/modules/old before the 'make modules_install' command 
+is run.
+
+Reboot the machine to test LILO and the kernel. Once logged in, use
+   root@local>dmesg
+to check if there were any errors during startup, and to make sure all devices 
+were detected.
+
+Kernel Modules
+Loadable kernel modules are akin to device drivers or VxDs in the Win32 environ-
+ment; they exist to keep the base kernel as small in size as possible, and to 
+allow dynamic loading and unloading of device drivers. As an example, one could 
+compile support for Iomega Zip drives as a module so that a Zip drive can be 
+connected to an already-booted system and the driver for that drive loaded with 
+a simple 'insmod ppa' command.
+
+Kernel modules are loaded with the 'insmod' or 'modprobe' utilities; insmod 
+loads a single module [*.o file in /lib/modules/version#], while modprobe loads 
+a module and every module it depends on [useful for sound cards which have 4-5 
+modules for the various midi/wave/synth devices] and requires a table created by 
+depmod to determine dependencies. Depmod is often called by the rc scripts 
+provided with the distribution; it is good practice to invoke it after a kernel 
+compilation to ensure that dependencies are generated for all new modules:
+   root@local>depmod -a
+A list of the currently loaded modules can be printed with the following command:
+   root@local>cat /proc/modules
+Loaded modules can be unloaded with the 'rmmod' utility.
+
+Usually the sound card is the toughest thing to get running; however, since most 
+PC sound cards are to some extent SoundBlaster compatible, and since Sound
+Blaster cards default to specific IRQ and I/O Address values, the following line 
+will in most cases enable sound on a PC:
+   root@local>modprobe sb io=0x220 irq=5 dma=3 dma16=5 mpu_io=0x300
+Note that this works without 'sndcfg' or similar utilties, and requires that the 
+'soundblaster' modules be compiled in the kernel [it is advisable to compile the 
+various sound card child modules such as the UART, FM, and OPL devices in case 
+the card does not use the Sound Blaster default versions].
+
+Different distributions handle modules differently; some load every module under 
+/lib/modules/version#, some use a startup script to determine which modules 
+should be loaded, and some place the modprobe commands directly in the runlevel 
+change [rc] files. Slackware, for example, has an rc.modules script that loads 
+specific modules; Debian loads every module specified in /etc/modules; Caldera 
+maimtains a similar list of modules in /etc/modules/version#/defaults. Be certain 
+to keep all compiled modules in /lib/modules/version# in order for modprobe and 
+depmod to find them.
+
+
+
+FileSystems
+-----------
+In Unix, a partition is termed a 'filesystem'; a disk can be partitioned to hold
+multiple filesystems of various types [EXT2, NTFS, FAT, UFS, etc]. Support for 
+various file system types can be compiled into the linux kernel or loaded as 
+kernel modules; additional filesystems can be mounted relative to the root [/] 
+or boot filesystem. In order to do this, mount points [empty directories] must 
+be created at the point in the root directory tree; filesystems can then be 
+mounted and unmounted using the following commands:
+   root@local>mount [device] [fs type] [mount point]
+   root@local>umount [mount point]
+Assuming one's root partition is on /dev/hda1, swap is on /dev/hdb1, a DOS 
+partiion is on /dev/hdb2, a linux partition containing the /usr directory tree 
+is on hdc1, and a cdrom is on /dev/hdd, one would need the following mount 
+commands:
+   root@local>mount  /dev/hdc1 -t ext2 /usr
+   root@local>mount /dev/hdb2 -t msdos /home/msdos
+   root@local>mount /dev/hdd -t iso9660 /cdrom
+These partitions can be pre-configured or even mounted automatically by adding 
+them to the file /etc/fstab, which contains filesystem definitions. An fstab 
+file for this setup might appear as follows:
+
+#/etc/fstab
+#__Device_____Mount_Point__FS_Type____Options___________________Dump_Pass_
+/dev/hda1     /            ext2       defaults,errors=remount-ro  0    1
+/dev/hdb1     none         swap       sw                          0    0
+proc          /proc        proc       defaults                    0    0
+/dev/hdc1     /usr         ext2       defaults,errors=remount-ro  0    2
+/dev/hdb2     /home/msdos  msdos      defaults                    0    0
+/dev/hdd      /cdrom       iso9660    ro,user,noauto              0    0
+/dev/fd0      /floppy      msdos      defaults,user,noauto        0    0
+#---------------------------------------------------------------------EOF
+Note that the root, swap, and /proc filesystems are configured in the fstab 
+already. The important column in fstab is 'options'; it allows the partition to 
+be auto-mounted ['defaults'] or not ['noauto'], to be mounted by a user 
+['user'], to be mounted read-only ['ro'], and to be remounted as read-only in 
+case of file system errors. The 'Dump' column is used to determine which file-
+systems will be backed up using the Unix 'dump' command, and 'Pass' refers to 
+the order in which fsck will repair the systems in case of error [root should be
+given a value of 1, all other ext2 partitions should have a value of 2, and 
+partitions that are to be ignored by fsck should have a value of 0]. 
+
+The file /etc/mtab contains a list of currently mounted filesystems; it can be 
+viewed with an editor or by using the command 'mount' with no parameters.
+
+The Unix directory tree structure seems to cause its share of confusion to non-
+unixers; as such it could do with a some explaining. In general, a Unix file-
+system tree contains the following structure:
+	/bin   		binary [program] files 
+	/etc   		configuration information
+	/incl		header files [for development]
+	/lib		shared libraries 
+	/lost+found	files recovered from FS errors
+	/man		manual [help] pages
+	/sbin		administration programs, daemons
+	/share		shared data, applets, gifs, etc
+This basic structure will be repeated in further subdirectories, usually to 
+represent installed programs and data that are required for system boot and 
+recovery [/], that are identical for all machines on that site [/usr], or that 
+are specific to the local machine [/usr/local] -- the idea being that / is on 
+its own parition so that FS crashes on /usr do not take it out, that /usr is 
+more or less static and can easily be recreated from a CD image, and that /local
+contains data or programs that constantly change.
+
+That said, there is not a lot of regulation to linux filesystem structure; a 
+common setup will look like this:
+ /
+ _/bin			binaries required for boot/recovery
+ _/boot			kernel images
+ _/dev			device files
+ _/etc			system configuration
+ _/home			user data directories
+ ___/[user]		data files for [user]
+ ___/ftp		ftp root directory
+ _____/pub		public-access files
+ ___/http		www root directory
+ _____/cgi-bin		CGI scripts
+ _____/www		WWW pages
+ ___/root		data files/home directory for superuser
+ _/lib			basic required libraries
+ _/lost+found		recovered files under /
+ _/mnt			mount points
+ ___/cdrom		mount point for cdrom
+ ___/floppy		mount point for floppy
+ ___/msdos		mount point for msdos file system
+ ___/tmp		temporary mount point
+ _/opt			commercial [licensed] software
+ _/proc			proc "live" file system
+ ___/[PID#]		stats for program [PID]
+ ___/bus		PCI/PnP/PCMCIA bus stats
+ ___/fs			fs stats
+ ___/ide		ide bus stats
+ ___/net		network stats
+ ___/parport		LPT stats
+ ___/scsi		SCSI bus stats
+ ___/sys		system stats, kernel tables/variables
+ ___/tty		tty driver stats
+ _/sbin			required administration programs, daemons
+ _/tmp			temporary/scratch directory
+ _/usr			site-specific directory tree
+ ___/X11R6		X Windows subsystem
+ _____/bin		X binaries
+ _____/include		X header files [development]
+ _____/lib		X libraries, shared files, and configuration
+ _____/man		X manual pages
+ _____/share		X shared data, images, etc
+ ___/bin		Site-specific applications and utilities, compilers
+ ___/doc		Application/Distribution documentation, READMEs
+ ___/etc		Application configuration
+ ___/games		Business productivity tools
+ ___/include		Library/standard header files
+ ___/info		Help system [alternative to man pages]
+ ___/lib		Shared libraries
+ ___/local      	Machine-specific directory tree
+ _____/bin		Downloaded share/freeware [freshmeat mirror ;) ]
+ _____/etc		User application configuration
+ _____/include		Header files for downloaded libraries
+ _____/lib		Shared libraries for downloaded software
+ _____/man		Manual pages for downloaded software
+ _____/share  		Shared data, images for downloaded software
+ ___/lost+found		Recovered files from /usr
+ ___/man		Manual pages for applications
+ ___/sbin		Administrator utilities
+ ___/share		Shared data, images, etc
+ ___/src		Kernel source, application source trees
+ ___/tmp		Temporary [scratch] directory
+ _/var			Variable-size files
+ ___/adm		System log files
+ ___/lock		Lock files
+ ___/log		Application log files
+ ___/news		Downloaded news
+ ___/run		Temp files containing PIDs referenced by programs
+ ___/spool		Mail and print queues
+ ___/tmp		Temporary files [again]
+
+And that's the short-short version...
+
+It is evident that there is a lot of redundancy --not to mention confusion-- in 
+the standard linux directory tree. This is primarily due to differing views 
+among software and distribution authors regarding where specific files should be 
+loated; it is also a means of breaking up the thousands of files shipped with 
+linux into more manageable subsets. Some of the breakup is intended to be for 
+hard drive layouts designed to minimize damage and prevent growing filesystems 
+such as /var from filling up the root filesystem; it is often recommended to 
+partition one's hard drive with this in mind:
+_Mount_Point_______Size___
+  /                 200  MB
+  /home             50   MB/user
+  /opt              N/A  [symlink to /usr/opt]
+  /usr              500+ MB
+  /usr/local        500+ MB
+  swap              ??   [2x RAM]
+  /var              25   MB
+
+With workstations this is not strictly necessary; however it does make install-
+ing and managing multiple workstations a lot easier.
+
+
+
+Config Files
+------------
+Most programs and shells have configuration or "rc" files to determine program 
+behavior; the system-wide rc files are stored in /etc, while user-specific rc 
+files are stored in the home directory [~/] of the user. To configure shells or 
+software, copy the appropriate rc file from the /etc directory to the home 
+directory, and precede it with a period -- e.g. for bash one would copy 
+/etc/bashrc to ~/.bashrc and modify it to provide shell startup commands. Common 
+files that the user will want to override include /etc/bashrc, /etc/vimrc, and 
+/usr/X11R6/lib/X11/xinit/xinitrc.
+
+The ~/.bashrc file is essentially a shell script that is executed every time 
+the bash shell is run [e.g., in an x-terminal, by typing 'bash', or by using 
+su to change users] -- note that when bash is run as a 'login shell' [i.e., 
+invoked by 'login', or in an xterm invoked with the -ls parameter] the file 
+~/.profile is used instead of ~/.bashrc; in general, it is a good idea to put
+commands common to both files into ~/.bashrc only, then source ~/.bashrc from
+within .profile [ lit, '. ~/.bashrc' ].  Any standard shell commands in the 
+startup file will be executed by bash; this includes variable assignments 
+[such as $PATH changes] and aliases. A standard ~/.bashrc might look as 
+follows:
+  #----------------------------~/.bashrc
+  export PATH=$PATH:/usr/local/bin
+  alias BB='xinit /usr/X11R6/bin/blackbox'
+  alias vi='/usr/bin/vim'
+  TTY=`tty | sed 's/.*tty/tty/'`
+  export PS1='$PWD[$TTY]>'
+  #----------------------------------EOF
+This does not contain too many surprises. The first line sets the PATH variable 
+and makes it available to child shells with the 'export' command; the second 
+lines sets an alias which allows X-Windows to be called with a specific window
+manager, overriding the ~/.xinitrc file. The standard 'vi' command is overridden 
+and forced to invoke vim in the third line. The fourth line sets the variable TTY to 
+the output of the tty utility [this returns the current tty device, which is 
+then stripped of the '/dev/'prefix via a quick sed call]; notice how commands can
+be executed by using backticks [` instead of ']. The final line sets the prompt 
+[PS1; see the bash man page] to reflect the current working directory and the 
+terminal number. Those used to job control shells may want to set the PS1 in 
+their ~/.profile  [or ~/.bashrc, for non-login shells] to
+   PS1='$PWD[$HISTCMD]>'
+to reflect the 'history' number of the current command. Further ideas for Bash
+prompt configuration can be found in the LDP Bash-Prompt HOWTO.
+
+There are two versions of the standard Unix editor 'vi' shipped with linux: elvis 
+[the dull one], and vim ['vi improved' -- the good one]. When the 'vi' command is 
+aliased or symlinked to vim, and when the ~/.vimrc file is set up correctly, vi 
+becomes a powerful editting too. Consider the following ~/.vimrc:
+  "----------------------------------------------.vimrc
+  syntax on         "use cool colors
+  set ruler         "show line/col in statusbar
+  set autoindent    "follow previous indentation
+  set cindent       "indent at }'s
+  set noerrorbells  "don't beep
+  set showmode      "show mode in statusbar
+  set showcmd       "show commands in statusbar
+  set smartindent   "follow }'s
+  set smarttab      "follow tabs
+  set softtabstop=3 "god uses 3 tabs!!
+  set tabstop=3     "rational tab spacing
+  set nowrap        "no 80-col wrap
+  "-----------------------------------------------EOF
+  [note that vim uses " instead of # for comments]
+The typical vim installation includes syntax highlighting files for common languages 
+[HTML, asm, C, perl, Tcl, sh, etc] in /usr/share/vim/syntax. The line 'syntax on' 
+enables syntax highlighting based on file extension; note that the terminal type
+must be 'linux' or something similar for this to work effectively. Following this 
+line are a number of useful settings for programming in vim -- a ruler [line and 
+column# displayed at the bottom of the screen], C-style "smart" autoindenting, 3
+space tabs, and no 80-column line wrapping. Further options can be found in the 
+vim online help which is access by typing ":help" when in command [not insert] 
+mode; help can be exitted using the standard ":q" command.
+
+Another interesting vim trick involves a change to the ~/.bashrc. Add this series 
+of lines to ~/.profile or ~/.bashrc [whichever is applicable]:
+  #------------------------------------------------------------------StartInsert
+  function dump () {
+        objdump -d -C -r -t $1 | vim - -c so/usr/share/vim/syntax/asm.vim +/main
+  }
+  export dump
+  #--------------------------------------------------------------------------EOF
+This will create a command called 'dump' which will send a file [e.g. 'dump 
+/opt/vmware-distrib/vmware'] to objdump, and the resulting disassembly will be 
+piped to vim --which can create a file from text sent via STDIN-- with the .asm
+syntax file preloaded. 
+
+The final configuration file that most users will modify is the xinitrc file. In
+most distributions, this calls a host of other files to determine specific X 
+settings; in general, however, it need only contain the name of a single file to
+execute [usually the window manager]:
+  #-----------------------.xinitrc
+  /usr/local/bin/enlightenment
+  #----------------------------EOF
+Additional programs can be added to this file --such as xterms, clocks, WM dock
+modules-- so that they can be run automatically after the window manager has 
+started; when this is the case, every program name must be followed by a "&" to 
+start it in the background, with the exception of the last program listed, which
+should be started in the foreground:
+  #-----------------------.xinitrc
+  /usr/local/bin/enlightenment &
+  /usr/local/bin/Eterm &
+  /usr/local/bin/wmapm &
+  /usr/local/bin/wmtop &
+  /usr/local/bin/wmmon &
+  /usr/local/bin/xmatrix
+#------------------------------EOF
+The X options defined in ~/.xinitrc determine the behavior of X when it is 
+launched with the 'startx' command; these options can be overridden when the 
+'xinit' command is called directly.
+
+
+
+Virtual Consoles
+-----------------
+One of the most endearing features of linux is its use of virtual consoles -- 
+enabling the user to start a new console [and a new login session] at any time, 
+and to switch between consoles using Alt and Function key combinations [e.g., 
+Alt-F1 for console 1, Alt-F2 for console 2, etc]. In most distributions only 4-6
+of these consoles are enabled; while this is enough for most users, there are 
+occasions [such as when writing a linux configuration guide while brushing up 
+on Perl CGIs and developing some linux asm examples] when more virtual consoles 
+may be needed.
+
+The virtual consoles are represented by the /dev/tty# files; /dev/tty1 is the 
+first virtual console, /dev/tty2 is the second, etc. The current tty device can 
+be identified by typing 'tty' at the command line.
+
+The main system initialization file is /etc/inittab; it describes the system run
+level changes and any initialization that is common across run levels -- such as
+virtual consoles. In the /etc/inittab file, there will be a few lines similar 
+to: 
+  c1:1235:respawn:/sbin/agetty 38400 tty1 linux
+The first field ['c1'] is simply a label that must be unique for each line; the 
+second and third define the run levels affected and how to run the program. The 
+fourth field, '/sbin/agetty' contains the program to run and it parameters; in 
+the case of virtual consoles the program is 'agetty' and takes the following 
+form:
+    /sbin/agetty [baud] [device] [terminal type]
+For adding virtual terminals, the only thing that must be changed is the device 
+parameter; every additional device added will be available after the next run 
+level change. Usually 8-10 virtual consoles are enough, while leaving one 
+virtual console for X-Windows and one more "just in case"; this would result in 
+an inittab section as follows: 
+  c1:1235:respawn:/sbin/agetty 38400 tty1 linux
+  c2:1235:respawn:/sbin/agetty 38400 tty3 linux
+  c3:1235:respawn:/sbin/agetty 38400 tty3 linux
+  c4:1235:respawn:/sbin/agetty 38400 tty4 linux
+  c5:1235:respawn:/sbin/agetty 38400 tty5 linux
+  c6:1235:respawn:/sbin/agetty 38400 tty6 linux
+  c7:1235:respawn:/sbin/agetty 38400 tty7 linux
+  c8:1235:respawn:/sbin/agetty 38400 tty8 linux
+Note that 'terminal type' refers to the value that will be assigned to the $TERM
+variable for the login shell on that device; to take advantage of the color 
+capabilities of the linux console [e.g. using 'vi', 'ls', and ncurses programs]
+this should be set to 'linux' [advanced terminal emulators such as Eterm, Aterm,
+and Rxvt can also use this to provide colored terminals in X-Windows].
+
+Knowing the virtual console type and device number can be very useful for 
+communication between consoles. Each virtual console has a tty device that can 
+be written to, and a vcs device that can be read from. To send a message to 
+the second virtual console, one could type
+   root@local>echo Message >> /dev/tty2
+The contents of the second virtual console could be read with the command
+   root@local>cat /dev/vcs2
+This has limited use in the command line, but it does enable the contents of 
+consoles to be read from X-Windows without switching back to console mode. If 
+one configures the syslog daemon to send output to virtual consoles --especially
+ones numbered greater than 12, which can be configured to have no login shell 
+and no means of switching via Alt-F# key combinations [although one can still 
+cycle through the allocated console with ALT+left/right arrow-- then the log 
+output can be checked simply by cat'ing the vcs file. An example of writing to 
+and reading from 'inaccessible' tty devices proves it is quite simple:
+   root@local>cat /etc/passwd >> /dev/tty20
+   root@local>cat /dev/vcs20 | more
+Configuring virtual terminals and log files correctly allows one to set up xterm
+windows tailing with constant update each console ['tail -f /dev/vcs20'], thus 
+allowing realtime system monitoring without tying up potentially useful virtual 
+console numbers.
+
+In addition to the vcs devices, linux provides the 'open' command, which will
+run any given program on the next available virtual console. This is very 
+useful when one has run out of virtual consoles, but does not want to restart
+initd in order to apply inittab changes. To start lynx on the next available
+VC, one would use the command
+    root@localhost> open lynx /usr/doc
+A specific virtual console can be specified using the -c parameter, followed
+by the terminal number; thus, to run the previous command on VC 8, one would
+use
+    root@localhost> open -s -c 8 lynx /usr/doc
+Note that the current virtual console will be switched to the new VC if the 
+-s parameter is used. 
+
+The open command can be used on personal systems to provide multiple consoles
+without requiring a login on each; for example, the following inittab and
+~/.profile lines will provide 6 consoles after the first login:
+  #-------------------------------------------------inittab exerpt
+  c1:1235:respawn:/sbin/agetty 38400 tty1 linux
+  # *** all other c# entries removed ***
+
+  #-------------------------------------------------profile exerpt
+  open -c 2 bash
+  open -c 3 bash
+  open -c 4 bash
+  open -c 5 bash
+  open -c 6 bash
+It is important to put this in /etc/profile or ~/.profile, not ~/.bashrc; it
+would not be wise to allocate 5 VCs every time an xterm is started. To 
+complement the 'open' command, linux also provides a 'switchto'. While 
+switchto requires a VC number as a parameter, this can be faked with a shell
+script command such as
+    echo "`tty | cut -dy -f2  ` + 1 " | bc
+to provide a "next" and "prev" VC function. 
+
+Virtual console displays can be manipulated more extensively using escape 
+sequences in conjunction with 'echo -e'; see the man pages for 'console', 
+'console_codes', and 'charsets' for more information.
+
+
+
+Log Files
+---------
+The linux system logging daemon is named 'syslogd' and is configured by the file
+/etc/sylog.conf; detailed information can be found via 'man sysklogd' and 'man 
+syslog.conf'. The syslog facility contains support for complex log setups, 
+including the ability to log to and from remote hosts via network sockets. As 
+with most daemons, it can be restarted with 'kill -HUP [pid]' in order to make 
+it re-read its configuration file.
+
+The typical linux workstation does not need very extensive logging facilities; 
+in fact, most of the log messages can be ignored in favor of saving hard drive 
+space.  The /etc/syslog.conf file provides a way of determine which types of 
+messages get logged, and where they got logged to.
+
+The syslog.conf file groups messages by 'facility' [source of the message] and 
+'priority' [type of message], then routes messages based on what 'action' [where
+to write the message] is associated with a specific facility and priority. The 
+general syntax is
+  [facility].[priority]				[action]
+where wildcards are supported; thus the line
+  *.*										/dev/null
+would cause all messages to be ignored.
+
+The facilities available for logging are auth, authpriv, cron, daemon, kern,
+lpr, mail, mark, news, syslog, user, uucp, and local0-local7; these reflect
+the system service or daemon responsible for generating the message. The message
+priority can be [in order of increasing severity] debug, info, notice, warning,
+err, crit, alert, and emerg. 
+
+Multiple facilities with the same priority can be specified by comma-delimiting
+the priorties, such that 'kern,daemon.emerg' will match all kernel and daemon 
+messages of emergency priority. Wildcards can be used as well, so that '*.emerg'
+would match emergency priority for all facilities, and 'kern.*' would match all 
+kernel messages. Exclamation points may be used to exclude ["NOT"] priorities, 
+and the equal sign can be used to match only the stated priority [otherwise the 
+stated priority and above are matched].
+
+The action can be a file or a device name to which the messages will be written.
+The default setup for syslog.conf is usually as follows:
+  #------------------------------------syslog.conf
+  *.=info;*.=notice    /usr/adm/messages
+  *.=debug             /usr/adm/debug
+  *.err                /usr/adm/syslog
+  #--------------------------------------------EOF
+Linux, however, allows for much more sophisticated logging. Assume that virtual 
+consoles from 20 up are going to be free for logging purposes; they can be 
+assigned aliases in ~/.bashrc or ~/.profile to fit their intended purpose:
+  alias KernelLog='tail /dev/vcs20'
+  alias DebugLog='tail /dev/vcs21'
+  alias CronLog='tail /dev/vcs22'
+  alias DaemonLog='tail /dev/vcs23'
+  alias AuthLog='tail /dev/vcs24'
+  alias Misc='tail /dev/vcs25'
+Now, the associated ttys can be written to by reconfiguring the syslog.conf:
+  kern.err								/dev/tty20
+  *.debug								/dev/tty21
+  cron.err								/dev/tty22
+  daemon.err							/dev/tty23
+  auth.warn;authpriv.warn			/dev/tty24
+  user.warn; mail.warn				/dev/tty25
+Of course this is by no means a complete syslog.conf file; these are simply logs
+that are available for 'online viewing' using the provided aliases. A possible 
+setup for permanent logfiles might be as follows:
+mail.none;news.none;*.=info;*.=notice             /usr/adm/messages
+  *.=debug                                        /usr/adm/debug
+  *.=alert;*.=emerg                               root
+  auth,authpriv.*                                 /usr/adm/authlog
+  cron,daemon,kern,syslog,user.err                /usr/adm/syslog
+  daemon.info;daemon.notice                       /usr/adm/daemonlog
+  mail.info;mail.notice                           /usr/adm/maillog
+This will split the logged messages into manageable files and will email the 
+superuser for any serious problems.
+
+In addition to the log files created by the syslog daemon, linux maintains in 
+the /var/adm directory the files lastlog [logs each user's last login time], 
+sulog [log of 'su' command usage], and wtmp [user logins & logouts, system 
+starup & shutdown]. Note that the utility 'last' can be used to view the 
+information contained in the wtmp file.
+
+Various log colorizing/browsing utilities are available for linux, such as 
+ACL and logcolorise.pl . The latter program is particularly useful out of 
+the box; one can route colored log output to an unused tty by placing a 
+command such as "tail -f /var/adm/messages | logcolurize.pl > /dev/tty10 &" 
+into one's startup scripts; thus, a quick perusal of the log files is just
+an Alt-F10 away.
+
+
+
+Network Setup
+-------------
+The configuration files for the network are located in the /etc directory. Many 
+of them can be left in the default configuration, however they should be 
+explained in case further configuration is necessary:
+  aliases -- Sendmail email aliases
+  inetd.conf -- Inet [TCP/IP] daemon configuration
+  dhcpd.conf -- DHCP configuration
+  exports -- Exported NFS shares
+  ftpaccess -- FTP configuration
+  ftpgroups --Define FTP access groups 
+  ftpusers -- Users that are not allowed FTP access
+  gateways  -- Specify system gateways
+  HOSTNAME -- Specify system machine name
+  host.conf -- Hostname lookup order 
+  hosts -- Static [local] hostname to IP mapping
+  hosts.allow -- List of hosts allowed to use INET services 
+  hosts.deny -- List of hosts not allowed to use INET services 
+  login.access -- Permission file for local logins
+  mail.rc -- Configuration for 'mail' email program
+  mailcap -- Email support for MIME types`
+  named.conf -- BIND configuration file
+  networks -- Networks the machine belongs to
+  nntpserver -- Specify NNTP [news] server.
+  protocols -- List of protocols provided by the TCP/IP suite
+  resolv.conf -- DNS serverconfiguration file 
+  rpc -- Configuration file for portmap [IPC to TCP/IP port # mapping] 
+  sendmail.cf -- Sendmail configuration file
+  services -- List of the services assigned to each port
+  
+
+Inetd
+In general, the rule for inetd configuration is to disable everything that you 
+do not explicitly plan to use. For a workstation, it is usually good to disable 
+everything except telnet and ftp. The format of the inet.conf file is pretty 
+straightforward and is documented in the file itself:
+# <service_name> <sock_type> <proto> <flags> <user> <server_path> <args>
+...where the # will disable the line. Note that most modern linux distributions 
+will come with TCP wrappers installed for extra security, so that instead of 
+seeing
+  ftp     stream  tcp     nowait  root    /usr/sbin/wu.ftpd -l -i -a
+for the ftp daemon, one would see
+  ftp     stream  tcp     nowait  root    /usr/sbin/tcpd  wu.ftpd -l -i -a
+The TCP wrappers allow use of the hosts.allow and hosts.deny restriction files. 
+A default security model would automatically deny access to any daemon for all 
+connections, or for all connections whose IP addresses do not respond to IDENT 
+requests [i.e. spoofed IP addresses]:
+   root@local>vi /etc/hosts.deny
+    ALL:ALL
+    ALL:PARANOID
+
+Connections from the local network can then be allowed for specific daemons:
+   root@local>vi /etc/hosts.allow
+    wu.ftpd: LOCAL
+    in.telnet.d: LOCAL
+
+A configuration such as this allows local network access only to FTP and telnet 
+services; access can be granted to specific non-local addresses in order to 
+retain tight security. Note that separate network daemons can be executed 
+depending on whether the connection is local or non-local, so that local users 
+could access finger while remote users would receive a less functional 'safe 
+finger' program -- see the host_access man page [host_access(5)] for details.
+
+
+Logins
+Login perferences such as delay after bad login, checking of mail on login, 
+default PATH, etc are stored in /etc/login.defs; usually this file is set up 
+correctly by default. By default, the /etc/issue file displays before the login 
+prompt, and the MOTD file displays afterwards. The /etc/environment file 
+contains the default starting environment [variables such as PATH, MANDIR, etc]
+for logins. On a typical linux workstation, the /etc/securetty contains the only
+terminals on which root can log in -- by default this is set to only the virtual
+terminals. Combining this with an /etc/nologin file [which prevents non-root 
+logins] will create a machine which can only be logged in to via root access to 
+the local virtual terminals.
+
+
+Kernel Devices
+A number of kernel network monitoring devices must be configured before they 
+can be used. 
+Routing messages:
+   root@local>mknod /dev/route c 36 0
+IP Forwarding:
+   root@local>vi ~/.bashrc
+     echo 1 > /proc/sys/net/ipv4/ip_forward
+Firewall Netlink:
+   root@local>mknod /dev/netlink c 36 3
+Syn Cookies:
+   root@local>vi ~/.bashrc
+     echo 1 > /proc/sys/net/ipv4/tcp_syncookies
+Ethertap:
+   root@local>mknod /dev/tap0 c 36 16
+Nvram:
+   root@local>mknod /dev/nvram c 10 144
+
+
+IPChains
+Firewalling: this is why one switches to linux. When IPChains are configured in 
+the kernel and the latest ipchains package is compiled, some serious network 
+protection is available for the linux box. IPChains consists of 'chains' of 
+rules that are used to filter packets passing through the machine; the most 
+useful chain for workstation firewalling is "input", though there are "output" 
+and "forward" chains as well. The main concept behind IPChains is that rules 
+are applied to packets when the packets reach any of these chains; if the packet
+matches the rules, then the action specified in the rule is taken. For example, 
+if the first rule in the input chain specifies that ICMP packets from 
+100.100.100.0 will be dropped, then a ping from 100.100.100.15 would fail, while
+a ping from 101.101.101.0 would succeed. The focus for this text is on work-
+station, not server, implementations of linux; therefore only the input chain 
+will be discussed. Further information can be found in the IPChains How-To.
+
+Rules are added to a chain by invoking the 'ipchains' utility. The typical 
+symtax is
+   ipchains -[AD] chain rule action
+where A is 'add rule', D is 'delete rule', chain refers to the chain of rules 
+being modified [e.g. 'input'], rule is the criteria which the packet must match,
+and action is the what happens to the packet [ACCEPT, DENY, REJECT, RETURN, 
+REDIRECT]. Of these options, the 'rule' option is naturally the most important.
+
+Chain rules can consist of a number of further switches:
+   -p protocol [can be a #, or 'TCP','UDP', 'ICMP'; '!' OK]
+   -s source address/host [IP or hostname '!' OK]
+   -d destination address/host [IP/hostname; '!' OK]
+   -i interface [ '!' OK]
+   -l [log packet if matched]
+Note that when sppecifying an address, '0/0' will match any IP address, and a 
+group of IP addresses can be specified with the format 'IPaddr/netmask' -- such 
+that '201.201.201.0/255.255.255.0' would match addresses 201.201.201.0 to 
+201.201.201.255. Addresses can be matched in a "NOT EQUAL" manner by inserting 
+a "!" before the address; thus, the rule '-s ! 201.201.201.0/255.255.255.0" 
+would match any address except the ones between 201.201.201.0 and 
+201.201.201.255.
+
+When the TCP or UDP protocol is selected, the source and destination addresses 
+can contain port numbers in order to allow or deny access to a specific port or 
+a range of ports. Ports may be specified by name or by number; a range or ports 
+consists of a lower and upper number joined by a colon [e.g. 80:8000], where a 
+blank lower number [e.g. :8000] implies '0' as the lower and a blank upper 
+number [e.g. 80:] implies 65535 as the upper. As an example, to drop all packets 
+except http requests from non-local addresses:
+   root@local>ipchains -A input -p TCP -s ! localhost -d 0/0 ! 80 -j DENY 
+Note that ICMP rules allow ICMP code to be specified in place of port number.
+
+Chain actions are specified with the -j switch. The j switch is considered a 
+"jump", and the default actions [DENY, ACCEPT, REJECT, MASQ, REDIRECT, RETURN] 
+are aliases. The default actions can be replaced with the name of a new chain 
+[the chains can be added by usinf the -N flag followed by the new chain name, 
+e.f. 'ipchains -N mychain'] that the packet will be sent to if it matches the 
+current rule. 
+
+The author of the IPChains How-To provides some interesting chains using IP 
+header values to prioritize different types of network traffic. The value in 
+question is the Type-Of-Service bit, which can be set to Minimum Delay, Maximum 
+Throughput, Maximum Reliability, or Minimum Cost [numeric values are 0x01 0x10, 
+0x01 0x08, 0x01 0x04, and 0x01 0x02 respectively]. The chains in question look 
+as follows:
+       ipchains -A output -p tcp -d 0.0.0.0/0 telnet -t 0x01 0x10
+       ipchains -A output -p tcp -d 0.0.0.0/0 ftp -t 0x01 0x10
+       ipchains -A output -p tcp -s 0.0.0.0/0 ftp-data -t 0x01 0x08
+It should be noted that this is intended for a router configuration in order to 
+maximize the network traffic efficiency for the connected workstations.
+
+At this point it is perhaps best to include the examples from the how-to, which 
+demonstrate the author's setup on his PPP-dialup workstation:
+#!/bin/sh
+        ipchains -P input DENY                                     #---------1
+        ipchains -A input -i lo -j ACCEPT                          #---------2
+        ipchains -N ppp-in                                         #---------4
+        ipchains -A input -i ppp0 -j ppp-in                        #---------2 
+        ipchains -A ppp-in -s 192.168.1.0/24 -l -j DENY            #---------3
+        ipchains -N ppp-out                                        #---------4
+        ipchains -A output -i ppp0 -j ppp-out                      
+        #-------------------------------------------------------optimize traffic
+        ipchains -A ppp-out -p TCP -d proxy.server 8080 -t 0x01 0x10
+        ipchains -A ppp-out -p TCP -d 0.0.0.0 telnet -t 0x01 0x10
+        ipchains -A ppp-out -p TCP -d 0.0.0.0/0 ftp-data -t 0x01 0x02
+        ipchains -A ppp-out -p TCP -d 0.0.0.0/0 nntp -t 0x01 0x02
+        ipchains -A ppp-out -p TCP -d 0.0.0.0/0 pop-3 -t 0x01 0x02
+        #-------------------------------------------------allow ftp cpnnections
+        ipchains -A ppp-in -p TCP -s 0.0.0.0/0 ftp-data -d $LOCALIP 1024:5999 -j ACCEPT
+        ipchains -A ppp-in -p TCP -s 0.0.0.0/0 ftp-data -d $LOCALIP 6010: -j ACCEPT
+        ipchains -A ppp-in -p TCP -d $LOCALIP ftp -j ACCEPT
+#---------------------------------------------------------------------------EOF
+Note how these chains provide the following:
+*Deny all input requests by default [1]
+*Allow input from ppp0 and local network connections [2]
+*Prevent IP address spoofing from ppp0 [3]
+*Create ppp-in and ppp-out chains [4]
+These chains can be modified to suit the local machine [e.g. by adding a few 
+ICMP rules] and placed in a shell script in the rc.d directories.
+
+
+Apache
+The Apache webserver installs by default in most linux installations; its 
+configuration file is either /etc/httpd.conf or, in later incarnations, 
+/usr/local/apache/conf/httpd.conf or /var/lib/apache/conf/httpd.conf . Running 
+'lynx 127.0.0.1' will quickly determine whether or not Apache is set up 
+correctly.
+
+The Apache server comes optimized for a midsize server setup and thus has 
+settings that are inappropriate, if not wasteful, for a workstation. Part of 
+this has to do with resource allocation and the anticipated number of web client
+connections; in addition, many superfluous options which do not impact system 
+performance [such as virtual hosting] can be removed from the configuration.
+
+A basic Apache setup for a linux workstation might look as follows:
+  #httpd.conf
+  #_______Basic Server Configuration______
+  ServerType standalone        #use inetd if you want wrappers
+  ServerRoot "/var/lib/apache" #do not change from preconfigured value!
+  PidFile /var/run/httpd.pid
+  ScoreBoardFile /var/run/httpd.scoreboard
+  Timeout 90
+  KeepAlive On
+  MaxKeepAliveRequests 20
+  KeepAliveTimeout 15
+  MinSpareServers 2            #each spare server consumes CPU resources
+  MaxSpareServers 10
+  StartServers 1
+  MaxClients 20
+  MaxRequestsPerChild 30
+
+  #_______Apache_Loadable_Modules__________
+  #[...this can be left as pre-configured...]
+
+  #________Server_Setup____________________
+  ExtendedStatus On            #Give detailed infor in status page
+  Port 80                      #Listen on port 80
+  User nobody                  #Run as user nobody
+  Group nogroup
+  ServerAdmin root@gaap.pandemonium.com
+  #__HTML_Pages_Setup__
+  DocumentRoot "/home/www/pages"       #Dir where web pages are stored
+  <Directory />                        #Default directory settings
+    Options FollowSymLinks
+    AllowOverride None
+  </Directory>
+  <Directory "/home/www/pages">        #DocumentRoot options
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+  </Directory>
+  DirectoryIndex index.html            #Default page to load
+  AccessFileName .htaccess             #Directory access restriction file
+  <Files .htaccess>
+    Order allow,deny
+    Deny from all
+  </Files>
+  UseCanonicalName On
+  #__MIME_Junk__
+  TypesConfig /var/lib/apache/conf/mime.types
+  DefaultType text/plain
+  <IfModule mod_mime_magic.c>
+    MIMEMagicFile /var/lib/apache/conf/magic
+  </IfModule>
+
+  #__CGI_Script_Setup__
+  ScriptAlias /cgi-bin/ "/home/www/cgi-bin/"
+  <Directory "/home/www/cgi-bin">      #Directory where CGI scripts are stored
+    AllowOverride None               #ScriptAlias means "execute docs in here"
+    Options None                     #Be sure to 'chmod 711' it!
+    Order allow,deny
+    Allow from all
+  </Directory>
+
+  #__Online_Status_and_Config_Pages__
+  <Location /server-status>    #http://127.0.0.1/server-status
+    SetHandler server-status
+    Order deny,allow
+    Deny from all
+    Allow from .pandemonium.com
+  </Location>
+  <Location /server-info>
+    SetHandler server-info   #http://127.0.0.1/server-info
+    Order deny,allow
+    Deny from all
+    Allow from .pandemonium.com
+  </Location>
+
+  #_______Log_File_Setup___________________
+  HostnameLookups Off          #Don't waste time getting hostnames
+  ErrorLog /var/log/httpd-error.log
+  LogLevel warn            #debug, info, notice, warn, error, crit, alert, emerg
+  Format "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined
+  CustomLog /var/log/httpd-access.log combined
+
+  #_______Final_Options____________________
+  ServerSignature Off
+  ReadmeName README
+  HeaderName HEADER
+  IndexIgnore .??* *~ *# HEADER* README* RCS CVS *,v *,t
+  AddEncoding x-compress Z
+  AddEncoding x-gzip gz
+  AddType text/html .shtml
+  AddHandler server-parsed .shtml
+  AddHandler imap-file map
+
+
+FTP
+In addition to the security offered by tcp wrappers and the firewall, the ftp 
+daemon contains it own authentication process. When a user logs into the ftp 
+port, the ftp daemon checks the /etc/passwd file to validate the user login; if
+the user 'ftp' is present in the passwd file, users may log in with the name 
+'ftp' or 'anonymous' and any password. The /etc/ftpusers file is used to deny 
+specific users [usually root] ftp access; any username appearing in this file is
+automatically denied ftp access.
+
+Anonymous ftp logins are restricted to the home directory of the ftp user 
+[usually /home/ftp]; in order to minimize the access granted an anonymous login,
+the following file permissions should be set for the ftp home directory:
+   root@local> chown root ~ftp; chmod 555 ~ftp
+   root@local> chown root ~ftp/bin; chmod 111 ~ftp/bin
+   root@local> cp /bin/ls ~/ftp/bin; chmod 111 ~/ftp/bin/ls
+   root@local> chown root ~ftp/etc; chmod 111 ~ftp/etc
+   root@local> cp /etc/passwd /etc/group ~ftp/etc; chmod 444 ~/ftp/etc/*
+
+The ftp daemon can be further configured via the /etc/ftpaccess file. The 
+'class' keyword is used to define access types; it has the following syntax:
+  class [classname] [user types] [address]
+where 'classname' is an arbitrary name for the class, 'user types' is any 
+combination of the keywords 'anonymous', 'guest', and 'real', and where 
+'address' is a hostname or IP address [wildcards allowed] from which the login 
+is taking place. Note that use of the 'real' keyword allows users in /etc/passwd
+to log in using their standard username and password.  
+
+Classes are used to provide types for other keywords. The 'limit' keyword 
+determines how many user from a specific class are allowed to log in at any one 
+time:
+  class localusers 	guest					101.100.0.0
+  class remoteusers	guest, anonymous  *
+  class admins			real				 	101.100.101.0	
+  limit localusers   100	 MoTuWeThFr0700-1900   /etc/ftpmsg.local
+  limit remoteusers	25     Any            /etc/ftpmsg.remote
+  limit admins       -1     Any        
+In this example, logins from the local domain [101.100.0.0] are allowed 100 at a
+time, and are only allowed guest access -- these are assumed to be on-site 
+workers. These on-site logins are allowed only during working hours 
+[Monday-Friday, 7am to 7pm; the file /etc/ftpmsg.local is displayed when time or
+#users prevents access. Logins from any address [*] are assumed to be remote 
+workers or anonymous FTP logins; they are limited to 25 at a time, at any time 
+of day. Logins from the subnet where the admins are located [101.100.101.0] are
+allowed 'real' access, at any time of day and of unlimited numbers [-1]. In 
+addition to the 'limit' keyword, further controls exist that allow the number of
+files downloaded, number of bytes downloaded, maximum time permitted for a 
+connection, nice value of the process, and tcp window size to be configure for 
+each class of user.
+
+FTP users can further be typed into 'guest' users and 'real' users. Any user names 
+[wildcards accepted] defined as 'guestuser' will be logged in as if they were the 
+user 'guest' [this must be set up in /etc/passwd]; 'real' users are defined in order 
+to provide exceptions to the guest rule. For example, the lines
+  guestuser *
+  realuser mammon
+would cause all ftp access to be treated as a guest account, except for the user
+'mammon'.
+
+Addresses can be denied ftp access outright using the 'deny' keyword. The following 
+line will deny access to addresses from the domain 205.200.0.0 and will display the 
+'abuse' message :
+  deny	205.200.0.0		/etc/ftpmsg.abuse
+
+Ftp permissions are set by permission type; the keywords 'chmod', 'delete', 'over-
+write', 'rename', and 'umask' are allowed or disallowed using the 'yes' or 'no' 
+keywords, followed by the user types which are to be effected:
+  chmod		no anonymous, guest
+  delete		no anonymous
+  overwrite	no	anonymous
+  rename		no	anonymous
+Note that 'yes' is assumed for all login types by default; thus the 'real' group 
+in the above setup would have access to all ftp commands.
+
+Upload permissions can be configured using the 'upload' keyword, which has the 
+following syntax:
+  upload  [root] [directory] [yes/no] [dirs/nodirs]
+where 'root' is the root directory [usually /home/ftp], 'directory' is the name 
+of the directory being configured [wildcards allowed], 'yes' and 'no' allow and deny 
+upload access,  and 'dirs' will allow subdirectories to be created. A typical 
+setup might look as follows:
+  upload /home/ftp *							no
+  upload /home/ftp/incoming				yes	nodirs
+  upload /home/ftp/pub						yes	dirs
+  upload class=admin /home/ftp/admin 	yes	dirs
+Note that class restrictions can be applied to the upload specifications.
+
+The ftp daemon also contains a log command which allows file transfers, attempts 
+to violate security rules [e.g. attempting a retrieval when permissions forbid it], 
+and individual ftp commands to be logged. The syntax for these three logging 
+options are
+		  log transfers [anonymous/guest/real] [inbound/outbound]
+		  log security [anonymous/guest/real]
+		  log command [anonymous/guest/real] 
+Note that there is no control over specific files or commands, which can cause the 
+log file to get somewhat lengthy on a high-traffic server.
+
+Various other options exist, including the displaying of banners, readme files, and 
+displaying the hostname and email address of the admin; see the ftpaccess man page 
+for more details.
+
+
+EMail
+All linux distributions install Sendmail by default, along with several other 
+email processing utilities. Sendmail is a Mail Transfer Agent, or MTA; it handles 
+routing of internal and outgoing mail. When teamed up with a delivery agent such 
+as Fetchmail, it makes for a powerful POP3/SMTP package.
+
+To begin with, Fetchmail must be configured to pull email from a POP server and 
+route it to Sendmail. Fetchmail uses the file ~/.fetchmailrc to determine its 
+behavior; this file has the following format:
+  poll [mailserver] protocol POP3 username [user] password [pwd] mda [program]
+An example configuration for retrieving mail from the server popd.server.com for 
+the user "mammon" with password "YeahRight", and routing the mail to sendmail, 
+would look as follows:
+
+  poll popd.server.com protocol pop3 username "mammon" password "YeahRight" 
+  mda "/usr/sbin/sendmail"
+
+Mail can now be retrieved from the server by typing 'fetchmail' at the command 
+prompt. Note that all 'test' attempts should use 'fetchmail -k' to avoid 
+deleting mail from the server.
+
+At this point Sendmail must be configured, and the eventful tour of the 
+/etc/sendmail.cf file can begin. The .cf file contains four main sections:
+   1. Local Definitions -- definitions & parameters for the local machine
+   2. Foreign Systems -- servers with which sendmail will communicate
+   3. Delivery Agents -- additional mail transport programs
+   4. Mail Headers --format of email headers generated by sendmail
+
+The Local Definitions are a series of cryptic abbreviations, usually preceded 
+by a D [sendmail macro/variable, like #define], C [sendmail Class, a list of 1+ 
+values], O [sendmail Options], or F [a class definition specified in a file]. 
+The usual defintions in this section are as follows:
+	Dw -- define local hostname
+	DD -- define local domain
+	Cw -- other names/aliases for the local host
+	Cd -- other names/aliases for the local domain
+	CS -- list of remote servers to exchange mail with
+	DF -- name of forwarder [email unhandled locally] server
+	CF -- other names/aliases for forwarder
+	DR -- name of relay [email destined beyond local host] server
+	CV -- name of external forwarding server [defined on forwarder server]
+	DW -- uucp name of local host
+	DM -- method of sending email out of local domain
+	OA -- location of aliases file
+	OQ -- location of mail spool
+The pattern behind these definitions is this: the first letter is the type of 
+definition [define, class, option, or file] and the second letter is the actual 
+macro name. Thus, one will commonly see the following macros in sendmail.cf 
+files:
+  $f sender's email address
+  $g sender's return address
+  $j official hostname [usually $w.$m]
+  $m official domain name
+  $n name for error-messages
+  $p sendmail PID
+  $r protocol used
+  $s sender's hostname
+  $u recipient's username
+  $w machine name of host
+  $z recipient's home directory [if local]
+  $E names to be exposed as from this host
+  $L names to always deliver as local
+  $M hosts to masquerade as
+  $S 'Smart relay' host
+
+For the most part, sendmail will work as installed -- usually using procmail to 
+handle placing local mail in the correct queues. For workstations connecting to 
+an ISP, however, the following macros will have to be modified:
+  Cwlocalhost,gaap
+  Dmpandemonium.com
+  Djsmtp.isp.com
+  DR
+  CL root,mammon
+  #CE root
+  DMsmtp.isp.com
+These settings will cause the following: set local hostname, set local domain, 
+'from' machine name, handle unqualified names locally [DR -- make sure it is 
+blank], deliver all email to addresses 'root' and 'mammon' locally, do not 
+expose root's username on send, and masquerade as smtp.isp.com. Combined with 
+fetchmail and procmail's local mailbox routing, this shoudl serve as a basic 
+email platform.
+
+
+PPP
+One of the greatest sources of trouble for linux initiates is the setup of a 
+PPP connection to an ISP. The available tutorials and how-to's provide laborious
+instructions detailing arcane setup options, while most distributions ship with 
+an /etc/ppp directory loaded with convoluted connection scripts. In reality, PPP
+is not all that difficult.
+
+The linux PPP package consists of the pppd daemon and a few scripts in the 
+/etc/ppp directory; for the purpose of this example it is best to save off the 
+/etc/ppp tree as /etc/ppp.factory and start with an empty directory.
+
+The basic setup is to have an options file in /etc/ppp/peers for each ISP; the 
+options file contains basic connection information and refers to a 'chat script'
+which is responsible for the login process.
+
+A typical options file would look as follows:
+  #/etc/ppp/peers/MajorISP
+  lock
+  defaultroute
+  noipdefault
+  modem
+  ttyS1 
+  57600
+  crtscts
+  connect '/usr/sbin/chat -v -f /etc/ppp/ISP.chat'
+  #--------------------------------------------EOF
+Note the PPPD options [lock, defaultroute, noipdefault, modem] which are 
+detailed in the pppd man page, and the connection options [ttyS1 for the device 
+and 57600 for the line speed] which are provided. The last line in the script is
+simply a command to execute on connection.
+
+The referenced chat script would contain the local half of the dialog that is to
+take place during login:
+  #/etc/ppp/ISP.chat
+  TIMEOUT 60
+  ABORT ERROR
+  ABORT BUSY
+  ABORT "NO CARRIER"
+  ABORT "NO DIALTONE"
+  "" "AT&FH0"
+  OK "atdt5551212"
+  CONNECT ""
+  ogin: mammon
+  assword: yeahright
+  #--------------------EOF
+Here can be seen the modem control codes, the ABORT error messages to be sent to
+the console in case of error, and the login name and password. Note that the 
+last two lines represent an EXPECT/SEND script; the chat program waits until the
+characters "ogin:" are recieved [a Login: or login: prompt] and sends the 
+username "mammon", then waits until the characters "assword:" are received and 
+sends the unencrypted password "yeahright".
+
+Once this is set up, the ISP can be connected to with the command
+ root@local>pppd call MajorISP
+The connection is terminated by the command
+ root@local>pppd-off
+If the pppd-off script is not provided with your distribution, you can use the 
+following alias:
+  alias pppd-off='for i in `ls /var/run/ppp?.pid`; do kill -9 `cat $i`; ifconfig
+${i:9:4} down; done'
+
+
+This should handle general ISP connections. Further options exist, such as 
+specifying "nodetach" to keep pppd occupying the console/xterm instead of 
+becoming a background process, as well as specifying PAP/CHAP options, scripts 
+to run on connect/disconnect, etc.
+
+One final topic that should be addressed is name servers. On some ISPs the DNS 
+server information cannot be retrieved from the ISP on connect; for these the 
+servers must be added to resolv.conf on connect. The pppd program automatically 
+runs /etc/ppp/ip-up and /etc/ppp/ip-down on connection and disconnection; it is 
+a simple matter to create these scripts to add and remove name servers from the 
+/etc/resolv.conf file:
+  #/etc/ppp/ip-up
+  #!/bin/sh
+  echo "nameserver 127.0.0.1 #Temporary PPP --primary DNS" >> /etc/resolv.conf
+  echo "nameserver 127.0.0.0 #Temporary PPP --secondary DNS" >> /etc/resolv.conf
+  #---------------------------------------------------------------EOF
+
+  #/etc/ppp/ip-down
+  #!/bin/sh
+  sed -e '/Temporary PPP/d' /etc/resolv.conf > /etc/resolv.new
+  mv /etc/resolv.new /etc/resolv.conf
+  #---------------------------------------------------------------EOF
+
+These scripts will add the name servers 127.0.0.1 and 127.0.0.0 to the 
+resolv.conf file on connection, and remove them on disconnect.
+
+This should provide a basic PPP up-and-running guide for those having trouble. 
+The scripts and commands mentioned here can be front-ended with a Tk script, or 
+can be replaced with a more complete package such as XISP, EZ-PPP, and the like.
+
+
+
+X-Windows
+---------
+X Windows is another area of linux in which the beginner gets frustrated and 
+feels abandoned -- often needlessly. The configuration for X Windows is very 
+straightforward and does not require any particular information about the system
+aside from the model or chipset of the video card and the size of the monitor --
+although the setup utilities and most documentation may claim otherwise.
+
+There are many X setup tools, often tailored to the distribution or developed as
+freeware utilities; the most reliable and the one with the least chance for 
+error is XF86Config, a console-mode utility. To run it, us the following 
+command:
+ root@local>xf86config
+A basic disclaimer screen will come up, after which there will be quite a few 
+prompts which, when answered, will create an XF86Config file [the file which the
+xserver reads to determine how to interact with the video hardware]. The setup 
+process in XF86Config will proceed in the following order:
+  1. Specify a mouse type -- usually #1 or #4. Emulate 3 buttons if you only 
+     have 2, and enable ChordMiddle if you have 3 buttons. Just press ENTER for
+     the mouse device name to take the default.
+  2. Use XKB, use type #1 for a 101-key keyboard and type #2 for a 104-key.
+  3. Monitor configuration: The first screen will prompt for the horizontal sync
+ 	 range, the second for the vertical. All of the old urban legends of X 
+	 setting monitors on fire refer to this part of the install, but do not 
+	 worry -- all modern monitors can handle a horizontal sync of 35 and a 
+	 vertical of 90. For the horizontal, choose #4 for older monitors, #5 for 
+	 smaller [14"] monitors, and #6 or #7 for larger monitors. For vertical 
+	 range, choose #2 for smaller screens and #3 for larger ones. Press ENTER 
+	 for the monitor names.
+  4. Card Selection: Page through the list looking for the correct video card, 
+    or at least a video card with the same chipset [video controller chip can be
+    identified by looking at the card itself, it's the big black CPU-looking one]. 
+	 Choose the correct card and for the X server select #5 to use the one from the 
+	 card definition. Say 'y' to the symbolic link questions and then enter the 
+	 correct amount of video ram. Finally, press ENTER for the video card name 
+	 questions.
+  5. Clockchip setting: Usually just press ENTER.
+  6. Mode Selection: For each color depth, X will try the modes in the order 
+    listed until it finds a working mode. For this reason, the modes all need to
+	 be changed so that the highest resolution is *first* instead of *last*; 
+	 otherwise all video modes will default to the VGA-style 640x480 resolution.
+	 An example for changing the 8-bit modes: Select 1, then type in '432' and 
+	 press ENTER. Say 'n' for virtual desktop [most window managers provide 
+	 their own].
+  7. Writing the config file: say 'n' to the /etc/XF86Config question, and 'y' 
+     to the default location.
+
+X is now configured; it can be started with "startx" for the default color 
+depth, or 'startx -- -bpp#' where # is the desired color depth [e.g. 'startx -- 
+-bpp 24' or 'startx -- -bpp 16']. The default color depth can be changed by 
+adding the line "DefaultColorDepth #' to the XF86Config file "Screen" section:
+ root@local>vi /usr/X11R6/lib/X11/XF86Config
+Section "Screen"
+    Driver      "svga"
+    Device      "NeoMagic (laptop/notebook)"
+    Monitor     "My Monitor"
+    DefaultColorDepth 24
+    Subsection "Display"
+...
+
+Additional XF86Config options can be determined by reading the XF86Config man 
+page.
+
+
+
+Printing
+--------
+Unlike standard desktop operating systems such as Windows and MacOS, Linux has
+no inherent printing support. Rather, a number of utilities interact to provide
+basic printing services. Foremost among these utilities is lpd, the line printer
+daemon; lpd will manage queues for a number of printers via the lpr et. al. 
+commands.
+
+Lpd will not format output; rather, it sends output to the printer with no 
+modification and no formatting. For this reason, it is desireable --if not 
+necessary-- to provide a filter which lpd will apply to the output in order 
+to format it for printer output. The filter can be a shell script, a perl
+script, or any executable file; the program 'apsfilter' is perhaps the most 
+versatile filter available. Its setup package is pretty straightforward, and 
+will go so far as to define further filters and /etc/printcap entries for 
+you.
+
+Apsfilter relies mainly on two additional filters -- a2ps [ASCII to Postscript] 
+and ghostscript [for converting Postscript to printer commands]. Once setup, 
+the apsfilter package manages printing as follows:
+       sourcefile -> aps -> ghostview -> lpd
+The source file is cat'ed to a filter [or a sequence of filters] in order to 
+convert it to Postscript; the output is then passed through Ghostscript to 
+create a copy suitable for printing [Ghostscript is actually a program that 
+converts PS files/data into a bytestream configured for display on a specific 
+device; that device can be a graphics card, a printer, or a graphics file 
+format], and the final data is piped straight to the printer device. This 
+causes a bit of overhead for printing and you can expect a 20-50% decrease in 
+printing speed; to bypass this apsfilter offers additional printer modes such 
+as raw ascii.
+
+Setting up a linux box for printing is as simple as obtaining the latest 
+versions of Ghostview, apsfilter, and a2ps; for the support of newer printers, 
+it may be necessary to compile the source for Ghostview directly [be sure to 
+kill -HUP lpd after compiling ghostview or setting up apsfilter] -- the 
+changes required are minimal [the only lines in ./makefile to be changed are 
+the FEATURES= and DEVICES= lines], and are well-documented in make.txt.  
+
+
+
+Documentation
+-------------
+The fact that linux tends to come with no printed manuals and a limited [in the 
+case of GUI-based distributions] or even missing GUI-based online help system
+gives the appearance that the OS ships with no documentation. This can be 
+frustrating and even intimidating for the novice, and all for no reason -- 
+linux in fact comes with more documentation than just about every other operating 
+system. The documentation ranges from technical 'man pages' to newbie 'FAQs' and
+includes a number of tutorial or 'How-To' files to cover a variety of obscure or
+complex tasks; accessing this documentation, however, does require some measure of 
+initiation into the linux documentation structure, such as it is.
+
+
+Man Pages
+The 'man' command allows access to formatted manuals ['man pages'] for the 
+software, daemons, configuration files, and programming libraries shipped with 
+the OS. Software installed subsequently may or may not come with its own man 
+pages; however, it is possible to translate a README or DOCUMENTATION file into 
+a man page an place it in the appropriate directory.
+
+The man command uses the variable MANPATH to determine which directories contain
+man pages; this is set in the file /etc/man.conf and usually includes /usr/man, 
+/usr/local/man, and /usr/X11R6/man. 
+
+Each man directory contains numbered subdirectories which contain specific types
+of manuals; even though commands or programs may have the same name [e.g. the 
+'chmod' utility and the 'chmod' system call], the correct one can be accessed by
+specifying which section of the man pages to look in. The 'sections' are similar
+to the sections in a printed reference manual; they group the material by type 
+and give the impression of a rough table of contents:
+		  1. User/unpriveleged commands & programs
+		  2. System calls [provided by kernel]
+		  3. Library functions [provided by C libs, etc]
+		  4. Special files [character and block devices]
+		  5. File formats, data structures
+		  6. Games, frivolous accessories
+		  7. Misc [header files, macros, OS guidelines]
+		  8. Administration/privileged commands & programs
+		  n. Tcl/Tk-related commands
+An overview to each section can be viewed with the command 'man # intro', where 
+'#' is the number of the section to view. The command 'man -a' will display the 
+results for all sections; thus typing
+   root@local>man -a intro
+will display the introductory pages for each section [note that the commands 
+used in the man viewer are similar to vi or more commands; thus ':n' or ':q' 
+will switch to the next man page]. 
+
+The man page for a specific section can be viewed by prefixing the search term 
+with the section number, e.g.
+   root@local>man 1 chmod
+will present the man page for the chmod utility, while
+   root@local>man 2 chmod
+will present the man page for the chmod system call. The sections or pages which 
+apply to a specific command can be viewed with the 'whatis' utility; thus 
+ root@local>whatis chmod
+will list the User Command and System Call man pages for chmod.
+
+Man pages can be searched for strings in case the specific command is not known;
+the apropos utility [also the command 'man -k'] will search the whatis database 
+for the provided string; 'man -K' will search all extant man pages for the 
+supplied string [very slow!]. To see the difference, try the following commands:
+ root@local>apropos editor
+ root@local>man -K editor
+The first will give a list of all editors installed on the system [and having 
+man pages], the second will present a prompt each time it finds a man page with 
+the word 'editor' in it, verifying with the user whether or not to display that 
+page.  Note that using the 'man -K', one can limit a search to a specific section 
+by specifying the section number before the search term, e.g.
+ root@local>man -K n canvas
+will search the Tcl commands for the term 'canvas', while
+ root@local>man -K 3 canvas
+will search the Library functions for the term 'canvas'.
+
+The order in which the sections are searched by the man utility is determined by
+the MANSECT variable, which is set in /etc/man.conf as follows:
+  MANSECT     1:8:2:3:4:5:6:7:9:tcl:n:l:p:o
+The PAGER variable is defined in the same file:
+  PAGER    /usr/bin/less -is
+...this determine what viewer is used to display the man pages. For more 
+information on the keystrokes used to work the man pager, do a 'man less'.
+
+Finally, the man pages provide excellent information on the unix file system
+and X Windows; newcomers to Unix are encourage to browse through `man hier`,
+`man proc`, `man MAKEDEV`, `man X`, and in fact the majority of the pages 
+located in /usr/man/man7 .
+
+Info
+The GNU project has moved most of their documentation from the searchable man 
+pages to the browsable [and, of course, searchable] 'info' system. Info is a 
+console-mode hypertext documentation system; it is invoked by typing 'info' or 
+'info [menuitem]'.
+
+When info is run with no parameters, a menu will be displayed containing such 
+topics as 'Developing in C/C++', 'Libraries and functions', and 'Programming 
+Tools.' At this point, PageUp and PageDown will scroll through the menu, and '?'
+will display a list of commands for navigating Info. The salient commands are
+as follows:
+		  q Quit Info
+		  n Next node
+		  p Previous node
+		  u Up one node level
+		  m Select a menu item
+		  [spacebar] Scroll down 
+		  [delete] Scroll up
+		  b Beginning of page
+		  e End of page
+		  g Go to a specific node
+		  s Search for a string in this node
+When using the 'm' command, the name of a menu item must be specified. For 
+example, to view the menu item labelled 'GCC' one would type 'm GCC'. Typing 
+'m ?' will give a list of all menu labels for the current node.
+
+
+Readmes
+Most programs come with a README or some addendums to the man page; these are 
+often stored in the /usr/doc directory. To make for quick browsing of the 
+directory and files, an alias can be set up in ~/.bashrc which uses the text-
+mode browser Lynx as a combined directory browser and text viewer:
+  alias doc='lynx /usr/doc'
+
+
+LDP
+The linux documentaton project provides a wealth of documentation which is 
+installed by most distributions in the /usr/doc directory. These include How-Tos,
+FAQ lists, and manuals such as the Network Administrator Guide [NAG], System 
+Administrator Guide [SAG], and the Linux Programmer's Guide [LPG]. It is 
+convenient to set up aliases for these documents in the ~/.bashrc file:
+  alias howto='lynx /usr/doc/how-to'
+  alias faq='lynx /usr/doc/FAQ'
+  alias nag='lynx /usr/doc/nag/index.html'
+  alias sag='lynx /usr/doc/sag/index.html'
+  alias lpg='lynx /usr/doc/lpg/index.html'
+Some distributions provide an HTML-formatted online manual which is stored in 
+the doc directory:
+  alias manual='lynx /usr/doc/HTML'
+Distributions such as Debian allow the installation of an archive of Linux 
+Gazette issues in the /usr/doc directory:
+  alias lg='lynx /usr/doc/lg'
+
+
+
+Software
+--------
+Linux distributions come with thousands of software packages, about a quarter of 
+which will ever be run by then end user [usually late at night when curiosity 
+strikes, before the scotch wears off]. Unfortunately most distributions forget 
+one or another of the most useful software packages -- the ones that make Linux 
+easier to use and more powerful.
+
+Console Utilities
+Linux has a huge amount of console utilities included with every distribution, 
+more than a single user could ever hope to learn. Surprisingly, though, some 
+essentials are invariable left out of almost every distribution:
+ aide -- GPL utility similar to Tripwire
+ alien -- Convert packages to and from RPM, DEB, and TGZ format
+ biew -- binary file viewer and editor; similar to hiew
+ lsof -- List Open Files -- excellent system monitoring tool.
+ nasm -- Netwide Assembler -- for assembly language programming
+ nc -- NetCat -- network debugging/probing tool
+ nmap -- network port scanner
+ pgcc -- pentium-optimized version of GCC
+ portsentry -- network port monitor [detects scans] 
+ pstack -- Similar in spirit to strace; displays stack trace of running program
+ tcpdump -- packet capture utility [use with sniffit/ethereal]
+
+
+X Applications
+With the advent of the KDE and Gnome desktop environments, a lot of the standard
+GUI utilities --CD players, hex editors, notepads, calculators-- are readily 
+available. There are one or two additional utilities that might be considered 
+essential [or at least highly recommended] to any X installation:
+ DDD -- Data Display Debugger -- excellent front-end to GDB
+ Eterm or Aterm -- enhanced terminal emulators for X
+ FileRunner -- Filemanager with FTP capability
+ Grasp -- Programmer's editor/environment, code browser
+ Helptool -- Redhat GUI frontend to installed man, howto's, etc
+ Nedit -- programmer's editor [with Project Mgr front-ends available]
+
+
+
+
+In Conclusion
+-------------
+This should be enough to get a basic linux installation both fully functional 
+and reasonable secure, as far as typical workstation applications are concerned.
+To be sure, there additional considerations to be taken into account for 
+laptops, for DSL or ISDN connections, and for inter- or intranet servers. It is 
+hoped that upon finishing this document, the reader will be in a better position
+for researching and applying solutions to these additional configuration 
+problems.

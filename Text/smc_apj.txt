@@ -1,0 +1,318 @@
+                                                     SMC Techniques: The Basics
+                                                     by mammon_
+
+
+One of the benefits of coding in assembly language is that you have the option
+to be as tricky as you like: the binary gymnastics of viral code demonstrate
+this above all else. One of the viral "tricks" that has made its way into
+standard protection schemes is SMC: self-modifying code.
+
+In this article I will not be discussing polymorphic viruses or mutation
+engines; I will not go into any specific software protection scheme, or cover
+any anti-debugger/anti-disassembler tricks, or even touch on the matter of the
+PIQ. This is intended to be a simple primer on self-modifying code, for those
+new to the concept and/or implementation.
+
+
+Episode 1: Opcode Alteration
+----------------------------
+One of the purest forms of self-modifying code is to change the value of an
+instruction before it is executed...sometimes as the result of a comparison,
+and sometimes to hide the code from prying eyes. This technique essentially
+has the following pattern:
+        mov reg1, code-to-write
+        mov [addr-to-write-to], reg1
+where 'reg1' would be any register, and where '[addr-to-write-to]' would be a
+pointer to the address to be changed. Note that 'code-to-write- would ideally
+be an instruction in hexadecimal format, but by placing the code elsewhere in
+the program--in an uncalled subroutine, or in a different segment--it is
+possible to simply transfer the compiled code from one location to another via
+indirect addressing, as follows:
+          call changer
+          mov dx, offset [string]     ;this will be performed but ignored
+label:    mov ah, 09                  ;this will never be perfomed
+          int 21h                     ;this will exit the program
+          ....
+changer:  mov di, offset to_write     ;load address of code-to-write in DI
+          mov byte ptr [label], [di]  ;write code to location 'label:'
+          ret                         ;return from call
+to_write: mov ah, 4Ch                 ;terminate to DOS function
+
+this small routine will cause the program to exit, though in a disassembler it
+at first appears to be a simple print string routine. Note that by combining
+indirect addressing with loops, entire subroutines--even programs--can be
+overwritten, and the code to be written--which may be stored in the program as
+data--can be encrypted with a simple XOR to disguise it from a disassembler.
+
+The following is a complete asm program to demonstrate patching "live" code;
+it asks the user for a password, then changes the string to be printed
+depending on whether or not the password is correct:
+; smc1.asm ==================================================================
+.286
+.model small
+.stack 200h
+.DATA
+;buffer for Keyboard Input, formatted for easy reference:
+MaxKbLength  db 05h
+KbLength     db 00h
+KbBuffer     dd 00h
+
+;strings: note the password is not encrypted, though it should be...
+szGuessIt        db     'Care to guess the super-secret password?',0Dh,0Ah,'$'
+szString1        db     'Congratulations! You solved it!',0Dh,0Ah, '$'
+szString2        db     'Ah, damn, too bad eh?',0Dh,0Ah,'$'
+secret_word      db     "this"
+
+.CODE
+;===========================================
+start:
+        mov     ax,@data                ; set segment registers
+        mov     ds, ax                  ; same as "assume" directive
+        mov     es, ax
+        call Query                      ; prompt user for password
+        mov     ah, 0Ah                 ; DOS 'Get Keyboard Input' function
+        mov     dx, offset MaxKbLength  ; start of buffer
+        int     21h
+        call Compare                    ; compare passwords and patch
+exit:
+        mov ah,4ch                      ; 'Terminate to DOS' function
+        int 21h
+;===========================================
+Query            proc
+        mov  dx, offset szGuessIt       ; Prompt string
+        mov  ah, 09h                    ; 'Display String' function
+        int  21h
+        ret
+Query            endp
+;===========================================
+Reply            proc
+PatchSpot:
+        mov  dx, offset szString2       ; 'You failed' string
+        mov  ah, 09h                    ; 'Display String' function
+        int  21h
+        ret
+Reply            endp
+;===========================================
+Compare            proc
+        mov     cx, 4                   ; # of bytes in password
+        mov     si, offset KbBuffer     ; start of password-input in Buffer
+        mov     di, offset secret_word  ; location of real password
+        rep cmpsb                       ; compare them
+        or cx, cx                       ; are they equal?
+        jnz     bad_guess               ; nope, do not patch
+        mov word ptr cs:PatchSpot[1], offset szString1  ;patch to GoodString
+bad_guess:
+        call Reply                      ; output string to display result
+        ret
+Compare            endp
+end     start
+; EOF =======================================================================
+
+
+Episode 2: Encryption
+---------------------
+Encryption is undoubtedly the most common form of SMC code used today. It is
+used by packers and exe-encryptors to either compress or hide code, by viruses
+to disguise their contents, by protection schemes to hide data. The basic
+format of encryption SMC would be:
+        mov reg1, addr-to-write-to
+        mov reg2, [reg1]
+        manipulate reg2
+        mov [reg1], reg2
+where 'reg1' would be a register containing the address (offset) of the
+location to write to, and reg2 would be a temporary register which loads the
+contents of the first and then modifies them via mathematical (ROL) or logical
+(XOR) operations. The address to be patched is stored in reg1, its contents
+modified within reg2, and then written back to the original location still
+stored in reg1.
+
+The program given in the preceding section can be modified so that it
+unencrypts the password by overwriting it (so that it remains unencrypted
+until the program is terminated) by first changing the 'secret_word' value as
+follows:
+secret_word      db     06Ch, 04Dh, 082h, 0D0h
+
+and then by changing the 'Compare' routine to patch the 'secret_word' location
+in the data segment:
+;===========================================
+magic_key        db     18h, 25h, 0EBh, 0A3h ;not very secure!
+
+Compare            proc    ;Step 1: Unencrypt password
+        mov     al, [magic_key]              ; put byte1 of XOR mask in al
+        mov     bl, [secret_word]            ; put byte1 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word, al     ; patch byte1 of password
+        mov     al, [magic_key+1]            ; put byte2 of XOR mask in al
+        mov     bl, [secret_word+1]          ; put byte2 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[1], al  ; patch byte2 of password
+        mov     al, [magic_key+2]            ; put byte3 of XOR mask in al
+        mov     bl, [secret_word+2]          ; put byte3 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[2], al  ; patch byte3 of password
+        mov     al, [magic_key+3]            ; put byte4 of XOR mask in al
+        mov     bl, [secret_word+3]          ; put byte4 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[3], al  ; patch byte4 of password
+        mov     cx, 4      ;Step 2: Compare Passwords...no changes from here
+        mov     si,offset KbBuffer
+        mov     di, offset secret_word
+        rep     cmpsb
+        or      cx, cx
+        jnz     bad_guess
+        mov     word ptr cs:PatchSpot[1], offset szString1
+bad_guess:
+        call Reply
+        ret
+Compare            endp
+
+Note the addition of the 'magic_key' location which contains the XOR mask for
+the password. This whole thing could have been made more sophisticated with a
+loop, but with only four bytes the above speeds debugging time (and, thereby,
+article-writing time). Note how the password is loaded, XORed, and re-written
+one byte at a time; using 32-bit code, the whole (dword) password could be
+written, XORed and an re-written at once.
+
+
+Episode 3. Fooling with the stack
+---------------------------------
+This is a trick I learned while decompiling some of SunTzu's code. What
+happens here is pretty interesting: the stack is moved into the code segment
+of the program, such that the top of the stack is set to the first address to
+be patched (which, BTW, should be the one closest to the end of the program
+due to the way the stack works); the byte at this address is the POPed into a
+register, manipulated, and PUSHed back to its original location. The stack
+pointer (SP) is then decremented so that the next address to be patched (i
+byte lower in memory) is now at the top of the stack.
+
+In addition, the bytes are being XORed with a portion of the program's own
+code, which disguises somewhat the actual value of the XOR mask. In the
+following code, I chose to use the bytes from Start: (200h when compiled)
+up to --but not including-- Exit: (214h when compiled; Exit-1 = 213h).
+However, as with SunTzu's original code I kept the "reverse" sequence of the
+XOR mask such that byte 213h is the first byte of the XOR mask, and byte 200h
+is the last. After some experimentation I found this was the easiest way to
+sync a patch program--or a hex editor--to the stack-manipulative code; since
+the stack moves backwards (a forward-moving stack is more trouble than it is
+worth), using a "reverse" XOR mask allows both filepointers in a patcher to be
+INCed or DECed in sync.
+
+Why is this an issue? Unlike the previous two examples, the following does not
+contain the encrypted version of the code-to-be-patched. It simply contains
+the source code which, when compiled, results in the unencrypted bytes which
+are then run through the XOR routine, encrypted, and then executed (which, if
+you have followed thus far, will immediately demonstrate to be no good...
+though it is a fantastic way of crashing the DOS VM!).
+
+Once the program is compiled you must either patch the bytes-to-be-decrypted
+manually, or write a patcher to do the job for you. The former is more
+expedient, the latter is more certain and is a must if you plan on maintaining
+the code. In the following example I have embedded 2 CCh's (Int3) in the code
+at the fore and aft end of the bytes-to-be-decrypted section; a patcher need
+simply search for these, count the bytes in between, and then XOR with the
+bytes between 200-213h.
+
+Once again, this sample is a continuation of the previous example. In it, I
+have written a routine to decrypt the entire 'Compare' routine of the previous
+section by XORing it with the bytes between 'Start' and 'Exit'. This is
+accomplished by seeting the stack segment equal to the code segment, then
+setting the stack pointer equal to the end (highest) address of the code to be
+modified. A byte is POPed from the stack (i.e. it's original location), XORed,
+and PUSHed back to its original location. The next byte is loaded by
+decrementing the stack pointer. Once all of the code it decrypted, control is
+returned to the newly-decrypted 'Compare' routine and normal execution
+resumes.
+
+;===========================================
+magic_key        db     18h, 25h, 0EBh, 0A3h
+
+Compare            proc
+         mov cx, offset EndPatch[1]    ;start addr-to-write-to + 1
+         sub cx, offset patch_pwd      ;end addr-to-write-to
+         mov ax, cs
+         mov dx, ss                    ;save stack segment--important!
+         mov ss, ax                    ;set stack segment to code segment
+         mov bx, sp                    ;save stack pointer
+         mov sp, offset EndPatch       ;start addr-to-write-to
+         mov si, offset Exit-1         ;start sddr of XOR mask
+XorLoop:
+         pop ax                        ;get byte-to-patch into AL
+         xor al, [si]                  ;XOR al with XorMask
+         push ax                       ;write byte-to-patch back to memory
+         dec sp                        ;load next byte-to-patch
+         dec si                        ;load next byte of XOR mask
+         cmp si, offset Start          ;end sddr of XOR mask
+         jae GoLoop                    ;if not at end of mask, keep going
+         mov si, offset Exit-1         ;start XOR mask over
+GoLoop:
+         loop XorLoop                  ;XOR next byte
+         mov sp, bx                    ;restore stack pointer
+         mov ss, dx                    ;restore stack segment
+         jmp    patch_pwd
+         db     0CCh,0CCh              ;Identifcation mark: START
+patch_pwd:                             ;no changes from here
+        mov     al, [magic_key]
+        mov     bl, [secret_word]
+        xor     al, bl
+        mov     byte ptr secret_word, al
+        mov     al, [magic_key+1]
+        mov     bl, [secret_word+1]
+        xor     al, bl
+        mov     byte ptr secret_word[1], al
+        mov     al, [magic_key+2]
+        mov     bl, [secret_word+2]
+        xor     al, bl
+        mov     byte ptr secret_word[2], al
+        mov     al, [magic_key+3]
+        mov     bl, [secret_word+3]
+        xor     al, bl
+        mov     byte ptr secret_word[3], al
+;compare password
+        mov     cx, 4
+        mov     si, offset KbBuffer
+        mov     di, offset secret_word
+        rep cmpsb
+        or cx, cx
+        jnz     bad_guess
+        mov word ptr cs:PatchSpot[1], offset szString1
+bad_guess:
+        call Reply
+        ret
+Compare            endp
+EndPatch:
+        db 0CCh, 0CCh                  ;Identification Mark: END
+
+This kind of program is very hard to debug. For testing, I substituted 'xor
+al, [si]' first with 'xor al, 00h', which would cause no encryption and is
+useful for testing code for final bugs, and then with 'xor al, EBh', which
+allowed me to verify that the correct bytes were being encrypted (it never
+hurts to check, after all).
+
+
+Episode 4: Summation
+--------------------
+That should demonstrate the basics of self-modifying code. There are a few
+techniques to consider to make development easier, though really any SMC
+programs will be tricky.
+
+The most important thing is to get your program running completely before you
+start overwriting any of its code segments. Next, always create a program that
+performs the reverse of any decryption/encryption code--not only does this
+speed up comilation and testing by automating the encryption of code areas
+that will be decrypted at runtime, it also provides a good tool for error
+checking using a disassembler (i.e. encrypt the code, disassemble, decrypt the
+code, disassemble, compare). In fact, it is a good idea to encapsulate the SMC
+portion of your program in a separate executable and test it on the compiled
+"release product" until all of the bugs are out of the decryption routine, and
+only then add the decryption routine to your final code. The CCh 'landmarks'
+(codemarks?) are extremely useful as well.
+
+Finally, do your debugging with debug.com for DOS applications--the debugger
+is quick, small, and if it crashes you simply lose a Windows DOS box. The
+ability to view the program address space after the program has terminated but
+before it is unloaded is another distinct advantage.
+
+More complex examples of SMC programs can be found in Dark Angel's code, the
+Rhince engine, or in any of the permutation engines used in ploymorphic
+viruses. Acknowledgements go to Sun-Tzu for the stack technique used in his
+ghf-crackme program.

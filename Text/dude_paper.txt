@@ -1,0 +1,2206 @@
+                    The  Despotic  Unix  Debugging  Engine
+                                  by mammon_
+
+_______________________________________________________________________________
+Contents
+
+     I. Intent
+    II. Design
+        A. The Kernel Module
+        B. The Device File
+        C. The Debug Library
+        D. Client Debugger Applications
+   III. Implementation of the Kernel Module
+        A. Process Management
+        B. Debug Actions
+        C. Debug Events
+        D. Breakpoint Modules
+        E. Breakpoint Actions
+        F. The Debug Device File
+        G. Module Init and Cleanup
+    IV. Library Interface
+	     A. Configuration
+	     B. Target Specification
+	     C. Breakpoints
+	     D. Tracing
+	     E. Register Manipulation
+	     F. Memory Manipulation
+     V. Reference Implementation for the Client Debugger
+    VI. Future Expansion
+
+
+
+_______________________________________________________________________________
+I. Intent
+
+   Now that the UNIX operating systems have caught the eye of the online fringe
+programming community through freely-available UNIX-style OSes such as FreeBSD
+and Linux, the development of malicious software is on the rise. The once-rare
+development of a UNIX virus or rootkit is now a daily occurrence, and the 
+sophistication of malicious software is growing. 
+   As always, avoidance is the best policy for malicious or suspect software;
+however, forces beyond a sysadmin's control ensure that sooner or later, every
+system will enounter destructive programs. It is best in such cases to be able
+to examine the software in question, in order to determine its operation, its 
+purpose, and how to safely remove it. The two means of analysis or examination
+are runtime analysis, such as monitoring the execution of a program or running
+the program in a safe "sandbox" environment, and file or "dead" analysis, 
+such as grep'ing the strings from a program or disassembling its object code.
+   While the UNIX environment has always provided an impressive array of
+programming and debugging tools, these same tools tend to rely on the 
+beneficence of a program in order to do their job; when faced with unruly or
+outright malicious code, these tools break down and become unreliable. The
+ptrace(2) interface on which many of the runtime analysis tools rely on is
+sorely taxed even when applied to well-behaved programs; it fails completely
+when faced with a program that has even a casual knowledge of --and a desire
+to outwit-- the ptrace(2) interface.
+   
+   The purpose of this paper and the accompanying code is to provide a 
+debugging alternative for the UNIX environment: a debugger which is simple to
+use and to extend, but which has the power and flexibility to combat malicious
+code. The design of the debugger will be discussed, followed by a Linux
+implementation and a discussion of avenues for future development.
+
+
+
+_______________________________________________________________________________
+II. Design
+
+   The UNIX environment runs processes or tasks in separate, protected address
+spaces; as a result, to properly control another process one must use kernel
+mode code. The ptrace(2) facility depends heavily on hardwired kernel support;
+in Linux, for example, the scheduler notifies the parent of a traced process
+via the SIGCHLD ... Since ptrace(2) has such deep hooks in the kernel, it is
+difficult to replace or remove.
+	The need to replace ptrace(2), however, is easily demonstrated. Firstly, 
+the process management it provides is dependent on signals; debugging therefore 
+becomes asynchronous and unreliable. While the use of signals is both portable
+and well-behaved, more effective --if not brutal-- methods can and should be 
+used by a debugger with full kernel support.
+	In addition, ptrace(2) is accessible to all processes, meaning that it is a 
+trivial matter for a process to determine whether or not it is being debugged, 
+and to change its behavior accordingly. Similarly, any process can use the 
+PTRACE_ATTACH service to attempt to control and modify --perhaps even infect--
+an arbitrary system process. At the very least, the debugging facility should
+be hidden from all processes, and should rely on some form of authentication
+to prevent process attaching and debugging which was not initated by a user.
+	The potential security hole provided by ptrace(2) can be eliminated with
+a simple system call hook which prevents or authenticates attempts to access
+the ptrace(2) services; at this point a replacement debugging facility should
+be introduced to the kernel which can adequately deal with hostile and clever
+code.
+
+
+	Patching an existing UNIX kernel is both non-portable and hard to maintain; 
+in addition, hard-coding process manipulation support into a kernel is insecure 
+and potentially unstable. For this reason a kernel module which can be loaded 
+or unloaded on demand will be used to house the kernel-mode code for the 
+debugger.
+   To accompany the kernel module, an application library is provided which will
+hide the details of communicating with the module from the user-mode debugging
+application (referred to from here on as the "client debugger"). This will
+simplify the interface which programmers need to learn in order to implement a
+client debugger, and will make future enhancements to the kernel module be
+transparent to the programmer. This is analogous to the ptrace(2) system call
+in <sys/ptrace.h>, as it provides a layer of abstraction over the kernel mode 
+component.
+   Communication between the library and the kernel module will take place via
+a UNIX "special file"; specifically, a character device file named /dev/debug.
+Writes to this file take the form of debugger commands such as setting
+breakpoints or configuring the debugger; data is returned by the module either 
+as integer return values from the write(2) call [limited to positive integers 
+only, since the write(2) call itself will convert all numbers less than zero to 
+-1 and a corresponding errno value] or in userspace buffers provided by the
+library as part of a command request.
+   The kernel module will be responsible for only a few duties: setting and 
+clearing breakpoints or execption handlers, starting and stopping the target
+process, and reading/writing code, data, and registers in the target process.
+The library and the client debugger will perform the more time-consuming tasks 
+such as parsing the entry point of the file, disassembling instructions, and 
+employing debug symbols found in the target. It should be noted that the user
+interface is entirely removed from the kernel component, so that system will
+not be halted in expectation of user input.
+   
+
+
+ A.The Kernel Module
+ -------------------
+   The kernel module will provide routines for managing breakpoints and
+exceptions, accessing process memory and registers, and for responding to
+breakpoints by generating Debug Events which will be passed to the client
+debugger. The kernel module will also be responsible for starting, stopping,
+and killing the target process as appropriate.
+
+
+   Breakpoints
+
+   A "breakpoint" is generally considered to be any mechanism which generates
+a debug exception in the OS; this can take the form of a hardware debug or
+"watch" register, an trap or interrupt instruction, or a software invocation
+of the breakpoint exeption handler. In the kernel module, debug exceptions can
+be generated by breakpoints as well as traps in system calls and exeption 
+handlers; thus the term "breakpoint handler" will actually encompass any 
+mechanism which causes a debug exception or otherwise stops the target process.
+
+   Generally speaking, a breakpoint will consist of a condition which causes a
+"break event" (a debug exception or other stopping of the process and 
+notification of the kernel module) and an action to perform when the event 
+occurs. A breakpoint might consist of an address within the target and a set
+of qualifying conditions --such as Write or Execute access to the address--
+while an action might be to generate a Debug Event which will notify the
+client debugger that the break event has occurred.
+
+   The general response to a break event is as follows:
+
+	1. debug exception occurs
+	2. kernel invokes appropriate exception handler
+	3. exception handler checks if this is one of its breakpoints
+	4. exception handler invokes the appropriate breakpoint handler
+	5. breakpoint handler performs an action such as stopping the process 
+
+	At this point, the target is stopped and all information about the break 
+event is known. The kernel module performs an action in response to the break 
+event, usually by stopping the process or logging the break event; in general, 
+a Debug Event is generated to notify the client debugger that a break event has 
+taken place. It is up to the client debugger to check for and react to Debug 
+Events; it may print a message to a stdout, examine process memory, or clear 
+a breakpoint and restart the process. 
+	A standard client debugger will leave the process stopped until the user 
+chooses to continue it; automated debuggers such as ltrace or strace will make
+a note of the Debug Event and restart the process automatically. The process
+is usually as follows:
+
+	1. kernel module generates DebugEvent
+	2. client uses write(2) to wait for a DebugEvent
+	3. write(2) returns and fills a DebugEvent structure for the client
+	4. client reacts to the event
+	5. client uses write(2) to step, restart, or kill the target process
+	6. kernel module starts or kills the process as requested
+
+	Since the target is assumed to be a child process of the client debugger, it 
+is assumed that the client debugger will always be active while the target is 
+running.  If this is not the case, the client debugger will need to perform 
+breakpoint cleanup before it exits.
+
+	The experienced ptrace(2) user should note that the client debugger never
+explicitly attaches to the target; there is no notion of a "target" or an 
+"attachment" in the kernel module, merely a table of breakpoints which contain
+a PID and an address to break on. Since there is no notion of a target or a
+controlling process, it may seem that any process can arbitrarily add and 
+remove breakpoints to any other process.
+	This is mostly true. When a breakpoint is set by a client debugger, the PID
+of the debugger is used to determine if the client debugger is currently the
+target --or the child of the target-- of a breakpoint; if so, the write(2) for 
+the breakpoint returns success but the requested breakpoint is not set. 
+Likewise, if the PID of the target of a requested breakpoint is the PID of a 
+process owning existing breakpoints, the same apparent success occurs. This is 
+to prevent the target process from inserting breakpoints into the debugger, and 
+from using up all available breakpoints in order to foil the client debugger.
+	When a request to delete a breakpoint occurs, the kernel module will check 
+the PID of the client debugger, and will return an apparent success if the PID 
+matches the PID of any target of any breakpoint. Once again, this is to prevent
+the target from removing breakpoints set by the client debugger. It should be
+noted, though, that any PID which is not related to a target of a breakpoint
+can delete existing breakpoints; it is assumed that a single user will be in
+control of all client debuggers, and thus that the user is permitted to manage
+breakpoints regardless of which instance of a client debugger they are using.
+
+	The breakpoints created by a client debugger are stored in a linked list
+in the module's descriptor for that client; each breakpoint structure contains
+at a minimum the 'type' of breakpoint [i.e., the Breakpoint Module servicing
+that breakpoint; see below], the 'action' to take when that breakpoint occurs
+[see Breakpoint Actions], the 'status' of the breakpoint [enabled or disabled],
+the PID of the client debugger, and the PID of the target process; all other
+information, such as the code address that the breakpoint fires on, is specific
+to the type of breakpoint. In order for this to be clear, it is important to
+understand that the trapping of signals, system calls, and other system 
+activity is considered a type of breakpoint.
+
+
+   Breakpoint Modules
+   
+   In order to allow greater flexibility, breakpoint handlers are constructed
+as independent modules which may be compiled into the debugger kernel module, 
+left as standalone kernel modules, or removed from the debugger entirely. Each
+breakpoint module provides its own breakpoint condition handler and its own
+exception handler to be invoked as needed to deal with breakpoints. All 
+breakpoints managed by modules must have an associated owner PID (the client 
+debugger), an action, and an "enabled" or "disabled" state variable; target 
+PIDs and breakpoint conditions are not required.
+   The primary breakpoint module is the Hardware Breakpoint module. On Intel
+platforms, this manages the INT1 trap, providing support for CPU debug 
+registers and single step or "trace" mode. The Software Breakpoint module
+manages the INT3 trap on Intel platforms, providing support for execution 
+breakpoints [note that while INT1 can be used for execution breakpoints, the 
+number of debug registers is limited to 4 for any single process ... it is 
+therefore wise to conserve these and simply use INT3 for code execution
+breakpoints]. 
+   A MM (memory manager) Breakpoint module can be provided to supplement 
+hardware breakpoints on data access. Simply put, an MM breakpoint modifies the 
+page containing the breakpoint address and removes permission for the type of 
+access requested (i.e., READ access to the page is removed if the breakpoint 
+is set on reads to the address); the module hooks the page fault handler in 
+order to catch references to the address, then provides the permission for one 
+instruction only [i.e., by stepping one instruction and then removing the 
+permission from the page] once the client debugger has requested starting or 
+tracing of the target. This is a bit tricky and will slow down execution; thus 
+it should only be used when hardware breakpoints such as debug registers are 
+all allocated, or do not exist.
+   A Signal Breakpoint can be used to trap signals being sent to a target. The 
+module will hook the kill() system call, or write a trap instruction into the 
+starting address of the appropriate signal handler for the target. In order to
+provide the greates flexibility and to reduce the number of stored breakpoints,
+a combination of these two approaches should be used: when the hooked kill() is
+called, the handler writes a trap instruction to the start of the appropriate
+signal handler; this way, signals which are ignored or not caught by the target
+can still be monitored. 
+
+   Additional modules can be added to trap system calls made by the target, 
+accesses to I/O addresses, or exceptions on the system. Since all breakpoints 
+will be created with the same write(2) control call, adherence to a common 
+breakpoint structure is mandated.
+
+
+   Breakpoint Actions
+
+	The default action for any exception caught by the kernel module is for the
+next exception handler in the chain to be invoked; this is the case when the
+exception is caused by a process which is not the target of any breakpoints, 
+or when the exception has been caused by an event [such as an embedded INT1]
+which the module is not responsible for. When a breakpoint is being handled by
+the module, the action associated with that specific breakpoint will be 
+performed. 
+
+	When the kernel module handles an exception, the process is generally as 
+follows:
+
+      1. Call next handler if PID is not a target or the child of a target
+      2. Call next handler if exception cause [e.g. address on an INT3]
+         matches no internal breakpoint condition	
+      3. Perform action assigned to the breakpoint matching this exception
+
+The possible breakpoint actions are 
+
+		1. Ignore, and continue process execution
+      2. Generate a Debug Event and continue process execution
+      3. Generate a Debug Event and stop the process
+      4. Generate a Debug Event, stop the process, and remove the breakpoint
+
+These actions are known as NONE, LOG, STOP, and ONESHOT respectively. Note 
+that it is possible to add a rudimentary UI to the kernel module and thus
+provide a fifth action, CONSOLE, which will halt the machine in kernel mode
+and waiting on user input; this has not been done for the obvious reasons.
+
+	A Debug Event is a notice for the client debugger; Debug Events are only
+generated under 'exception conditions' -- that is, when a trap, fault, or
+exception has occurred in the target process. Each Debug Event contains
+information about the exception that caused the event --specifically, a copy
+of the breakpoint structure for the breakpoint which caused the exception--
+as well as enough target state [registers, task descriptor variables] to allow
+the client debugger to produce a log entry, or display options to the user.
+
+
+
+ B. The Device File
+ ------------------
+   The debug device file is used to handle communication between the kernel
+module and the client debugger. By default, the device will be /dev/debug;
+however, in order to combat detection of the presence of the debugger by a 
+target process, this device is created and destroyed by the kernel module 
+when the module is loaded, and may be changed from the default by passing an
+appropriate parameter to the module. 
+	In addition to the device filename, the device major and minor number may 
+be overridden when loading the module; this prevents the target from searching 
+directories such as /var, /tmp, and . for device files of the type required by 
+the debugger. Since all communication with the debugger takes place through 
+the device file, allowing the client debugger --and thereby, the user-- to
+arbitrarily determine the device file location effectively cloaks the debugger
+presence; combining this with basic stealth kernel module techniques and the
+standard polymorphism/string encryption of "processes that wish not to be seen"
+makes the kernel module component difficult, if not impossible, to detect.
+	The device file sends commands to the kernel module via write(2) calls; once
+the module has registered its internal write system call for the inode of the
+device file, all writes are assumed to be debugger commands; the length of
+the write and a magic number in the command serve to validate commands, with
+non-command writes returning an error. Other filesystem calls can return 0 
+[success with no data] or an error.
+
+
+
+ C. The Debug Library
+ --------------------
+ 	The debug library provides an interface for client debuggers to use for
+communication with the kernel module. While the library does provide a number
+of debugging services, it is not a full debugger, and is not intended to
+provide services which may or may not be provided by the client debugger [e.g.
+watches, opcode disassembly, symbol loading, etc]. Additional libraries may
+be shipped with the debug library in order to provide these extraenous yet
+convenient features.
+	In addition to communicating with the kernel module, the library will load
+and unload the module as needed, and will allow the client debugger to specify
+settings for the kernel module such as the maximum number of breakpoints, the
+debug device file name, and so forth.
+
+
+   
+ D. Client Debugger Applications
+ -------------------------------
+ 	While the kernel module and the debug library have been written with console
+front-ends in mind, the library interface will be generic enough to allow any
+type of client -- ncurses, Gtk, Xlib -- to be developed. Like ptrace(2), the
+kernel module and debug library only provide a small core set of services, and
+the client debugger is therefore responsible for symbol management, disassembly,
+and other high-level features.
+
+
+
+_______________________________________________________________________________
+
+III. Implementation of the Kernel Module
+
+   As discussed above, the debugger will be presented as a Linux loadable
+kernel module; subsequent sections will discuss the design of a userspace 
+library to communicate with the module, and a client debugger which makes use
+of the library. Some knowledge of kernel programming and Intel CPU debugging
+facilities is required to understand the code presented here; the focus is 
+not on educating the reader on writing a debugger, but rather a demonstration
+of working with the Intel debugging facilities on the Linux platform.
+   
+ 	A. Process Management
+ 	---------------------
+
+		Each time a Debug Event is generated, a copy of the process state is
+		saved to provide context for that event. The process state structures
+		provide space for the process registers [ PROC_REGS ] and the process
+		memory map [ PROC_MEM ].
+
+		struct PROC_REGS {
+ 			 unsigned long eax, ecx, edx, ebx;
+ 			 unsigned long esp, ebp, esi, edi;
+  			 unsigned long eflags;
+  			 unsigned long  ds, cs, ss;
+  			 unsigned long  es, fs, gs;
+		};
+
+		struct PROC_MEM {
+   		unsigned long start_code, end_code, start_data, end_data;
+   		unsigned long start_brk, brk, start_stack;
+   		unsigned long arg_start, arg_end, env_start, env_end;
+   		unsigned long rss;
+		};
+
+		struct PROC_STATE  {
+   		struct PROC_REGS  regs;
+   		struct PROC_MEM   mem;
+		};
+
+
+      Reading and Writing Process Memory
+
+		The kernel module makes use of the process memory read and write routines
+		ptrace_readdata() and ptrace_writedata() provided in 
+		linux/kernel/ptrace.c:
+		
+		int proc_readmem( int PID, void *dest, void *src, int len){
+		   struct task_struct *t = find_task_by_pid(PID);
+		   if (! t )   return(0);
+		   return( (*fn_ptrace_readdata)(t, (unsigned long) src, dest, len) );
+		}
+
+		int proc_writemem( int PID, void *dest, void *src, int len){
+		   struct task_struct *t = find_task_by_pid(PID);
+		   if (! t)    return(0);
+		   return( (*fn_ptrace_writedata)(t, src, (unsigned long) dest, len) );
+		}
+
+
+      Reading and Writing Process Registers
+
+		The process registers are stored in the TSS of the process; the getreg()
+		and putreg() routines are defined in arch/i386/kernel/ptrace.c, and 
+		can be used to read and write these register values while the process
+		is not currently running [which is normally the case in a debugger].
+
+		The symbolic constants EAX, etc are defined in include/asm/ptrace.h
+
+		int proc_getregs(int PID, struct PROC_REGS *regs){
+		   struct task_struct *t = find_task_by_pid(PID);
+		   if (! t)    return(0);
+		
+		   regs->eax      = (*fn_getreg)(t, EAX * sizeof(long));
+		   regs->ecx      = (*fn_getreg)(t, ECX * sizeof(long));
+		   regs->edx      = (*fn_getreg)(t, EDX * sizeof(long));
+		   regs->ebx      = (*fn_getreg)(t, EBX * sizeof(long));
+		   regs->esp      = (*fn_getreg)(t, UESP * sizeof(long));
+		   regs->ebp      = (*fn_getreg)(t, EBP * sizeof(long));
+		   regs->esi      = (*fn_getreg)(t, ESI * sizeof(long));
+		   regs->edi      = (*fn_getreg)(t, EDI * sizeof(long));
+		   regs->eip      = (*fn_getreg)(t, EIP * sizeof(long));
+		   regs->eflags   = (*fn_getreg)(t, EFL * sizeof(long));
+		   regs->ds       = (unsigned long) (*fn_getreg)(t, DS * sizeof(long));
+		   regs->cs       = (unsigned long) (*fn_getreg)(t, CS * sizeof(long));
+		   regs->ss       = (unsigned long) (*fn_getreg)(t, SS * sizeof(long));
+		   regs->es       = (unsigned long) (*fn_getreg)(t, ES * sizeof(long));
+		   regs->fs       = (unsigned long) (*fn_getreg)(t, FS * sizeof(long));
+		   regs->gs       = (unsigned long) (*fn_getreg)(t, GS * sizeof(long));
+		
+		   return(1);
+		}
+		
+		int proc_setregs(int PID, struct PROC_REGS *regs){
+		   struct task_struct *t = find_task_by_pid(PID);
+		   if (! t)    return(0);
+		   (*fn_putreg)(t, EAX * sizeof(long), regs->eax);
+		   (*fn_putreg)(t, ECX * sizeof(long), regs->ecx);
+		   (*fn_putreg)(t, EDX * sizeof(long), regs->edx);
+		   (*fn_putreg)(t, EBX * sizeof(long), regs->ebx);
+		   (*fn_putreg)(t, UESP * sizeof(long), regs->esp);
+		   (*fn_putreg)(t, EBP * sizeof(long), regs->ebp);
+		   (*fn_putreg)(t, ESI * sizeof(long), regs->esi);
+		   (*fn_putreg)(t, EDI * sizeof(long), regs->edi);
+		   (*fn_putreg)(t, EIP * sizeof(long), regs->eip);
+		   (*fn_putreg)(t, EFL * sizeof(long), regs->eflags);
+		   (*fn_putreg)(t, DS * sizeof(long), (unsigned short) regs->ds);
+		   (*fn_putreg)(t, CS * sizeof(long), (unsigned short) regs->cs);
+		   (*fn_putreg)(t, SS * sizeof(long), (unsigned short) regs->ss);
+		   (*fn_putreg)(t, ES * sizeof(long), (unsigned short) regs->es);
+		   (*fn_putreg)(t, FS * sizeof(long), (unsigned short) regs->fs);
+		   (*fn_putreg)(t, GS * sizeof(long), (unsigned short) regs->gs);
+		
+		   return(1);
+		}	
+		
+		When a break event occurs, the pt_regs structure passed to the 
+		exception handler is more accurate than the registers on the stack
+		of the process. Thus, it is necessary to have a separate routine
+		for accessing the process registers on a break event.
+
+		int proc_getregs_ptregs( struct pt_regs *pt, struct PROC_REGS *regs ) {
+		   if		 (! pt || ! regs) return(0);
+
+		   regs->eax      = pt->eax; regs->ecx      = pt->ecx;
+		   regs->edx      = pt->edx; regs->ebx      = pt->ebx;
+		   regs->esp      = pt->esp; regs->ebp      = pt->ebp;
+		   regs->esi      = pt->esi; regs->edi      = pt->edi;
+		   regs->eip      = pt->eip; regs->eflags   = pt->eflags;
+		   regs->ds       = pt->xds; regs->cs       = pt->xcs;
+		   regs->ss       = pt->xss; regs->es       = pt->xes;
+		   return(1);
+		}
+		
+
+		Isolating the Target Process
+
+		In order to prevent targets from accessing the debugger facility, and to
+		distinguish between breakpoints within targets of the kernel modules and
+		breakpoints within other [usually ptrace(2)] targets, a routine is
+		provided which checks the PID and the parent PID of the current task;
+		this is called from within the exception handlers, as well as from the
+		Debug Request handler.
+
+		asmlinkage int check_if_target(void){
+		   int  PID = current->pid,
+		        PPID = current->p_pptr->pid;
+		   return( check_bps_for_pid( PID, PPID ));
+		}
+		
+		
+		Stopping the Target Process
+
+		Stopping the process is a simple matter of modifying the target state
+		and removing the target from the kernel run queue; the same actions are
+		performed when a force_sig(SIGSTOP, task) is called.
+
+		int proc_stop( int PID ){
+		   struct task_struct *task = find_task_by_pid(PID);
+		
+		   if (! task)    return(0);
+		   if ( task->state == TASK_RUNNING ) {
+		      task->state = TASK_STOPPED;
+		      if ( current->pid == task->pid){
+		         schedule();
+		      } else {
+		         del_from_runqueue(task);    /* inline fn in linux/sched.h  */
+		      }
+		   }
+		   return(1);
+		
+
+		Starting the Target Process
+
+		Similarly, starting the process involves setting task->state to 
+		TASK_RUNNING and adding the process to the kernel run queue; since run
+		queue management can get rather hairy, the kernel wake_up_process
+		routine defined in linux/kernel/sched.c is used to perform both of these
+		operations:
+
+		int proc_start( struct task_struct *task ){
+		   wake_up_process(task);
+		   return(0);
+		}
+		
+		The 'continue' debugging operation is a wrapper for proc_start which
+		clears the trace flag if it is set:
+
+		int proc_continue(int PID) {
+		   struct task_struct *task = find_task_by_pid(PID);
+		   struct DEBUG_CLIENT *client = get_client_by_target( PID );
+		
+		   if (! task)    return(0);
+		   if ( client_trace_exists( client, PID)) {
+		      unset_trace_flag( task );        /* clear trace flag */
+		   }
+		   proc_start( task );
+		   return(1);
+		}
+
+
+		Stepping the Target Process
+
+		Since Intel CPUs provide a trace facility via the trace flag in the
+		EFLAGS register, supporting the 'trace' or 'step' debugging operation
+		is simply a matter of manipulating that flag; the INT1 exception
+		handler will deal with clearing the trace flag when the execution step	
+		actually occurs.
+
+		int proc_trace(int PID, int action) {
+		   struct BREAKPOINT bp;
+		   struct task_struct *task = find_task_by_pid(PID);
+		   struct DEBUG_CLIENT *client = get_client_by_target( PID );
+		
+		   if (! task || ! client)    return(0);
+		   if (! client_trace_exists( client, PID)) {
+				/* this creates a BP_TRACE breakpoint structure for the target */
+		      memset(&bp, 0, sizeof(struct BREAKPOINT));
+		      bp.PID = PID;
+		      bp.type   = BP_TRACE;
+		      bp.client = client->PID;
+		      bp.action = action;
+		      bp_module_new_bp(BP_TRACE, &bp);
+		      if ( ! new_trace_for_client(client, &bp) )
+		         return(0);
+		   }
+		
+		   set_trace_flag( task );    /* set TF for target proc */
+		
+		   /* start target, so that it executes 1 instruction */
+		   proc_start( task );
+		   return(1);
+		}
+
+		The above code relies on the following routines which set and clear
+		the trace flag in the EFLAGS register:
+
+		#define TRAP_FLAG 0x100
+		#define EFL_OFFSET ((EFL-2)*4-sizeof(struct pt_regs))
+
+		static inline void set_trace_flag( void *task ) {
+   		unsigned long tmp = get_stack_long(task, EFL_OFFSET) | TRAP_FLAG;
+   		put_stack_long(task, EFL_OFFSET,tmp);
+		}
+
+		static inline void unset_trace_flag( void *task ) {
+   		unsigned long tmp = get_stack_long(task, EFL_OFFSET) & ~TRAP_FLAG;
+   		put_stack_long(task, EFL_OFFSET,tmp);
+		}
+
+		These make use of the ptrace get_stack_long() and put_stack_long()
+		routines to access the EFLAGS register within the TSS.
+
+
+ 	B. Debug Requests
+	-----------------
+
+		All interaction with the kernel module takes place through Debug Request
+		structures: 
+
+		#define DBG_MAGIC        0xFEEBF0FF
+
+		struct DEBUG_REQUEST {
+		   int magic;     /* DBG_MAGIC  ^ type */
+   		int type;      /* requested action, e.g. DBG_TRACE */
+   		int key;       /* authentication mechanism */
+   		int target;    /* PID of target */
+   		void *data;    /* pointer to appropriate data struct OR int data */
+		};
+
+		The 'magic' field is used to ensure that this is a valid Debug Request
+		structure; 'data' and 'target' may not be needed, depending on the
+		request type, and 'key' is used to authenticate the client debugger.
+		The value in 'key' is the value returned when the client debugger first
+		issues a DBG_REGISTER command; requests with an invalid key are
+		ignored.
+
+		The 'type' field can be any one of the following commands:
+
+			/*      Single Step Mode */
+			#define DBG_TRACE        0x10
+			/*      Breakpoints */
+			#define DBG_BP_SET       0x20
+			#define DBG_BP_GET       0x21
+			#define DBG_BP_ENABLE    0x22
+			#define DBG_BP_DISABLE   0x23
+			#define DBG_BP_DEL       0x24
+			/*      Debug Events */
+			#define DBG_GET_EVENT    0x30
+			/*      Process Info & Control */
+			#define DBG_GET_REGS     0x40
+			#define DBG_SET_REGS     0x41
+			#define DBG_GET_STATE    0x42
+			#define DBG_READ_MEM     0x45
+			#define DBG_WRITE_MEM    0x46
+			/*      Misc Debug Commands */
+			#define DBG_REGISTER     0x01
+			#define DBG_UNREGISTER   0x02
+			#define DBG_CONTINUE     0x03
+			#define DBG_LAST_ERR     0x04 
+		
+
+		The  debug requests are handled by a simple switch statement which 
+		takes care of the more simple operations, and delegates complex 
+		operations --such as setting a breakpoint-- to external routines.
+
+		int do_debug_request( struct DEBUG_REQUEST *req) {
+		   struct DEBUG_CLIENT *client = NULL;
+		   int rv = 0, start_time;
+		   struct BREAKPOINT bp, *int_bp;
+		   struct PROC_REGS regs;
+		   struct PROC_STATE state;
+		   struct PROC_MEM_REQUEST mem_req;
+		   struct DEBUG_EVENT event;
+		   char *str;
+		
+		   if (req->type != DBG_REGISTER) {
+		      /* perform authentication for client */
+		      client= get_client_by_pid(current->pid);
+		      if (! client || client->key != req->key)
+		         return(0);
+		      if ( req->type != DBG_LAST_ERR )    client->last_err = 0;
+		   }
+		
+		   switch (req->type){
+		      case DBG_TRACE:
+		         rv = proc_trace( req->target, (int)req->data ) ;
+		         break;
+		      case DBG_CONTINUE:
+		         rv = proc_continue( req->target );
+		         break;
+		      case DBG_GET_STATE:
+		         if ( proc_getstate(req->target, &state) ) {
+		            copy_to_user( req->data, &state, sizeof(struct PROC_STATE));
+		            rv = 1;
+		         }
+		         break;
+		      case DBG_GET_REGS:
+		         if ( proc_getregs(req->target, &regs) ) {
+		            copy_to_user( req->data, &regs, sizeof(struct PROC_REGS) );
+		            rv = 1;
+		         }
+		         break;
+		      case DBG_SET_REGS:
+		         if ( req->data ) {
+		            get_regs_from_uspace(&regs, req->data);
+		            rv = proc_setregs(req->target, &regs);
+		         }
+		         break;
+		      case DBG_READ_MEM:
+		         if ( req->data ) {
+		            get_procmem_from_uspace( &mem_req, req->data);
+		            if ( mem_req.src  && mem_req.dest ) {
+		               rv = proc_readmem( req->target, mem_req.dest, mem_req.src,
+		                                  mem_req.len);
+		            }
+		         }
+		         break;
+		      case DBG_WRITE_MEM:
+		         if ( req->data ) {
+		            get_procmem_from_uspace( &mem_req, req->data);
+		            if ( mem_req.src  && mem_req.dest ) {
+		               rv = proc_writemem(req->target, mem_req.dest, mem_req.src,
+		                                  mem_req.len);
+		            }
+		         }
+		         break;
+		      case DBG_BP_SET:
+		         if ( req->data ) {
+		            get_bp_from_uspace(&bp, req->data);
+		            rv = new_bp_for_client(client, &bp);
+		         }
+		         break;
+		      case DBG_BP_GET:
+		         if ( req->data ) {
+		            get_bp_from_uspace(&bp, req->data);
+		            int_bp = find_matching_bp(&bp);
+		            copy_to_user( req->data, &int_bp, sizeof(struct BREAKPOINT) );
+		            rv = int_bp->id;
+		         }
+		         break;
+		      case DBG_BP_ENABLE:
+		         rv = set_bp_state( get_bp((int) req->data), 1 );
+		         break;
+		      case DBG_BP_DISABLE:
+		         rv = set_bp_state( get_bp((int) req->data), 0 );
+		         break;
+		      case DBG_BP_DEL:
+		         rv = del_bp_for_client( client, get_bp((int) req->data) );
+		         break;
+		      case DBG_GET_EVENT:
+		         if ( req->data ) get_event_from_uspace( &event, req->data );
+
+		         rv = event.timeout;
+		         if (! rv )  rv = DBG_DEFAULT_TIMEOUT;
+		         start_time = xtime.tv_sec;
+
+		         while (! get_client_event( client, &event)  &&
+		                  xtime.tv_sec - start_time <  rv ) {
+		                  schedule();
+		         }
+
+		         rv -= (xtime.tv_sec - start_time);
+		         copy_to_user( req->data, &event, sizeof(struct DEBUG_EVENT) );
+		         break;
+		      case DBG_REGISTER:
+		         rv = new_client(current->pid);
+		         break;
+		      case DBG_UNREGISTER:
+		         rv = remove_client(current->pid);
+		         break;
+		      case DBG_LAST_ERR:
+		      default:
+		         rv = client->last_err;
+		         break;
+		   }
+		   return(rv);
+		}
+		
+
+		The get_*_from_uspace routines are simply inline functions that call
+		copy_from_user, e.g. :
+
+		inline void get_bp_from_uspace(struct BREAKPOINT *bp, char *buf) {
+		   copy_from_user((char *)bp, buf, sizeof(struct BREAKPOINT) );
+		}
+
+		The rest of the switch statement should be pretty straightforward; the
+		only noteworthy area is the DBG_GET_EVENT item, which uses xtime.tv_sec
+		to monitor how many seconds have elapsed since start_time, and calls
+		schedule() instead of sleep to cause the kernel scheduler to switch
+		tasks until either the timeout expires or the client has a Debug Event
+		waiting.
+
+
+	 C. Debug Events
+ 	---------------
+	The client debugger is notified of exceptions such as break events by the
+	Debug Event structure:
+		
+		struct DEBUG_EVENT {
+		   int timeout;               /* seconds to wait for event */
+		   struct PROC_STATE state;   /* registers and such */
+		   struct BREAKPOINT bp;      /* struct BREAKPOINT that caused event */
+		   struct DEBUG_EVENT *next;  /* internal; NULL on returned EVENTs */
+		};
+
+	Debug Events are queued in the kernel module until the client debugger
+	explicitly retrieves them via a DBG_GET_EVENT request. 
+		
+
+		Debug Event Creation
+
+		Events are generated in bp modules by the bp handler:
+
+		int bp_hw_main(struct BREAKPOINT *bp){
+		   struct DEBUG_EVENT e ;
+		   char *str;
+		
+		   memset(&e, 0, sizeof(struct DEBUG_EVENT));
+		   memcpy( &e.bp, bp, sizeof(struct BREAKPOINT) );
+		
+		   /* fill current process state */
+		   proc_getstate_current((struct pt_regs *)bp->pt_regs, &e.state);
+		
+		   switch( bp->action ) {
+				/* ... BP Action stuff ommitted */
+		   }
+		
+		   /* Disable BP so execution can continue & mark as needing reset */
+		   bp_hw_disable( bp );
+		   bp->action |= BPACTION_RESET_BP;
+
+		   /* set TF so we can halt and reset breakpoint */
+		   set_trace_flag( current );
+		
+		   /* generate debug event */
+		   add_client_event( get_client_by_pid(bp->client), &e);
+		   return(1);
+		}
+		
+
+		The add_client_event() routine maintains the list of Debug Events 
+		pending for each client debugger.
+
+		int add_client_event( struct DEBUG_CLIENT *client, struct DEBUG_EVENT *e){
+		   struct DEBUG_EVENT *event, *new;
+		
+		   if (! e || ! client) return(0);
+		
+		   new = new_event(e);
+		   if (! new ) {
+		      client->last_err = DBG_CLIENT_NO_FREE_EVENTS;
+		      return(0);
+		   }
+		
+		   e->next = NULL;
+		   if (! client->event) {
+		      client->event = new;
+		   } else {
+		      event = client->event;
+		      while(event->next) event = event->next;
+		      event->next = new;
+		   }
+		
+		   return(1);
+		}
+		
+
+		Debug Events for a client debugger can be retrieved with the 
+		get_client_event() routine.
+
+		int get_client_event(struct DEBUG_CLIENT *client, struct DEBUG_EVENT *e) {
+		   if (! client || ! e)    return(0);
+		   if (client->event) {
+		      memcpy(e, client->event, sizeof(struct DEBUG_EVENT));
+		      free_event(client->event);
+		      client->event = e->next;
+		      e->next = NULL;
+		      return(1);
+		   }
+		   client->last_err = DBG_CLIENT_NO_CLIENT_EVENTS;
+		   return(0);
+		}
+		
+
+		The new_event() and free_event() routines are basic linked-list 
+		management routines that maintain the global linked list of pre-
+		allocated Debug Event structures.
+
+
+
+ 	D. Breakpoint Modules
+ 	---------------------
+	
+	Each breakpoint type is handled by an associated module, which exports
+	installation, uninstallation, breakpoint add, and breakpoint delete 
+	functions. The basic breakpoint types are defined as follows:
+
+		#define BP_HW     0x01		/* INT1 Debug Trap */
+		#define BP_INT3   0x02		/* INT3 Debug Trap */
+		#define BP_TRACE  0x03		/* INT1 Trace Trap */
+		
+		
+		The BP Modules Table
+
+		Each breakpoint type is handled by an associated module; the modules 
+		are represented by a table of BP_MODULE structures, and the breakpoint
+		type is an index into that table.
+
+		struct BP_MODULE {
+		   BPMOD_SYS   fn_install;
+		   BPMOD_SYS   fn_uninstall;
+		   BPMOD_BP    fn_new_bp;
+		   BPMOD_BP    fn_del_bp;
+		   BPMOD_BP    fn_enable_bp;
+		   BPMOD_BP    fn_disable_bp;
+		   BPMOD_MAIN  fn_main;
+		   int  *trap_flag;
+		} 	bp_module_table[] = {
+		   {  0 	},
+		   {  bp_hw_install, 	bp_hw_uninstall, 		bp_hw_new, 		bp_hw_del,
+		      bp_hw_enable, 		bp_hw_disable, 		bp_hw_main, 	0	},
+		   {  bp_int3_install, 	bp_int3_uninstall, 	bp_int3_new, 	bp_int3_del,
+		      bp_int3_enable, 	bp_int3_disable, 		bp_int3_main, 	0  },
+		   {  bp_trace_install, bp_trace_uninstall, 	bp_trace_new, 	bp_trace_del,
+		      bp_trace_enable, 	bp_trace_disable, 	bp_trace_main, 0 	},
+		   {  0 	}
+		};
+		
+
+		All breakpoint operations are resolved by invoking the appropriate
+		function pointer in the table entry for that breakpoint type, for 
+		example: 
+
+		int bp_module_new_bp( int bp_module, struct BREAKPOINT *bp ){
+		   if ( bp_module > NUM_BP_MODULES)    return(0);
+		   return( (*bp_module_table[bp_module].fn_new_bp)( bp ) );
+		}
+		
+
+		The Breakpoint Structure
+
+		Breakpoints themselves are represented by a single structure:
+
+		struct BREAKPOINT {
+		   char type;                 /* HARDWARE, INT3, SIGNAL, etc */
+		   char action;               /* action to take */
+		   char status;               /* enabled or disabled */
+		   char id;                   /* position in table */
+		   int client;                /* PID of client debugger */
+   		int PID;                   /* PID of target */
+   		struct task_struct *tsk;   /* used internally, in the kernel mod */
+			void *pt_regs;             /* used internally, by BP handler */
+   		long target;               /* address, signal type, etc */
+   		int  data;                 /* INT3: orig byte INT1: DR# */
+   		struct BREAKPOINT *next;
+		};
+
+		Breakpoints are managed as a linked list associated with each client
+		debugger.
+
+
+		Breakpoint Management
+		
+		Breakpoints are created and deleted by allocating a BREAKPOINT struct
+		from an existing pool, then calling the new_bp() routine of the 
+		appropriate breakpoint module; the new_bp() routine is responsible for
+		actually installing the breakpoint in the target process -- for example,
+		by replacing a byte with an INT3, or by loading an address into a debug
+		register.
+
+		struct BREAKPOINT * new_bp(struct BREAKPOINT *bp){
+		   struct BREAKPOINT *new;
+		
+		   if (! bp) return(0);
+		   new = free_bps;
+		   if (new) {
+		      free_bps = new->next;
+		      memcpy(new, bp, sizeof(struct BREAKPOINT));
+		      new->next = NULL;
+		      new->cond = NULL;
+		      if ( new->PID ) {
+		         new->tsk = find_task_by_pid(new->PID);
+		      }
+		      if ( new->status == BP_ENABLED) {
+		         bp_module_new_bp( new->type, new );
+		      }
+		   } else {
+		      get_client_by_pid(bp->client)->last_err = DBG_BP_NO_FREE_BPS;
+		   }
+		   return(new);
+		}
+		
+		int free_bp(struct BREAKPOINT *bp) {
+		   if (! bp) return(0);
+		
+		   /* call bp manager to "undo" enabled bp */
+		   bp_module_del_bp( bp->type, bp );
+		
+		   memset(bp, 0, sizeof(struct BREAKPOINT));
+		   bp->next = free_bps;
+		   free_bps = bp;
+		   return(1);
+		}
+
+
+		Example: BPINT3 Management
+
+		Managing INT3 breakpoints is fairly simple: to install, the original
+		byte at the breakpoint address is overwritten with an INT3 instruction;
+		to uninstall, the original byte is written back. 
+
+		int bp_int3_enable(struct BREAKPOINT *bp) {
+		   char int3 = 0xCC;
+		   int rv;
+		   if (! bp) return(0);
+		   if (! bp->tsk ) find_task_by_pid(bp->PID);
+
+		   /* replace with INT3 (0xCC) */
+		   rv = (*fn_access_process_vm)(bp->tsk, bp->target, &int3, 1, 1);
+
+		   if (! rv )  
+				get_client_by_pid(bp->PID)->last_err = DBG_BPINT3_PROC_W_ACCESS;
+		   return(rv);
+		}
+		
+		int bp_int3_disable(struct BREAKPOINT *bp) {
+		   int rv;
+		   if (! bp ) return(0);
+		   if (! bp->tsk ) find_task_by_pid(bp->PID);
+
+		   /* replace INT3 with original byte */
+		   rv = (*fn_access_process_vm)(bp->tsk, bp->target, (char *) &bp->data, 
+													1, 1);
+		   if (! rv )  
+				get_client_by_pid(bp->PID)->last_err = DBG_BPINT3_PROC_W_ACCESS;
+		   return(rv);
+		}
+
+		int bp_int3_new(struct BREAKPOINT *bp){
+		   int rv;
+		   if (! bp ) return(0);
+		   if (! bp->tsk ) find_task_by_pid(bp->PID);
+		
+		   /* get original byte from addr */
+		   rv = (*fn_access_process_vm)(bp->tsk, bp->target, (char *) &bp->data, 
+													1, 0);
+		   if (! rv )  
+				get_client_by_pid(bp->PID)->last_err = DBG_BPINT3_PROC_R_ACCESS;
+		
+		   bp_int3_enable(bp);
+		   bp_int3_count ++;
+		   return(rv);
+		}
+		
+		int bp_int3_del(struct BREAKPOINT *bp){
+		   if (! bp ) return(0);
+		
+		   bp_int3_disable(bp);
+		   bp_int3_count--;
+		   return(1);
+		}
+		
+
+		Example: BPHW Management
+
+		Management of debug register exceptions is more complex; DR7 must be
+		managed as well as the actual debug register being set. The enable and
+		disable routines merely modify the DR7 flag for the appropriate register;
+		the new routine finds the next available debug register and sets it to
+		the target address, then fills DR7 with the breakpoint conditions. The
+		delete routine sets the debug register and its DR7 flags to 0.
+
+		int bp_hw_enable(struct BREAKPOINT *bp) {
+		   if (! bp )           return(0);
+		   if (! bp->data > 3 || bp->data < 0 ) {
+		      get_client_by_pid( bp->client )->last_err = DBG_BPHW_INVALID_DR;
+		      return(0);
+		   }
+		   if (! bp->tsk )      bp->tsk = find_task_by_pid(bp->PID);
+		   bp->tsk->thread.debugreg[7] |= set_dr_mask[bp->data];
+		   return(1);
+		}
+		
+		int bp_hw_disable(struct BREAKPOINT *bp) {
+		   if (! bp )           return(0);
+		   if (! bp->data > 3 || bp->data < 0 ) {
+		      get_client_by_pid( bp->client )->last_err = DBG_BPHW_INVALID_DR;
+		      return(0);
+		   }
+		   if (! bp->tsk )      bp->tsk = find_task_by_pid(bp->PID);
+		   bp->tsk->thread.debugreg[7] &= ~(set_dr_mask[bp->data]);
+		   return(1);
+		}
+		
+		unsigned long clear_cond_mask[4] =
+		      { 0x0FFFFFFF, 0xF0FFFFFF, 0xFF0FFFFF, 0xFFF0FFFF };
+		
+		void set_debug_reg( struct task_struct *t, int num, unsigned long addr,
+		                    int cond) {
+		   unsigned long dr7_mask;
+		   char len_rw;
+		
+		   if ( num < 0 || num > 3 )      return;
+		   /* set the actual debug register */
+		   t->thread.debugreg[num] = addr;
+		
+		   /* get LEN and R/W settings from data: lower nibble of first byte */
+		   len_rw = ((char *)&cond)[0] & 0x0F;
+		   dr7_mask = len_rw << (num * 8);
+		
+		   /* clear settings for this DR# register */
+		   t->thread.debugreg[7] &= clear_cond_mask[num];
+		   /* update the DR7 control register : */
+		   t->thread.debugreg[7] |= dr7_mask;
+		
+		   return;
+		}
+		
+		int bp_hw_new(struct BREAKPOINT *bp){
+		   struct task_struct *task;
+		
+		   if (! bp )     return(0);
+		   if ( bp->type != BP_TRACE ) {
+		      task = find_task_by_pid(bp->PID);
+		
+		   /* use first avail debug reg */
+		   if ( ! task->thread.debugreg[0] ) {
+		         set_debug_reg(task, 0, bp->target, bp->data);
+		         bp->data = 0;
+		      } else if (! task->thread.debugreg[1] ) {
+		         set_debug_reg(task, 1, bp->target, bp->data);
+		         bp->data = 1;
+		      } else if (! task->thread.debugreg[2] ) {
+		         set_debug_reg(task, 2, bp->target, bp->data);
+		         bp->data = 2;
+		      } else if (! task->thread.debugreg[3] ) {
+		         set_debug_reg(task, 3, bp->target, bp->data);
+		         bp->data = 3;
+		      } else {
+		         get_client_by_pid( bp->client )->last_err = DBG_BPHW_NO_FREE_DR;
+		         return(0);
+		      }
+		
+		      bp_hw_enable( bp );
+		   }
+		
+		   bp_hw_count ++;
+		   return(1);
+		}
+		
+		unsigned long clear_dr_mask[4] =
+		      { 0xFFF0FFFE, 0xFF0FFFFB, 0xF0FFFFEF, 0x0FFFFFBF };
+		
+		void unset_debug_reg( struct task_struct *t, int num ) {
+		   unsigned long mask;
+		   t->thread.debugreg[num] = 0;
+		
+		   if ( num < 0 || num > 3 ) return;
+		   mask = clear_dr_mask[num];
+		
+		   t->thread.debugreg[7] &= mask;
+		   return;
+		}
+		
+		int bp_hw_del(struct BREAKPOINT *bp){
+		
+		   if (! bp )           return(0);
+		   if (! bp->tsk )      bp->tsk = find_task_by_pid(bp->PID);
+		   bp_hw_count--;
+		   if (! bp_hw_count ) {
+		      /* remove the exception: no need to slow down the machine :) */
+		      uninstall_hw_exception();
+		   }
+		
+		   if ( bp->type != BP_TRACE ) {
+		      unset_debug_reg(bp->tsk, bp->data);
+		   }
+		   return(1);
+		}
+		
+
+
+      Breakpoint Handlers
+
+		When the kernel receives a debug exception, it will jump to the
+		exception handler registered by the kernel module. These exception
+		handlers generally take the following form:
+
+   	__asm__  (                         
+		   	".globl bp_handler   		\n"		/* export handler name */
+		   	".align 4,0x90        		\n"
+		   	"bp_handler:         		\n\t"		/* Start of exception handler */
+		      	"pushf               	\n\t"
+		      	"pusha               	\n\t"
+		      	"call check_if_target	\n\t"		/* handle this exception? */
+		      	"testl %%eax, %%eax  	\n\t"
+		      	"popa              		\n\t"
+		      	"jz default_handler  	\n\t"		/* no ... skip next part */
+		      	"popf              		\n\t"
+		      	"pushl $0            	\n\t"
+		      	"pushl ptr_do_bp(,1)		\n\t"		/* push our_handler */
+		      	"jmp go_errorcode   		\n"
+		   	"default_handler:  			\n\t"
+		      	"popf              		\n\t"
+		      	"pushl $0            	\n"		/* push old handler */
+		      	"pushl fn_do_debug(,1)  \n\t"
+		   	"go_errorcode:         		\n\t"
+		      	"jmp *fn_error_code		\n"		/* jmp to kernel dispatcher */
+	 	:: );
+
+
+		Exception handlers are installed in the kernel by adding them to
+		the IDT directly. The following two functions manage adding and
+		removing exception handlers:
+
+		void grab_excep( int n, void *new_fn, unsigned long *old_fn){
+		   unsigned long new_addr = (unsigned long)new_fn;
+		   struct desc_struct *idt = p_idt_table;
+		
+		   /* save old exception handler */
+		   *old_fn = (idt[n].off_hi << 16) + idt[n].off_lo;
+		   /* insert new exception handler */
+		   idt[n].off_hi = (short)(new_addr >> 16);
+		   idt[n].off_lo = (short)(new_addr & 0x0000FFFF);
+		   return;
+		}
+
+		void ungrab_excep( int n, long old_fn){
+		   unsigned long new_addr = old_fn;
+		   struct desc_struct *idt = p_idt_table;
+		   idt[n].off_hi = (short)(new_addr >> 16);
+		   idt[n].off_lo = (short)(new_addr & 0x0000FFFF);
+		   return;
+		}
+		
+		
+		An example of the use of these routines can be found in the install
+		and uninstall functions of the BPHW module:
+
+		int install_hw_exception(){
+		   grab_excep(1, &bp_hw_handler, &old_bphw_handler);
+		   return(1);
+		}
+
+		int uninstall_hw_exception(){
+		   ungrab_excep(1, old_bphw_handler);
+		   return(1);
+		}
+
+
+      Example: Handling INT3 Breakpoints
+
+		INT3 breakpoints are easily handled by decrementing EIP and replacing
+		the INT3 byte with the original byte for that breakpoint. The target
+		process is then stepped one instruction, the original byte is patched
+		with an INT3 byte to re-install the breakpoint, and the target process 
+		is allowed to continue.
+
+		Most of this is handled after the Debug Event has been created in
+		bp_int3_main() with code similar to
+
+      	bp_int3_disable( bp );
+      	bp->action |= BPACTION_RESET_BP;
+      	/* set TF so we can halt and reset breakpoint */
+      	set_trace_flag( bp ->tsk );
+      	/* decrement EIP */
+      	((struct pt_regs *)(bp->pt_regs))->eip--;
+
+		...and supplemented by a clause in the trace handler with the code
+
+			bp = get_bp_by_target(current->pid, regs->eip - 1);
+		   unset_trace_flag( current );
+			bp_module_enable( bp->type, bp );
+			return;
+		
+		Thus, the INT3 handler itself only has to deal with identifying the 
+		BREAKPOINT structure that is responsible for the current trap. This
+		can be done by decrementing EIP and finding the BREAKPOINT that has
+		that address as the target.
+		
+		asmlinkage void do_bp_int3(struct pt_regs * regs, long err_code) {
+		   void (*old_fn)(struct pt_regs *,long) = (void *)fn_do_int3;
+		   struct BREAKPOINT fake_bp = {BP_INT3, BPACTION_STOP, -1, -1, 0},
+		                         *bp = NULL;
+		   unsigned long eip;
+		   struct DEBUG_CLIENT *c;
+		   struct task_struct *t = current;
+		
+		   /*------------------------------ */
+		   eip = regs->eip--;       /* EIP has been advanced by now */
+		   bp = get_bp_by_target(t->pid, eip);
+			if ( bp ) {
+		   	bp->tsk = t;
+		   	bp->pt_regs = regs;
+		   	bp_int3_main( bp );
+		   } else                 /* else call old handler */
+		      (*old_fn)(regs, err_code);
+		
+		   return;
+		}
+		
+		
+      Example: Handling Hardware Breakpoints
+
+		Handling an exception caused by a debug register is fairly simple; the
+		debug register causing the exception is determined, then read to find
+		the address which the register was set to break on. The BREAKPOINT
+		structure for this address is then found, and bp_hw_main() is called 
+		to invoke the appropriate Breakpoint Action for this breakpoint.
+
+		asmlinkage void do_bp_hw(struct pt_regs * regs, long err_code) {
+		   void (*old_fn)(struct pt_regs *,long) = (void *)fn_do_debug;
+		   struct DEBUG_CLIENT *client;
+		   struct BREAKPOINT *bp = NULL;    /* shut up anal and *wrong* GCC */
+		   unsigned int condition = 0;
+		   unsigned long addr = 0;
+		
+		
+		   __asm__ __volatile__( "movl %%db6,%0" : "=r" (condition)  );
+		   if ( condition & DR_STEP ) {      /* is this a trace ? */
+				/* ... TRACE stuff omitted */
+		   } else {                         /* get bp based on DR# */
+		      if ( condition & DR_TRAP0 ) {
+		         __asm__ __volatile__( "movl %%db0,%0" : "=r" (addr)  );
+		      } else if ( condition & DR_TRAP1 ) {
+		         __asm__ __volatile__( "movl %%db1,%0" : "=r" (addr)  );
+		      } else if ( condition & DR_TRAP2 ) {
+		         __asm__ __volatile__( "movl %%db2,%0" : "=r" (addr)  );
+		      } else if ( condition & DR_TRAP3 ) {
+		         __asm__ __volatile__( "movl %%db3,%0" : "=r" (addr)  );
+		      } else {
+		         client = get_client_by_target( current-> pid );
+		         client->last_err = DBG_BPHW_UNKNOWN_ADDR;
+		         addr = 0;
+		      }
+		
+		      if ( addr ) {
+		         bp = get_bp_by_target(current->pid, addr);
+		         if (bp && check_bp_cond(bp)) {
+		            bp->tsk = current;
+		            bp->pt_regs = regs;
+		            bp_hw_main( bp );
+		         }
+		      } /* else call old handler */
+		      /* clear DR6 */
+		      __asm__("movl %0,%%db6" : : "r" (0));
+		      return;
+		   }
+		
+		   (*old_fn)(regs, err_code);		/* fall through to old handler */
+		
+		   return;
+		}
+		
+
+      Example: Handling Single-Step Traps
+
+		In this implementation, each client debugger has a supplemental linked
+		list of breakpoints known as 'traces' -- quite simply, one BREAKPOINT
+		structure for each trace flag that the client debugger has set [or, 
+		more accurately, one for each target process being traced] -- which are
+		searched for the PID of the current process when a trace INT1 occurs.
+		If the trace was generated by a client debugger, do_trace_main() is 
+		called and the Breakpoint Action for the process [i.e., stopping the
+		process] is performed.
+			
+		asmlinkage void do_bp_hw(struct pt_regs * regs, long err_code) {
+		   void (*old_fn)(struct pt_regs *,long) = (void *)fn_do_debug;
+		   struct DEBUG_CLIENT *client;
+		   struct BREAKPOINT *bp = NULL;    /* shut up anal and *wrong* GCC */
+		   unsigned int condition = 0;
+		   unsigned long addr = 0;
+		
+		
+		   __asm__ __volatile__( "movl %%db6,%0" : "=r" (condition)  );
+		
+		   if ( condition & DR_STEP ) {      /* is this a trace ? */
+		      /* first, get client and check for BPs needing reset */
+		      if ( (client = get_client_by_target( current-> pid )) ) {
+		         bp = client->bp;
+		         while (bp) {
+		            if ( bp->action & BPACTION_RESET_BP ) {
+		               bp->action &= ~BPACTION_RESET_BP;
+		               bp_module_enable_bp( bp->type, bp );
+		            }
+		            bp = bp->next;
+		         }
+		      }
+		
+		      bp = get_trace_by_pid(current->pid);
+		      if ( bp ) {                   /* call trace handler */
+		         bp->tsk = current;
+		         bp->pt_regs = regs;
+		         bp_module_main( BP_TRACE, bp );
+		         return;
+		      }  else if ( client )  {
+		         /* we were just resetting BPs */
+					bp = get_bp_by_target(current->pid, regs->eip - 1);
+		   		unset_trace_flag( current );
+					bp_module_enable( bp->type, bp );
+		         return;
+		      }  
+			}
+		 	/* ... BP_HW stuff omitted here */
+		
+		   (*old_fn)(regs, err_code);		/* fall through to old handler */
+		
+		   return;
+		}
+
+
+      Capturing Process Signals
+		
+		The common routine for delivering signals is send_signal in signal.c;
+		hijacking this routine by overwriting the function prologue with a jump
+		instruction will suffice to capture all signals.
+
+      /* not yet implemented */
+         
+
+      Capturing System Calls
+
+		In Linux, the system call function pointers are all stored in the 
+		syscall table; individual system calls can be hooked by modifying this
+		table, or all system calls can be intercepted by hooking exception 0x80
+		in the IDT.
+
+      /* not yet implemented */
+         
+
+      Capturing System Exceptions
+
+		System faults and exceptions can be caught by hooking the approprtiate
+		exception in the IDT. Obvious faults of interest for application 
+		debugging include the Segmentation Fault, the Divide By Zero fault, and
+		the General Protection Fault.
+
+      /* not yet implemented */
+         
+
+ 	E. Breakpoint Actions
+ 	---------------------
+
+	When a break event occurs, the action associated with that breakpoint
+	is performed by the bp module. The possible actions are:
+
+		#define BPACTION_NONE      0x00		/* ignore */
+		#define BPACTION_STOP      0x01		/* stop the process */
+		#define BPACTION_LOG       0x02		/* generate Debug Event */
+		#define BPACTION_ONESHOT   0x04 		/* delete the breakpoint */
+
+
+      Breakpoint Action Handlers
+
+		In the breakpoint handler of each module, the breakpoint action is
+		handled by a switch statement similar to the following:
+		
+		   switch( bp->action ) {
+		      case BPACTION_STOP:
+		         /* the usual one: stop the process */
+		         proc_stop( current->pid );
+		         break;
+		      case BPACTION_ONESHOT:
+					/* stop the process, delete the BP */
+		         proc_stop( current->pid );
+		         del_bp_for_client(get_client_by_pid(bp->client), bp);
+		         break;
+		      case BPACTION_LOG:
+		         /* this just generates a debug event */
+		         break;
+		      case BPACTION_NONE:
+		      default:
+					return(1);
+		         break;
+		   }
+		
+		Additional action types may be added by writing appropriate case
+		labels in the breakpoint handler switch statement; action types
+		which are not applicable for a given breakpoint type should be
+		ignored.
+
+
+
+	 F. The Debug Device File
+ 	------------------------
+
+	The debugger device file is created when the module is loaded; in the same
+	manner as other device files and /proc files, the Linux file_operations 
+	structure is used to supply customer handlers for file open, read, write,
+	and close operations:
+	
+		struct file_operations dbg_fops = {
+		   NULL, 										/* struct module *owner */
+		   NULL, 										/* lseek */
+		   dbg_read, 									/* read */
+		   dbg_write, 									/* write */
+		   NULL, 										/* readdir */
+		   NULL, 										/* poll */
+		   NULL, 										/* ioctl */
+		   NULL, 										/* mmap */
+		   dbg_open, 									/* open */
+		   NULL, 										/* flush */
+		   dbg_release, 								/* release */
+		};
+
+
+      Basic File Operations
+
+		The two most rudimentary file operations --open(2) and close(2)--
+		serve only to increment and decrement the use count of the module.
+		It is important that the client debugger explicitly close the debug
+		device file before it exits; otherwise the module cannot be unloaded.
+
+		int dbg_open(struct inode *inode, struct file *file){
+		   MOD_INC_USE_COUNT;
+		   return(0);
+		}
+		
+		int dbg_release(struct inode *inode, struct file *file){
+		   MOD_DEC_USE_COUNT;
+		   return(0);
+		}
+		
+
+      Device Read Handler
+
+		The device file read(2) handler could be used to return a list of
+		installed clients and breakpoints; however, in this implementation
+		it simply returns a 0-byte successful read.
+
+		ssize_t dbg_read(struct file *file, char *buffer, size_t length,
+		                  loff_t *offset){
+		   return(0);
+		}
+		
+
+      Device Write Handler
+
+		All communication with the kernel module takes place through the device
+		file write(2) handler. Writes to the device are expected to be the size
+		of a DEBUG_REQUEST structure; writes of any other length result in an
+		no-room-on-device error. Each write is stored in a kernelspace buffer,
+		then passed to the do_debug_request() routine for handling.
+		
+		ssize_t dbg_write(struct file *file, const char *buffer, size_t length,
+		                  loff_t *offset){
+		   struct DEBUG_REQUEST req = {0};
+		
+		   if (! buffer ) return(-EINVAL);
+		   if ( length != sizeof(struct DEBUG_REQUEST)) return(-ENOSPC);
+		
+		   copy_from_user((char *)&req, buffer, sizeof(struct DEBUG_REQUEST));
+		   /* is this a proper request? */
+		   if ( req.magic != DBG_MAGIC ^ req.type ) return(-ENOSPC);
+
+		   return( do_debug_request(&req) ); /* call debug_request_handler */
+		}
+
+
+	 G. Module Init and Cleanup
+ 	--------------------------
+	
+	Needless to say, all of the setup and cleanup required by the kernel module
+	is performed by the module init and module cleanup funtions; these are 
+	identified using the module_init() and module_exit() kernel macros.
+
+
+      Module Init
+		
+		The module init routine calls initialization routines for the breakpoint,
+		client, and event components; it also handles creation of the debug
+		device file and parsing of insmod parameters.
+
+		The parameters which the module recognizes are
+			MODULE_PARM(file, "s");				/* string: path for device file */
+			MODULE_PARM(modname, "s");			/* string: name of the module */
+			MODULE_PARM(major, "i");			/* number: major device # */
+			MODULE_PARM(minor, "i");			/* number: minor device # */
+			MODULE_PARM(max_clients, "i");	/* number: max # of clients */
+			MODULE_PARM(max_events, "i");		/* number: max # of EVENTs/client */
+			MODULE_PARM(max_bp, "i");			/* number: max # of BPs/client */
+		These parameters supply the core mechanism for hiding the presence of 
+		the debugger -- modifying the module name, device file location, and
+		the major/minor numbers of the device file -- and also provide a means
+		for overriding the default number of clients, events, and breakpoints.
+
+		int __init init_dbg_mod(void){
+		   int rv;
+		
+		   EXPORT_NO_SYMBOLS;
+
+		   /* do user settings */
+		   if ( ! file ) file = default_dbgfile;
+		   if ( ! modname ) modname = default_name;
+		   if ( ! major ) major = DBG_DEFAULT_MAJOR;
+		   if ( ! minor ) minor = DBG_DEFAULT_MINOR;
+		   /* set table size limits */
+		   dbg_limits.clients = max_clients;      /* init to insmod params */
+		   dbg_limits.events  = max_events;
+		   dbg_limits.bp     = max_bp;
+		   if ( ! dbg_limits.clients) dbg_limits.clients = DBG_MAX_CLIENTS;
+		   if ( ! dbg_limits.events ) dbg_limits.events = DBG_MAX_EVENTS;
+		   if ( ! dbg_limits.bp )    dbg_limits.bp = DBG_MAX_BP;
+		
+			/* register major/minor number of device file with dbg_fops */
+		   rv = register_chrdev(major, modname, &dbg_fops);
+		   if ( rv < 0 ) {
+		      return(-EINVAL);
+		   } else if (!major) major = rv;
+		
+		   /* create debug device file */
+		   rv = k_mknod((const char *)file, S_IFCHR | 0666, MKDEV(major,minor));
+			if ( rv ) 
+				return(rv);
+		
+		   /* allocate tables based on size limits */
+		   init_auth();
+		   init_event();
+		   init_bp_modules();
+		   init_bp();
+		
+		   return(0);
+		}
+
+
+      Module Cleanup
+
+		The module cleanup routine frees all allocated kernel memory, clears all
+		existing breakpoints, and removes the debug device file.
+
+		void __exit exit_dbg_mod(void){
+		   k_unlink(file);
+		   cleanup_bp();
+		   cleanup_bp_modules();
+		   cleanup_event();
+		   cleanup_auth();
+		   unregister_chrdev(major, modname);
+		   return;
+		}
+		
+		The k_mknod and k_unlink routines in init_dbg_mod() and exit_dbg_mod() 
+		are re-implementations of sys_mknod and sys_unlink which do not require 
+		a userspace filename.
+
+   
+
+_______________________________________________________________________________
+IV. Library Interface
+
+
+	A. Configuration
+	----------------
+	
+	The debugger library relies on an internal structure to provide
+	information about the kernel module component, and about its own
+	behavior as a client. In order to take advantage of the kernel
+	module's dynamic settings, this structure is user-accessible:
+	
+		typedef struct {
+		   char  device[PATH_MAX];    /* path of debugger device file */
+		   char  module[PATH_MAX];    /* path of debugger kernel module */
+		   char  modname[64];
+		   int   major, minor;
+		   int   max_bp, max_bpcond;
+		   int   max_clients, max_events;
+		   int   init;          		/* is the debugger initialized */
+		   int   ourmod;        		/* did we load the kernel module? */
+		   int   key;           		/* client authorization key */
+		   int   fd;            		/* file descriptor of debugger */
+		   int   err;           		/* last error */
+		} settings_t;
+
+	The library uses the following routines to initialize and cleanup its
+	internal data structures:
+
+		int dbg_init( settings_t *s);
+			Initialize the debugger.
+			The settings argument may be NULL, in which case defaults are used.
+			Returns 0 on error.
+
+		int dbg_is_init();
+			Returns 1 if initialized, 0 if not.
+
+		int dbg_term();
+			Terminate the debugger and perform necessary cleanup.
+			Returns 0 on error.
+
+
+	B. Target Specification
+	-----------------------
+
+	The target is represented internally by a single structure:
+
+		typedef struct DBG_TGT {
+		   char  	loader[PATH_MAX], loader_args[32];
+		   char     path[PATH_MAX];
+		   int      argc;
+		   char     **argv;
+		   int      pid;
+		   short    status;
+		   short    type;
+			int		reason;
+		   struct   DBG_STATE state;  /* last state for target */
+		} *target_t;
+
+	The notion of a 'loader' allows the user to specify their own loader for
+	the target process. The library provides a generic loader which sets the 
+	entry point of the target to INT3 and performs a fork-exec:
+
+		typedef int (*TargetLoader)(target_t t);
+		extern int load_elf( target_t t );
+
+	The path, argc, argv, and pid members are obvious; status refers to one of :
+
+		#define TARGET_STATUS_STOPPED 0x01
+		#define TARGET_STATUS_RUN     0x02
+		#define TARGET_STATUS_KILLED  0x03
+
+	...and 'type' refers to one of the following:
+
+		#define TARGET_TYPE_LOAD      0x01
+		#define TARGET_TYPE_ATTACH    0x02
+
+	The 'reason' member contains the ID of the BP that caused the last event.
+
+
+	The state member is used to store the current state of the target; this 
+	includes the contents of registers and memory of interest to the debugger. 
+	The DBG_STATE structure is defined as follows:
+
+		typedef struct DBG_STATE {
+		   struct DBG_REGS regs;
+		   struct DBG_PAGE cs_page;
+		   struct DBG_PAGE ds_page;
+		   struct DBG_PAGE es_page;
+		   struct DBG_PAGE ss_page;
+		} * target_state_t;
+
+		typedef struct DBG_PAGE {
+		   unsigned long addr;
+		   unsigned int len;
+		   unsigned char *data;
+		} * target_mempage_t;
+		
+		typedef struct DBG_REGS {
+		   unsigned long eax, ecx, edx, ebx;
+		   unsigned long esp, ebp, esi, edi;
+		   unsigned long eip, eflags;
+		   unsigned long  ds, cs, ss;
+		   unsigned long  es, fs, gs;
+		} * target_regs_t;
+
+	When the library receives a Debug Event and returns control to client 
+	debugger, usually as a result of a step or continue operation, the target 
+	state is updated with the current register contents. The DBG_PAGE 
+	structures are filled with page->len bytes starting at page->addr in the 
+	target address space; by default, cs_page is based on cs:eip, ds_page on 
+	ds:esi, es_page on es:edi, and ss_page on ss:esp.
+
+
+	A target may be "loaded" and executed, or a currently running process can
+	be attached to. The library provides the following routines for managing 
+	the target:
+
+		target_t dbg_target_load(char *path, char *args, TargetLoader loader);
+	   	Load a target and set a BP at the entry point.
+			Executes the target.
+			Returns NULL if the target is not found.
+			
+		int dbg_target_reload( target_t t, TargetLoader loader );
+	   	Set a BP at the entry point.
+			Executes the target.
+			Returns 0 on error.
+		
+		int dbg_target_unload(target _t);
+			Unload the target.
+			Kills or detaches the target. 
+			Cleans up breakpoints and frees target structure.
+			Returns 0 on error.
+
+		target_t dbg_target_attach(int pid);
+			Attach to the specified process, making it a target.
+			The target is stopped and its trace flag set.
+			Returns NULL if the PID is not found.
+
+		int dbg_target_detach(target_t t);
+			Detach from the target process. 
+			If the target was 'loaded' and not 'attached', kills target.
+			Returns 0 on error.
+
+		int dbg_target_waitevent( target_t t, int timeout );
+			Wait for a Debug Event in the target process.
+			Timeout is max # of seconds to wait or 0 for default.
+			Fills t->state, t->reason, and t->status.
+			Returns 0 if 'timeout' seconds pass without a Debug Event.
+
+		int dbg_state_get( target_t t );
+			Fills t->state.
+			Returns 0 on error.
+
+
+
+	C. Breakpoints
+	--------------
+
+	Breakpoints within the target are represented by the following structure:
+	
+		typedef struct DBG_BP {
+		   char id;             
+		   char status;        
+		   char type;           
+		   char action;         
+		   unsigned long addr;  
+		} * bp_t;
+			
+	The status field is 1 for enabled and 0 for disabled; type is one of:
+
+		#define INT3_X    0x01
+		#define REG_R     0x02
+		#define REG_W     0x03
+		#define REG_RW    0x04
+		#define REG_X     0x05
+		
+	...while action is one of:
+
+		#define ACTION_NONE      0x00
+		#define ACTION_STOP      0x01
+		#define ACTION_LOG       0x02
+		#define ACTION_ONESHOT   0x04
+
+	The addr fields refer to the address on which the breakpoint applies.
+
+	In the library, the following routines are provided to assist the client
+	debugger in managing breakpoints:
+
+		int dbg_bp_set(target_t t, bp_t bp);
+			Create a new breakpoint from a user-supplied breakpoint struct.
+			Installs the breakpoint in the kernel module.
+			Returns 0 on error.
+
+		bp_t dbg_bpx_new(target_t t, unsigned long addr);
+			Creates a new INT3_X breakpoint.
+			Does not check for duplicate breakpoint addresses. 
+			Breakpoints are enabled when created.
+			Returns NULL on error.
+
+		bp_t dbg_bpr_new(target_t t, unsigned long addr, int perm, int len);
+			Creates a new REG_? breakpoint on a code address or data range.
+			Does not check for duplicate breakpoint addresses. 
+			Breakpoints are enabled when created.
+			'perm' is a combination of 0x01 (x), 0x02 (w), and 0x04 (r)
+			'len' is the length of the data range [ 1,2, or 4 on Intel ]
+			Returns NULL on error.
+			
+		int dbg_bp_enable(bp_t bp);
+			Enable a breakpoint.
+			No effect if the breakpoint is already enabled. 
+			Returns 0 on error.
+		
+		int dbg_bp_disable(bp_t bp);
+			Disable a breakpoint.
+			No effect if breakpoint is already disabled.
+			Returns 0 on error.
+		
+		int dbg_bp_del(bp_t bp);
+			Delete an existing breakpoint of any type.
+			Returns 0 on error.
+
+
+
+	D. Tracing
+	----------
+
+	The most important feature of an application debugger is its support for
+	single-stepping or 'tracing' through code. The library uses combinations 
+	of trace breakpoints and one-shot breakpoints to implement the following 
+	routines:
+
+		int dbg_step(target_t t);
+			Step one instruction or step into a call
+			Fills t->state
+			Returns 0 on error
+		
+		int dbg_step_to(target_t t, unsigned long addr);
+			Step to an address
+			Fills t->state
+			Returns 0 on error
+		
+		int dbg_step_over(target_t t);
+			Step over a call
+			Fills t->state
+			Returns 0 on error
+		
+		int dbg_step_out(target_t t);
+			Step out of a call 
+			Fills t->state
+			Returns 0 on error
+		
+		int dbg_cont(target_t t);
+			Continue Execution
+			This continues a stopped target and clears the trace flag 
+			Following this, the debugger should call dbg_waitevent()
+			Returns 0 on error
+
+
+
+	E. Register Manipulation
+	------------------------
+
+	The register set supported by the library is currently limited to the
+	registers commonly used by applications:
+
+		typedef struct DBG_REGS {
+		   unsigned long eax, ecx, edx, ebx;
+		   unsigned long esp, ebp, esi, edi;
+		   unsigned long eip, eflags;
+		   unsigned long  ds, cs, ss; 
+		   unsigned long  es, fs, gs;
+		} * target_regs_t;
+
+	Single registers can be referred to using the following enumerations:
+		
+		enum x86_regs {
+		   reg_eax, reg_ecx, reg_edx, reg_ebx,
+		   reg_esp, reg_ebp, reg_esi, reg_edi, reg_eip , reg_eflags,
+		   reg_ds, reg_cs, reg_ss, reg_es, reg_fs, reg_gs
+		};
+
+
+	The register set of the target can be manipulated with the following
+	routines:
+
+		unsigned long dbg_reg_get(target_t t, int reg);
+			Get Register Contents
+			Returns the value of the specified register.
+			Returns 0 on error
+	
+		int dbg_reg_set(target_t t, int reg, unsigned long value);
+			Set Register Contents
+			Sets the specified register in the target process to 'value'.
+			Returns 0 on error
+
+		int dbg_reg_getall(target_t t, target_regs_t regs);
+			Get All Registers
+			Gets the registers of the target process into 'regs'
+			Returns 0 on error
+
+		int dbg_reg_setall(target_t t, target_regs_t regs);
+			Set All Registers
+			Sets the registers of the target process to the values in 'regs.
+			Returns 0 on error
+
+
+	F. Memory Manipulation
+	----------------------
+		
+	The kernel module allows arbitrary addresses in the target process memory
+	to be read from or written to. The library provides the following routines 
+	to wrap these services:
+
+		int dbg_mem_read(target_t t, unsigned long addr, char *buf, int size);
+			Read memory from the target process
+			Reads 'size' bytes from 'addr' to 'buf'.
+			Returns 0 on error
+
+		int dbg_mem_write(target_t t, unsigned long addr, char *buf, int size);
+			Write memory to the target process
+			Writes 'size' bytes from 'buf' to 'addr'.
+			Returns 0 on error
+		
+
+
+_______________________________________________________________________________
+V. Reference Implementation for the Client Debugger
+
+	A complete debugger has many features not supplied in the library, including:
+
+      + support for debug symbols
+		+ integration with source code files
+      + display of disassembled code
+      + display of system state (registers)
+      + language for specifying breakpoint conditions
+
+	Naturally, a full client implementation would be long and tedious and is, 
+as the poet says, beyond the scope of this paper on kernel mode debugging 
+facilites.  However, a client debugger need only provide a handful of services
+to be an effective debugger. The following commands provide the necessary
+services required of an application debugger.
+
+
+	Note: the following code assumes a global structure conatining a pointer
+         to the current target, i.e.:
+		struct DEBUGGER {
+			target_t	target;
+			/* other globals here */
+		} *debugger;
+
+	LOAD: This routine loads and executes the target, then obtains the 
+	current state of the target process for display. While the 
+	dbg_target_load does fill the target->state structure, the code
+	segment in that state may be inaccurate if an INT3 on the entry point
+	was used to break into the target.
+
+		cmd_load( char *path, char *args ){
+   		debugger->target = dbg_target_load(path, args, load_elf);
+   		if (! debugger->target ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+				/* load state again, now that the INT3 is definitely cleared */
+      		dbg_state_get( debugger->target );
+				/* update disassembly and register windows */
+      		update_display( &debugger->target->state );
+   			}
+   		return(1);
+		}
+
+
+	UNLOAD: Kill the target process if it is still running, then clean up 
+	the target structure and all breakpoints.
+
+		int cmd_unload( void ){
+   		if (!  dbg_target_unload(debugger->target) ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+      		debugger->target = NULL;
+				/* clear all windows */
+      		update_display( NULL );
+   		}
+  			return(1);
+		} 
+
+
+	GO: Continue execution of the target until the specified address is
+	reached; if no address is specified, step one instruction. Note that
+	this is simply a wrapper for the two library functions, which take
+	care of the step operations and fill the target->state structure.
+
+		int cmd_go( unsigned long addr ){
+   		int rv = 0;
+   		if ( addr )
+      		rv = dbg_step_to( debugger->target, addr );
+   		else
+      		rv = dbg_step( debugger->target );
+   		if (! rv ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+      		update_display( &debugger->target->state );
+   		}
+   		return(1);
+		}
+
+
+	BP: Set a breakpoint on a code or data address. This demonstrates the
+	different routines for specifying an INT3 or INT1 breakpoint, as well
+	as a fall-through option in the switch statement for handling all other
+	breakpoint types.
+
+		int cmd_bp( int type, unsigned long addr ){
+   		bp_t bp;
+
+   		switch( type ) {
+      		case INT3_X:
+         		bp = dbg_bpx_new( debugger->target, addr);
+         		break;
+      		case REG_R:
+         		bp = dbg_bpr_new(debugger->target, addr, 0x02, 1);
+         		break;
+      		case REG_W: case REG_RW:
+         		bp = dbg_bpr_new(debugger->target, addr, 0x04, 4);
+         		break;
+      		case REG_X:
+         		bp = dbg_bpr_new(debugger->target, addr, 0x01, 4);
+         		break;
+      		default:
+         		bp = calloc( sizeof( struct DBG_BP ), 1 );
+         		bp->status = 1;
+         		bp->type = type;
+         		bp->action = 1;      /* stop */
+         		bp->addr = addr;
+         		dbg_bp_set(debugger->target, bp);
+         		break;
+   		}
+
+   		if (! bp ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+				/* add breakpoint to the debugger's internal list */
+      		add_target_bp(debugger->target, bp);
+   		}
+   		return(1);
+		}
+
+
+	STEP: Step or trace a single instruction. This is a simple wrapper for
+	the library routine, which was used above in GO.
+
+		int cmd_step( void ){
+   		if (! dbg_step( debugger->target) ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+      		update_display( &debugger->target->state );
+   		}
+   		return(1);
+		}
+		
+
+	STEP OVER: Step one instruction, stepping over calls. This requires 
+	examining the next instruction to determine if it is a call or not;
+	if so, the return address of the call can be used as a parameter to
+	dbg_step_to -- the implementation of dbg_step_over() blindly calls 
+	dbg_step_to() after stepping one instruction, using the return address
+	on the stack as the step-to address.
+
+		int cmd_stepover( void ){
+		   int rv;
+		   struct instr i;
+		
+		   /* check to make sure EIP is a call :) */
+		   if ( get_next_inst( debugger->target, &i ) ) {
+		      if ( i.mnemType & INS_SUB )
+		         rv = dbg_step_over( debugger->target );
+		      else
+		         rv = dbg_step( debugger->target );
+		      if (! rv ) {
+      			print_error( dbg_last_err() );
+					return(0);
+		      } else {
+      			update_display( &debugger->target->state );
+		      }
+		   } else {
+      		print_error( "Unable to disassemble address after EIP\n" );
+				return(0);
+			}
+		   return(1);
+		}
+
+
+	RET: Set out of the current call. This similar to STEP OVER, above;
+	instead of stepping one instruction, dbg_step_out() obtains the return 
+	address from the stack immediately and passes it to dbg_step_to(). Note
+	that dbg_step_out() and dbg_step_over() cannot be trusted to determine
+	if the return address on the stack is a valid address or not.
+
+		int cmd_ret( void ){
+		   if (! dbg_step_out( debugger->target) ) {
+      		print_error( dbg_last_err() );
+				return(0);
+		   } else {
+      		update_display( &debugger->target->state );
+		   }
+		   return(1);
+		}
+
+		
+	CONTINUE: Exit trace mode, disable the current breakpoint, and continue
+	execution of the target process until another debug event occurs. This
+	demonstrates the use of the dbg_target_waitevent() call with a timeout
+	of 20 seconds to wait for the next debug event.
+
+		int cmd_cont( void ){
+   		if (! dbg_cont( debugger->target) ) {
+      		print_error( dbg_last_err() );
+				return(0);
+   		} else {
+      		/* wait for next event */
+      		dbg_target_waitevent(debugger->target, 20);
+      		update_display( &debugger->target->state );
+   		}
+   		return(1);
+		}
+
+
+	While these services do not represent the entirety of a full-featured 
+debugger, they do represent those services that require a kernel-mode component
+in order to implement. The rest of the client debugger -- including the 
+disassembler, the debug symbol manager, the watch facility, and the user 
+interface -- can easily be constructed using standard UNIX libraries and 
+include files.
+
+
+
+_______________________________________________________________________________
+VI. Future Expansion
+
+ A. Stealth Features
+ -------------------
+ 	+ encryption of strings
+	+ compile-time polymorphism
+	+ stealth kernel module techniques
+
+ B. Support Libraries
+ --------------------
+ 	+ opcode disassembly
+	+ ELF loading
+	+ core file loading
+	+ symbol management
+
+ C. Specialized Clients
+ ----------------------
+ 	+ ltrace and strace
+	+ target profiling
+	
+	

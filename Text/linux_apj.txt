@@ -1,0 +1,345 @@
+                                                  x86 ASM Programming for Linux
+                                                  by mammon_
+
+
+Essentially this article is an excuse to combine two of my favorite coding
+interests: the Linux operating system and assembly language programming. Both
+of these need (or should need) no introduction; like Win32 assembly, Linux
+assembly runs in 32-bit protected mode...however it has the distinct advantage
+of allowing you to call the C standard library functions as well as any of the
+usual Linux "shared" library functions. I have begun with a brief introduction
+on compiling assembly language programs in Linux; for greater readability you
+may want to skip over this to the "Basics" section.
+
+
+Compiling And Linking
+---------------------
+The two main assemblers for Linux are Nasm, the (free) Netwide Assembler, and
+GAS, the (also free) Gnu Assembler which is integrated into GCC. I will focus
+on Nasm in this article and leave GAS for a later date, as it uses the AT&T
+syntax and thus would require a lengthy introduction.
+
+Nasm should be invoked with the ELF format option ("nasm -f elf hello.asm");
+the resulting object is linked with GCC ("gcc hello.o") to produce the final
+ELF binary. The following script can be used to compile ASM modules; I wrote
+it to be very simple, so all it does is take the first filename passed to it
+(I recommend naming it with a ".asm" extension), compile it with nasm, and
+link it with gcc.
+
+#!/bin/sh
+# assemble.sh =========================================================
+outfile=${1%%.*}
+tempfile=asmtemp.o
+nasm -o $tempfile -f elf $1
+gcc $tempfile -o $outfile
+rm $tempfile -f
+#EOF ==================================================================
+
+
+The Basics
+----------
+It is best, of course, to start off with an example before launching into the
+OS details. Here is a very basic, "hello-world"-style program:
+; asmhello.asm ========================================================
+global main
+extern printf
+
+section .data
+msg	db	"Helloooooo, nurse!",0Dh,0Ah,0
+section .text
+main:
+	push dword msg
+	call printf
+	pop eax
+        ret
+; EOF =================================================================
+A quick rundown: the "global main" must be declared global--and since we are
+using the GCC linker, the entrypoint must be named "main"--for the OS loader.
+The "extern printf" is simply a declaration for the call later in the program;
+note that this is all that is needed; the parameter sizes do not need to be
+declared. I have sectioned this example into the standard .data and .text
+sections, though this is not strictly necessary--one could get by with only a
+.text segment, just as in DOS.
+
+In the body of the code, note that you must push the parameters to the call,
+and in Nasm you must declare the size of all ambiguous (i.e. non-register)
+data: hence the "dword" qualifier. Note that just as inother assemblers, Nasm
+assumes that any memory/label reference is intended to mean the address of the
+memory location or label, not its contents. Thus, to specify the address of
+the string 'msg' you would use 'push dword msg', while to specify the contents
+of the string 'msg' you would use 'push dword [msg]' (note this will only
+contain the first 4 bytes of 'msg'). As printf requires a pointer to a string,
+we will specify the address of 'msg'.
+
+The call to printf is pretty straightforward. Note that you must clean up the
+stack after every call you make (see below); thus, having PUSHed a dword, I
+POP a dword from the stack into a "throwaway" register. Linux programs end
+simply with a RET to the OS, as each process is spawned from the shell (or PID
+1 ;) and ends by returning control to it.
+
+Notice that in Linux you use the standard shared libraries that are shipped
+with the OS in lieu of an "API" or Interrupt Services. All external references
+will be taken care of by the GCC linker which takes a lot of the workload off
+the asm coder. Once you get used to the basic quirks, coding assembly in Linux
+is actually easier than on a DOS-based machine!
+
+
+The C Calling Syntax
+--------------------
+Linux uses the C calling convention--meaning that arguments are pushed onto the
+stack in reverse order (last arg first), and that the caller must cleanup the
+stack. You can do this either by popping values from the stack:
+     push dword szText
+     call puts
+     pop ecx
+or by directly modifying ESP:
+     push dword szText
+     call puts
+     add esp, 4
+
+Results from the call are returned in eax or edx:eax if the value is greater
+than 32-bit. EBP, ESI, EDI, and EBX are all saved and restored by the caller.
+Note that you must preserve any other registers you use, as the following will
+illustrate:
+; loop.asm =================================================================
+global main
+extern printf
+section .text
+msg	db	"HoodooVoodoo WeedooVoodoo",0Dh,0Ah,0
+main:
+   mov ecx, 0Ah
+   push dword msg
+looper:
+   call printf
+   loop looper
+   pop eax
+   ret
+; EOF ======================================================================
+On first glance this looks pretty simple: since you are going to use the same
+string on the 10 printf() calls, you do not need to clean up the stack. Yet
+when you compile this, the loop never stops. Why? Because somewhere in the
+printf() call ECX is being used and isn't saved. So to make your loop work
+properly you must save the count value in ECX before the call and restoe it
+afterwards, as so:
+; loop.asm ================================================================
+global main
+extern printf
+
+section .text
+msg	db	"HoodooVoodoo WeedooVoodoo",0Dh,0Ah,0
+main:
+   mov ecx, 0Ah
+looper:
+   push ecx          ;save Count
+   push dword msg
+   call printf
+   pop eax            ;cleanup stack
+   pop ecx            ;restore Count
+   loop looper
+   ret
+; EOF ======================================================================
+
+
+I/O Port Programming
+--------------------
+But what about direcr hardware access? In Linux you need a kernel-mode driver
+to do anything really tricky...this means your program will end up being two
+parts, one kernel-mode that provides the direct-hardware functionality, the
+other user-mode to provide an interface. The good news is that you can still
+access ports using the IN/OUT commands from a user-mode program.
+
+To access the I/O ports your program must be granted permission by the OS; to
+do that, you must make an ioperm() call. This function can only be called by a
+user with root access, so you must either setuid() the program to root or run
+the program as root. The ioperm() has the following syntax:
+
+      ioperm( long StartingPort#, long #Ports, BOOL ToggleOn-Off)
+
+which means that 'StartingPort#' specifies the first port number to access (0
+is port 0h, 40h is port 40h, etc), '#Ports' specifies how many ports to access
+(i.e., 'StartingPort# = 30h' and '#Ports = 10' would provide access to ports
+30h-39h), and 'ToggleOn-Off' enables access if TRUE (1) or disables access if
+FALSE (0).
+
+Once the call to ioperm() is made, the requested ports may be access as
+normal. The program can call ioperm() any number of times and does not need to
+make a subsequent ioperm() call (though the example below does so) as the OS
+will take care of this.
+
+; io.asm ====================================================================
+BITS 32
+GLOBAL szHello
+GLOBAL main
+EXTERN printf
+EXTERN ioperm
+
+SECTION .data
+szText1 db 'Enabling I/O Port Access',0Ah,0Dh,0
+szText2 db 'Disabling I/O Port Acess',0Ah,0Dh,0
+szDone  db 'Done!',0Ah,0Dh,0
+szError db 'Error in ioperm() call!',0Ah,0Dh,0
+szEqual db 'Output/Input bytes are equal.',0Ah,0Dh,0
+szChange db 'Output/Input bytes changed.',0Ah,0Dh,0
+
+SECTION .text
+
+main:
+   push dword szText1
+   call printf
+   pop ecx
+enable_IO:
+   push word 1    ; enable mode
+   push dword 04h ; four ports
+   push dword 40h ; start with port 40
+   call ioperm    ; Must be SUID "root" for this call!
+   add ESP, 10    ; cleanup stack (method 1)
+   cmp eax, 0     ; check ioperm() results
+   jne Error
+
+;---------------------------------------Port Programming Part--------------
+SetControl:
+   mov al, 96     ; R/W low byte of Counter2, mode 3
+   out 43h, al    ; port 43h = control register
+WritePort:
+   mov bl, 0EEh   ; value to send to speaker timer
+   mov al, bl
+   out 42h, al    ; port 42h = speaker timer
+ReadPort:
+   in al, 42h
+   cmp al, bl     ; byte should have changed--this IS a timer :)
+   jne ByteChanged
+BytesEqual:
+   push dword szEqual
+   call printf
+   pop ecx
+   jmp disable_IO
+ByteChanged:
+   push dword szChange
+   call printf
+   pop ecx
+;---------------------------------------End Port Programming Part----------
+
+disable_IO:
+   push dword szText2
+   call printf
+   pop ecx
+   push word 0    ; disable mode
+   push dword 04h ; four ports
+   push dword 40h ; start with port 40h
+   call ioperm
+   pop ecx        ;cleanup stack (method 2)
+   pop ecx
+   pop cx
+   cmp eax, 0     ; check ioperm() results
+   jne Error
+   jmp Exit
+Error:
+   push dword szError
+   call printf
+   pop ecx
+Exit:
+   ret
+; EOF ======================================================================
+
+
+Using Interrupts In Linux
+-------------------------
+Linux is a shared-library environment running in protected mode, meaning there
+are no interrupt services. Right?
+
+Wrong. I noticed an INT 80 call on some GAS sample source code with the
+comment "sys_write(ebx, ecx, edx)". This function is part of the Linux syscall
+interface, which means that the interrupt 80 must be a gate into the syscall
+services. Poking around in the Linux source code (and ignoring warnings to
+NEVER use the INT 80 interface as the function numbers may be changed at any
+time), I found the "system call numbers" --that is, what function # to pass on
+to INT 80 for each syscall routine-- in the file UNISTD.H. There are 189 of
+them, so I will not list them here...but if you are going to be doing Linux
+assembly, do yourself a favor and print this file out.
+
+When calling INT 80h, eax must be set to the desired function number. Any
+parameters to the syscall routine must be placed in the following registers in
+order:
+
+    ebx, ecx, edx, esi, edi
+
+so that parameter one is placed in ebx, parameter 2 in ecx, etc. Note that
+there is no stack used to pass values to a syscall routine. The result of the
+call will be returned in eax.
+
+Other than that, the INT 80 interface is the same as regular calls (only a bit
+more fun ;). The following program demonstrates a simple INT 80h call in which
+a program checks and display its own PID. Note the use of printf() format
+string-- it is best to psuedocode this as a C call first, then make the format
+string a DB and to push each variable passed (%s, %d, etc). The C structure
+for this call would be
+
+     printf( "%d\n", curr_PID);
+
+Note also that the escape sequences ("\n") are not all that reliable in
+assembly; I had to use the hex values (0Ah,0Dh) for the CR\LF.
+
+;pid.asm====================================================================
+BITS 32
+GLOBAL main
+EXTERN printf
+
+SECTION .data
+szText1 db 'Getting Current Process ID...',0Ah,0Dh,0
+szDone  db 'Done!',0Ah,0Dh,0
+szError db 'Error in int 80!',0Ah,0Dh,0
+szOutput db '%d',0Ah,0Dh,0           ;weird formatting is for printf()
+
+SECTION .text
+main:
+        push dword szText1    ;opening message
+	call printf
+	pop ecx
+GetPID:
+	mov eax, dword 20     ; getpid() syscall
+        int 80h               ; syscall INT
+        cmp eax, 0            ; there will never be PID 0 ! :)
+	jb Error
+        push eax              ; pass return value to printf
+        push dword szOutput   ; pass format string to printf
+	call printf
+        pop ecx               ; cleanup stack
+	pop ecx
+        push dword szDone     ; ending message
+	call printf
+	pop ecx
+        jmp Exit
+Error:
+        push dword szError
+	call printf
+	pop ecx
+Exit:
+        ret
+; EOF =====================================================================
+
+
+Final Words
+-----------
+Most of the trouble is going to come from getting used to Nasm itself. While
+nasm does come with a man page, it does not by default install it, so you must
+move it (cp or mv) from
+/usr/local/bin/nasm-0.97/nasm.man
+to
+/usr/local/man/man1/nasm.man
+The formatting is a little messed up, but that is easily fixed using the nroff
+directives. It still does not give you the entire Nasm documentation, however;
+for that, copy nasmdoc.txt from
+/usr/local/bin/nasm-0.97/doc/nasmdoc.txt
+to
+/usr/local/man/man1/nasmdoc.man
+Now you cam invoke the nasm man page with 'man nasm' and the nasm documentation
+with 'man nasmdoc'.
+
+For further information, check out the following:
+Linux Assembly Language HOWTO
+Linux I/O Port Programming Mini-HOWTO
+Jan's Linux & Assembler HomePage (bewoner.dma.be/JanW/eng.html)
+
+Also I owe a bit of thanks to Jeff Weeks at code^x software (gameprog.com/codex)
+for forwarding me a couple of GAS hello-world's in the dark days before I
+found Jan's page.

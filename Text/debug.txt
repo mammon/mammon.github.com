@@ -1,0 +1,152 @@
+debug.exe
+? commands
+a ASSEMBLE assemble 8086/87/88 mnemonics
+c COMPARE compare two portions of memory
+d DUMP display the contents of an area of memory
+e ENTER enter data in memory at specificed address
+f FILL fill range of memory with specified values
+g GO run executable
+h HEX perform hex math
+i INPUT input 1 byte from specified port
+l LOAD load contents of file or disk sector
+m MOVE copy contents of a bloack of memory
+n NAME specify file to L or W
+o OUTPUT output one byte to port
+p PROCEED execute a loop, reps, int or subroutine
+q QUIT exit debug
+r REGISTER display/alter registers
+s SEARCH search memory for pattern of bytes
+t TRACE execute one instruction, then display registers/flags/cs:IP
+u UNASSEMBLE
+w WRITE Write file to disk
+xa Allocate expanded memory
+xd deallocate expanded
+xm map expanded mem pages
+xs displat status of expnaded mem
+
+
+mov dl, 48
+mov ah, 2
+int 21
+mov dl, 65
+int 21
+mov dl, 79
+int 21
+mov dl, 21
+int 21
+mov dl, 0d
+int 21
+mov dl, 0a
+int 21
+int 20
+
+Hey!
+
+jmp 0114 (xxx)
+db 'Hey! ASM rocks!'0d.0a'$'
+mov dx, 102
+mov ah, 9
+int 21
+int 20
+
+1d
+
+Using debug as a compiler
+
+Debug can be used more or less as a standard assembler by preparing .asm files 
+beforehand and invoking them through standard dos redirection, i.e.
+<PRE><CODE>
+debug.exe < hello.asm
+</pre></code>
+A text file can be prepared for assembly as follows:<P>
+<PRE><CODE>
+<i>hello.asm</i>
+a100
+jmp 0114
+db 'Hey! ASM rocks!'0d.0a'$'
+mov dx, 102
+mov ah, 9
+int 21
+int 20
+
+rcx
+1d
+n hello.com
+w
+q
+
+</code></pre><P>
+This is essentially a script of commands you would enter in debug. The first 
+line is stands for "Assemble at 100h", or "start coding a com file". At this point 
+each line of asm code you enter will be assembled into the final file, starting 
+with address 100h. The blank line at the end of the code is important as it 
+signifies that the code input is over. Next you must edit the register CX to reflect the byte 
+count of the file; the "rcx" goes on one line and the number of bytes to write--1D--goes 
+on another. The filen must be named of course, in the "n hello.com" line, then written with the "w"
+line (remember, each line in a dos text file has a CR/LF, which is the 
+equivalent of pressing ENTER when writing scripts like this). Finally, debug is 
+exitted with the "q" command followed by a blank line (the last is <b>very</b> important, for 
+without it debug will lock up and receive no further input, which as you remember is coming from 
+a file).
+<P>
+Note that this method is a little tricky as you do not know the address of each 
+line while you are writing the code. Thus, the starting JMP statement is usually 
+a guess (e.g. JMP 1FF) that is fixed later; ditto for any jumps or data references in the
+code. A good practice would be to write the asm file as follows:
+<PRE><CODE>
+<i>hello.asm</i>
+a100
+jmp FFFF
+...
+mov dx, FFFF
+...
+int 20
+...
+</PRE></CODE>
+Then, after running the .asm file through debug, unassemble the resulting com 
+file in debug and fix the jumps:
+<PRE><code>
+debug hello.com
+-u
+0C93:0100 EB12          JMP     FFFF
+0C93:0102 48            DEC     AX
+0C93:0103 65            DB      65
+0C93:0104 7921          JNS     0127
+0C93:0106 204153        AND     [BX+DI+53],AL
+0C93:0109 4D            DEC     BP
+0C93:010A 20726F        AND     [BP+SI+6F],DH
+0C93:010D 63            DB      63
+0C93:010E 6B            DB      6B
+0C93:010F 7321          JNB     0132
+0C93:0111 0D0A24        OR      AX,240A
+0C93:0114 BA0201        MOV     DX,FFFF
+0C93:0117 B409          MOV     AH,09
+0C93:0119 CD21          INT     21
+0C93:011B CD20          INT     20
+0C93:011D 46            INC     SI
+0C93:011E EBBB          JMP     00DB
+-a100
+0C93:0100 JMP 114
+
+-a114
+0C93:0114 mov DX,102
+
+-w
+-q
+</PRE></CODE>
+Notice how the data between 102 and 114 is unassembled as code; this is 
+because debug is a "dumb" (i.e., not following the flow of execution)
+disassembler. However, with practice--and good habits like placing all 
+data at the start of your code, therefore enabling you to simply count the number of 
+bytes (or characters) following the DB in order to determine where the first JMP 
+should point to--you will be able to interpret such crudely disassembled code 
+with ease.
+
+Progamming with an Assembler
+
+
+
+
+
+
+

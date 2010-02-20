@@ -1,0 +1,1148 @@
+...
+
+
+
+Straight to Shell 
+-----------------
+Shell scripting is, of course, simply an automation of the shell's built-in
+command line capabilities. Any operation that can be performed in a shell
+script can also be performed on the command line -- even for loops and if 
+statements.
+
+There are, however, a few command line behaviors or nuances that must be 
+learned before any serious scripting is begun. One of these is the syntax for
+variables; a shell or environment variable is referred to by name when it is
+declared or exported, but its name is prefixed with a dollar sign when it is
+referenced. Thus,
+    root@localhost> PATH=bin:/usr/bin:/usr/local/bin
+uses PATH= to declare the PATH variable; while
+    root@localhost> PATH=$PATH:/sbin:/usr/sbin
+uses PATH= to declare the variable, and $PATH to refer to it. No spaces can 
+appear on either side of the '=' in declaration or assignment; also, while
+variable names do not have to be in caps, they usually are kept so in order 
+to prevent interference with directories and program names, which tend to 
+be mixed or lowercase.
+
+The use of different quotation marks is also important. A pair of back-ticks 
+[` `] will execute any shell commands they contain, and replace the quoted 
+command with its output. Single quotes [' '] will force their contents to 
+be interpreted literally; thus variables and escape sequences will not be
+recognized, as the $ and \ characters are treated literally. Most quoting 
+is performed with double quotes [" "], which allow variables and escape 
+sequences; double quotes are commonly used to refer to files with spaces 
+in their names ["My Document.doc"], while single quotes are used to refer 
+to files with shell metacharacters in their names ['Why me?.doc']. The
+differences between the three quoting methods can be made clear with a simple
+experiment:
+    root@localhost> echo '$PWD'
+      $PWD
+    root@localhost> echo "$PWD"
+      /usr/src/binutils-2.9.1/binutils
+    root@localhost> echo `$PWD`
+      bash: /usr/src/binutils-2.9.1/binutils: is a directory
+
+Of course, the usual programming escape sequences can be used in shell 
+scripting:
+              \a     alert (bell)
+              \b     backspace
+              \e     an escape character
+              \f     form feed
+              \n     new line
+              \r     carriage return
+              \t     horizontal tab
+              \v     vertical tab
+              \\     backslash
+              \nnn   octal value nnn (one to three digits)
+              \xnnn  hexadecimal value nnn (one to three digits)
+...providing that double quotes are enclosing the string. The effects of these 
+may be tested with the `echo -e` statement [the -e being short for 'evaluate'].
+
+
+Shell scripting does not use brackets or parentheses to delineate control
+blocks; instead it used keywords. When entering a control block, all 
+subsequent lines will be assume to be part of that block unless another 
+[nested] block is entered. Thus, an 'if' will continue through the next 
+"unclaimed" [i.e., not part of an inner 'if' block] 'fi' statement; a missing
+end-of-block marker [such as 'fi'] will cause an 'unexpected EOF' error when 
+the script is run. The following are typical shell control statements:
+        syntax                               example
+        ------                               -------
+  if [test-expression]                if [ $LOGSIZE -gt 1000000 ] 
+  then                                then
+     (commands)                          cat log.full | mailx admin-pager
+  elif [test-expression]              elif [ $LOGSIZE -gt 500000 ]
+     (commands)                          /usr/local/sbin/trunc_log ./log
+  else                                else
+     (commands)                          echo "./log OK" >> logcheck.out
+  fi                                  fi
+
+
+  for (var) in (list)                 for file in `ls -A /etc`
+  do                                  do
+     (commands)                          cp $file /backup/etc/
+  done                                done
+
+
+  PS3="User prompt"                   PS3="Choose an action:"
+  select (var) in (list)              select menu_item in Cut Copy Paste
+  do                                  do
+     (commands)                          echo "You chose $menu_item"
+     break                               break
+  done                                done
+
+
+  while (command)                     while [ $x -lt 100 ]
+  do                                  do
+     (commands)                          x=`expr $x + 1`
+  done                                done
+
+
+  until (command)                     until [ $x -eq 100 ] 
+  do                                  do
+     (commands)                          x=`expr $x + 1`
+  done                                done
+
+
+  case (var) in                       case $USERNAME in
+  (pat))                                   root)
+     (commands)                                 echo "root is god"
+       ;;                                       ;;
+  (pat))                                   mammon)
+     (commands)                                 echo "access denied"
+       ;;                                       ;;
+  esac                                esac
+
+In the above examples, '(var)' stands for a variable to which a value [usually
+of a selection or iteration] will be assigned; '(command)' refers to the output
+of a command which will be evaluated as 0 [success/'true'] or nonzero [failure/
+'false']; '(commands)' refers to a block of commands to be executed, '(pat)'
+refers to a pattern [usually a string], '(list)' refers to a list of strings 
+[space-delimited], and '[test expression]' refers to a condition test between
+square brackets. Some sample test conditions are:
+       -d file        True if file exists and is a directory.
+       -e file        True if file exists.
+       -f file        True if file exists and is a regular file.
+       -k file        True if file exists and its ``sticky'' bit is  set.
+       -r file        True if file exists and is readable.
+       -w file        True if file exists and is writable.
+       -x file        True if file exists and is executable.
+       -L file        True if file exists and is a symbolic link.
+       -S file        True if file exists and is a socket.
+       arg1 -eq arg2  True if arg1 =  arg2  
+       arg1 -ne arg2  True if arg1 != arg2
+       arg1 -lt arg2  True if arg1 <  arg2
+       arg1 -le arg2  True if arg1 <= arg2
+       arg1 -gt arg2  True if arg1 >  arg2
+       arg1 -ge arg2  True if arg1 >= arg2
+It is important to note that the square brackets used in shell scripts are a 
+shorthand form of the 'test' command --which is responsible for evaluating the
+above conditions-- and that they require an inner space, so that
+    if [ -r /etc/passwd ]
+would be legal, and 
+    if [-r /etc/passwd]
+would not.
+
+Note that any list or value can be replaced by a command in backticks [such as
+`ls /usr/local/bin`] which will produce such a list or value; such back-ticked 
+commands can appear in test conditions, lists, while statements, and so on.
+
+
+While programming constructs such as the above seem intended to be used only
+in shell scripts, they can also be entered from the command prompt as well. 
+To become familiar with this, one must be aware that the shell has 4 prompts:
+$PS1, the standard command line, e.g. "root@localhost> "; $PS2, the secondary
+prompt string used to denote a multi-line expression, usually ">"; $PS3, the
+prompt used in the 'select' command, e.g. "Select from the following menu:";
+and $PS4, the execution trace prompt used to denote execution nesting levels,
+usually "+".
+
+Upon typing the first line of a multi-line expression, the next line will
+beging with the $PS2 prompt -- this will happen when a quote is left open
+as well, on the assumption that one wants a newline embedded in the string;
+the use of $PS2 will continue until the expression is finished or the string
+is closed. Entering a multi-line expression from the command line will usually
+go as follows:
+  Step 1
+    root@localhost> for i in `ls /etc` do
+    >
+  Step 2
+    root@localhost> for i in `ls /etc` do
+    > echo "Line count for $i is: `wc -l /etc/$i | cut -c0-7`"
+    >
+  Step 3
+    root@localhost> for i in `ls /etc` do
+    > echo "Line count for $i is: `wc -l /etc/$i | cut -c0-7`"
+    > done
+...at this point the command will be run.
+
+
+In addition to $PS1-4, the shell contains a number of other special variables
+which can be referenced for various OS or environment information. Among the
+more interesting of these are the following:
+    $*          Parameters to the current command, $IFS-delimited
+    $@          Parameters to the current command, space-delimited
+    $#          Number of parameters
+    $1, $2      First parameter, second, etc
+    $?          Exit status of the last command
+    $$          PID of the shell
+    $!          PID of most recently-executed background process
+    $RANDOM     Random integer [must be set or seeded before use]
+    $PIPESTATUS Array of exit values from last foreground command
+    $HOSTNAME   Name of current host/computer
+    $IFS        Input field separator, e.g. ',' for comma-delimited data
+    $PATH       Search path for executables
+    $HOME       Home directory of the current user
+
+
+The shell also allows the use of one-dimensional arrays of strings. An array 
+is automatically declared when a variable is assigned a list of values:
+    array=(val, val)
+       e.g.  MY_ARRAY=( "first", "second", "third")
+or when a variable is assigned a value at a certain index or offset:
+    array[index]=val
+       e.g.  MY_ARRAY[3]="third"
+Values within an array can be referenced using a special curly-brace syntax:
+    ${array[index]}
+       e.g.  echo ${MY_ARRAY[3]}
+This syntax can be modified to return the length of an element in the array:
+    ${#array[index]}
+       e.g.  echo Length of arg 3 is ${#MY_ARRAY[3]}
+or to return all of the elements in the array:
+    ${array[*]}  
+    ${array[@]}  
+    "${array[*]}" 
+Note that the use of the double quotes with the [*] index causes the values to
+be printed using the first character of $IFS as a delimiter.
+
+
+The shell also allows functions to be declared. The syntax for this is fairly
+simple:
+    function name () {
+    }
+...in which even the parenthese are optional. The function can be called by 
+referencing its name, or its name followed by parentheses containing the 
+parameters:
+    name
+    name()
+    name( arg1, arg2, arg3 )
+Note that the parameters are never formally declared in the function defintion,
+and as such the number of arguments to a function is uncontrolled and almost 
+arbitrary. The positional-parameter variables [$@, $1, $2, ... $#] are used 
+within a function to refer to any values passed to that function; thus the 
+parameters to the script itself become inaccessible within functions.
+
+
+That should be enough of an introduction to shell semantics to make the rest of
+this document comprehensible.  The reader is of course encouraged to read the 
+shell man page --generally, `man bash`-- for details on built-in commands, test 
+operators, environment variables, shortcuts, and higher-level programming 
+constructs. In the bash man page, the following sections are of particular 
+interest:
+  SHELL GRAMMAR				-- Control statements, &, |, !, and friends
+  SHELL BUILTIN COMMANDS	-- Alias, echo, eval, etc
+  CONDITIONAL EXPRESSIONS	-- Test expressions and operators
+  PARAMETERS				-- Environment variables
+  JOB CONTROL				-- Controlling background and foreground processes
+  REDIRECTION				-- Redirecting STDIN, STDOUT, STDERR, and so on
+  EXPANSION					-- Typing and scripting shortcuts
+  PROMPTING					-- Customizing the command prompts
+  Readline Command Names	-- Command history key-combos
+Of course, as with every other aspect of unix, the rule of thumb is "man 
+everything."
+
+
+
+Regular Expressions
+-------------------
+To begin using command-line tools effectively, one must become familiar with
+regular expressions. For some, this can be quite a formidable obstacle; when
+non-unixers refer to 'arcane' and 'esoteric' unix commands, rest assured that
+they are referring specifically to regular expressions.
+
+To start off, a regular expression is a pattern which a utility must match [or
+not match] in a given set of data. If you were looking for all occurences of the
+word 'the' in a file, you would want a utility to match the pattern /the/. Of 
+course, capitalization and spelling may vary, thus metacharacters are used to 
+specify wildcards, newlines, tabs, etc; in a unix shell, for example, one might 
+list all shell scripts in a directory by matching the pattern "*.sh". 
+
+In regular expressions, things are a bit more complicated. As one would expect,
+any character matches itself; thus /tttfh/ matches 'tttfh' and not 'tttfi', 
+although --unless further restrictions are imposed-- it will match strings such
+as 'tttfhtt', which are a superset of the pattern. The metacharacter '.' matches
+any non-whitespace character, much like the '?' metacharacter in file globs; the
+pattern /th.s/ will match 'this' and 'thus'.
+
+To match more than a single occurence of a character, the character must be 
+followed by an operator. Of these operators, '*' will match zero or more 
+occurrences, '?' will match zero or one occurrences, and '+' will match one 
+or more occurrences of the character. To illustrate the differences, the 
+pattern /th.+/ would match the characters 'th' followed by one or more 
+characters [e.g. the, that, therefore]; /th.?/ would match 'th' followed by
+at most one character [e.g. th, the ]; and /th.*/ would match 'th' followed by
+anything [e.g. th, the, that, therefore]. To match a specific number of further
+instances, the '\{min,max\}' operator can be used, where '\{min\}' matches
+exactly min occurences, '\{min,\}' matches min or more occurences, and 
+'\{min,max\}' matches between min and max occurences. Thus, to match 'th' 
+followed by any three characters, one would use the pattern /th.\{3\}/ ; to 
+match 'th' followed by three or more characters, /th.\{3,\}/ ; and to match 
+'th' followed by from three to five characters, /th.\{3,5\}/ .
+
+Regular expressions have many more metacharacters; '^', for example, will
+match the beginning of a line, and '$' will match the end of a line -- so
+the pattern /^Intrusion logged\.$/ will match any line containing only the 
+phrase 'Intrusion logged.'. Note that metacharacters can be escaped using a 
+backslash. Ranges of characters can also be specified by using brackets; to
+match any alphanumeric character, the pattern /[A-Za-z0-9]/ would be used, while
+/[aeiouy]/ would match any lowercase vowel. Finally, one should be aware that 
+there are still more options available within regular expressions, allowing for
+quite complex and sophisticated [if unreadable] pattern-matching; however, the
+specifics for such extended features vary depending on the utility being used.
+
+To sum up:____________________________________________________________________
+^  = beginning of line                    [ /^error:/   ]
+$  = end of line                          [ /error$/    ]
+[] = match any of the enclosed characters [ /^[Ee]rror/ ]
+.  = match any character                  [ /^.rror/    ]
+*  = match zero or more of the preceding expression
+?  = match zero or one of the preceding expression
++  = match one ore more of the preceding expression
+\{#\}    = match # of the preceding expression
+\{#,\}   = match # or more of the preceding expression
+\{#,##\} = match between # and ## of the preceding expression
+_____________________________________________________________________________
+
+
+
+Grep
+----
+One of the most simple and most powerful commands in unix is 'grep'. This is
+simply a "find line with..." utility; when invoked with a pattern, it will 
+print all the lines containing that pattern. The basic usage is 
+      grep pattern filename
+so to find all root logins in the system logs, one would use
+      grep 'ROOT LOGIN' /var/log/auth.log
+When invoked with the -v option, grep will print all lines that do not contain
+the pattern; to find all non-root logins, one could thus use
+      grep -v 'ROOT LOGIN' /var/log/auth.log
+Other options include -i [case-insensitive match], -n [print line number], and 
+-H [print filename] ... the last being particularly useful for tracking down
+variable and function declarations in source code; a simple
+      grep -H ptrace /usr/src/linux/arch/i386/kernel/*
+will list all occurrences of 'ptrace' in the kernel source code. The -l and -L
+options allow one to output only the filenames of matching or non-matching
+files, respectively.
+
+
+
+Awk
+---
+At the other end of the spectrum is awk: undoubtedly the most complex 
+utility in standard unix, almost an interpreter in its own rights. Awk is 
+a general-purpose pattern-matching utility; for every pattern specified by
+the user, an associated action is performed when that pattern is matched. 
+The general usage of awk is
+   awk [flags] 'pattern {action}' filename
+A pattern is a regular expression, straight text patterns, relational 
+expressions, or the special patterns BEGIN and END. When an action is specified
+without a pattern, that action is the default and is applied to all lines. 
+
+Actions are any of a number of awk operations or built-in commands. As an 
+interpreter, awk has a library of internal functions for most general program-
+ming needs; there are I/O routines such as close(), getline, next, print,
+printf, and system(); string processing routines like gsub, index, length,
+match, split, sub, substr, tolower, and toupper; and assorted mathematical and
+time/date routines.
+
+Awk can get quite sophisticated, with high-level language constructs such as 
+if blocks and for loops, arrays, user-defined functions. In addition, a 
+number of internal devices [e.g. /dev/stdin, /dev/stderr] are supplied for
+accessing system file descriptors. The usual pre-defined variables such as
+ARGC, ARGV, ENVIRON, FILENAME, FS, NF, and NR are also included.
+
+Awk acts on a file line-by-line; each line is searched for the specified
+patterns, and acted upon as necessary. In awk scripting, the current line is
+referred to as $0, with $1+ referring to the fields within the line. The 
+default field separator in awk is the space; however this can be overridden 
+by setting the FS variable, or by using the -F flag. To demonstrate the basic 
+usage of awk, the following is an implementation of the cat utility om awk:
+   awk '{print}' filename
+This will apply the action 'print' [the default argument in awk is $0, so print
+will print the current line] to all lines. To add a header and a footer, use
+the BEGIN and END patterns:
+   awk 'BEGIN {print "filename: " ARGV[0]} {print} END {print "EOF"}' filename
+The header and footer allow one to display the contents of files in a formated
+report:
+   awk -F ':' 'BEGIN {print "User\tPwd\tUID\tGID\tName\tHome\tShell"} \
+	            {print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7 }' /etc/passwd
+
+One of awk's greatest strengths is its parsing of input lines into fields,
+based on the use of space as a delimiter [note: the above example used the 
+-F flag to override the delimiter, allowing the lines to be split on colons
+rather than spaces] -- this is very handy for parsing table-based format 
+such as databases, logs, and program output. Consider the need to strip all 
+but the PIDs from the output of ps; with awk, this is quite simple:
+    ps aux | awk '{print $2}'
+Thus, to kill all netscape processes, one could use
+    ps aux | grep netscape | awk '{print $2}' | xargs kill
+One could also create a shell function such as the follwing:
+    function killall () {
+		  ps aux | grep $1 | awk '{print $2}' | xargs kill -9
+	 }
+...which would allow commands as simple as "killall netscape".
+
+Awk is useful for text processing; its regular expressions are particularly
+powerful, containing character classes such as [:cntrl:], [:print:], 
+[:alnum:], [:blank:], [:space:], [:digit:], [:lower:], and [:upper:]. An 
+in-depth study of the utility is out of place here; however this brief 
+introduction should make a tour through the awk manpage quite enlightening. 
+For further instruction, the books 'Effective Awk Programming' [Robbins, 
+SSC] and 'Sed & Awk' [Dougherty & Robbins, O'Reilly] are recommended.
+
+
+
+Sed
+---
+The field-based nature of awk makes it awkward [sorry] to use for some editting
+tasks; the tool 'sed' fills in these gaps. Sed earned its name by being a 
+streaming version of ed --trust me, you don't want to use ed-- and, like awk, 
+it can be as complex as you want it to be, allowing user-defined functions and 
+variables within a sed script. Using sed from the command line is relatively
+simple; the specified sed commands are performed on the input [STDIN or a 
+file], and printed to STDOUT.
+
+Sed iterates through each line in a file [or from STDIN] and applies commands
+specified by the user to appropriate lines; it can be considered a batch-mode
+editor, as opposed to an interactive editor like vi, ed, pico. A sed command
+will have the syntax:
+     [address][!]command[arguments]
+...where an address can be a line number or a regular expression. A command 
+with no preceding address is applied to all lines, thus the 'cat' utility 
+can be replaced with 
+     sed -e ''
+Usually, sed is invoked with
+     sed [-n] -e 'command-list' filename
+The -e option specifies that what follows is an expression to be evaluated; 
+the -n option instructs sed to only print out lines which are explicitly 
+printed in the expression, as sed prints all lines by default. Compare the 
+output of the following:
+     sed -e '' /etc/passwd 
+	 sed -e 'p' /etc/passwd
+	 sed -n -e 'p' /etc/passwd
+The 'p' is sed's print command; notice that when 'p' is used on all lines
+without the -n flag, each line is printed twice. When using sed to extract
+lines from a file, the -n option should always be used; witness the sed
+implementation of head
+     sed -n -e '1,5p' /etc/passwd
+and of grep
+     sed -n -e '/^root/p' /etc/passwd
+Sed's commands are basically one letter each, with varying syntaxes; some of
+the more common commands are:
+  d delete          [address]d
+  g get (overwrite) [address]g
+  G get (append)    [address]g
+  h hold            [address]h
+  N remove newline  [address]N
+  p print           [address]p
+  q quit            [address]q
+  r read from file  [address]r filename
+  s substitute      [address]s/pattern/replacement/[#gpw]
+  w write to file   [address]w filename
+  y transform       [address]y/list1/list2
+Of these, the most frequently used is the substitute command; this is commonly
+used as a quick search and replace utility. For example, to change all 
+occurrences of 'root' to 'r00t', one would use the following:
+   sed -e 's/root/r00t/g' /etc/passwd > /etc/passwd.new
+   mv /etc/passwd.new /etc/passwd
+The substitute command has four possible flags: # [replace #th occurrence of
+the pattern in the line], g [replace all occurrences of the pattern in the
+line], p [print the line if the substition succeeds], and 'w filename' [write 
+the line to filename if the subsitution succeeds]. 
+
+Sed is very handy for data conversion, though it may seem rather limited at 
+first. Consider the following examples on the password file:
+      * Change /etc/passwd from colon-delimited to pipe-delimited
+	    sed -e 's/:/|/g' /etc/passwd
+	  * Combine the last two fields of /etc/passwd
+	    sed -e 's/://6' /etc/passwd
+	  * Remove user ftp from /etc/passwd
+	    sed -e '/^ftp/d' /etc/passwd
+	  * Display all UID 0 users
+	    sed -n -e '/^[^:]*:[^:]*:0:/p' /etc/passwd
+Sed can also be used to strip lines before sending commands to another utility:
+      * Display all modules referenced by other modules
+       lsmod | sed -ne '1!p' | awk '{if ($3 > 0) {print $1}}'
+	  * Display all modules with no referrers
+       lsmod | sed -ne '1!p' | awk '{if ($3 == 0) {print $1}}'
+	  * Unload all unused modules 
+       lsmod | sed -ne '1!p' | awk '{if (/unused/) {print $1}}' | xargs rmmod
+	  * Kill all httpd sessions
+	    ps aux |grep httpd |sed -ne '/grep/!p' |awk '{print $2}' |xargs kill -9
+As you can see, sed is one of those utilities which perfectly demonstrates the
+unix philosophy: lot of little tools, each doing one job very well, can be 
+chained [or rather, 'piped'] together in an infinite number of combinations in 
+order to automate any task. 
+
+
+
+Cut, Paste, Join, Tr
+--------------------
+For some tasks, awk and sed are rather heavy handed -- especially since 
+unix comes with a number of additional text processing utilities. To break 
+a line of text into arbitrary fields, the cut utility may be used:
+    cut -d[char] -f[#]
+	cut -c[range]
+The first syntax specifies a one-character delimiter after the -d flag, and 
+a number, range, or comma-separated list of fields after the -f flag. To 
+strip the username, password, and home directory out of /etc/passwd, one 
+would use
+    cut -d: -f1,2,7 /etc/passwd
+The second syntax allows characters to be selected by their position in the 
+line; `cut -c1` would select the first character on the line, `cut -c1-10`
+the first ten characters, and so on. Cut can be used instead of awk in the
+killall routines mentioned above:
+    ps aux | grep httpd | sed -ne '/grep/!p' | cut -c10-15 | xargs kill -9
+
+The complement of cut is paste, which will join together two files line-by-line
+with the lines delimited by a tab, or with a delimiter specified with the -d
+flag. Two files can be interleaved --with line 1 of one file following line 1
+of the other, and so on-- by using a newline delimiter [ -d"\n" ]:
+    paste -d"\n" /etc/passwd /etc/passwd.new > /etc/passwd.full
+Alternatively, the contents of one file can be added to another as a separate
+field:
+    paste -d":" /etc/passwd /etc/shadow > /root/secure/pwd.backup
+
+Similar to paste is the join command; this will join together two files
+based on a common field. The default is to join on the first field, delimited
+by spaces, however this can controlled by setting the file delimiter with 
+'-t char', the field to join on in file 1 with '-1 field', and the field to
+join on in file2 with '-2 field'. This, when field 4 in file1 and field 2 in 
+file2 are equivalent, and the fields are pipe-delimited, the command
+    join -t"|" -1 4 -2 2 file1 file2
+will join each line in the two files where the fields match, for example
+    root@localhost>cat file1
+      id|rate|dept|name|notes
+      9876|5.25|tech|Jones|lousy
+      8743|32.50|html|walt|credible
+      1432|90.00|dev|Smith|hyper
+    root@localhost>cat file2
+      boss|name|credits|demerits
+      Hank|Jones|2|25
+      Paul|walt|25|0
+      Hank|Smith|10|10
+will produce the output
+     name|id|rate|dept|notes|boss|credits|demerits
+     Jones|9876|5.25|tech|lousy|Hank|2|25
+     walt|8743|32.50|html|credible|Paul|25|0
+     Smith|1432|90.00|dev|hyper|Hank|10|10
+when used with the above command line.
+
+Quite often the output from shell commands will need to be translated from
+one character set to another, from upper case to lower, or from numeric to
+alphabetic. The utility used for this is tr; it takes two sets of characters
+as parameters, and translates STDIN by replacing characters in set 1 with 
+the equivalent character in set 2. Thus, the command
+    tr abcdef ABCDEF
+would replace all a's with A, all b's with B, and so on; characters not in
+the first set are ignored. The tr command also supplies high-level character
+sets or ranges for convenience:
+  [:alnum:]       all letters and digits
+  [:alpha:]       all letters
+  [:blank:]       all horizontal whitespace
+  [:cntrl:]       all control characters
+  [:digit:]       all digits
+  [:graph:]       all printable characters, not including space
+  [:lower:]       all lower case letters
+  [:print:]       all printable characters, including space
+  [:punct:]       all punctuation characters
+  [:space:]       all horizontal or vertical whitespace
+  [:upper:]       all upper case letters
+  [:xdigit:]      all hexadecimal digits
+In addition, tr provides shortcuts for specifying ranges of characters:
+  CHAR1-CHAR2     all characters from CHAR1 to CHAR2
+  [CHAR1-CHAR2]   same as CHAR1-CHAR2, if both SET1 and SET2 use this
+  [CHAR*]         in SET2, copies of CHAR until length of SET1
+  [CHAR*REPEAT]   REPEAT copies of CHAR, REPEAT octal if starting with 0
+Thus one could perform an ASCII dump of a binary file using tr ranges:
+  root@localhost> cat /bin/uname | tr [:cntrl:] [.*]
+The output could then be grepped for patterns, or stripped to provide a
+crude version of the strings utility. 
+
+
+
+Sort, Uniq, Diff, Cmp, Comm
+---------------------------
+The sort utility should be familiar to anyone who has spent any time on the
+command line; a quick trip through the man page or a `sort --help` will get
+the usage information. In general, sort is run on a file or STDIN with 
+various options; the default behavior will sort the lines alphabetically:
+    root@localhost> sort /etc/passwd
+Each line is considered broken into fields separated by whitespace; the field
+number to sort on can be specified with the -k option, while the delimiter 
+may be set with the -t option. The following uses these plus the -n option 
+[to force a numeric sort] to sort the passwd file by UID:
+    root@localhost> sort -n -t : -k 3 /etc/passwd
+Sort allows for reverse ordering using the -r option; other sorting options 
+include -i [ignore unprintable characters], -b [ignore non-whitespace], -f
+[case-insensitive], and -d ['phone directory' order, all non-alphanumeric or 
+spaces are ignored].
+
+The uniq utility is a quick way to remove duplicate lines from a file or
+stream. It relies on the input being sorted; thus it it usually piped to
+from sort. The output from uniq can be redirected to a file in order to
+de-dupe data, or it can be passed on to another utility to analyze the
+results. The following will de-dupe a log of ip_addresses, and output a 
+count of how many distinct IP addresses are in the log:
+    root@localhost> sort -n ip_addr.log | uniq | wc -l
+Likewise, the following will output a list of all unique domain names from
+a list of email addresses:
+    root@localhost> sed -e 's/^.\{1,\}@//g' | sort | uniq
+the results may then be checked for invalid or blocked domains.
+
+
+There are three utilities for comparing two files: diff, cmp, and comm; each
+of these relies on the files being sorted, or made as similar as possible, 
+in order to catch only significant differences. Diff is primarily used for
+creating "patch files" -- .diff files used by the path utility to update
+text files, usually source code. Assuming that the original file is named
+input.c.bak, and the modified version is named input.c, a patch file can be 
+created using
+    diff -C 2 input.c.bak input.c > input.diff
+...thus enabling the file input.c to be upgraded to the current version using
+    patch -p1 <input.diff
+Patch files are commonly used in large software projects, such as the linux
+kernel. A patch file is created by recursing the linux source directory; the
+patch can then be downloaded [usually a 1 MB file as opposed to a 15MB tar
+file] and applied to the local linux source tree.
+ 
+The cmp utility is similar to diff, though it is more useful for binary files;
+cmp will display [in octal] the original and the new value for each byte that
+differs; for example, in an object file that has had three 'nop' markers added
+to it, cmp would return the following:
+    root@localhost> cmp -l picprg.o picprg1.o
+      1057 307 220
+      1603  54 220
+      2115 377 220
+
+Comm looks for lines that the input files have in common; it can be used to 
+print lines based on whether they are in one, both, or neither of the two files.
+The syntax for comm is
+    comm [-123] file1 file2
+where -1 flag will supress the printing of lines unique to file1, -2 will 
+suppress the printing of lines unique to file 2, and -3 will suppress the 
+printing of lines common to both files. The default behavior of comm is to 
+print the contents of the two files formatted into 3 quasi-columns, with each
+column corresponding with the -123 options. The most general use of comm is
+to determine differences between two files:
+    root@localhost> comm -23 /etc/passwd /etc/passwd.bak
+
+
+
+Head, Tail, Split, Csplit
+-------------------------
+In Unix, may of the data files and command outputs are too long to scroll 
+through using more; for this, the head and tail commands are provided. The
+head command reads the first 10 lines of a file or stdin; tail reads the
+last ten lines. As an example, the ten most and least recent files in a 
+directory can be viewed with
+  root@localhost> ls -Alt | head
+  root@localhost> ls -Altr | tail
+Of course the number of lines to report can be set on the command line; to
+report one line, use the parameter -1 for either head or tail -- using 
+-100 will report 100 lines, and so on. In addition, a count of bytes can 
+be specified using the parameter -c , such that `head -c 512` will print
+the first 512 bytes of input. This can be used to print file headers, or to
+limit user input in a script.
+
+The tail command has a useful 'auto-update' feature in the -f parameter; 
+`tail -f` will continuously output lines appended to a file. This is 
+tremendously useful for monitoring log files, e.g.
+    tail -f /var/logs/messages
+or for both monitoring and saving the output of commands, e.g.
+    [at console] startx 2> /tmp/X-errs.log
+    [at xterm]   tail -f /tmp/X-errs.log
+
+For splitting a file into similar-sized parts, one can use the split or
+csplit utilities. Split is designed to break a file into smaller files 
+of the same size; the size can be specified in bytes with the -b parameter,
+or can be specified in lines with the -l parameter -- the maximum size of
+a line in bytes is controlled with the -C parameter. To split a file into
+floppy-sized chunks, one would use
+  split -b 1474560 filename
+or
+  split -b 1440k filename
+The resulting files may then be cat'ed together to reform the original
+file.
+    root@localhost> split -b 1440k wine-20000526-7.rpm
+    root@localhost> cat xaa xab > wine-20000526-7.rpm 
+
+Instead of splitting on a byte or line count, one can use csplit to split 
+the file based on a pattern. The syntax for csplit is
+    csplit filename pattern
+where pattern can be an integer that specifies a line number to break on,
+a regular expression to break on, or a regular expression to skip to. The
+following will split /var/log/messages into two files, one with all entries 
+before June 5 and one with all entried from June 5 on:
+    root@localhost> csplit /var/log/messages '/^Jun  5/'
+while the next command will produce one output file with all entries from
+June 5 on:
+    root@localhost> csplit /var/log/messages '%^Jun  5%'
+In csplit, the /REGEXP/ syntax is used to specify which pattern to split on,
+and the %REGEXP% syntax is used to specify which pattern to skip to. Note that
+the split for any pattern can be repeated by appending a count or an asterisk
+to the pattern e.g. `csplit myfile /^+++/10` or `csplit file /^+++/*`.
+
+
+
+Wc, Nl
+------
+Often when dealing with large files of data, information about the data
+is as important as the data itself. Scripts may need to make decisions 
+based on the number of emails in a data file, of the number of lines in 
+a log file; for these reasons the wc [word count] utility was born.
+
+As with most other command line utilities, wc will take as a parameter the
+name of a file, or it will receive data from STDIN. By default, wc prints
+a count of words in the file; with the -c parameter it prints a count of
+the bytes [characters] in the file, with the -l parameter it prints a 
+count of the lines in the file. Thus, to get the number of files in a
+directory, one could use the command
+    ls -A | wc -l
+while to get the size of a file, one could use
+    wc -c /var/log/messages
+which is more efficient than piping the results of ls -l through cut.
+
+Of different intent is the utility nl [number lines]. The nl tool is used 
+to number the lines of a file, for example lines of source code. By default
+nl will start at line number 1, numbering all non-empty lines; these can 
+all be changed via command line options. The usage of nl is basic:
+    nl -a /usr/src/linux/kernel/sched.c
+
+While primarily used for number lines of source code, nl does provide 
+facilities for joining blank lines [the -l option], number lines that match
+a regexp [-b pREGEXP], or specifying character delimiters for marking 
+breaks between files.
+
+
+
+Bc, Dc, Expr
+------------
+The evaluation of arithmetic expressions can be done with bc, dc, expr, and
+the shell $(( )) operator. Of these, the $(( )) operator is the easiest
+to use; the contents of the inner set of parentheses are evaluated as an 
+artihmetic expression, and there is no need to escape metacharacters such as 
+the asterisk. Thus, the following expressions are all valid:
+    $(( 2 + 2 ))
+    $(( 3 * 3 ))
+    $(( 3 + 4 / 2 ))
+    $(( (3 +4) /2 ))
+Note that operator precedence follows C rules; also, variables can be used in 
+the expression. 
+
+Expr has the same capabilities as $(( )), though many of its metacharacters 
+will need to be escaped [e.g. \* for multiplicaton] or single-quoted. However,
+expr also allows the following string operations:
+     match  [string] [pattern]
+     substr [string] [pos] [length]
+     index  [string] [set]
+     length [string]
+The expr command also supports logical operations; the operators < <= > >= ==
+and != return 1 if true and 0 if false. The | operator will return arg1 unless
+arg1 is NULL or 0, in which case it returns arg2; the & operator returns arg1
+if both arguments are non-NULL and non-0, otherwise it returns 0. Such logical
+expressions can be incorporated into if statements:
+     if `expr $ERROR & $WARN_ADMIN`   ....
+     if `expr $IS_ADMIN | $IS_DAEMON` ....
+Both bc and dc are a mathematical interpreters; the first allows standard 
+expressions such as "(2 + 2) * 9" to be executed, while the second executes 
+expressions in Reverse Polish Notation. In general, bc and dc are not very 
+useful unless one is building complex mathematical expressions within a script;
+however, either of them can receive an expression via STDIN and output a result
+to STDOUT, e.g. `echo 2 + 2 | bc`. 
+
+
+Getopts, Read, Dialog
+---------------------
+The shell provides a command known as 'getopts' to make the handling of command
+line parameters easier to handle. Getopts assumes that a script will take a 
+sequence of one-letter commands, some of which may require strings; this makes
+it possible to call a script with the options '-f file', '-v', and '-r' by
+typing either of
+    my_script.sh -r -v -f file
+    my_script.sh -rvf file
+The getopts command is meant to be called in a loop; on each call it examines
+the next option passed the command line, places the value of that option in a
+user-specified variable, sets any arguments to that option in the $OPTARG 
+variable, and places a count of the current options passed in $OPTIND. Thus,
+the standard usage of getopts is
+    1. Enter a while loop where $OPTIND is compare to $#
+    2. Inside the loop, run getopts and store result in $var
+    3. Still in the loop, read $var [and $OPTARG if this particular $var
+       requires an argument] and act on it
+The syntax of  getopts is
+    getopts options-list variable
+...where options list is an undelimited list of the 1-character options to
+the script; any character followed by a colon represents an option that takes
+an argument. Thus, for the options-list "rvf:u:hp", options "rvhp" require no
+arguments, while options "fu" require arguments.
+
+At this point an example might help. Assume a script which is invoked
+    myscript.sh [-f file] [-d device] [-vh]
+in which 'v' stands for verbose and 'h' stands for help; for the sake of 
+example, this script is assumed to have a Help() and a Usage() function. The
+usage of getopts for this script would be as follows:
+
+    while [ $OPTIND -le $# ]
+    do
+        getopts f:d:vh opt
+        case $opt in
+           f) FILE=$OPTARG   ;;
+           d) DEVICE=$OPTARG ;;
+           v) VERBOSE=1      ;;
+           h) Help()         ;;
+           ?) Usage()        ;;
+        esac
+    done
+
+
+The 'read' command can be used to prompt a user for input, or as a 'Press ENTER
+to continue" trick. The syntax for read is
+    read [-p prompt] [variable]
+where 'variable' is a shell variable to store the results in -- if no variable
+is specified, the shell variable $REPLY will contain the input. Note that is
+no prompt is specified, then nothing will be printed.
+
+
+As any coder knows, a program that is clever and well-written is worth, in the
+eyes of a non-programmer, maybe a thousandth of a program that looks nice and
+has a soothing UI. The 'dialog' program exists to give scripts a consistent, 
+easily-coded user interface, to replace the intimidating black-and-white
+console with the warm, fuzzy feeling of a Slackware install program.
+
+Put straight, dialog is just friggen cool. It allows for dialog boxes to be 
+created on a blue background -- message boxes, OK/Cancel boxes, text input
+boxes, boxes with radio buttons or progress bars or check boxes ... the idea
+being that the programmer can hide the activity of the script behind a 
+sequence of full-screen dialog boxes. The dialog program does not provide
+event-driven programming for the console, however it is perfect for scripts
+which will, in the end, be used by someone who knows nothing about the unix
+console.
+
+The dialog program has the following syntax:
+    dialog [--title string] [--backtitle string] [--boxtype] [box params]
+where 'title' refers to a string on the title bar of the dialog box, and 
+'back title' refers to a string on the screen behind the dialog box. The box
+types themselves are as follows:
+
+    Info Dialog
+       `--infobox text height width`
+       Displays a dialog box containing 'text', and exits.
+          ex. dialog --infobox "F S C K !" 10 40
+    Message [OK] Dialog
+       `--msgbox text height width`
+       Displays a dialog box containing 'text' and an OK button.
+          ex. dialog --msgbox "Format /dev/hda?" 10 40
+    Yes/No [OK/Cancel] Dialog
+       `--yesno text height width`
+       Displays a dialog box containing 'text' and YES and NO buttons; returns
+       0 if YES was selected, 1 if NO was selected.
+          ex. dialog --yesno "Use Debian!" 10 40
+    File View Dialog
+       `--textbox file height width`
+       Displays the contents of 'file'; keys can be used to scroll the file.
+          ex. dialog --textbox /etc/passwd 20 50
+    Progress Bar Dialog
+       `--gauge text height width percent`
+       Displays a progress bar containing 'text' and filled through 'percent';
+       the progress bar can be updated with values read from STDIN.
+          ex. dialog --gauge "Time to die..." 5 50 10
+    Text Input Dialog
+       `--inputbox text height width [init]`
+       Displays a prompt with caption 'text'; the input of the user is printed
+       to STDERR.
+          ex. dialog --inputbox "user?" 10 40
+    Checkbox Dialog
+       `--checklist text height width list-height [ tag item status ] ...`
+       Displays a dialog witch checkbox options; each option has a value 
+       ['tag'], a caption ['item'], and a checked/unchecked status ['status' --
+       either 'on' or 'off']. The tags of the items checked are printed to 
+       STDERR when the dialog is closed.
+          ex. dialog --checklist scotch 10 40 3 a ice on b water off
+    Radio Button Dialog
+       `--radiolist text height width list-height [ tag  item status ] ...`
+       Similar to the Checkbox dialog, except that only one item may be 
+       selected.
+          ex. dialog --radiolist Bowmore 10 40 3 12yr a off 17yr b off 21yr c on
+    Menu Dialog
+       `--menu text height width menu-height [ tag item ] ... `
+       Displays a dialog box with a menu, similar to a Radio Button dialog 
+       without state [on/off] information.
+          ex. dialog --menu Choose 10 50 3 This a That b There c
+
+The use of dialog boxes in shell scripts can be pretty confusing when coming
+from an event-driven background; the following is a quick example to
+demonstrate the use of the dialog utility:
+
+#-----------------------------------------------------------DlgTest.sh
+#!/bin/bash
+RANDOM=666
+RND="tmp.$RANDOM.out"
+
+dialog --infobox "   Dialog Test Script\nPress Enter to continue" 5 30
+read
+while [ 0 ] # start endless loop
+dialog --menu "Choose a dialog type to test:" 20 40 10 \
+               1 "MessageBox"          \
+               2 "OK/Cancel Box"       \
+               3 "File Viewer"         \
+               4 "Text Input"          \
+               5 "Check Boxes"         \
+               6 "Exit"                \
+2> $RND
+case `cat $RND` in
+   1) dialog --msgbox "Demonstration MBox\n OK?" 10 30;;
+   2) dialog --yesno  "Vote Blindly by choosing a button:" 10 30
+      dialog --msgbox "You selected $?" 10 20;;
+   3) dialog --textbox /etc/passwd 20 40;;
+   4) dialog --inputbox "Ozzy, say something incomprehensible:" 10 40 \
+             2> $RND
+      dialog --msgbox "I heard you say\n `cat $RND`" 20 40;;
+   5) dialog --checklist "How do you like your linux?" 20 50 5 \
+             small "like a floppy"  off                        \
+             quick "like Casanova out the window" on           \
+             dirty "like an old man" on                        \
+             bad "like Jesse James" on                         \
+             2> $RND
+      dialog --msgbox "Linux is great when it is\n `cat $RND`" 20 40;;
+   6) rm $RND; clear; exit 0 ;;
+esac
+done   #end endless loop
+rm $RND
+exit 1
+#------------------------------------------------------------------EOF
+
+
+
+Xargs and Other Loose Ends
+--------------------------
+In addition to the data matching and manipulation programs mentioned above,
+there are a few 'utility' shell commands which are used to make the standard
+tools work together, or to interact with the OS. Some of the more common 
+commands are useful primarily from the command line [rather than from within
+scripts], and most users will be familiar with them -- for example, 'ps', 
+'renice', and 'kill'. 
+
+Xargs is a command that many users are not familiar with. The purpose of xargs
+is to take a large number of arguments --say, the results of `ls /usr/bin`--
+and pass them one by one to a script or tool that can only handle a limited 
+number of arguments. The syntax for xargs is
+    xargs [command] [arguments...]
+with an -n# option for controlling how many arguments get passed to the
+command. A quick example would be
+    root@localhost> cut -f1 /etc/hosts | xargs -n1 ping
+as a quick way to determine which LAN nodes are alive. There is alternate mode
+for xargs in which arguments are passed one at a time and inserted into the
+command; this is useful for including the same argument in a single command 
+multiple times. A useless and entirely contrived example of this feature --
+which uses the -i parameter -- will demonstrate the principle:
+    root@localhost> ls /etc | xargs -i echo {} found -- {} will not be deleted
+
+
+Another command that proves more useful in scripts than on the command line
+is 'eval'. The eval command will treat all of its arguments as if they were
+a shell command, and execute them:
+    root@localhost> eval echo eval is a waste on the command line, eh?
+It is primarily used within scripts to execute the contents of variables, thus
+allowing complex commands to be built piecemeal and executed with a single `eval
+$var` statement.
+
+
+Rudimentary process control can be handled with the 'exec' and 'wait' commands.
+The exec command will run a specified command and exit when that command is 
+finished; in effect the shell will exit and pass control to the command. The 
+wait command takes a PID as a parameter; the shell or script will then sleep
+until the given PID is completed. If no PID is specified, all of the child
+processes of the shell or script are waited on.
+
+
+As anyone who has more than a passing acquaintance with the kill command knows,
+unix does a lot of its work with signals. The kill command makes it possible
+for a script to send signals, likewise does the 'trap' command make it possible 
+to receive them. The trap command takes two forms, the first to install a
+'signal handler', and the second to remove it:
+    trap command signal-list
+    trap signal-list
+The 'command' in this case is a command line to execute should the signal be
+received by the process; the 'signal list' is a space-delimited list of the 
+numeric signals that are to be trapped. A complete list of signals can be 
+obtained from `man 7 signal`, but the most common are:
+    0    Exit from shell
+    1    Hangup [HUP]
+    2    Interrupt [^c]
+    3    Quit
+    15   'kill' command
+Note that it is possible, therefore, to do proper 'kill -HUP' handling by 
+trapping signal 1. The trap command can be used on the command line:
+trap 'echo Control-C has no power here!' 2
+and will remain in effect until removed, or a until new shell is started.
+
+
+Formatting
+----------
+The guys who put together the standard collection of unix tools have had to
+deal with everything -- including managers who call the help desk to find out 
+where the ASCII is on their keyboard. Faced with the output from any of the 
+above tools, most non-unixers will look at the floor, shuffle a bit, and ask 
+about the whereabouts of graphics, bold fonts, margins, and so forth. As if 
+Courier 10pt wasn't good enough for them...
+
+There are many ways to format raw ASCII text for proper output; the two most
+basic are 'fold' and 'pr'. The first provides word wrapping for blocks of 
+text; its syntax is
+    fold [-s] [-b] [-w width]
+where '-s' causes the line to break on a whitespace [rather than in the 
+middle of a word], '-b' causes the width to be measured in bytes rather than
+columns, and '-w' specifies the width to break at [default is 80]. Thus, to
+word-wrap a file at 75 columns, one would use the command
+    root@localhost> cat file | fold -s -w 75
+The pr command does for pages what fold does for lines of text; it is intended
+to prepare output for a line printer. The basic pr switches are:
+    -c      show control characters, octal values for unprintable characters
+    -d      double space the output
+    -f      use form feed to separate pages [default is use newlines]
+    -h str  use string 'str' in place of filename for page header
+    -n      number lines
+    -o num  use a left margin of 'num' spaces 
+    -t      do not print headers or footers
+    -w num  set page width to 'num' 
+...though there are facilities for merge printing and columnar printing. At its
+most basic, pr can be used as a rough print filter; for example, to print a
+disassembled listing in 75 columns with 5 columns of margin, one might use
+    root@localhost> objdump --disassemble | \
+                    pr -o 5 -w 75 -h -f "Disassembly of a.out" | lpr
+Both pr and fold are part of the "textutils" GNU package; in addition to the
+man pages, they have `info` documentation available.
+
+
+
+Shell CGI
+---------
+
+
+
+Exercises
+---------
+
+1) Creating an Eterm pixmaps.list file
+
+format for tile is
+" 0  0  [name]"
+format for scale is 
+"-1 -1  [name]"
+So, assuming you have
+/usr/share/pics/tile
+and
+/usr/share/pics/scale
+the command line would be:
+
+for i in `/bin/ls -A /usr/share/pics/tile`
+do
+    echo "\" 0  0  $i \"" >> /usr/share/Eterm/pix/pixmaps.list
+done
+
+for i in `/bin/ls -A /usr/share/pics/scale`
+do
+    echo "\"-1 -1  $i \"" >> /usr/share/Eterm/pix/pixmaps.list
+done
+
+
+
+
+2) Report Success/Failure 
+[Ala RH/Mandrake startup scripts]
+
+function try () {
+   $* 2>&1 >> /dev/null
+   if [ $? -eq 0 ]
+      then        echo -e "\033[70G[\033[32mSUCCESS\033[0m]"
+      else        echo -e "\033[70G[\033[31mFAILURE\033[0m]"
+   fi
+}
+
+#  [70G moves to col 70
+
+usage:
+echo -e "Testing successful return code `try true`"
+echo -e "Testing unsuccessful return code `try false`"
+
+
+
+3)Set Xterm Titlebar
+
+function TermName {
+    echo -e "\033]0;$*\007"
+}
+
+
+
+4) Log/output colorizer 
+# gcc [opts] [files] 2>&1 | colors.sh
+# tail -f /var/log/messages | colors.sh
+
+#!/bin/sh
+
+if [ ! $RedPat ]
+then
+   RedPat='[Ff]ailed'
+fi
+if [ ! $GreenPat ]
+then
+	GreenPat='0x[0-9A-Fa-f]\{2,\}'
+fi
+if [ ! $CyanPat ]
+then
+	CyanPat='[Ww]arning'
+fi
+#The rest will be hard-coded. No need to be TOO user-friendly
+	BrownPat='[^A-z][sS][uU][^A-z]'
+	BluePat='[Ss]witching to [Rr]un *[Ll]evel'
+	MagPat=' [rR][oO][oO][tT]'
+	WhitePat='[kK][Ee][Rr][Nn][Ee][Ll]'
+	CritPat='[Ee]rror'
+
+Reset='\\033[0m'
+Red='\\033[31m'
+Green='\\033[32m'
+Brown='\\033[33m'
+Blue='\\033[34m'
+Magenta='\\033[35m'
+Cyan='\\033[36m'
+White='\\033[1m'
+Crit='\\033[41m\\033[37m\\033[5m'
+
+
+#     main ()
+while read line
+do
+   line=`echo $line | sed -e "s/\($RedPat\)/$Red\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($GreenPat\)/$Green\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($BrownPat\)/$Brown\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($BluePat\)/$Blue\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($MagPat\)/$Magenta\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($CyanPat\)/$Cyan\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($WhitePat\)/$White\1$Reset/g"`
+   line=`echo $line | sed -e "s/\($CritPat\)/$Crit\1$Reset/g"`
+
+	echo -e $line
+done
+
+
+5) Converting UC filenames to LC
+
+for i in `ls -1 `
+do
+ mv $i `echo $i | tr [:upper:] [:lower:]`
+done
+
+6) Displaying power left on a laptop
+PS1='\W: `cat /proc/apm | cut -d" " -f8-9`>'

@@ -1,0 +1,557 @@
+<html>
+<HEAD><TITLE>Mammon_'s Tales To His Grandson</Title></HEAD>
+<body bgcolor="#c0c0c0" text="#000000" link="#0080c0" vlink="#808040">
+<! -------------------------------------------------------------------------------------------------->
+
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font>
+              <center><i>Mankind comes into the Ice Age</i></center>
+
+
+<P><BR>
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Configuring the Environment</b></font><P>
+Soft-Ice has a file called WINICE.DAT that can be modified to configure your debugger for optimal use. All of the 
+configuration options can be entered from the Soft-Ice command line, so you may want to experiment before overwriting 
+the program defaults. In general the Function keys can be left alone, but you may wish to modify the visible windows, 
+the size and color of the display, the function exports and the code display. Changes can be added to the INIT="X;" line 
+in WINICE.DAT just as they would be on the command line, such that one possible initialization string could be
+ INIT="Code ON;WR;lines 50;WC25;X;". Note that "init=" lines can only contain a limited number of characters, but you 
+ may specify multiple "init=" lines (as long as only the last one ends in "X;").<code>
+
+ <LI>Code ON|OFF : Code ON displays the hexidecimal byte code next to the disassembled listing.
+
+ <LI>Color : Color is used to set the screen colors for the display. The colors are 4-bit hexidecimal
+values (i.e., a value from 1 to 16, or in hex from 0 to F: 0=black 1=blue 2=green 3=cyan 
+4=red 5=magenta 6=brown 7=grey 8=dark grey 9=light blue 
+A=light green B=light cyan C=light red D=light magenta E=yellow F=white), and each color setting 
+is a combination of two colors, the background and foreground--such that 0F would be white 
+text on a black background, while F0 would be black text on a white background. The areas
+of the display that can be set are normal (color of normal text), bold (color of bold/highlit text), 
+reverse (color of reverse-display text), help (color of the help line), and line (color of 
+horizontal lines). The sytnax for the color command is <b>color</b> <i>normal bold reverse help line</i>, 
+such that <B>color 7 F 71 30 2</b> would color the display as follows: normal text grey on black,
+ bold text white on black, reverse video text blue on grey, help line black on cyan, horizontal line 
+green on black.
+
+ <LI>Exp : Display export symbols from DLLs and EXEs. This command is vital to understanding a 
+disassembled listing; it picks out the Windows calls from the program's internal calls so
+ that you do not spend hours tracing through Kernel32.dll. Typing <b>exp</b> <i>module name</i> will load the symbols
+ from that module; some good choices are kernel32.dll/kernel.exe, user32.dll/user.exe, and gdi32.dll/gdi.exe. Exp
+ can also be used to display the currently loaded modules (<B>exp /</b>), and to list the symbols that match a certain
+ pattern (<B>exp delete</b> would list all of the symbols in the loaded modules that begin with Delete). Note that 
+it is a good idea to load the exports in Winice.dat rather than from the Soft-Ice command line.
+
+  <LI>Faults ON|OFF : Faults ON causes Soft-Ice to be invoked to handle General Protection Faults.
+
+  <LI>Lines # : Increase or decrease the number of lines (or font size) of the display. 
+
+  <LI>WC # : Enable code window of # lines (e.g. WC 25).
+
+  <LI>WD # : Enable data window of # lines (e.g. WD 15). Shift-F3 changes the format of the data.
+
+  <LI>WR : Enable register window.
+
+  <LI>WW # : Enable watch window of # lines (e.g. WW 5).
+  
+  <LI>ALTKEY KeyCombo : Change Soft-Ice hotkey (ex., "ALTKEY ALT Z").
+
+  <LI>^ : A caret ("^") causes a command to be executed without being displayed on the command line.
+
+  <LI>; : A semi-colon mimics the user pressing the "ENTER" key.
+  </code><P>
+Here are some sample "init" lines from WINICE.DAT:<P><code>
+<LI>INIT="lines 60;code on;wd 13;wc 25;wr;wl;dex 1 ss:esp;faults off;color 80 8F 70 74 8F;X;"
+<LI>INIT="ww 5;watch es:di;watch eax;watch *es:di;watch *eax;color 17 1F 90 98 1A;X;"
+<LI>INIT="set font 2;set origin 150 25;lines 50;wr;wl;wd 10;wc 20;color 07 0B 71 04 02;DEX 0 SS:ESP;X;"
+</code><P>
+<b>Universal Video Driver</b>: Soft-Ice 3.2 comes with a Universal Video Driver that can be used with
+virtually any video card. Instead of switching to text mode graphics, Soft-Ice appears as a window on
+the desktop. The window may be resized using the "lines 25|43|50|60" command, may be moved around the
+screen using Ctrl-Alt-arrow key combinations, and may be made more readable by using "set font 0|1|2|3"
+to increase/decrease the font size (note that you may have to resize the window using the "lines" command
+after increasing the font size). Note that the location of the window may be set manually using the "set
+origin x y" command (x 150 y 25 = centered on 800x600 screen).
+<P>
+<b>Internal Variables</b>: Soft-Ice uses a number of internal variables to retain settings information.
+These variables may be changed dynamically using the "set <i>variable parameter</i>" command, and include
+the following: <LI>ALTSCR ( on|off , moves display to a second, monochrome monitor) 
+<LI>CASESENSITIVE ( on|off , make global/local symbol names case-sensitive) 
+<LI>CODE ( on|off , display hexadecimal bytecodes ) 
+<LI>EXCLUDE ( on|off ) 
+<LI>FAULTS ( on|off , trap General Protection and Page Faults) 
+<LI>I1HERE ( on|off , make any embedded INT1 invoke SoftIce) 
+<LI>I3HERE ( on|off ,  make any embedded INT3 [e.g. from Win32 API DebugBreak() call] invoke SoftIce) 
+<LI>LOWERCASE ( on|off , display code in lowercase) 
+<LI>MOUSE ( on|off 1|2|3, turn mouse on/off, set movement speed from 1 (slow) to 3 (fast) ) 
+<LI>PAUSE ( on|off , pause after each screenful of info in the Command Window) 
+<LI>SYMBOLS ( on|off , use symbol information) 
+<LI>TABS ( on|off 1|2|3|4|5|6|7|8 , set tabstops every 1-8 characters) 
+<LI>THREADP ( on|off ) 
+<LI>VERBOSE ( on|off , display diagnostic messages such as "module load/unload xxx" )<P> Current settings can be viewed by typing "set <i>variable</i>" with no parameters.<P>
+<B>Winice.dat Settings</b> Some variables can be set in winice.dat without using the "init" line. These include 
+the following commands (<i>courtesy of THE OWL</i>):
+<LI>NOPIC2=on|off 
+<LI>NOLEDS=on|off (disable/enable capslock and numlock programming) 
+<LI>NOPAGE=on|off (disable/enable mapping of non-present pages)
+<LI>NOCONTEXT=on|off 
+<LI>MACROS=<i>number</i> (maxmimum number of macros) 
+<LI>NMI on|off(trap Non-Maskable Interrupt--useful with a hardware breakout switch) 
+<LI>VERBOSE=on|off (ensable/disable diagnostic messages) 
+<LI>KBD=on|off (patch/do not patch keyboard driver)
+<LI>LOWERCASE=on|off (enable/disable lowercase assembly) 
+<LI>MOUSE=on|off (enable/disable mouse support) 
+<LI>THREADP on|off ( enable/disable thread-specific stepping) 
+<LI>EXCLUDE (range parameter) 
+<LI>SIWVIDRANGE on|off 
+<LI>TRA=<i>size</i> (trace buffer size)
+<LI>HST=<i>size</i> (command history buffer size) 
+<LI>LOAD=<i>filename</i> (load symbols) 
+<LI>LOAD%=<i>filename</i><LI>LOADX=<i>filename</i><LI>LOADX%=<i>filename</i> 
+<LI>LOAD32=<i>filename</i><LI>LOAD32%=<i>filename</i> 
+<LI>PHYSMB=<i>size</i> (amount of system RAM)
+<LI>PHONE=<i>number</i> (phone number for serial debugging)
+<LI>COM1=on|off (enable COM1 for serial debugging; works for COM2 and COM3)
+<LI>DINIT=<i>string</i> (DIAL initialiaztion string for serial debugging)
+<LI>ANSWER=<i>string</i> (ANSWER initialization string for serial debugging)
+<LI>EXP=<i>filename</i> (load exports) 
+<LI>VDD 
+<LI>DDRAW 
+<LI>DRAWSIZE=<i>size</i> (video memory size in K) 
+<LI>MONITOR 
+<LI>WDMEXPORTS 
+<LI>DISPLAY=<i>type</i> (<i>type</i> is VIPE, S3, MACH32,MACH86, 0, or VD) 
+<LI>FAULTS=on|off (trap GPFs) 
+<LI>SYM=<i>size</i> (mem alloc for symbols)
+<LI>LBRECORD=on|off (enable/disable last-branch message collection)<P> Macros may be defined  in winice.dat by 
+entering the line 'MACRO <i>name</i>="<i>commands</i>" ' (for example, MACRO Qexp="addr explorer; Query %1"). 
+Finally, function key
+commands can be set by using a <i>key_combo</i>="^<i>command</i>;" syntax, such as SF1 = "^watch eax;" (set Shift-F1 to "watch eax");
+in this syntax A stands for ALT, C for Ctrl, and S for Shift.
+<P>
+<HR><! -------------------------------------------------------------------------------------------------->
+
+<font size=+1><B>Tracing Through Code</b></font><P>
+The whole point of using a debugger is that you can single-step through program code as watch the changes made to
+ registers, memory, variables, and flags as the program runs. In general you will want to "Program Step" using the F10 key, 
+thereby skipping over irrelevant calls and OS service routines. When you find a section of interest, and whose code you want to thoroughly 
+disassemble (often part of a disassembler's ASM listing that needs clarification), you will "Single Step" through the code using the F8 key to see
+ exactly what the program is doing. Is is important to have the export symbols loaded for the Windows .DLLs, for unless you are debugging the
+ kernel, you don't want to be led off track by a standard API call that winds through various functions and sub-functions of USER.EXE. Should you get
+ caught in a call that you desperately want out of, you can use the F12 key to jump ahead to the next RET instruction.
+<code><LI>P : Execute one program step, executing calls as a single instruction. Shortcut: the F10 key.
+<LI>P RET :  Execute until a return instruction is found. Shortcut: the F12 key.
+<LI>T : Execute one instruction. Shortcut: the F8 key.</code>
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Back Trace Mode</b></font><P>
+The Back Trace mode of Soft-Ice is often misunderstood, usually because of the name. Back Trace mode
+does not actually trace backwards through code; rather, it keeps a buffer of instructions that are
+stored when a breakpoint (with the T or TW qualifier set) is triggered. The user can then view or
+trace through commands in the buffer, though the action is kept within the buffer (i.e., the registers
+do not change, and addresses outside of the buffer cannot be jumped to or called). Back Trace mode is
+controlled by four main instructions:
+
+<LI>BPR <i>start end</i> [T|TW] [<i>conditions...</i>] : The BPR command can be used with the T or TW
+verb to set up a breakpoint that will trigger a write to the trace buffer when a memory address is executed/written to. Entering BPR with the starting
+and ending address of the memory range, followed by T (for back trace on execution) or TW (back trace
+on memory write), and capped by any conditions for the breakpoint, will install a memory range breakpoint
+that, instead of halting execution, will write code to the trace buffer. This buffer can then be viewed
+with the SHOW command, or traced through using the TRACE command. 
+
+<LI>BPRW <i>module</i>|<i>selector</i> [T|TW] [<i>conditions...</i>] : The BPRW command can be used with
+the T or TW verb to set up a breakpoint that will trigger a write to the trace buffer when a windows module
+or selector is executed/written to. Entering BPRW followed by the module name or selector to be trapped,
+followed by T (for back trace on execution) or TW (back trace on write), and capped by any conditions for the
+breakpoint, will install a memory range breakpoint that will write code to the trace buffer <i>instead of</i>
+halting execution (it will seem that the program does not break; however this is an illusion). The trace buffer can
+then be viewed with the SHOW command and traced through using the TRACE command. Note that using the BPRW function
+will slow down your system considerably (for example, try it with module "kernel").
+
+<LI>SHOW <i>start</i> [l <i>length</i>] : The SHOW command displays the contents of the trace buffer
+from the index number specified as <i>start</i> for the number of instructions given in <i>length</i>; note that index 1 displays the 
+most recent instruction in the buffer, while index B (not 0x0B) displays the oldest instruction in the
+buffer. The instructions are displayed in the command window, and can be scrolled through using the up
+and down arrow keys; ESC exits SHOW mode.
+
+<LI>TRACE off | <i>index</i> : The TRACE command is used to trace step through the back trace buffer
+starting with the instruction specified by <i>index</i>; note that an index value of 1 indicates the
+most recent instruction in the buffer, while an index value of B (not 0x0B) indicates the oldest value
+in the trace buffer. The buffer can be taced through using XT, XP, and XG in place of the T (F8), P (F10),
+and G commands (note: if you use Back Trace mode frequently, it would be good to map the following keys:
+AF8="^XT;", AF10="^XP;", and AF12="^XP ret;"). The command TRACE OFF is used to exit back trace mode.
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Viewing and Editing Memory</b></font><P>
+As you trace through code, you will often need to view the contents of memory locations in order to keep track of variables, pointers, and interrupts; in addition, you may need to search the entire addressable memory range for a specific piece of data--say, for example, a user name--in order to set a breakpoint on access to that data.  The contents of any of the windows in the Soft-Ice display can be editted by accessing the window with an Alt key sequence (Alt-R for registers, Alt-D for data, Alt-C for code, etc.) and directly modifying the displayed data.
+<code>
+<LI>D : Display memory contents. Syntax: <B>D</B> <i>size address</i> <b>L</b><i> length</i>,
+ where size can be B (byte), W (word), D (double word), S (short real), L (long real), or T (10-byte real), 
+and address is the memory address to be displayed (an address pointed to by the contents of a register--like EAX-- or a 
+register offset--like [ebp-04]--can be displayed by typing the register name and offset in place of the address); the l
+ displays the data to the Command window (the default display area is the Data window), with length determining how many rows 
+ (at 4 bytes apiece, as in the data windows) of memory to display. Note that there are 4 Data Windows, which may be cycled
+ through by typing DATA at the command line.
+ <LI>DEX : Assing an expression to a data window. Syntax: <b>DEX</B> <i>window-number</i> [<i>expression</i>],
+ with window-number being a number from 0 through 4, and expression beign an expression that results in a memory address.
+ Example: <b>DEX 1 ss:esp</b> sets DEX0 to show the top of the stack, <b>DEX 1 @variablename</b> sets DEX1 to show the
+ memory address pointed to by variablename (such as [ebp+10]), <b>DEX 1 @eax</b> sets DEX1 to display the memory range
+ pointed to by eax. A data window can be with the command DATA <i>window-number</i> (e.g., DATA 0, DATA 1, DATA 2, and
+ DATA 3), or by cycling through the windows using the DATA command.
+ <LI>S : Search RAM for a string. Syntax: <b>s</b> <i>address </i><B>L</B><I> length data-list</i>, 
+with address being the memory address to start searching at, length being the length in bytes of the search area (FFFFFFFF 
+is the max), and data-list being the data you are searching for--strings must be in quotes (either single or double), bytes
+ are simply the hexidecimal bytecodes. Switches: -c makes the search case-insensitive, -u searches for a Unicode string.
+ <b> S 30:0 L ffffffff 'username'</b> searches the entire 4 GB of address space
+ for the string "username". <b>S es:di 10 L ecx 'Hello',12,34</b> searches the address space starting
+ at es:di for the number bytes of bytes specified (in hex) in the ECX register for the the string "Hello"
+ followed by 12h and 34h.</code><P>
+
+<hr><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Watches</b></font><P>
+Watches allow you track a variable while you are debugging a program; needless to say, this is a very important 
+function for cracking and reverse engineering. To open the watch window, type <b>ww</b> at the Soft-Ice command line; typing 
+<B>watch</b> followed by an variable name (eg watch <b>user_id </b>) adds that variable (and its value) to the watch window. Registers and 
+stack offsets (not to mention memory values) can be watched by using them in place of the variable name, such as <b>watch es:di</b> and <b>watch [ebp 18]</b>. In addition, since many 
+registers and stack offsets merely point to address where the real variables are stored, you can watch the value referenced by the register or stack offset by typing a <b>*</b> before the 
+name of the register/offset (eg, <b>watch *es:di</b>). Good variables to watch are es:di, *es:di, eax, and any [esp ?] or [ebp ?] that references input by a user.
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Using Breakpoints</b></font><P>
+It is impossible to debug effectively without a working knowledge of breakpoints. A breakpoint is simply an instruction for the cpu to halt execution upon access to a certain memory area or upon system and program events (such as windows messages and program instructions) and turn control over to the debugger. When you set a breakpoint in Soft-Ice and then run the target program, Soft-Ice will pop up when the condition for the breakpoint is met with its usual display of code, registers, and data--halted at the instruction that caused the breakpoint to activate.
+<code><LI>Bc # : Clear Breakpoint--erases a breakpoint set in Soft-Ice; you must know the breakpoint number..
+<LI>Bd # : Disable Breakpoint--disables but does not delete a breakpoint set in Soft-Ice; you must know the breakpoint number.
+<LI>Be # : Enable Breakpoint--enables a breakpoint which has been disabled; you must know the breakpoint number.
+<LI>Bl : List Breakpoints--lists all of the breakpoints currently set in Soft-Ice, their status, and their breakpoint numbers.
+<LI>Bmsg : Break on Windows Message. Syntax: <B>BMSG</b> <i>window handle</i> <b>L</b> <i>begin-message end-message</i>
+<LI>Bpint : Break on Interrupt. Only works with interrupts handled by the IDT (95/NT). Syntax: <b>BPINT</B> <i>int-number</i> 
+<LI>Bpio: Break on I/O port address read and/or write. Sytnax: <b>BPIO</b> <i>port</i> [R|W|RW] [EQ|NE|GT|LT|M <i>value</i>] [c=<i>count</i>]
+<LI>Bpm: Break on memory read, write, or execution. Syntax: <B>BPM</I>[B|W|DW] <i>address</i> [R|W|RW|X] 
+<LI>Bpx : Break on execution. Syntax: <b>BPX</b> <i>address/symbol</i> [c=<i>count</i>] [EQ|NE|GT|LT|M <i>value</i>] [c=<i>count</i>]
+<LI>Bpr : Break on memory range. Syntax: <b>BPR</b> <i>start-address end-address</i> [R|W|RW|T|TW] [<i>expression</i>]
+<LI>Bprw : Break on program/code segment. Syntax: <b>BPRW</b> <i>module-name</i>|<i>selector</i> [R|W|RW|T|TW] [<i>expression</i>]
+<LI>CSIP : Qualify breakpoints. Syntax: <b>CSIP</b> <i>[off |[not] starting-address ending-address | module-name]</i> Using <i>not</i> causes the breakpoint to occur only if the CSIP is not 
+equal to the starting addresses or Windows modules listed; otherwise execution breaks only if the breakpoints specified by the user are within the specified address/module. "Off" disables the CSIP checking.</code>
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Using Symbols and NMSYM</b></font><P>
+<P><i>From a .EXE file</i>: Create a .MAP file with IDA, or to a .SYM file with BUILDSYM.EXE (BUILDSYM <i>exefilename</i>)
+<P><i>From a .DBG file</i>: Convert to .MAP or .SYM file using DBG2MAP.EXE (DBG2MAP /m <i>dbgfile</i>)
+<P><i>From a .MAP file</i>: Convert the .MAP file to a .SYM file with MAPSYM.EXE (MAPSYM -mn <i>mapfile</i>), 
+MSYM.EXE (MSYM <i>mapfile</i>) or TMAPSYM.EXE (TMAPSYM <I>mapfile</i>)
+<P><i>From a .SYM file</i>: Convert the .SYM file to a .NMS file with NMSYM.EXE (NMSYM /TRANS:SYMBOLS <i>symfile</i> /OUT:<i>file.nms</i>)
+NMSYM.EXE has the following command-line options:
+<LI>/TRANSLATE or /TRANS (Translate Symbols [PUBLIC, TYPEINFO, SYMBOLS, SOURCE], eg. "/TRANS:SYMBOLS target.exe")
+<LI>/LOAD (Load/execute module, eg. "/LOAD:NOBREAK target.exe", "/LOAD:Execute target.exe")
+<LI>/SOURCE (Name of source file, eg. "/TRANS:PACKAGE /SOURCE:target.exe")
+<LI>/ARGS (Specify arguments for loaded module, eg. "/LOAD:Execute /ARGS:test.txt notepad.exe")
+<LI>/OUTPUT or /OUT (Output filename, eg. "/TRANS:PUBLIC /OUT:target.nms")
+<LI>/PROMPT (Prompt for missing source files)
+<LI>/SYMLOAD or /SYM (Load symbols, eg. "/SYM:kernel32.nms;user32.nms;target.exe")
+<LI>/EXPORTS or /EXP (Load exports, eg. "/EXP:user.exe;kernel32.dll;msvcrt42.dll")
+<LI>/UNLOAD (Unload sym/exp info, eg. "/UNLOAD:user.exe;kernel32.dll;msvcrt42.dll")
+<LI>/LOGFILE oe /LOG (Save command history, eg. "/LOG:sice.txt", "/LOG:sice.txt,APPEND")
+<LI>/VERSION or /VER (Product Version)
+<LI>/HELP or /H (Help)
+<P>
+<i>Map2Map Utility:</i> Gij has written a utility to convert IDA .MAP files to the proper format for NMSYM.EXE; it is called
+<a href="http://www.eccentrica.org/Mammon/Gij_eids.zip">Map2Map</a> and requires <a href="ftp://ftp.ActiveState.com/Perl-Win32/Release/Pw32i316.exe">Perl</a>.
+<P>
+<i>Soft-Ice Command History</i>: The Soft-Ice command window history can be saved at any time using
+Symbol Loader or NMSYM.EXE. The entire contents of the history buffer (of a size set in WINICE.DAT) is
+saved to the file specified; note that only text that appears in the command window will be saved. Data
+can be dumped to the command window using the "D" (dump)command and specifying a length ("l") to dump, and code
+can be dumped to the command window using the "U" (unassemble) command and specifying a length ("l") as well.
+Note that if you are going to be saving the command window history, it is a good idea to have VERBOSE=OFF set in
+your WINICE.DAT.
+
+
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Command Line Options</b></font> <i>Courtesy of THE OWL</i><P>
+<LI>/? (display help screen)
+<LI>/tra <i>size</i> (Amount of back trace history memory in decimal K)
+<LI>/x
+<LI>/m
+<LI>/nmi on|off (trap Non-Maskable Interrupt)
+<LI>/nol on|off (no capslock/numlock programming)
+<LI>/vdd
+<LI>/kbd on|off (patch keyboard driver [caps/numlock])
+<LI>/pen on|off (enable pentium support)
+<LI>/com[123] (Use COM port 1-3 for serial debugging)
+<LI>/hst <i>size</i> (Amount of additional display history memory in decimal K)
+<LI>/exp <i>filename</i> (Load exports from file name)
+<LI>/l <i>filename</i> (Load symbol information from file name)
+<LI>/l% <i>filename</i> (Load symbol information from file name)
+<LI>/load <i>filename</i> (Load symbol information from file name)
+<LI>/load% <i>filename</i> (Load symbol information from file name)
+<LI>/loadx <i>filename</i> (Load symbol information from file name)
+<LI>/loadx% <i>filename</i> (Load symbol information from file name)
+<LI>/load32 <i>filename</i> (Load symbol information from file name)
+<LI>/load32% <i>filename</i> (Load symbol information from file name)
+<LI>/sym <i>size</i> (Amount of symbol table memory in decimal K)
+
+
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Obtaining System Information</b></font><P><code>
+<LI>Addr : Display or switch to an Address Context.
+<LI>Class : Display Information on Windows Classes.
+<LI>CPU : Display the CPU Registers.
+<LI>Exp : Load/Display Export Symbols from DLL files.
+<LI>GDT : Display the Global Descriptor Table.
+<LI>Heap : Display the Windows Global Heap.
+<LI>Heap32 : Display/Walk the Windows Global Heap.
+<LI>HWND : Display information on Windows Handles.
+<LI>IDT : Display the Interrupt Descriptor Table.
+<LI>LDT : Display the Local Descriptor Table.
+<LI>LHeap : Display the Windows Local Heap.
+<LI>Map32 : Display a memory map of all 32-bit modules loaded in memory.
+<LI>MapV86 : Display the DOS memory map of the current Virtual Machine.
+<LI>Mod : Display the Windows Module List.
+<LI>Page : Display Page Table information.
+<LI>Proc : Display information about a process.
+<LI>Stack : Display a call stack.
+<LI>Sym : Set or display a symbol.
+<LI>Task : Display the Windows Task List.
+<LI>Thread : Display information about a thread.
+<LI>TSS : Display Task State Segment and I/O Port Hooks.
+<LI>VCall : Display the names and addresses of VxD callable routines.
+<LI>VM : Display information on virtual machines.
+<LI>VXD : Display the Windows VXD map.
+<LI>.VMM : Call VMM Debug Informational Services menu.
+<LI>.VPICD : Call VPICD Debug Information Menu.
+<LI>.VXDLDR : Display VXD information.
+<LI>WMSG : Display the names and message numbers of Windows messages.
+</code>
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Trapping General Protection Faults</b></font><P>
+This section is still in the "experimentation" phase. Soft-Ice traps all of your GPFs by default, 
+but this is little consolation as there is not a whole lot you can do about it. I have 
+noticed two patterns with GPFs caught by Soft-Ice: one in which you are trapped in a 
+Wait_Semaphore loop, and the other in which all of the opcodes in the code window are 
+"FFFFFFFF INVALID". In the former case, you can F12 back to the main Kernel code and try to "feel" (that's
+ crackerspeak for stepping through again and again until you notice a pattern) which Jcc (conditional jump, for 
+example a JNZ) is causing the problem, then edit the flags (R FL Z in Soft-Ice to toggle ON or OFF 
+the Zero flag) before that particular JNZ (this has worked exactly <i>once</i> for me, and even then all 
+it did was save my computer from locking up; the app still crashed); in the case of the latter, you can 
+(pray! hah, just kidding...) assemble a RET statement using the Soft-Ice <B>A</B> command (<B>A</B> <i>address</I>, where <i>address</i> 
+is the line with the FFFFFFFF INVALID code) and hope that this area of code was CALLed and not JMPed (this has not worked for me 
+at all, but the theory is more-or-less OK ; ). Other than that, unless you wrote and/or memorized the Windows Kernel source code, you 
+are going to have to live with the GPF (but you must go down fighting!).
+<P>
+
+<HR><! -------------------------------------------------------------------------------------------------->
+<font size=+1><B>Exercises</b></font><P>
+<a href="http://ftpsearch.ntnu.no/cgi-bin/search?query=softice&doit=Search&type=Case+insensitive+substring+search&hits=50&matches=&hitsprmatch=&limdom=&limpath=&f1=Count&f2=Mode&f3=Size&f4=Date&f5=Host&f6=Path&header=none&sort=date&trlen=20">Soft-Ice</a> is an extremely powerful program 
+with a complex interface that is best learned through experience. The following exercises are provided as a means for 
+users to familiarize themselves with Soft-Ice.<P>
+<I>Exercise 1: Debugging an existing application</I><P>
+Often you will experience frustration when using a program written by a third party (third-party in this case meaning "not 
+yourself", rather than "not Microsoft"); Soft-Ice is an excellent tool for resolving such situations. Inso Corporation's 
+<a href="http://www.geocities.com/Athens/Forum/9684/quickview.zip">Quick View Plus</a>, for instance, has a bug in the "Register" window: when 
+you enter a serial number and click "Register", the program displays a message box claiming the number you have entered is invalid. 
+Needless to say, Inso Corp has labelled this bug a "security feature", but nevertheless we are here to fix it.<P>
+Start out by installing Quick View Plus Trial edition; the Install Wizard will guide you through its dismal blue screens and 
+grey dialog boxes. When it finishes, Quick View Plus will run and a small grey window with three buttons ("Purchase", "Uninstall", "Continue") 
+will appear; it is here that the exercise will begin in earnest.
+<P>
+1) Click "Purchase", then "$49", then "Accept", and finally "Unlock by Phone".<P>
+2) Press Ctrl-D to bring up Soft-Ice. Our approach is going to be to capture messages to the "Register" 
+window, and to accomplish this we need to do a little scouting: BMSG requires an hwnd parameter, and the HWND 
+command requires a process name. We will therefore first type TASK at the Soft-Ice command line, which shows us the following:
+<pre>
+Taskname           SS:SP       StackTop     StackBot   StackLow   TaskDB  hQueue  Events
+Order32          0000:0000     005ED000     005F0000              11DE    2EEF    0000
+...
+</pre>
+There it is, right on top: Order32. The Syntax for HWND is HWND <i>task</i>, so we will now type 
+HWND ORDER32, which will give the following output:
+<pre>
+Window-Handle       hQueue       SZ     QOwner      Class_Name     Window Procedure
+07A8(1)             2EEF         32     ORDER32     #32770 (Dialog) 173F:00004757
+ 07AC(2)            2EEF         32     ORDER32     Static          173F:000052FA
+.......
+ 07DC               2EEF         32     ORDER32     Edit            173F:00000BF4
+</pre>
+There are a ton of windows listed, with 07A8 being the main dialog box, but the one we are interested in 
+is the only edit control: 07DC. <P>
+3) What we are going to do now is set a breakpoint on window 07DC (the edit control) for the windows message 
+WM_GETTEXT; by only trapping this message (which retrieves text from an edit control), we avoid having to cycle through 
+the various screen-painting and mouse-over routines that Windows processes every millionth of a second. Note that we could instead 
+breakpoint on GetDlgItemText, GetDlgItemTextA, GetWindowText, and GetWindowTextA to achieve the same effect, but it is wise to set only 
+1 breakpoint instead of 4 (plus the programmer may have written their own "Get Text" routine, in which case these breakpoints would fail 
+us). The command we will type at the Soft-Ice prompt is BMSG 07DC WM_GETTEXT.<P>
+4) Now we are ready for action. Enter the Unlocking Code you like best (I lean towards 666111666) and press "OK". 
+You will pop immediately into Soft-Ice, in USER!BOZOSLIVEHERE--Microsoft's little idea of a joke, I guess; press F12 
+to RET out of the function and you will be in USER!BEAR498, F12 again to USER!GLOBALGETATOMNAME, F12 once again 
+to end up in PROT16 code, another F12 brings you to USER!DIALOGBOXINDIRECTPARAM, and finally one more F12 and you will 
+end up in KERNEL.Alloc. This is fairly important to notice, for in most cases where your breakpoint dumps you into Windows code (and F11 will get you 
+out of only a single layer), you will come across KERNEL.Alloc right before you come back to the application's code. 
+A good rule of thumb is therefore to F12 fanatically until you reach KERNEL.Alloc, then press F12 once to get back to the application.<P>
+5) Press F12 that one final time, and you will find yourself in ORDER32!.text 39B9, with the following code:
+<PRE>
+0137:004049B9 Call [User32!GetDlgItemTextA]
+0137:004049BF LEA ECX,[EBP-68]
+0137:004049C2 PUSH ECX
+0137:004049C3 CALL 004047E2
+0137:004049C8 ADD ESP,04
+0137:004049CB TEST EAX,EAX
+0137:004049CD JNZ 004047E2
+</PRE>
+004049BF LEA ECX,[EBP-68] is the current line of code; Call User32!GetDlgItemTxtA had just been executed. 
+Looking at the next few lines of code, you will realize that this is all we need: this is a <i>classic</i> 
+TEST/JNZ scheme. The Unlock Code has been stored in EBP-68 by GetDlgItemTextA; it is then moved to ECX and 
+pushed on to the stack as the only parameter to the function at 004047E2. When the program returns from the call, 
+the stack is corrected (ADD ESP,04) and a boolean value (1 or 0, equaling TRUE or FALSE) has been stored in EAX 
+by the function. The value in EAX is then tested to find out if it is TRUE (1) and if so, the program moves on to the 
+"good-unlock-code-now-register-the-poor-fellow" code. In psuedo-C-code, this would look like
+<PRE>
+CHAR UnlockCode;
+BOOLEAN IsGood;
+...
+GetDlgItemText(hwnd 07DC, int UnlockCodeField, charbuf  [EBP-68], int 8);
+UnlockCode=[EBP-68];
+IsGood=ValidateUnlockCode(UnlockCode);
+if (IsGood) UnlockProgram();
+else MessageBeep();
+...
+</PRE>
+Now we must make sure we are right about this code. F8 through the
+LEA instruction, then type  D ECX: at the Soft-Ice command line and there in the data window 
+you will see
+<PRE>
+<code>013F:005EF604 36 36 36 31 31 31 36 36-00 05 00 00 7F 16 85 63  66611166....^..c</code>
+</pre>
+OK, so that is our serial about to be manipulated. Look close, what do you see?
+Our dear little 666111666 (or the first eight digits of it, actually) being loaded into ECX as a parameter 
+to 004047e2  ValidateUnLockCode(UnlockCode). F10 down to the JNZ, but halt there. Notice it says JNZ 00404A29  (NO JUMP) 
+Now we will toggle the zero flag, so that it becomes not-zero, by typing R FL Z. 
+Notice how the code has changed to JNZ 00404A29  (JUMP)
+At this point we will Ctrl-D to return control back to the program and see if we were right...a new window pops up: 
+<B>Quick View PLus Unlocked</b> 
+Thank you for purchasing ya-di-ya-di-ya.... 
+Press "OK", the lesson is over!
+To clean up, press Ctrl-D and type 
+BC *
+to clear all of your breakpoints. <P><BR>
+<I>Exercise 2: Regaining Lost Access</I><P>
+When you have your system set up for maximum security, it is always a danger that you will forget your password and thereby lose access to your data. In most cases you can simply perform a dictionary attack on your encrypted files (or whichever target is giving you trouble), but when you have walked away from your PC for awhile and that screensaver you forgot you installed kicks in, protected by a password you have long forgotten, you will have to reboot--and lose data--in order to access your machine at all. Soft-Ice, however, is powerful enough to get you through these difficult moments.<P>
+To begin, install a screensaver with password protection (if you haven't already) through the Display Control Panel in Windows 95. Wait for it to kick in, then move the mouse to activate the password login dialog box. Here goes: <P>
+1). Type in the wrong password, then <B>Ctrl-D</b> and put a breakpoint on hmemcpy (<b>bpx hmemcpy</b>)--hmemcpy being the kernel function used by Windows to shuffle strings around in memory, for instance when they are input from a dialog box being checked for authenticity. Press 
+<b>Ctrl-D</b> again to return to the screen saver, the punch the OK button. Soft-Ice will pop up and you will end up in 
+KERNEL!LOGERROR 0123<P>
+2). <b>F12</b> until you read Kernel.Alloc (10 times), then once more to get back into the target code, in this case 
+called (amazingly enough) PASSWORD!.text<P>
+Note that this points us immediately to our target executable, 
+password.cpl in the windows\system directory. Password.cpl is a 37,376 byte Control Panel extension--so 
+immediately we know that .scr files use the Passwords Control Panel applet (or sub-applet) to protect your machine. 
+Password.cpl exports the following functions: 
+<PRE><code>
+0000	00001151	CPlApplet
+0001	00003f3b 	PPChangePassword
+0002	00003eb9	PPGetPasswordStatus
+0003	00004006	VerifyScreenSavePwd</code>
+</PRE>
+and (like any Windows program) imports a good many more, including these:
+<PRE><code>
+MPR.dll
+0015	PwdSetPasswordStatusA
+004e	WNetVerifyPasswordA
+0011	PwdChangePasswordA
+0013	PwdGetPasswordStatusA
+003f	WNetGetUserA</code>
+</pre>
+This target is getting more interesting by the moment...it may require a "full reverse" in the Projects page...<P>
+3). Look closely at the code:
+<PRE><code>
+0137:7C45428F	CALL [7C4582BC]
+0137:7C454295	TEST EDI, EDI
+0137:7C454297	JNZ 7C4542B1
+0137:7C454299	LEA EAX, [EBP-04]
+0137:7C45429C	LEA  ECX, [EBP-14]
+0137:7C45429F	PUSH EAX
+0137:7C4542A0	PUSH ECX
+0137:7C4542A1	CALL 7C454536
+0137:7C4542A6	TEST EAX, EAX
+0137:7C4542A8	JZ 7C4542DE
+0137:7C4542AA	MOV EAX,00000001
+0137:7C4542AF	JMP 7C454322
+</code></pre>
+Password protection schemes usually do not place an unencrypted copy of the password in memory; in general, 
+the user input is encrypted using the same algorithm as the password-encryptor, then the two encrypted strings are 
+compared (yes, it can be made much tougher than this, but that is the basic idea). What this means is that if you are 
+hunting for the <i>password</i>, you are in for a lot of math; if you just want to get <i>access</i>, then it is a simple 
+matter of a CMP statement--the "flag-toggling" approach.<P>
+If you eyeball the code a little, You'll notice that there are two classes of jumps: one that dumps you in the 
+7C4542xx range (the JNZ at 7C454295 and the JZ at 7C4542A8), and the one that dumps you in the 7C4543xx range 
+(the JMP at 7C454322). What it seems like--and this is an intuition that will come after scrolling through tons of 
+such code--is that there are two checks (maybe one for password length and one for password contents, though in 
+this exercise the purpose of the checks  is trivial), then an EAX=00000001 (in boolean, "TRUE") followed by a jump 
+to a location <i>after</i> the "consequences" of the checks.<P>
+It appears, therefore, that you wish to fail both of the checks (i.e., not jump) and end up at 7C454322. How do you know?
+ At this point, just a guess really. But if you trace through the code, you will notice that with the wrong password, you will 
+take both of these jumps (i.e., if you fake past the first one, the second will get you) and end up with an "invalid password" 
+message.<P>
+(4) <b>F10</b> through the code until the <code>JNZ 7C4542B1</code>. At this point you will toggle the zero flag (<b> r fl z</b>), then 
+<b>F10</b> through the code until the <code>JZ 7C4542DE</code>. Once  again, toggle the zero flag, and press <b>CTRL-D</b> to 
+return to the screensaver...which will immediately disappear and allow you to access the desktop. Be sure to clean up that <code>hmemcpy</code> breakpoint before you leave...<P>
+The Good Part? Now you know how to break past a puny screensaver password-protection scheme using Soft-Ice (and 
+many similar schemes, use your imagination). The Bad Part? No-one whose machine you want to break into is going to 
+have Soft-Ice installed. Of course, after a full reverse-engineering, you can write a utility to kill the .scr thread or fool the .cpl file, then stick it in the autorun.inf of a CD-ROM and hope the target computer has "autoplay" enabled....<P>
+<HR><! -------------------------------------------------------------------------------------------------->
+<center><a href="index.html"><font color=808080>Home<font></a><font color=808080> * <font><a href="tools.html"><font color=808080>Tools<font></a><font color=808080> * <font><a href="http://www.geocities.com/SiliconValley/Vista/2299/"><font color=808080>95/NT Tech Info<font></a><font color=808080> * <font><a href="links.html"><font color=808080>Links<font></a></center>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,244 @@
+																				  Splitting Strings
+																				  by mammon_
+
+Those familiar with Perl will undoubtedly have used its split() function, which
+takes a single string and splits it into multiple strings or into an array, 
+based on a delimiter character specified in the call. Typical invocations of 
+split() would be:
+
+     ($field1, $field2, $junk) = split(':', $line);
+     @array = split(' ', $line);
+	  
+In the first line, the source string is split into a maximum of 3 substrings, 
+creating a new string each time it encounters a colon character; note that the 
+third string, $junk, contains the entire rest of the string -- only the first 2 
+colons will be parsed. In the second line, an array of strings is created by 
+splitting the source string at the space character; since the number of destin-
+ation strings is not specified, the array will contain one element for each 
+substring [read: each string created by splitting the original at a whitespace
+character].
+
+Strings and string parsing are notably tedious in assembly. Once learning Perl,
+I found that the pseudocode for many of my asm programs started to include a 
+few calls to 'split', since it is a handy one-line method of string parsing,
+applicable to processing command lines, user input, and data files. As a result,
+it quickly became necessary to write such a routine.
+
+Being that asm has no inherent array or string tokenizing support, there are 
+many possible approaches to string splitting. Since the most immediate problem 
+is that the split() routine does not know in advance how many substrings it 
+will be creating, there is a temptation to code a strtok() replacement, such
+that the first call returns the first substring, and subsequent calls each 
+return the next substring until the end of the string has been reached:
+
+		  mov ecx, ptrArray
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ecx], eax
+.loop:
+		  call split
+		  cmp eax, 0
+		  je .end
+		  mov [ecx], eax
+		  add ecx, 4
+		  jmp .loop
+.end:
+
+This allows for control over the number of substrings created by only calling 
+split() the desired number of times; however this method also requires a lot 
+of caller-side work --setting up an array, moving the string pointer returned 
+in eax to an appropriate array position, and keeping track of the number of 
+array elements. It is also noticeably more clumsy than the Perl version.
+
+Another method would be to mimic the Perl function entirely, and have split()
+return an array of substrings:
+
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ptrStringArray], eax
+		  
+This is obviously more elegant on the caller side, but it has a few subtle 
+problems: first, the control over how many elements is split is lost;  
+secondly, the array is of indefinite element size [i.e., one would have to 
+scan each string again in order to find the end and thus the next string];
+and lastly, the duplication of the string in memory is somewhat of a waste.
+
+The C language has more or less created a string standard in which strings are
+terminated with a null ['\0' or 0x0] character. Most library or OS functions 
+to which the split strings will be passed tend to expect this termination; thus
+each substring is going to have a termination byte added. However, this termin-
+ation byte can replace the delimiter for each substring, thus allowing the 
+original string itself to serve as the array of substrings after the split 
+function. Thus, all that is required from the split function is to return an 
+array of dword pointers into the original string, and a count of the array 
+elements [substrings]:
+
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ptrStringArray], eax
+		  mov [StringArrayNum], ebx
+		  
+The split function will have to create a DWORD element for each substring 
+it splits; while this is somewhat wasteful, it is still less expensive than 
+copying the entire string a second time, unless the string is composed of 
+1-3 byte substrings. In order to control the number of splits, a 'max_split'
+parameter will have to be added to the split() routine, such that if max_split
+is NULL, the split() routine will return the maximum possible number of
+substrings; if max_split is non-NULL, split() will return max_split or fewer 
+substrings.
+
+The complete split routine is as follows:
+
+#--------------------------------------------------------------------split.asm
+;    split( char, string, max_split)
+;     Returns address of array of pointers into original string in eax
+;     Returns number of array elements in ebx
+;     Behavior:
+;           split( ":", "this:that:theother:null\0", NULL)
+;           "this\0that\0theother\0null\0"
+;           ptrArray[0] = [ptrArray+0] = "this\0"
+;           ptrArray[1] = [ptrArray+4] = "that\0"
+;           ptrArray[2] = [ptrArray+8] = "theother\0"
+;           ptrArray[3] = [ptrArray+C] = "null\0"
+EXTERN malloc
+EXTERN free
+
+split:
+	push ebp
+	mov ebp, esp            ;save stack pointer
+ 	mov ecx, [ebp + 8] 		;max# of splits
+ 	mov edi,	[ebp + 12] 		;pointer to target string
+ 	mov ebx, [ebp + 16]		;splitchar
+	
+	xor eax, eax				;zero out eax for later
+	mov edx, esp				;save current stack pos.
+	push dword edi				;save ptr to first substring
+ 	cmp ecx, 0					;is #splits NULL?
+	jnz do_split            ;--no, start splitting
+	mov ecx, 0xFFFF			;--yes, set to MAX
+	
+do_split:						
+	mov bh, byte [edi]      ;get byte from target string
+	cmp bl, bh					;equal to delimiter?
+	je .splitstr            ;--yes, then split it
+	cmp al, bh					;end of string? [al == 0x0]
+	je EOS                  ;--yes, then leave split()
+	inc edi						;next char
+	loop do_split 
+.splitstr:
+	mov [edi], byte al	   ;replace split delimiter with "\0"
+	inc edi						;move to first char after delimiter
+	push edi						;save ptr to next substring
+	loop do_split				;loop #splits or till EOS
+	
+EOS:
+	mov ecx, edx				;edx, ecx == original stack position
+	sub ecx, esp				;get total size of pushed pointers
+	push ecx						;save size 
+	call malloc					;allocate that much space for array
+	test eax, eax
+	jz .error
+	pop ecx						;restore size
+	mov edi, eax				;set destination to beginning of array
+	add edi, ecx				;move to end of array
+	shr ecx, 2					;divide total size/4 [= # of dwords to move]
+	mov ebx, ecx				;save count
+	
+.store:
+	sub edi, 4					;move to beginning of dword
+	pop dword [edi] 			;pop from stack to array
+	loop .store
+
+.error:
+	mov esp, ebp
+	pop ebp
+	ret							;eax = array[0], ebx = array count
+#------------------------------------------------------------------------EOF
+
+The use of the stack in this routine may be a little unclear. Each time a 
+delimiter is encountered, the a pointer to the character after the delimiter
+is pushed onto the stack:
+		  this:that:theother\0
+		  ^----------------------This is pushed at the very beginning.
+		                         Element#: array[0]
+		  this:that:theother\0
+		       ^-----------------This is pushed when the first ':' is found.
+								       Element#: array[1]
+		  this\0that:theother\0
+		             ^-----------This is pushed when the second ':' is found
+						             Element#: array[2]
+        this\0that\0theother\0
+		                         The stack now looks like this:
+										 --------------[ebp]
+										 ptr->string1
+										 ptr->string2
+										 ptr->string3
+										 --------------[esp]
+										 The string pointers are then POPed into the 
+										 array, starting with array[2] and ending with
+										 array[0].
+										 
+Once the string is parsed and the pointers are PUSHed to the stack, edi is set
+to the address of the array [mov edi, eax] and advanced to the end of the 
+allocated array [add edi, ecx]. The counter is then set to the number of DWORD
+pointers that have been pushed onto the stack [shr ecx, 2]; for each DWORD 
+pointer, edi is withdrawn 4 bytes more from the end of the array [sub edi, 4] 
+and the pointer is POPed into that 4 byte space. In the last iteration of the 
+loop, edi is set to the beginning of the allocated array, and the first DWORD 
+pointer [ array[0] ] is POPed into the first array element.
+										 
+To test this, of course, one needs a program to drive it. The following code
+simulates an /etc/passwd read, splitting a hard-coded line into its component,
+colon-delimited fields:
+
+#----------------------------------------------------------------splittest.asm
+BITS 32
+GLOBAL main
+EXTERN printf
+EXTERN free
+EXTERN exit
+%include 'split.asm'
+
+SECTION .text
+main:
+	push dword szString		;print the original string
+	push dword szOutput
+	call printf
+	add esp, 8
+	
+	push dword ":"				;split the original string
+	push dword szString
+	push dword 0
+	call split
+	add esp, 12
+	
+	mov ecx, ebx
+	mov ebx, eax
+printarray:						;print the substrings
+	push ecx						;printf hoses ecx!!!!!
+	push dword [ds:ebx]
+	push dword szOutput
+	call printf
+	add esp, 8
+	add ebx, 4					;skip to next array element
+	pop ecx
+	loop printarray
+	
+	push dword [ptrarray]	;free the array created by split
+	call free
+	add esp, 4
+
+	push dword 0				;program is done
+	call exit
+
+SECTION .data 
+szOutput	db '%s',0Ah,0Dh,0									;printf format string
+szString	db	'name:password:UID:GID:group:home',0	;string to print
+#------------------------------------------------------------------------EOF
+
+This program was written using nasm on a glibc Linux platform; however the 
+split routine itself is fairly portable --the only assumed external routine 
+is malloc() and -- and can easily be rewritten for the DOS or win32  platforms.

@@ -1,0 +1,408 @@
+                                                        Loadable Kernel Modules
+                                                        by mammon_
+                                                                      
+                      
+
+If there is one area in linux that is sure to attract assembly language coders,
+it is the coding of loadable kernel modules; after all, asm programmers aren't
+known for waiting around in Ring 3 space waiting for the CPU to assign their
+process some resources.
+
+Kernel modules are Ring 0 programs that are dynamically linked into a running
+kernel; they require LKM support in the kernel [ CONFIG_MODULES ]. Each kernel
+ships with a given number of kernel modules, as most device drivers are
+compiled as such; the modules are located in /lib/modules/kernel_version#.
+Modules are managed with the commands insmod [load module], modprobe [load
+module and all modules it depends on], lsmod [list loaded modules], and rmmod
+[unload module]; information on loaded modules can also be obtained from the
+/proc file system, e.g. /proc/modules.
+
+
+Kernel Land
+-----------
+It need hardly be said that kernel-space programming is different from
+user-space progamming. For starters, simple bugs can panic the kernel, or
+render kernel subsystems unreliable if not actually inoperable. It is
+advisable, when developing kernel modules, to become well-acquainted with the
+"Magic SysReq Key" commands.
+
+There is no main function. Kernel modules must export the init_module and
+cleanup_module routines; these will be called by the kernel when the module is
+loaded and unloaded. The rest of the kernel module will generally consist of 
+callback routines which are executed in response to system events [i.e. ioctl()
+calls, reading of /proc files, syscalls, interrupts].
+
+The standard C libraries are also unavailable -- they are far away, in the
+user-space shared by all normal, well-behaved programs. The only external
+routines that a kernel module can call are those listed in the kernel symbol
+table [which can be browsed via /proc/ksyms] and the INT 80 syscalls. Some
+basic C-style routines are provided by the kernel, and are prototyped in
+$INCLUDE/linux/kernel.h:
+     simple_strtol(const char *,char **,unsigned int);
+     sprintf(char * buf, const char * fmt, ...);
+     vsprintf(char *buf, const char *, va_list);
+     get_option(char **str, int *pint);
+     memparse(char *ptr, char **retptr);
+     printk(const char * fmt, ...)
+Note that the standard kernel routines are documented in section 9 of the
+manual, and can be browsed with
+     ls -1 /usr/man/man9 | cut -d. -f1
+As mentioned in a previous article, the syscalls are listed in
+/usr/include/asm/unistd.h .
+
+Finally, accessing user-space memory is not easy. In C, there are macros
+provided for this -- get_user(), put_user(), copy_from_user(), copy_to_user()
+... all defined in $INCLUDE/asm/uaccess.h -- and these boil down to inline
+assembler routines that can be accessed, somewhat awkwardly, from routines
+listed in the kernel symbol table [e.g. __get_user_1 and so on]. In general, it
+is best to leave user/kernel-space interaction to /proc and /dev files.
+
+
+Developing Kernel Modules
+-------------------------
+What does all of this mean in terms of assembly language? Essentially, asm
+kernel modules will have the same problems as C kernel modules, with the added
+bonus that none of the C macros for kernel-mode programming will work.
+
+When programming kernel modules, one is more or less restricted to using the
+GAS assembler. NASM can be made to work, but by default it produces object 
+files in format that the kernel module loader cannot recognize [note: RedPlait
+has produced a patch for NASM to fix this; in addition, it is possible to 
+write a libBFD post-processor which will re-assemble the sections in the
+appropriate order]. Information on GAS invocation and syntax can be obtained
+from the 'as' manpage and info file, and the GAS preprocessor is documented 
+in the 'gasp' info page.  Note that the info files can be accessed randomly by
+appending the sequence of menu selections to the command; thus 
+    info as Machine i386 i386-Syntax
+would load the 'as' info section for i386 syntax details.
+
+Kernel modules are unlinked object files -- they are linked to the kernel
+dynamically, and so should not be run through ld. Using gcc, a kernel module
+can be compiled with
+    gcc -c filename
+assuming that the file extension is .s or .S . Gcc will produce a .o output 
+file which may be loaded using 'insmod' and unloaded using 'rmmod'. The 
+compilation/test cycle for a linux kernel module is essentially
+    gcc -c asm_module.s
+    insmod asm_module
+    lsmod
+    rmmod asm_module
+Note that modules which cannot be initialized or unloaded will remain loaded
+until reboot, thus preventing another module with the same name from being
+loaded. In order to minimize reboots, it helps to symlink a number of 'test'
+filenames to the original object file, so that 'asm_module.o' would be linked
+to 'asm_module1.o', 'asm_module2.o', and so on. 
+
+
+Debugging kernel modules can be quite a chore. While kernel-mode debuggers 
+exist for linux, it is often more expedient to use primitive "printf" debugging
+techniques and core file analysis. In the former case, the linux kernel
+provides the function "printk()", which is the kernel-mode equivalent of
+printf(); the one notable difference is that the format string should begin 
+with a 'priority code' indicating how syslogs should handle the message. The
+priority codes are:
+    <0> Kernel Emergency
+    <1> Kernel Alert
+    <2> Kernel Critical Condition
+    <3> Kernel Error
+    <4> Kernel Warning
+    <5> Kernel Notice
+    <6> Kernel Info
+    <7> Kernel Debug
+
+In addition, when a kernel module 'crashes', it writes an 'oops' file to
+STDERR. This is essentially a stripped-down core file giving the registers 
+and stack state at the moment of the crash; it can be saved to a file and
+loaded with the ksymoops utility to make the report more coherent.
+
+One of the best tools for debugging assembly language kernel modules is gcc
+itself. If the module --or the problematic portion thereof-- can be written
+correctly in C, a GAS version can be produced by compiling the module with
+    gcc -S filename
+This will produce an assembly-language version of the program, loaded with 
+GAS preprocessor directives. This file can be cleaned up and compared against
+the hand-tooled assembly language version in order to judge the effects of
+C macros, data alignment, and sections. 
+
+
+Hello Kernel
+------------
+As usual, it is best to start with the most simple module possible in order to
+demonstrate the absolute basics of LKM programming. Other than the use of init 
+and cleanup functions, this module should not present any surprises:
+
+#---------------------------------------------------------------------Asm_mod.s
+.globl init_module
+.globl cleanup_module
+.extern printk
+
+.text
+.align 4
+init_module: 
+     pushl $strLoad
+     call printk
+     popl %eax
+     xor %eax, %eax
+     ret
+     
+cleanup_module:
+     pushl $strUnload
+     call printk
+     popl %eax
+     xorl %eax, %eax
+     ret
+
+
+.section .rodata
+.align 32
+strLoad:  
+.ascii "<1> Asm Module Loaded!\n\0"
+strUnload: 
+.ascii "<1> Asm Module Unloaded\n\0"
+
+.section .modinfo
+__module_lernel_version:
+.ascii "kernel_version=2.2.15\0"
+#---------------------------------------------------------------------------EOF
+
+As you can see, this program does nothing special -- it simply outputs an
+alert when the module is loaded or unloaded. Note the .modinfo section of the 
+program; this is where the module specifies which kernel it was compiled for.
+In C, a macro determines this based on a constant in the kernel header files; 
+in assembly, you will have to specify the kernel version by hand or with a 
+Makefile. Also note the .rodata section -- this is where the kernel expects to
+find string references, and one can expect a lot of segmentation faults if the
+strings are placed in .data instead.
+
+
+Using the /proc Filesystem
+--------------------------
+The trend in linux, as well as in other Unixes, is to provide runtime access to
+kernel-space data through the /proc file system. Linux system tweakers will no
+doubt be familiar with cat'ing /proc files to check the status of kernel
+variables, and echo'ing values to those files in order to change the values of 
+such variables. The /proc filesystem is a handy mechanism for interfacing with
+kernel modules without the relative complexity of a device file and an ioctl()
+interface.
+
+Creating an entry in the /proc file system consists of the following steps:
+     1. Prepare a proc_dir_entry struct to describe the /proc file
+     2. Register the /proc file to create it
+     3. Unregister the /proc file when finished with it
+
+The most important component of this process is obviously the proc_dir_entry
+structure; it is define in $INCLUDE/linux/proc_fs.h:
+    struct proc_dir_entry {
+        unsigned short low_ino;                        //inode # of the /proc file
+        unsigned short namelen;                        //length of filename
+        const char *name;                              //pointer to filename string
+        mode_t mode;                                   //Access mode [permissions]
+        nlink_t nlink;                                 //# of links to the file
+        uid_t uid;                                     //UID of file owner
+        gid_t gid;                                     //GID of file owner
+        unsigned long size;                            //Size of the file
+        struct inode_operations * proc_iops; 
+        struct file_operations * proc_fops;
+        get_info_t *get_info;                     //Function handling file reads
+        struct module *owner;
+        struct proc_dir_entry *next, *parent, *subdir;
+        void *data;                                    //pointer to
+'user-defined' data
+        read_proc_t *read_proc;
+        write_proc_t *write_proc;
+        unsigned int count; /* use count */
+        int deleted;        /* delete flag */
+        kdev_t  rdev;
+    };
+
+The last 5 members of the structure are not defined in the proc_dir_entry man
+page, and do not appear to be used; however, as demonstrated in the sample
+code, space must be reserved for them.
+
+In most cases, the majority of these structure members cal be set to NULL in
+order to have them filled with default values. The members that should normally
+be set to null include low_ino, uid, gid, size, *proc_iops, *proc_fops, *owner,
+*next, *parent, *subdir, and *data. This leaves the following members to be
+filled by the program:
+     namelen  -- length of *name string, without the terminating \0
+     *name    -- .rodata string containing the name of the /proc file
+     mode     -- access permissions for the file
+     nlink    -- 1 for normal files, 2 for directories
+     *getinfo -- callback routine for reads to the /proc file
+Note that *getinfo() is called for normal /proc file reads, e.g. `cat
+\proc\modules`. In order to handle more advanced operations such as writes,
+links, and so forth, an inodes_operations and a file_operations structure need
+to set up.
+
+The *getinfo() function has the following prototype:
+    int get_info(char *buffer, char **retBuf, off_t pos, int size);
+where buffer is the buffer provided by the user-space program, size is the 
+size of that buffer, pos is the current position in the file [to support
+multiple, sequential reads by the user-space program], and retBuf is a pointer
+to a buffer which can be used in place of the supplied buffer [for example, if
+size is too small]. When a return buffer is used, a pointer to the buffer is
+stored in retBuf, and the size of the buffer is returned in eax.
+
+It is important to use stack frames in all kernel-mode callbacks. The prototype
+for a get_info function in GAS would be
+    .globl get_info
+    get_info:
+        pushl %ebp
+        movl %esp,%ebp
+        ....
+        movl %eax,20(%ebp)
+        leave
+        ret
+The parameters will all be at offsets of %ebp, as the default return value [an
+invisible fifth parameter that is always zero] demonstrates.
+
+Registering and unregistering a proc file are fairly straightforward. The 
+proc_register command has the prototype
+     proc_register(proc_dir_entry *parent, proc_dir_entry *child)
+and always returns 0. The *parent structure must refer to a directory within
+the /proc tree; the global symbols proc_root and proc_sys_root refer to the
+directories /proc and /proc/sys, respectively. The child structure refers to
+the /proc entry that is being created. 
+
+The proc_unregister command has the prototype
+    proc_unregister(proc_dir_entry * parent, int inode);
+and returns 0 only on success. The parent node will be the same as in the
+proc_register call, while inode refers to the inode assigned to the /proc file
+being unregistered. Note that the inode of a /proc file is specified in the
+first member of the proc_dir_entry structure; if the inode member is 0 on /proc
+file registration, an inode number is dynamically assigned and stored in the
+inode member.
+
+
+Hello Proc
+----------
+The following program will demonstrate the use of the get_info() function; it
+creates a /proc file which, when read, will return a simple string in the
+buffer provided by the user-space program. 
+#--------------------------------------------------------------------Asm_proc.s
+.globl init_module
+.globl cleanup_module
+.globl ReadAsmProcFile
+.globl procAsm
+.extern printk
+.extern sprintf
+.extern proc_root
+.extern proc_register
+.extern proc_unregister
+ 
+.text
+.align 4
+init_module: 
+    pushl %ebp
+    movl %esp,%ebp
+     pushl $strLoad
+     call printk
+     popl %eax
+     pushl $procAsm
+     pushl $proc_root
+     call proc_register
+     addl $0x8, %esp
+     xorl %eax, %eax
+     leave
+     ret
+     
+cleanup_module:
+    pushl %ebp
+    movl %esp,%ebp
+     pushl $strUnload
+     call printk
+     popl %eax
+     movzwl procAsm, %eax
+     pushl %eax
+     pushl $proc_root
+     call proc_unregister
+     addl $0x8, %esp
+     xorl %eax, %eax
+     leave
+     ret
+
+ReadAsmProcFile:
+    pushl %ebp
+    movl %esp,%ebp
+    pushl $strRead
+    movl 8(%ebp),%eax
+    pushl %eax
+    call sprintf
+    addl $16,%esp
+    movl %eax,20(%ebp)
+     leave
+     ret
+
+
+.section .modinfo
+__module_kernel_version:
+.ascii "kernel_version=2.2.15\0"
+
+.section .rodata
+.align 32
+strName:       .ascii "AsmModule\0"
+strLoad:       .ascii "<1> Asm Module Loaded!\n\0"
+strUnload:          .ascii "<1> Asm Module Unloaded\n\0"
+strRead:       .ascii "This /proc file has nothing to say\n\0"
+
+.data
+.align 32
+#______________________File_Permissions
+.equ S_IFREG, 0100000
+.equ S_IRUSR, 00400
+.equ S_IWUSR, 00200
+.equ S_IXUSR, 00100
+.equ S_IRGRP, 00040
+.equ S_IWGRP, 00020
+.equ S_IXGRP, 00010
+.equ S_IROTH, 00004
+.equ S_IWOTH, 00002
+.equ S_IXOTH, 00001
+
+#________________________________________proc_dir_entry structure
+procAsm:
+procAsm_low_ino:              .short         0
+procAsm_name_length:          .short         9
+procAsm_name:                 .long          strName   
+procAsm_mode:                 .short         S_IFREG | S_IRUSR |S_IRGRP | S_IROTH
+procAsm_nlinks:               .short         1
+procAsm_owner:                     .short         0
+procAsm_group:                     .short         0
+procAsm_size:                 .long          0
+procAsm_operations:           .long          0
+procAsm_read_proc:            .long          ReadAsmProcFile
+                                   .zero     40
+#________________________________________end proc_dir_entry
+
+#---------------------------------------------------------------------------EOF
+The /proc file can be read with the usual `cat /proc/AsmModule` commands. It
+should be noted that get_info() is executed when the file is opened; this
+allows different behavior to be supplied for file opens, reads, and writes.
+
+
+Further Reading
+---------------
+Programming Linux kernel modules, either in assembly or in C, is a complicated
+and challenging field. The following online resources provide vital information
+on kernel module programming.
+
+"Linux Kernel Module Programming Guide", by Ori Pomerantz
+       http://www.linuxdoc.org/LDP/lkmpg/mpg.html
+       The 'classic' guide to LKM programming. This work is part of the Linux
+       documentation project, and is available in most Linux distributions. 
+       Most LKM texts will assume you are familiar with the concepts presented
+       in this one.
+
+"(nearly) Complete Linux Loadable Kernel Modules", by pragmatic / THC 
+       http://thc.pimmel.com/files/thc/LKM_HACKING.html
+       Based on the exploratory LKM hacking essays of Phrack 50 and 52, 
+       this treatise on LKM hacking is very thorough and very informative.
+       The text contains an introduction to LKM programming and proceeds to
+       cover kernel modules from the security and hacking viewpoints, with 
+       plenty of source code to back up the discussion. If you read or print 
+       out only one LKM guide, this should be it.
+
+"Linux Kernel Hacker Documentation"
+       http://jungla.dit.upm.es/~jmseyas/linux/kernel/hackers-docs.html
+       This page contains links to a number of articles and books on Linux
+       kernel-mode programming.

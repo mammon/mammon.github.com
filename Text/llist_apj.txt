@@ -1,0 +1,470 @@
+                                                            Linked Lists in ASM
+                                                            by mammon_
+
+
+Assembly language is notorious for being low-level; to wit, it lacks many of
+the features in higher-level languages which make programming easier. In the
+course of my work in the visasm project I have put quite a bit of time into
+working on exactly which higher language features are important and which, in a
+nutshell, are swill.
+
+One of the areas in which assembly language is lacking is the use of dynamic
+structures. Pointer manipulation in asm is simple and clear for up to one
+level of redirection; further redirection causes the code to quickly become a
+confusion of register juggling and indirect addressing. As a result,
+implementing even a simple linked list in assembly language can be tedious
+enough to make one rewrite the project in C.
+
+In this article I have undertaken an implementation of a linked list in NASM;
+the implementation is generic enough to support more complex data structures,
+and should port to other assemblers with few changes.
+
+To begin with, one must define the memory allocation routines for use in the
+application; I have chosen Win32 for convenience. The routines defined below
+are for local heap allocation and for the Win32 console interface to allow the
+use of STDOUT on the console.
+;=========================================================Win32 API Definitions
+STD_INPUT_HANDLE     EQU        -10     ;nStdHandle types
+STD_OUTPUT_HANDLE    EQU        -11
+STD_ERROR_HANDLE     EQU  	-12
+
+EXTERN AllocConsole                     ;BOOL AllocConsole()
+EXTERN GetStdHandle                     ;HANDLE GetStdHandle( nStdHandle )
+EXTERN WriteConsoleA  ;HANDLE hConsole, lpBuffer, Num2Write, lpWritten,NULL
+EXTERN ExitProcess    ;UINT ExitCode
+EXTERN GetProcessHeap ;
+EXTERN HeapAlloc      ;HANDLE hHeap,DWORD dwFlags, DWORD dwBytes:ret ptr
+EXTERN HeapFree       ;HANDLE hHeap,DWORD dwFlags, LPVOID lpMem
+EXTERN HeapReAlloc    ;HANDLE hHeap,DWORD dwFlags,LPVOID lpMem,DWORD dwBytes
+EXTERN HeapDestroy    ;HANDLE hHeap
+%define HEAP_NO_SERIALIZE               0x00000001
+%define HEAP_GROWABLE                   0x00000002
+%define HEAP_GENERATE_EXCEPTIONS        0x00000004
+%define HEAP_ZERO_MEMORY                0x00000008
+%define HEAP_REALLOC_IN_PLACE_ONLY      0x00000010
+%define HEAP_TAIL_CHECKING_ENABLED      0x00000020
+%define HEAP_FREE_CHECKING_ENABLED      0x00000040
+%define HEAP_DISABLE_COALESCE_ON_FREE   0x00000080
+%define HEAP_CREATE_ALIGN_16            0x00010000
+%define HEAP_CREATE_ENABLE_TRACING      0x00020000
+%define HEAP_MAXIMUM_TAG                0x0FFF
+%define HEAP_PSEUDO_TAG_FLAG            0x8000
+%define HEAP_TAG_SHIFT                  16
+;===========================================================End API Definitions
+
+
+In addition, it is useful to define a few common routines for use later:
+;==============================================================Utility Routines
+[section data class=DATA use32]             ;set up the segments early
+%macro STRING 2+
+%1:      db %2
+.end:
+%define %1.length  %1.end - %1
+%endmacro
+[section code class=CODE use32]
+
+GetConsole:
+;GetConsole()
+[section data]
+hConsole        DD      0
+[section code]
+        call AllocConsole
+	push dword STD_OUTPUT_HANDLE
+	call GetStdHandle
+        mov [hConsole], eax
+        xor eax, eax
+        ret
+
+puts:
+;puts( ptrString, NumBytes )
+[section data]
+NumWrote        DD 0
+[section code]
+%define _ptrString ebp + 8
+%define _strlen ebp + 12
+        push ebp
+        mov ebp,esp
+        push eax
+        push dword 0
+	push dword NumWrote
+        mov eax, [ _strlen ]
+        push dword eax
+        mov eax, [ _ptrString ]
+        push dword eax
+        push dword [hConsole]
+        call WriteConsoleA
+        pop eax
+	mov esp, ebp
+	pop ebp
+        ret 8
+;==========================================================End Utility Routines
+The STRING macro is particular interesting; it allows one to define a string
+in the data segment as
+        STRING label, 'contents of string',0Dh,0Ah
+while defining the constant label.length as the total length of the string.
+This will come in handy during the many calls to puts, which is used to write
+to the Win32 console. Puts has the syntax
+        puts( lpString, strLength )
+and returns the result of WriteConsole, a BOOL value. GetConsole is a routine
+provided to move the Win32 console allocation code out of the main program; it
+takes no parameters and defines the hConsole handle.
+
+The linked list implementation has been designed to be extendable; the routine
+names are prefaced with underscores to avoid filling up the namespace of the
+linked list application, and the routines themselves are generic enough to be
+called from higher-level Stack, Queue, and List implementations. The Linked
+List interface is as follows:
+        ptrHead    _create_list( hHeap, NodeSize )
+        void       _delete_list( hHeap, ptrHead)
+        ptrNode    _add_node( hHeap, ptrPrev, NodeSize )
+        void       _delete_node( hHeap, ptrPrev, ptrNode )
+        void       _set_node_data( ptrNode, NodeOffset, data )
+        DWORD data _get_node_data( ptrNode, NodeOffset )
+The names of the routines should make their intent apparent; note however that
+NodeSize is assumed to be the size of a LISTSTRUCT structure.
+;====================================================Linked List Implementation
+[section data]
+;Define .next as offset Zero for use in generic functions
+    struc _llist
+     .next:      resd 1                         ;this is basically a constant
+    endstruc
+
+;Macro to ensure that .next is always at offset zero in user-defined lists
+%macro LISTSTRUCT 1
+  struc %1
+  .next:        resd 1
+%endmacro
+%macro END_LISTSTRUCT 0
+  endstruc
+%endmacro
+
+[section code]
+;Note that these assume an LISTSTRUCT base type
+_create_list:
+; ptrHead_create_list( hHeap, NodeSize )
+%define _hHeap ebp + 8
+%define _ListSize ebp + 12
+        ENTER 0 , 0
+        push dword [_ListSize]                  ;size of LISTSTRUCT
+        push dword HEAP_ZERO_MEMORY             ;FLAG for HeapAlloc
+        push dword [_hHeap]                     ;Heap being used
+	call HeapAlloc
+        test eax, eax
+        jz .Error                               ;Alloc failed!
+        mov [eax + _llist.next], dword 0        ;.next pointer = NULL
+.Exit:  LEAVE                                   ;eax = ptrHead
+        ret 8
+.Error: xor eax, eax                            ;error = return NULL
+        jmp .Exit
+
+_delete_list:
+; _delete_list( hHeap, ptrHead)
+%define _hHeap ebp + 8
+%define _ptrHead ebp + 12
+        ENTER 0, 0
+        push eax
+        push ebx                                ;save registers
+        mov eax, [_ptrHead]                     ;eax = addr of list head node
+.DelNode:
+        mov ebx, [eax + _llist.next]            ;ebx = [eax].next
+        push eax                                ;free addr in eax
+        push dword 0                            ;FLAG
+        push  dword [_hHeap]                    ;local heap
+        call HeapFree
+        test ebx, ebx                           ;is [eax].next == NULL?
+        jz .Exit                                ;if yes then done
+        mov eax, ebx                            ;loop until done
+        jmp .DelNode
+.Exit:  pop ebx
+        pop eax
+        LEAVE
+        ret 8
+
+_add_node:
+; ptrNode _add_node( hHeap, ptrPrev, NodeSize )
+%define _hHeap ebp + 8
+%define _ptrPrev ebp + 12
+%define _ListSize ebp + 16
+        ENTER 0, 0
+        push edx                                ;HeapAlloc kills edx!!
+        push ebx
+        push ecx                                ;save registers
+        mov ebx, [_ptrPrev]                     ;ebx = node to add after
+        push dword [_ListSize]                  ;size of node
+        push dword HEAP_ZERO_MEMORY             ;FLAG
+        push dword [_hHeap]                     ;local heap
+	call HeapAlloc
+	test eax, eax
+        jz .Error                               ;alloc failed!
+        mov ecx, eax                            ;note -- eax = ptrNew
+        add ecx, _llist.next                    ;ecx = ptrNew.next
+        mov [ecx], ebx                          ;ptrNew.next = ptrPrev.next
+        add ebx, _llist.next                    ;note -- ebx = ptrPrev
+        mov [ebx], eax                          ;ptrPrev.next = ptrNew
+.Exit:  pop ecx
+        pop ebx
+        pop edx
+        LEAVE
+        ret 12
+.Error: xor eax, eax                            ;return NULL on failure
+        jmp .Exit
+
+_delete_node:
+; _delete_node( hHeap, ptrPrev, ptrNode )
+%define _hHeap ebp + 8
+%define _ptrPrev ebp + 12
+%define _ptrNode ebp + 16
+        ENTER 0, 0
+        push ebx
+        mov eax, [_ptrNode + _llist.next]       ;eax = ptrNode.next
+        mov ebx, [_ptrPrev]                     ;
+        mov [ebx + _llist.next], eax            ;ptrPrev.next = ptrNode.next
+        push dword [_ptrNode]                   ;free ptrNode
+        push dword 0                            ;FLAG
+        push dword [_hHeap]                     ;local heap
+        call HeapFree
+        pop ebx
+        LEAVE
+        ret 12
+
+_set_node_data:
+; _set_node_data( ptrNode, NodeOffset, data )
+%define _ptrNode ebp + 8
+%define _off ebp + 12
+%define _data ebp + 16
+        ENTER 0, 0
+        push eax
+        push ebx
+        mov eax, [_ptrNode]                     ;eax = ptrNode
+        add eax, [ _off ]                       ;eax = ptrNode.offset
+        mov ebx, [_data]                        ;ebd = data
+        mov [eax], ebx                          ;ptrNode.offset = data
+        pop ebx
+        pop eax
+        LEAVE
+        ret 12
+
+_get_node_data:
+; DWORD data _get_node_data( ptrNode, NodeOffset )
+%define _ptrNode ebp + 8
+%define _off ebp + 12
+        ENTER 0, 0
+        mov eax, [_ptrNode]                     ;eax = ptrNode
+        add eax, [_off]                         ;eax = ptrNode.offset
+        mov eax, [eax]                          ;return [ptrNode.offset]
+        LEAVE
+        ret 8
+;===============================================================End Linked List
+The LISTSTRUCT structure is perhaps the most crucial part of this implemen-
+tation. In NASM, a structure is simply a starting address with local labels
+defined as constants which equal the offset of the local label from the start
+of the structure. Thus, in the structure
+   struc MyStruc
+     .MyVar   resd 1
+     .MyVar2  resd 1
+     .MyVar3  resd 1
+     .MyByte  resb 1
+   endstruc
+the constant MyStruc.MyVar has a value of 0 [0 bytes from the start of the
+structure], MyStruc.MyVar2 has a value of 4, MyStruc.MyVar3 has a value of 8,
+MyStruc.MyByte has a value of 12, and MyStruc_size [defined as the offset of
+the "endstruc" directive] has a value of 13. Note that in NASM, the name of a
+structure instance determines the address in memory of the instance [i.e., it
+is a simple code label], while the constants defined in the structure
+definition allow access to offsets from that address.
+
+What this means is that structures in NASM can be defined and never instant-
+iated, allowing the convenient use of the structure constants for dynamic
+memory structures such as classes and linked list nodes. The above code uses
+the LISTSTRUCT macro to force all linked list nodes to have a ".next" member;
+this also allows the use of the constant "_llist.next" in the linked list
+routines to avoid  having to pass the offset of the ".next" member for a node.
+
+The implementation routines should be pretty straight forward. _create_list
+allocates memory from the local heap of the size of one list node [determined
+by the parameter NodeSize passed to _create_list] and returns the address of
+the allocated memory; since this node is assumed to be the list "head", the
+.next member is set to NULL. _delete_list is passed the address of the head
+node of the list; it saves the address in the .next member of the node and
+then frees the memory allocated to the node, repeating this with each .next
+link until the .next member is NULL [indicating an end of list].
+
+_add_node is used to insert a node into an existing list; it is passed the
+address of the node after which the new node is to be inserted. The .next
+member of this node is moved into the .next member of the new node, and
+replaced with the address of the new node. Thus, if before insertion the list
+had the structure
+      .next [Node1] --> .next [Node2] --> .next [NULL]
+      .data NULL        .data Node1       .data Node2
+then it would have the following structure after insertion following Node1:
+      .next [Node1] --> .next [NewNode] --> .next [Node2] --> .next [NULL]
+      .data NULL        .data Node1         .data NewNode     .data Node2
+_del_node does the opposite of _add_node; it moves the .next member of the
+node to be deleted into the .next member of the preceding node, then frees the
+specified node.
+
+Note that both _del_node and _add_node are designed to be as generic as
+possible and make no assumptions regarding the linked list structure; thus in
+a double linked list of the format
+     struc DLLIST
+      .next
+      .prev
+      .data
+     endstruc
+one could front-end the Delete function as follows:
+DelNode:
+        push dword eax                   ;eax = Node to delete
+        push dword [eax + DLLIST.prev]
+        push hHeap
+        call _del_node
+        ret 8
+The other linked list routines can be provided with similar front-ends to take
+care of common heap handles, list sizes, and member assignments.
+
+Both the _set_node_data and the _get_node_data routines are basic pointer
+manipulations added for code clarity. Each could be rewritten inline; for
+example, the _get_node_data routine can be implemented as
+        add ebx, offset
+        mov eax, [ebx]
+assuming ebx holds the node to be accessed and "offset" is the offset [or
+constant] of the node member to be accessed.
+
+Below is a simple program which makes a four-node linked list of the format
+        .next Node1 --> .next Node2 --> .next Node3 --> .next NULL
+        .prev NULL  <-- .prev Head  <-- .prev Node1 <-- .prev Node2
+        .data NULL      .data 'node1'   .data 'node2'   .data 'node3'
+Note the use of the NewNode routine, which provides a front-end to _add_node
+which sets the .prev member for the new node. One brief caveat, the example
+does not delete the list, as the Win32 heap is deallocated on program
+termination; neither is there any substantial error checking in the sample.
+
+;=======================================================Linked List Application
+[section data]
+hHeap    dd 0
+ptrHead	 dd 0
+STRING strData1, 'node 1',0Dh,0Ah
+STRING strData2, 'node 2',0Dh,0Ah
+STRING strData3, 'node 3',0Dh,0Ah
+STRING strStart, 'Creating List',0Dh,0Ah
+STRING strDone, 'Finished!',0Dh,0AH,'Printing Data...',0Dh,0Ah
+STRING strErr, 'Error!',0Dh, 0AH
+
+LISTSTRUCT llist
+.prev   resd 0
+.data   resd 0
+END_LISTSTRUCT
+
+[section code]
+Error:
+        push dword strErr.length
+        push dword strErr
+	call puts
+        jmp Exit
+
+..start:
+	call GetProcessHeap
+        mov [hHeap], eax
+        call GetConsole
+
+        push dword strStart.length
+        push dword strStart
+	call puts
+
+CreateList:
+        push dword llist_size
+        push dword [hHeap]
+        call _create_list
+        test eax, eax
+        jz Error
+        mov [ptrHead], eax
+        push dword 0
+        push dword llist.data
+        push eax
+        call _set_node_data             ;set ptrHead.data to NULL
+        push dword 0
+        push dword llist.prev
+        push eax
+        call _set_node_data             ;set ptrHead.prev to NULL
+
+        call NewNode                    ;create Node1
+        test eax, eax
+        jz ListDone
+        push dword strData1
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node1.data to 'node1'
+
+        call NewNode                   ;create Node2
+        test eax, eax
+        jz ListDone
+        push dword strData2
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node2.data to 'node2'
+
+        call NewNode                   ;create Node3
+        test eax, eax
+        jz ListDone
+        push dword strData3
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node3.data to 'node3'
+
+ListDone:
+        push dword strDone.length
+        push dword strDone
+        call puts
+
+        mov ebx, [ptrHead]
+PrintList:
+        push dword _llist.next
+        push ebx
+        call _get_node_data             ;could have been mov eax,[ebx]
+
+        test eax, eax                   ;if ptrCurrent.next == NULL exit
+        jz Exit                         ; [end of list]
+        mov ebx, eax                    ;save ptrNode
+        push dword strData1.length      ;push length for call to puts
+        push dword llist.data
+        push ebx
+        call _get_node_data             ;get ptrNode.data
+        push dword eax                  ;push string for call to puts
+        call puts
+        jmp PrintList                   ;loop
+
+Exit:
+	push dword 0
+        call ExitProcess
+
+NewNode:
+        ENTER 0, 0
+        push edx
+        mov edx, eax                    ;save previous node
+        push dword llist_size
+        push dword eax
+        push dword [hHeap]
+        call _add_node
+        test eax, eax
+        jz .Done
+        push dword eax
+        push dword llist.next
+        push dword edx
+        call _set_node_data             ;set ptrPrev.next to ptrNew
+        push edx
+        push dword llist.prev
+        push eax
+        call _set_node_data             ;set ptrNew.prev to ptrPrev
+        push dword 0
+        push dword llist.next
+        push eax
+        call _set_node_data             ;set PtrNew.next to  NULL
+.Done   pop edx
+        LEAVE                           ;eax is still set to ptrNew
+        ret
+;==========================================================================EOF
+As mentioned earlier, this is a generic implementation of dynamic structures
+designed with linked lists in mind. The macros and routines may be included in
+a header file such as llist.h and used to automate the creation of dynamic
+memory structures in future projects. In addition, further macros and routines
+can be added to provide specific implementations of Single Linked Lists,
+Double Linked Lists, Circular Lists, Stacks, Queues, and Deques.

@@ -1,0 +1,184 @@
+																						 Using ioctl()
+																				         by mammon_
+		
+
+One of the most famous Unix maxims reads 'everything is a file'; directories
+are files, pipes are files, hardware devices are files, even files are files.
+This provided a transparent means or reading and writing hardware or software
+constructs such as modems and sockets; yet the lack of interrupts or device
+driver routines is sometimes confusing for those not used to Unix programming. 
+In linux, handling device parameters through the character and block 'special 
+file' interface is handled through ioctl().
+
+The ioctl() system call takes a file descriptor and a request type as its 
+primary arguments, along with an optional third argument referred to as "argp"
+which contains any arguments that must be passed along with the request. The 
+possible ioctl() requests can be found by poking around in the $INCLUDE/asm and
+$INCLUDE/linux header files, although a somewhat dated list of requests can be 
+viewed by typing 'man ioctl_list'. 
+
+One of the most useful devices to program with ioctl() for the applications 
+programmer will be the console; in linux terms, this consists of the keyboard 
+and display, such that all 63 of the Virtual Consoles can be controlled with 
+ioctl(). This can be useful if one wants to output debugging information to a
+non-visible console, or to transfer STDIN and STDOUT to a newly-allocated 
+console while disabling virtual console switching, effectively tying the user 
+to a single console [e.g., in a walkup workstation]. 
+
+Information on console ioctl requests can be found with 'man console_ioctl'. 
+Bringing up this man page instantly displays the following text:
+       WARNING: If you use  the  following  information  you  are
+       going to burn yourself.
+
+       WARNING:  ioctl's are undocumented Linux internals, liable
+       to be changed without warning.  Use POSIX functions.
+This is ancient asm coderspeak meaning 'you are on the right track, keep going.'
+
+Perusing the listed requests will provide enough information to code that first
+exercise from DOS-ASM 1o1: generating a tone on the PC speaker.
+       KDMKTONE
+       Generate  tone  of  specified length.  The lower 16
+       bits of argp specify the period  in  clock  cycles,
+       and  the  upper  16 bits give the duration in msec.
+       If the duration is zero, the sound is  turned  off.
+       Control  returns  immediately.  For example, argp =
+       (125<<16) + 0x637 would specify the  beep  normally
+       associated  with  a  ctrl-G.   (Thus since 0.99pl1;
+       broken in 2.1.49-50.)
+		 
+This should not be too terribly hard to implement -- a call to open the file 
+descriptor, and a single call to ioctl() to sound the tone. First things first,
+open() is called on /dev/tty to create a handle for the current console:
+#-------------------------------------------------------------------beep.asm
+%define O_RDWR 2					;grep O_RDWR /usr/include/asm/*
+%define KDMKTONE 0x4B30 		;grep KDMKTONE /usr/include/linux/*
+EXTERN open
+GLOBAL main
+
+section .data
+szTTY db '/dev/tty',0
+
+section .text
+main:
+		  push dword O_RDWR
+		  push dword szTTY
+		  call open
+		  add esp, 8
+#--------------------------------------------------------------------BREAK
+
+Next, calculate the frequency and duration of the tone to be played:
+#---------------------------------------------------------------------CONT
+		  mov dx, 666			;duration
+		  shl edx, 16
+		  or dx, 1199			;tone
+#--------------------------------------------------------------------BREAK
+
+Now, normally one might call ioctl as so:
+		  push edx
+		  push dword KDMKTONE
+		  push eax
+		  call ioctl
+		  add esp, 12
+
+However, ioctl is a systemcall, and we can save a bit of time by going
+straight through the syscall gate at 0x80:
+#---------------------------------------------------------------------CONT
+		  mov ebx, eax
+		  mov ecx, KDMKTONE
+		  mov eax, 54				;ioctl func defined in /usr/include/asm/unistd.h
+		  int 0x80
+		  ret
+#----------------------------------------------------------------------EOF
+
+So much for the simple beep. Another ASM 101 favorite is the 'blinking LED'
+trick, where students learn to make the keyboard LEDs blink on and off in any 
+number of psychedelic patterns. A quick tour through the man page shows the 
+requests needed for this sample as well:
+
+       KDGETLED
+       Get state of LEDs.  argp points to a long int.  The
+       lower  three  bits of *argp are set to the state of
+       the LEDs, as follows:
+           LED_CAP       0x04   caps lock led
+           LED_NUM       0x02   num lock led
+           LED_SCR       0x01   scroll lock led
+       KDSETLED
+       Set the LEDs.  The LEDs are set  to  correspond  to
+       the lower three bits of argp.  However, if a higher
+       order bit is set, the LEDs revert to  normal:  dis-
+       playing the state of the keyboard functions of caps
+       lock, num lock, and scroll lock.
+
+The file descriptor must be opened as with the previous example. From there, 
+we must get the current LED state:
+#--------------------------------------------------------------------led.asm
+		 
+%define KDGETLED        0x4B31         ;grep KDGETLED /usr/include/linux/*
+%define KDSETLED        0x4B32         ;grep KDSETLED /usr/include/linux/*
+
+		  xor edx, edx
+		  mov ecx, KDGETLED
+		  mov ebx, eax
+		  mov eax, 54
+		  int 0x80
+#--------------------------------------------------------------------BREAK
+
+Next, all of the LEDs will be turned on and then off 10 times. It is vital 
+to the success of the algorithm that a delay be present between the off and 
+on transitions; otherwise the LEDs will appear to be steadily lit, and that
+is much less of a programming achievement:
+#---------------------------------------------------------------------CONT
+		  mov ecx, 10
+.here:
+		  push ecx						;save counter
+		  or edx, 0x07					;set all of 'em
+		  mov ecx, KDSETLED
+		  mov eax, 54
+		  int 0x80
+
+		  mov ecx, 0xFFFFFF			;delay counter
+.delay:
+		  loop .delay
+
+		  and edx, 0					;turn all of them off
+		  mov ecx, KDSETLED
+		  mov eax, 54
+		  int 0x80
+
+		  mov ecx, 0xFFFFFF			;next delay counter
+.delay2:
+		  loop .delay2
+
+		  pop ecx
+		  loop .here
+
+		  ret
+#----------------------------------------------------------------------EOF
+Blinking the LEDs in succession and achieving hypnotic frequency via ioctl() 
+will be left as an exercise to the reader.
+
+This should provide a quick introduction to using ioctl(). There are many more 
+possibilities available for scan codes, screen painting, and virtual console 
+control; further opportunities for console amusement exist also within the realm 
+of escape-sequence programming. The examples presented here can be compiled with
+the standard
+    nasm -f elf file.asm
+	 gcc -o file file.o
+combination, or by using a Makefile:
+#----------------------------------------------------------------------Makefile
+TARGET =beep					  #TARGET is the variable storing the base filename 
+
+ASM = nasm                   #ASM contains the name of the assembler
+ASMFILE = $(TARGET).asm      #ASMFILE contains the full name of the source file
+OBJFILE = $(TARGET).o        #OBJFILE contains the full name of the object file
+LINKER = gcc                 #LINKER contains the full name of the linker
+LIBS =                       #LIBS contains any library flags
+LIBDIR =                     #LIBDIR contains any library location flags
+
+all:                         #the 'all:' section applies to all targets
+	$(ASM) -o $(OBJFILE) -f elf $(ASMFILE)
+	$(LINKER) -o $(TARGET) $(OBJFILE) $(LIBDIR) $(LIBS)
+#---------------------------------------------------------------------------EOF
+As with all Makefiles, with the target correctly set the source will be compiled
+and linked simply by typing 'make' in the directory where the Makefile is 
+located.

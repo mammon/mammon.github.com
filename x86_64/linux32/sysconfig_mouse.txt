@@ -1,0 +1,29 @@
+#MOUSETYPE=imps2
+#XMOUSETYPE=IMPS/2
+#FULLNAME="USB|Wheel"
+#XEMU3=no
+#WHEEL=yes
+#device=usbmouse
+#GPM_PARAM="-Rimps2 -M -m /dev/psaux -t ps2 -A30"
+#
+#
+MOUSETYPE=ps2
+XMOUSETYPE=PS/2
+FULLNAME="USB"
+XEMU3=yes
+WHEEL=no
+device=psaux
+GPM_PARAM="-Rimps2 -A60"
+#GPM_PARAM="-M -Rimps2 -m /dev/usbmouse -t imps2 -A60"
+#
+#
+#MOUSEDEVICE="/dev/input/mice"
+#MOUSETYPE="imps2"
+#GPM_PARAM="-m /dev/psaux -t ps2 -Rimps2 -M -m $MOUSEDEVICE -t $MOUSETYPE"
+#GPM_REPEAT=""
+#FULLNAME="Intelli/Wheel mouse (USB)"
+#XMOUSEDEVICE="/dev/input/mice"
+#BUTTONS="0"
+#WHEELS="1"
+#XEMU3="no"
+#XMOUSETYPE="imps/2"

@@ -1,0 +1,4967 @@
+
+
+===============================================================================
+
+Introduction
+------------
+
+IDA is an interactive disassembler - it converts a binary executable program
+into an assembler text, allowing you to examine internals of the executable,
+to reverse engineer it and obtain a source text of the input file.
+
+Its most outstanding feature that makes it unique among other disassemblers
+is interactivity (as the name implies). With IDA you may examine the input
+file and make modifications on the fly, with zero wait time, all your modifi-
+cations are instantly displayed on the screen.
+
+Another unparalleled aspect of IDA is FLIRT - Fast Library Identification and
+Recognition Technology. The disassembler looks at the input file and tries to
+find common procedures and properly names and attaches comments to them,
+working as an intelligent assistant for you. FLIRT technology saves your
+valuable time, taking the routine part of work. It is pretty funny to open a
+window with the list of functions and to look how FLIRT gives meaningful names
+to the functions and attaches comments to them.
+
+Also, IDA is the only disassembler that knows about high level language data
+structures like arrays, enumerations and structs. You may use them to make your
+disassembly clearer and more understandable. The upcoming version of IDA under-
+stands even local variables of procedures.
+
+Some key features:
+
+     *You may patch the input file and get a patched version of the input file
+      (works for some file formats)
+     *There is a built-in C like language. It will help you to automate routine
+      tasks.
+     *IDA is capable to analyse program in the background, in parallel with you.
+     *IDA saves the database with the disassembly on the disk: you may continue
+      the disassembly later.
+     *The autocommenting feature makes the output text clearer.
+     *The standard TVision interface will help you to get learn IDA quickly.
+      The context sensitive help makes it even more easier. You may open windows
+      up to 132x100 characters. Also you can redefine keys and create your own
+      keyboard macros.
+     *A little but important thing as a built-in calculator is a necessity.
+
+And finally, limitations:
+
+     Size of input file is limited: 64 megabytes as distributed. If you change
+     VPAGESIZE parameter in the configuration file, you will be able to disas-
+     semble files up to 256 megabytes. Enough for the moment?
+     Number of segments is really unlimited. The only limitation is on the number
+     of contiguous memory chunks, it also depends on VPAGESIZE parameter.
+     Initially the limit is approximately 340 chunks. Address space available for
+     disassembling is 32 bit. There is a small window at 0xFF000000 which is used
+     by IDA for the internal housekeeping.
+     Number of lines per instruction/data: 500. You can't enter a long comment with
+     length more than 4095 characters for one instruction. Length of a short
+     comment is 255 characters.
+     You may define up to 1024 segment selectors.
+
+Arrays
+------
+IDA knows about arrays and provides you with one dimensional arrays of any
+elements. IDA can create simple arrays automatically.
+
+To create an array, use '*' (asterisk) key. For example, you need to create
+array of double-bytes. The following actions will do the job:
+
+   1.Define the first element of array
+   2.Press '*'
+   3.Specify size of array (and possibly other array attributes) and press
+   the Enter key.
+
+That's all - the array is created.
+To create an array of structures, define a structure first.
+
+Enumeration
+-----------
+IDA is able to represent constants as symbolic names. All what you need to do
+is to create a collection of symbolic names and specify representation of an
+operand as a "enumeration".
+
+For example:
+
+        mov     ax, 4C00h
+        int     21h
+
+may be represented as
+
+        ExitFunc = 4C00h
+        DosFunc  = 21h
+
+        ....
+
+        mov     ax, ExitFunc
+        int     DosFunc
+
+Structures
+----------
+IDA knows about structured types and provides you with means to define and
+use them. You need first to create a structure type and after define instances
+of structured types. Also, you may use pointers to structures.
+
+For example:
+
+        les     bx, [bp+4]
+        mov     ax, [bx+2]
+
+may be represented as
+
+mystr   struc
+name    dw      ?
+pointer dw      ?
+mystr   ends
+
+        ...
+
+        les     bx, [bp+arg0]
+        mov     ax, [bx+mystr.pointer]
+
+
+Autocommenting
+--------------
+Auto-Commenting is a nifty feature that you expect from any debugger. IDA Pro
+is very capable at auto-commenting. Below are a few samples of the auto-
+commenting ability of IDA. And if that isn't enough to make you happy, it is
+possible to define your own comments databases !
+
+Windows, Windows NT, Windows 95 auto-commenting
+
+Here is a small WIN 3.1 VxD fragment, as it is disassembled and commented by IDA
+
+
+
+000004C1                 push    eax
+000004C2                 push    ebx
+000004C3                 push    ecx
+000004C4                 push    edx
+000004C5                 mov     eax, 0
+000004CA                 VxDcall VDD_Msg_ClrScrn
+000004D0                 mov     eax, 8
+000004D5                 VxDcall VDD_Msg_BakColor
+000004DB                 mov     eax, 1Eh
+000004E0                 VxDcall VDD_Msg_ForColor
+000004E6                 mov     eax, 1Ah
+000004EB                 mov     edx, 1
+000004F0                 VxDcall VDD_Msg_SetCursPos
+000004F6                 mov     ebx, large ds:18F2h
+
+
+OS/2 1.3, 2.1 and Warp auto-commenting
+
+Of course, OS2 programs are also auto-commented. Here is a part taken from
+the disassembly of a 32-bit OS/2 program.
+
+
+
+00010949                 call    DosSetExceptionHandler
+0001094E                 mov     eax, offset CPPOS30__matherr
+00010953                 call    CPPOS30__exception_procinit
+00010958                 mov     eax, [esp+20h]
+0001095C                 call    sub_109E4
+00010961                 push    109ACh
+00010966                 push    0FF01h
+0001096B                 call    DosExitList
+00010970                 call    sub_109DC
+00010975                 push    10000h
+0001097A                 mov     ecx, large dword ptr ds:CPPOS30__environ
+00010980                 sub     esp, 0Ch
+00010983                 mov     edx, dword_203AC
+00010989                 mov     eax, dword_203A8
+0001098E                 call    CPPOS30__callback_opt_sys
+00010993                 call    CPPOS30_exit
+00010998                 lea     ecx, [esp+20h]
+0001099C                 push    ecx
+0001099D                 call    DosUnsetExceptionHandler
+000109A2                 add     esp, 2Ch
+
+DOS auto-commenting
+
+DOS Programs are a piece of cake with that level of information.
+
+
+
+seg000:09D2 loc_0_9D2:                              ; CODE XREF: start+8CCj
+seg000:09D2                 mov     al, 0
+seg000:09D4                 mov     dx, 194Fh
+seg000:09D7                 xor     cx, cx
+seg000:09D9                 mov     bh, 7
+seg000:09DB                 mov     ah, 6
+seg000:09DD                 int     10h             ; - VIDEO - SCROLL PAGE UP
+seg000:09DD                                         ; AL = number of lines to scroll window (0 = blank whole window)
+seg000:09DD                                         ; BH = attributes to be used on blanked lines
+seg000:09DD                                         ; CH,CL = row,column of upper left corner of window to scroll
+seg000:09DD                                         ; DH,DL = row,column of lower right corner of window
+seg000:09DF                 xor     dx, dx
+seg000:09E1                 mov     word_0_15F, dx
+seg000:09E5                 mov     ah, 2
+seg000:09E7                 xor     bh, bh
+seg000:09E9                 int     10h             ; - VIDEO - SET CURSOR POSITION
+seg000:09E9                                         ; DH,DL = row, column (0,0 = upper left)
+seg000:09E9                                         ; BH = page number
+seg000:09EB                 mov     di, 546h
+seg000:09EE                 call    off_0_16C
+seg000:09F2                 mov     di, 4B4h
+seg000:09F5                 call    off_0_16C
+seg000:09F9                 mov     di, 54Ah
+seg000:09FC                 call    off_0_16C
+seg000:0A00                 call    off_0_16E
+seg000:0A04                 mov     ax, 4C00h
+seg000:0A07                 int     21h             ; DOS - 2+ - QUIT WITH EXIT CODE (EXIT)
+seg000:0A07                                         ; AL = exit code
+
+
+Input File Types
+-----------------
+EXE
+     MS DOS plain executable file
+
+COM
+     MS DOS .com file
+
+SYS or DRV
+     MS DOS Driver
+
+NE
+     New Executable Format. This format is used in MS Windows 3.x and OS/2 files.
+
+LX
+     Linear Executable Format. This format is used in OS/2 2.x and OS/2 Warp.
+
+LE
+     Linear Executable Format. This format is used in MS Windows VxD files.
+
+PE
+     Portable Executable Format. This format is used in MS Windows 95 and MS Windows NT.
+
+OMF
+     Intel Object Module Format. This format is used in MS DOS, MS Windows 3.x and OS/2 object files.
+
+LIB
+     Library of Object Files. This format is used in MS DOS, MS Windows 3.x and OS/2.
+
+AR
+     Library of Object Files. UNIX, MS Windows95 and MS Windows NT Library files.
+
+COFF
+     Common Object File Format. This format is widely used in UNIX world. For example, SCO UNIX,
+     DGJPP, GNU32 executable and object files have this format.
+
+Intel Hex Object Format
+     This format is used to keep image files for microprocessors. Don't confuse it with OMF!
+
+MOS Technology Hex Object Format
+     This format is used to keep image files for microprocessors.
+
+S-record Format
+     This format is used to keep image files for microprocessors.
+
+Overlayed EXE
+     Borland C overlayed files. Overlayed part of the program is kept together with the non-overlayed part in
+     one executable file.
+
+Borland Pascal Overlays
+     Borland Pascal Overlayed files. Overlays are kept in a separate file.
+
+NLM
+     Novell Netware 3.x, 4.x Loadable Modules. IDA understands compressed modules too.
+
+ZIP
+     Archive files. Of course, IDA doesn't disassemble ZIP files (there is nothing to disassemble), it can just
+     fetch a file from the archive.
+
+JAVA
+     Java classes
+
+BIN
+     Binary. Any unformatted file.
+
+This list of not exhaustive and never will be, there are two reasons why:
+
+   1.New input file formats are constantly added to the list. The upcoming version is likely to support ELF format - a
+     new de-facto standard for UNIX executables. Linux uses ELF format, for example.
+   2.Any user can write a DLL module to load any new format. We already have a module to load Watcom's platform
+     independent executables.
+
+Output File Types
+-----------------
+IDA can create the following files
+
+     ASM (output source code)
+     LST (output source code)
+     MAP (output MAP file for debugging)
+     MS DOS EXE, COM (eventually patched input file)
+     BIN (patched input file)
+     IDC (IDC program to recreate IDA database)
+
+Supported Processors
+--------------------
+List of supported processors
+
+     Intel 8080/85
+     Z80, HD 64180
+     Intel 8086/87
+     Intel 80286/287 real & protected modes
+     Intel 80386/387 real & protected modes
+     Intel 80486/487 real & protected modes
+     Intel Pentium real & protected modes
+     Intel Pentium MMX real & protected modes
+     Intel Pentium Pro real & protected modes
+     Intel 860 XR, 860 XP (alpha!)
+     Intel 8051 series
+     MOS Technologies 6502
+     DEC PDP-11
+     Motorola MC68000
+     Motorola MC68010
+     Motorola MC68020
+     Motorola MC68030
+     Motorola MC68040
+     Motorola CPU32 (68330)
+     Motorola MC68020 with MC68882
+     Motorola MC68020 with MC68851
+     Motorola MC68020 with MC68882 and MC68851
+
+IDA is capable to disassemble Java classes.
+
+Due to modular structure of IDA is it possible to write a module to disassemble files for new processors. The users of
+IDA have created such modules.
+
+
+
+===============================================================================
+                         Section II : FLIRT
+===============================================================================
+FLIRT - Fast Library Identification and Recognition Technology
+
+   1.The goal
+   2.Difficulties
+   3.The idea
+   4.Implementation
+   5.Results
+
+The goal
+
+Disassembling of modern high level language programs requires a lot of time to determine library functions. This time may
+be considered lost because meanwhile we do not receive new knowledge and only facilitate further analysis of the
+program and algorithms containing in the program. It's a pity that such determination is necessary for every new
+disassembled program.
+
+Sometimes of analysis of a program is considerably eased by knowing 'class' of a library function, it helps to sieve out
+uninteresting functions. For example, a function that works with streams in C++ usually has nothing to do with an
+algorithm of a function.
+
+On the other hand every high level language program uses a great quantity of standard library functions and sometimes
+programs contain up to 95% standard functions. For example well-known program "Hello, world!" contains:
+
+        library functions       -       58
+        function main()         -       1
+
+Naturally it's a trivial program but usually the library functions constitute about a half (50%) of the program code. It's the
+reason a user of a disassembler is forced to waste more than a half of time to determine the library functions. The matter
+is that a process of analysis of the program resembles a process of solution of crossword puzzles: the more letters we
+know the easier is to guess the next word and in disassembling the more comments and meaningful names in a function
+are the quicker we understand what this function is. Wide usage of the standard libraries such as OWL, MFC and others
+increase contribution of the standard functions in the program yet more. A middle sized program for Win32, written on
+C++ using modern technologies (e.g., AppExpert and similar wizards) calls 1000-2500 library functions.
+
+To enable a lot :) of an IDA user we tried to create an algorithm of recognition of the standard library functions. To
+achieve a real usable result we agreed about the following:
+
+     we consider the C(C++) language programs
+     we have no such goal to recognize 100% of functions. It's impossible theoretically and moreover a recognition of
+     certain functions may lead to undesirable consequences. For example it's unreasonable to recognize function:
+
+
+                     push    bp
+                     mov     bp, sp
+                     xor     ax, ax
+                     pop     bp
+                     ret
+
+     because a probability of wrong recognition is very high (it's curiously but in modern C++ libraries there are a lot of
+     such functions that are absolutely identical byte- to-byte but have different names).
+     we recognize and give the names to functions only (code segment), ignoring the data (data segment).
+     if we recognize a function successfully we assign a name and/or comment the function. We have no aim to get an
+     information about the types of function arguments, about the behavior of the function and what it does.
+     a percentage of wrong recognized functions must be minimal. We consider a wrong recognized function is worse
+     than not recognized one so an ideal situation is when there are no wrong recognized functions at all.
+     the recognition of the functions must require a minimum of processor and memory resources.
+     an algorithm must be platform-independent, i.e. it must work with the programs compiled for any processor.
+     when it's possible we search for and locate a main() function and position the cursor at it, because a startup-code
+     taken from a library is not interesting.
+
+Difficulties
+
+The main difficulty is the quantity of the functions and memory they occupy. If we calculate memory occupied by all
+_versions_ of all libraries produced by all compiler _vendors_ for memory _models_, we easily achieve tens of
+gigabytes. And if we take into account OWL, MFC, MFC and similar libraries, then the required disk space is as high
+as the sky. For the time being users of personal systems cannot afford to set aside so huge disk space for a simple utility
+disassembler, so we need to design some algorithm to diminish volume of information required to recognize standard
+library functions. Also, quantity of functions dictates the necessity of efficient recognition algorithm. Simple brute-force
+search is not acceptable.
+
+The next difficulty is the presence of _variant_ bytes in the program. The variant bytes are non-constant bytes in the
+program. Some bytes of a program corrected (fixed up) at the loading time. Some others become constants at linking
+time. Mainly the variant bytes are originate from references to external names. In this case the compiler does not know
+addresses of called functions and leaves these bytes equal to zeroes and writes so called "fixup information" to the output
+file (sometimes this table is called "relocation table", "relocation information"). For example, an excerpt of an assembler
+program listing
+
+B8 0000s                               mov     ax, seg _OVRGROUP_
+9A 00000000se                          call    _farmalloc
+26: 3B 1E 0000e                        cmp     bx, word ptr es:__ovrbuffer
+
+contains variant bytes. The linker will try to resolve external references, replacing zeroes with addresses of called
+functions, but some bytes are left untouched, for example references to dynamic libraries and bytes containing absolute
+address in the program. These references can be resolved only at the loading time. This is done by a special part of an
+operating system - system loader. It will try to resolve all external references and replace zeroes with absolute addresses.
+If even a system loader cannot resolve an external reference (i.e. the program refers to an unknown DLL or name), the
+program will not run.
+
+Also, some linkers count themselves authorized to change bytes without fixup information (non-variant bytes). They
+modify object code, making it faster. For example:
+
+
+                0000: 9A........        call    far ptr xxx
+
+is replaced by
+
+                0000: 90                nop
+                0001: 0E                push    cs
+                0002: E8....            call    near ptr xxx
+
+Naturally, the program will run as it ran before, without this modification, but the replacement made by the linker
+effectively prohibits byte-to-byte comparison bytes of the program with templates.
+
+The presence of variant bytes in a program makes it impossible to use checksums for recognition. If functions would not
+contain variant bytes, it would be enough to calculate checksum (CRC, for example) of first N bytes and select a group
+of functions by a hash-table. It would greatly decrease the size of information required for recognition: name of a
+function, its length and checksum would suffice.
+
+I have already told that it is impossible to recognize all standard library functions. There are functions that are identical
+byte-to-byte, doing the same but they are called differently. For example, functions strcmp() and fstrcmp() are identical
+in large memory models. On the one hand, we do not want to throw away these functions because they are not trivial
+and recognition would help the user, but we cannot distinguish them.
+
+Another kind of difficulty for recognition are functions like
+
+                call    xxx
+                ret
+
+or
+
+                jmp     xxx
+
+At first sight these functions are trivial and uninteresting, but you will be surprised if you learn how many such functions
+exist in the libraries. For example, libraries from BCC OS/2 v1.5 contain 20 such functions including functions like
+read(), write(), etc. Plain comparison of these functions gives nothing. In any library we can find dozens of functions
+distinguishable only by the functions they call.
+
+Generally, all short functions (consisting merely of 2-3 instructions) are difficult to recognize - probability of wrong
+recognition is very high. At the same time leaving them unrecognized is undesirable - for example, if we do not recognize
+tolower() function, we may fail to recognize strlwr() which refers to tolower().
+
+The last, but very important difficulty is copyright issues. We cannot distribute standard libraries so we should use
+checksums, etc.
+
+The idea
+
+The idea is simple: let's create a database of all functions from all libraries of all vendors and check each byte of the
+program being disassembled whether a standard function can be started at it.
+
+All information required for the recognition is kept in a signature file. Each function is represented by a pattern. Pattern
+is first 32 bytes of a function with all variant bytes marked. For example:
+
+558BEC0EFF7604..........59595DC3558BEC0EFF7604..........59595DC3 _registerbgidriver
+558BEC1E078A66048A460E8B5E108B4E0AD1E9D1E980E1C0024E0C8A6E0A8A76 _biosdisk
+558BEC1EB41AC55604CD211F5DC3.................................... _setdta
+558BEC1EB42FCD210653B41A8B5606CD21B44E8B4E088B5604CD219C5993B41A _findfirst
+
+here variant bytes are displayed as ".."
+
+We see that many functions start with the same byte. Therefore we build the following tree:
+
+558BEC
+      0EFF7604..........59595DC3558BEC0EFF7604..........59595DC3 _registerbgidriver
+      1E
+        078A66048A460E8B5E108B4E0AD1E9D1E980E1C0024E0C8A6E0A8A76 _biosdisk
+      B4
+        1AC55604CD211F5DC3                                       _setdta
+        2FCD210653B41A8B5606CD21B44E8B4E088B5604CD219C5993B41A   _findfirst
+
+(This tree is built from the above patterns). In the nodes of the tree we keep sequences of bytes. In this example root of
+the tree contains sequence "558BEC", three subtrees stem from the root, starting with bytes 0E, 1E, B4 accordingly.
+Subtree starting with B4 in its turn refers to two subtree. Each subtree ends with leaves. In a leaf we keep information
+about a function (only name of a function is depicted here).
+
+Building the tree allows to achieve two goals at the same time:
+
+     we decrease memory requirements by keeping bytes that are common for more than one function, in tree nodes.
+     Also, the more function with the same starting sequence the more memory we save.
+     we can use the tree for fast pattern matching - the number of comparisons required to match place of a program
+     with all functions in a signature file depends logarithmically on the number of functions.
+
+It would be at least irresponsible to take a decision based on the first 32 bytes of a function. Besides in real-world
+libraries one can find lots of functions starting with the same bytes:
+
+558BEC
+      56
+        1E
+          B8....8ED8
+                   33C050FF7608FF7606..........83C406
+                                                      8BF083FEFF
+                    0. _chmod   (20 5F33)
+                    1. _access  (18 9A62)
+
+To all appearance, these functions differ somewhere after the first 32 bytes and have the same first 32 bytes. That's the
+reason why they are attached to one leaf of the tree. In this case we calculate CRC16 (16 bit cyclic redundancy
+checksum) of bytes starting from position 33 till the first variant byte and save it in the signature file. We need to save the
+number of bytes used to calculate CRC16 because it differs from function to function. In the above example CRC16 is
+calculated using 20 bytes for function _chmod (bytes 33..52). For function _access we have used 18 bytes.
+
+There is a possibility that the first variant byte will be at 33d position and length of sequence of bytes to calculate CRC16
+may be equal to zero. However, practice shows that this happens rarely and the algorithm gives very low number of false
+recognitions, but it happens sometimes.
+
+There are functions having the same pattern and the same CRC16 (possibly because of too few bytes used to calculate
+CRC16). Example:
+
+... (partial tree is shown here)
+05B8FFFFEB278A4606B4008BD8B8....8EC0
+          0. _tolower (03 41CB) (000C:00)
+          1. _toupper (03 41CB) (000C:FF)
+
+We were unlucky: only 3 bytes were used to calculate CRC16 and is was the same for both functions. In this case we
+try to find a position at which all functions in a leaf have different bytes. (in our example this position is 32+3+000C)
+
+Even this method does not allow to recognize all function. Here is an example:
+
+... (partial tree is shown here)
+                0D8A049850E8....83C402880446803C0075EE8BC7:
+                  0. _strupr (04 D19F) (REF 0011: _toupper)
+                  1. _strlwr (04 D19F) (REF 0011: _tolower)
+
+These functions are identical at non-variant bytes and differ only by the functions they call. In this example the only way
+to distinguish functions is to examine name referenced from an instruction at offset 11.
+
+The last method has a disadvantage: proper recognition of functions _strupr() and _strlwr() depends on recognition of
+functions _toupper() and _tolower(). It means that in the case of failure because of the absence of reference to
+_toupper() or _tolower() we should defer recognition and repeat it later, after finding _tolower() or _toupper(). This
+means the our algorithm is not one-pass algorithm anymore, but luckily the second and subsequent passes are applied
+only to a few locations in the program.
+
+At last, functions may be identical at non-variant bytes, refer to the same names but be called differently. That is,
+functions have the same implementations and different names. Surprisingly, this is a frequent situation in standard libraries,
+especially in C++ libraries.
+
+This situation is called a collision (collision occurs when functions attached to a leaf can not be distinguished from each
+other by using the explained above methods). A classical example is:
+
+558BEC1EB441C55606CD211F720433C0EB0450E8....5DCB................
+   0. _remove (00 0000)
+   1. _unlink (00 0000)
+
+or
+
+8BDC36834702FAE9....8BDC36834702F6E9............................
+   0. @iostream@$vsn            (00 0000)
+   1. @iostream_withassign@$vsn (00 0000)
+
+These examples appeal to an artificial intelligence :) We made our goal to be an efficient and fast algorithm and therefore
+we leave artificial intelligence for the future development of the algorithm.
+
+Implementation
+
+Today the implementation coincides practically the algorithm described above. We consider only the C and C++
+language programs. It will be possible to write the preprocessors for other libraries in future.
+
+For every vendor a separate signature file is created, such decision allows to decrease a probability of collisions and not
+to take into account other vendor functions.
+
+Special signature files applied to the entry point of a program are created to determine a compiler used for the program.
+They also determine a signature file for that vendor/compiler. These special signature files are called startup-signatures.
+Our algorithm successfully discerns the startup modules of all popular vendors. It's not necessary to discern the models
+(small, compact, medium, large, huge) of the libraries and versions of the compilers because all functions are stored in
+one signature file so it's enough to determine right signature file and our algorithm takes everything upon.
+
+There are special startup-signatures for every format of disassembled file. The signature exe.sig is used for programs
+running under MS DOS, lx.sig or ne.sig - for OS/2, etc.
+
+To decrease a probability of false recognition of short functions it's sine qua non to remember a reference to an external
+name if such a reference exists. It may decrease in some degree the probability of the recognition of the function in
+general but such approach is justified. It's better not to recognize than to recognize wrongly. The too short functions (the
+length less than 4 bytes) not containing the references to external names do not participate in creation of a signature file
+and such functions are not recognized.
+
+For the functions from <ctype.h> are short and refer to the array of types of the symbols, we decided to consider the
+references to this array as an exception so that CRC16 of the array of the types of the symbols is stored in the signature
+file.
+
+The collisions are solved by a human (creator) of a signature file. He chooses the functions to be included in the signature
+file and the functions that are unnecessary. Note that the process of this choice is very easy and resolves itself into editing
+of a text file.
+
+The patterns of the functions are stored in a signature file not in their original form (i.e., they do not look as it was
+demonstrated in the examples). Instead of the patterns the arrays of bits determining the changing bytes and the values of
+the individual bytes are stored. Accordingly the signature file contains nary byte from the libraries excepting names of the
+functions.
+
+A creation of a signature file involves in 2 stages: a preprocessor of the libraries and a formation of a signature file. At the
+first stage the program 'parselib' is used. It preprocesses *.obj and *.lib files and produces a pattern-file. The pattern-file
+contains patterns of the functions, their names, CRC16 and all other information that is necessary to create the signature
+file. At the second stage an utility 'sigmake' makes the signature file from the pattern-file.
+
+This division into 2 stages allows sigmake utility to be independent from a format of an input file. It will be possible to
+write other preprocessors for files differing from *.obj and *.lib in future.
+
+We decided to compress (using InfoZip algorithm) the created signature files to decrease the disk space necessary for
+their storage.
+
+For the sake of convenience of a user we tried to recognize the function main() in a program. An algorithm for finding this
+function is different for the different compilers and for the different types of the programs
+(DOS/OS2/WinDows/GUI/Console...), so this algorithm is written in a signature file as a text string. Unfortunately
+creation of this algorithm is not automated and is laborious.
+
+Results
+
+As it turned out the signature files are compressible well; they may be compressed more than 2 times. The reason is that
+about 95% of a signature file are function names. (Example: signature file for MFC 2.x before compression was 2.5Mb,
+after - 700Kb. It contains 33634 function names; average is 21 byte for a function). Generally, ratio of a library size to a
+signature size is from 100 to 500.
+
+Percentage of properly recognized functions is very high. In the "Hello, world" program our algorithm recognized all
+library functions except one function which consists of one instruction:
+
+        jmp     off_1234
+
+The most pleasing is that there were no false recognitions. However it does not mean that they will not appear in the
+future. It should be noted that the algorithm works only with functions. Sometimes data is located in code segment and
+therefore we need to mark some names as "data names", not as "function names". It is not easy to examine all names in a
+modern large library and mark all data names. However, there is possibility to mark a name in a signature file as a data
+name, but the process of marking data names is left for the future.
+
+
+================================================================================
+                          SECTION III : IDC COMMANDS
+================================================================================
+
+IDC language is a C-like language. It has the same lexical tokens as C: character set, constants, identifiers,
+keywords, etc. All variables in IDC are automatic local variables. A variable can contain:
+
+     a 32-bit signed long integer
+     a character string (max 255 characters long)
+     a floating point number (extra precision, up to 25 decimal digits)
+
+A program in IDC consists of function declarations. A function in IDC returns a value. There are 2 kinds of functions:
+
+     built-in functions
+     user-defined functions
+
+Here is how a function is declared :
+
+  static func(arg1,arg2,arg3) {
+    ...
+  }
+
+where arg1,arg2,arg3 are the function parameters,'func' is the function name. It is not nesessary to specify the types of
+the parameters because any variable can contain a string or a number.
+
+Here is how a variable is declared :
+
+  auto var;
+
+This declaration introduces a variable named 'var'. It can contain a string or a number. All C and C++ keywords are
+reserved and cannot be used as a variable name. The scope of the variable is the function where it is defined.
+
+IDC supports the following statements:
+
+     if (expression) statement
+
+     if (expression) statement else statement
+
+     for ( expr1; expr2; expr3 ) statement
+
+     while (expression) statement
+
+     do statement while (expression);
+
+     break;
+
+     continue;
+
+     return ;
+
+     return;
+
+     the same as 'return 0;'
+     { statements... }
+
+     expression;
+
+     (expression-statement)
+     ;
+
+     (empty statement)
+
+In expressions you may use almost all C operations except:
+
+     ++,--
+     complex assigment operations as '+='
+     , (comma operation)
+
+You may use the following construct in the expressions:
+
+  [ s, o ]
+
+Suppose one wants to calculate the linear (effective) address for segment 's' offset 'o'. Here is how it is done :
+
+  (s << 4) + o
+
+If a string constant is specified as 's', it denotes a segment by its name.
+
+There are 3 type conversion operations:
+
+     long( expr )
+     floating point number is truncated during conversion
+     char( expr )
+     float( expr )
+
+However, all type conversions are made automatically:
+
+addition
+     if both operands are strings, string addition is performed (strings are concatenated);
+     if floating point operand exists, both operands are converted to floats; otherwise both operands are converted to
+     longs;
+subtraction/multiplication/division
+     if floating point operand exists, both operands are converted to floats; otherwise both operands are converted to
+     longs;
+comparisions (==,!=, etc)
+     if both operands are strings, string comparision is performed; if floating point operand exists, both operands are
+     converted to floats; otherwise both operands are converted to longs;
+all other operations
+     operand(s) are converted to longs;
+
+Built-in functions
+------------------
+Alphabetical list of IDC functions :
+
+AddCodeXref
+AddConst
+AddEntryPoint
+AddEnum
+AddHotkey
+AddSourceFile
+AddStruc
+AddStrucMember
+AltOp
+AnalyseArea
+Analysis
+AskAddr
+AskFile
+AskIdent
+AskSeg
+AskSelector
+AskStr
+AskYN
+AutoMark
+AutoMark2
+AutoShow
+Batch
+BeginEA
+Byte
+ChooseFunction
+CmtIndent
+Comment
+Comments
+Compile
+CreateArray
+DelArrayElement
+DelCodeXref
+DelConst
+DelEnum
+DelExtLnA
+DelExtLnB
+DelFixup
+DelFunction
+DelHotkey
+DelLineNumber
+DelSelector
+DelSourceFile
+DelStruc
+DelStrucMember
+DeleteAll
+DeleteArray
+Dfirst
+DfirstB
+Direction
+Dnext
+DnextB
+Dword
+Exit
+ExtLinA
+ExtLinB
+Fatal
+FindBinary
+FindCode
+FindData
+FindExplored
+FindFuncEnd
+FindImmediate
+FindProc
+FindSelector
+FindText
+FindUnexplored
+FindVoid
+FirstSeg
+GetArrayElement
+GetArrayId
+GetCharPrm
+GetConst
+GetConstByName
+GetConstCmt
+GetConstEnum
+GetConstName
+GetConstValue
+GetEntryOrdinal
+GetEntryPoint
+GetEntryPointQty
+GetEnum
+GetEnumCmt
+GetEnumFlag
+GetEnumIdx
+GetEnumName
+GetEnumQty
+GetEnumSize
+GetFirstConst
+GetFirstIndex
+GetFirstMember
+GetFirstStrucIdx
+GetFixupTgtDispl
+GetFixupTgtOff
+GetFixupTgtSel
+GetFixupTgtType
+GetFlags
+GetFrame
+GetFrameArgsSize
+GetFrameLvarSize
+GetFrameRegsSize
+GetFrameSize
+GetFuncOffset
+GetFunctionFlags
+GetFunctionName
+GetLastConst
+GetLastIndex
+GetLastMember
+GetLastStrucIdx
+GetLineNumber
+GetLongPrm
+GetMarkComment
+GetMarkedPos
+GetMemberComment
+GetMemberFlag
+GetMemberName
+GetMemberOffset
+GetMemberQty
+GetMemberSize
+GetMemberStrId
+GetMnem
+GetNextConst
+GetNextFixupEA
+GetNextIndex
+GetNextStrucIdx
+GetOpType
+GetOperandValue
+GetOpnd
+GetPrevConst
+GetPrevFixupEA
+GetPrevIndex
+GetPrevStrucIdx
+GetReg
+GetSegmentAttr
+GetShortPrm
+GetSourceFile
+GetSpDiff
+GetSpd
+GetStrucComment
+GetStrucId
+GetStrucIdByName
+GetStrucIdx
+GetStrucName
+GetStrucNextOff
+GetStrucPrevOff
+GetStrucQty
+GetStrucSize
+GetTrueName
+GetnEnum
+HighVoids
+Indent
+ItemEnd
+ItemSize
+JmpTable
+Jump
+LineA
+LineB
+LocByName
+LowVoids
+MK_FP
+MakeArray
+MakeByte
+MakeCode
+MakeComm
+MakeDouble
+MakeDword
+MakeFloat
+MakeFrame
+MakeFunction
+MakeLocal
+MakeName
+MakePackReal
+MakeQword
+MakeRptCmt
+MakeStr
+MakeStruct
+MakeTbyte
+MakeUnkn
+MakeVar
+MakeWord
+MarkPosition
+MaxEA
+Message
+MinEA
+Name
+NextAddr
+NextFunction
+NextHead
+NextNotTail
+NextSeg
+OpAlt
+OpBinary
+OpChr
+OpDecimal
+OpEnum
+OpHex
+OpNumber
+OpOctal
+OpOff
+OpSeg
+OpSign
+OpStkvar
+OpStroff
+PatchByte
+PatchDword
+PatchWord
+PrevAddr
+PrevFunction
+PrevHead
+PrevNotTail
+RenameArray
+RenameEntryPoint
+Rfirst
+Rfirst0
+RfirstB
+RfirstB0
+Rnext
+Rnext0
+RnextB
+RnextB0
+RptCmt
+ScreenEA
+SegAddrng
+SegAlign
+SegBounds
+SegByBase
+SegByName
+SegClass
+SegComb
+SegCreate
+SegDefReg
+SegDelete
+SegEnd
+SegName
+SegRename
+SegStart
+SelEnd
+SelStart
+SetArrayLong
+SetArrayString
+SetCharPrm
+SetConstCmt
+SetConstName
+SetEnumCmt
+SetEnumFlag
+SetEnumIdx
+SetEnumName
+SetFixup
+SetFlags
+SetFunctionEnd
+SetFunctionFlags
+SetLineNumber
+SetLongPrm
+SetMemberComment
+SetMemberName
+SetMemberType
+SetPrcsr
+SetReg
+SetSegmentType
+SetSelector
+SetShortPrm
+SetSpDiff
+SetStrucComment
+SetStrucIdx
+SetStrucName
+StringStp
+Tabs
+TailDepth
+Voids
+Wait
+Warning
+Word
+WriteExe
+WriteMap
+WriteTxt
+XrefShow
+XrefType
+add_dref
+atoa
+atol
+byteValue
+del_dref
+fclose
+fgetc
+filelength
+fopen
+form
+fprintf
+fputc
+fseek
+ftell
+hasName
+hasValue
+isBin0
+isBin1
+isChar0
+isChar1
+isCode
+isData
+isDec0
+isDec1
+isDefArg0
+isDefArg1
+isEnum0
+isEnum1
+isExtra
+isFlow
+isFop0
+isFop1
+isHead
+isHex0
+isHex1
+isLoaded
+isOct0
+isOct1
+isOff0
+isOff1
+isRef
+isSeg0
+isSeg1
+isStkvar0
+isStkvar1
+isStroff0
+isStroff1
+isTail
+isUnknown
+isVar
+loadfile
+ltoa
+readlong
+readshort
+readstr
+savefile
+set_start_cs
+set_start_ip
+strlen
+strstr
+substr
+writelong
+writeshort
+writestr
+xtol
+
+Function Definitions:
+
+hasValue
+
+
+// Do flags contain byte value? (i.e. has the byte a value?)
+// if not, the byte is uninitialized.
+
+#define hasValue(F)     ((F & FF_IVL) != 0)     // any defined value?
+
+
+byteValue
+
+
+// Get byte value from flags
+// Get value of byte provided that the byte is initialized.
+// This macro works ok only for 8-bit byte machines.
+
+#define byteValue(F)    (F & MS_VAL)    // quick replacement for Byte()
+
+
+isLoaded
+
+
+// Is the byte initialized?
+
+#define isLoaded(ea)    hasValue(GetFlags(ea))  // any defined value?
+
+
+isCode
+
+
+#define MS_CLS  0x00000600L             // Mask for typing
+#define FF_CODE 0x00000600L             // Code ?
+#define FF_DATA 0x00000400L             // Data ?
+#define FF_TAIL 0x00000200L             // Tail ?
+#define FF_UNK  0x00000000L             // Unknown ?
+
+
+#define isCode(F)       ((F & MS_CLS) == FF_CODE) // is code byte?
+#define isData(F)       ((F & MS_CLS) == FF_DATA) // is data byte?
+#define isTail(F)       ((F & MS_CLS) == FF_TAIL) // is tail byte?
+#define isUnknown(F)    ((F & MS_CLS) == FF_UNK)  // is unexplored byte?
+#define isHead(F)       ((F & FF_DATA) != 0)      // is start of code/data?
+
+
+CommonBits
+
+//
+//      Common bits
+//
+
+#define MS_COMM 0x000FF800L             // Mask of common bits
+#define FF_COMM 0x00000800L             // Has comment?
+#define FF_REF  0x00001000L             // has references?
+#define FF_LINE 0x00002000L             // Has next or prev cmt lines ?
+#define FF_NAME 0x00004000L             // Has user-defined name ?
+#define FF_LABL 0x00008000L             // Has dummy name?
+#define FF_FLOW 0x00010000L             // Exec flow from prev instruction?
+#define FF_VAR  0x00080000L             // Is byte variable ?
+
+#define isFlow  (F)     ((F & FF_FLOW) != 0)
+#define isVar   (F)     ((F & FF_VAR ) != 0)
+#define isExtra (F)     ((F & FF_LINE) != 0)
+#define isRef   (F)     ((F & FF_REF)  != 0)
+#define hasName (F)     ((F & FF_NAME) != 0)
+
+
+OpTypes
+
+
+#define MS_0TYPE 0x00F00000L            // Mask for 1st arg typing
+#define FF_0VOID 0x00000000L            // Void (unknown)?
+#define FF_0NUMH 0x00100000L            // Hexadecimal number?
+#define FF_0NUMD 0x00200000L            // Decimal number?
+#define FF_0CHAR 0x00300000L            // Char ('x')?
+#define FF_0SEG  0x00400000L            // Segment?
+#define FF_0OFF  0x00500000L            // Offset?
+#define FF_0NUMB 0x00600000L            // Binary number?
+#define FF_0NUMO 0x00700000L            // Octal number?
+#define FF_0ENUM 0x00800000L            // Enumeration?
+#define FF_0FOP  0x00900000L            // Forced operand?
+#define FF_0STRO 0x00A00000L            // Struct offset?
+
+#define MS_1TYPE 0x0F000000L            // Mask for 2nd arg typing
+#define FF_1VOID 0x00000000L            // Void (unknown)?
+#define FF_1NUMH 0x01000000L            // Hexadecimal number?
+#define FF_1NUMD 0x02000000L            // Decimal number?
+#define FF_1CHAR 0x03000000L            // Char ('x')?
+#define FF_1SEG  0x04000000L            // Segment?
+#define FF_1OFF  0x05000000L            // Offset?
+#define FF_1NUMB 0x06000000L            // Binary number?
+#define FF_1NUMO 0x07000000L            // Octal number?
+#define FF_1ENUM 0x08000000L            // Enumeration?
+#define FF_1FOP  0x09000000L            // Forced operand?
+#define FF_1STRO 0x0A000000L            // Struct offset?
+
+// The following macros answer questions like
+//   'is the 1st (or 2nd) operand of instruction or data of the given type'?
+// Please note that data items use only the 1st operand type (is...0)
+
+#define isDefArg0(F)    ((F & MS_0TYPE) != FF_0VOID)
+#define isDefArg1(F)    ((F & MS_1TYPE) != FF_1VOID)
+#define isDec0(F)       ((F & MS_0TYPE) == FF_0NUMD)
+#define isDec1(F)       ((F & MS_1TYPE) == FF_1NUMD)
+#define isHex0(F)       ((F & MS_0TYPE) == FF_0NUMH)
+#define isHex1(F)       ((F & MS_1TYPE) == FF_1NUMH)
+#define isOct0(F)       ((F & MS_0TYPE) == FF_0NUMO)
+#define isOct1(F)       ((F & MS_1TYPE) == FF_1NUMO)
+#define isBin0(F)       ((F & MS_0TYPE) == FF_0NUMB)
+#define isBin1(F)       ((F & MS_1TYPE) == FF_1NUMB)
+#define isOff0(F)       ((F & MS_0TYPE) == FF_0OFF)
+#define isOff1(F)       ((F & MS_1TYPE) == FF_1OFF)
+#define isChar0(F)      ((F & MS_0TYPE) == FF_0CHAR)
+#define isChar1(F)      ((F & MS_1TYPE) == FF_1CHAR)
+#define isSeg0(F)       ((F & MS_0TYPE) == FF_0SEG)
+#define isSeg1(F)       ((F & MS_1TYPE) == FF_1SEG)
+#define isEnum0(F)      ((F & MS_0TYPE) == FF_0ENUM)
+#define isEnum1(F)      ((F & MS_1TYPE) == FF_1ENUM)
+#define isFop0(F)       ((F & MS_0TYPE) == FF_0FOP)
+#define isFop1(F)       ((F & MS_1TYPE) == FF_1FOP)
+#define isStroff0(F)    ((F & MS_0TYPE) == FF_0STRO)
+#define isStroff1(F)    ((F & MS_1TYPE) == FF_1STRO)
+#define isStkvar0(F)    ((F & MS_0TYPE) == FF_0STK)
+#define isStkvar1(F)    ((F & MS_1TYPE) == FF_1STK)
+
+//
+//      Bits for DATA bytes
+//
+
+#define DT_TYPE 0xF0000000L             // Mask for DATA typing
+
+#define FF_BYTE 0x00000000L             // byte
+#define FF_WORD 0x10000000L             // word
+#define FF_DWRD 0x20000000L             // dword
+#define FF_QWRD 0x30000000L             // qword
+#define FF_TBYT 0x40000000L             // tbyte
+#define FF_ASCI 0x50000000L             // ASCII ?
+#define FF_STRU 0x60000000L             // Struct ?
+#define FF_XTRN 0x70000000L             // Extern data, unknown size
+#define FF_FLOAT 0x80000000L            // float
+#define FF_DOUBLE 0x90000000L           // double
+#define FF_PACKREAL 0xA0000000L         // packed decimal real
+#define FF_ALIGN    0xB0000000L         // alignment directive
+
+//
+//      Bits for CODE bytes
+//
+
+#define MS_CODE 0xF0000000L
+#define FF_FUNC 0x10000000L             // function start?
+#define FF_IMMD 0x40000000L             // Has Immediate value ?
+#define FF_JUMP 0x80000000L             // Has jump table
+
+
+MK_FP
+
+
+// Return value of expression: ((seg<<4) + off)
+
+long    MK_FP           (long seg,long off);    // the same as [ seg, off ]
+                                                // i.e: ((seg<<4)+off)
+
+
+form
+
+
+// Return a formatted string.
+//      format - printf-style format string.
+//               %a - means address expression.
+//               floating point values are output only in one format
+//                regardless of the character specified (f,e,g,E,G)
+//               %p is not supported.
+// The resulting string must be less than 255 characters
+
+char    form            (char format,...);      // works as sprintf
+                                                // The resulting string should
+                                                // be less than 255 characters.
+
+
+substr
+
+
+// Return substring of a string
+//      str - input string
+//      x1  - starting index (0..n)
+//      x2  - ending index. If x2 == -1, then return substring
+//            from x1 to the end of string.
+
+char    substr          (char str,long x1,long x2); // substring [x1..x2-1]
+                                                // if x2 == -1, then till end of line
+
+
+strstr
+
+
+// Search a substring in a string
+//      str    - input string
+//      substr - substring to search
+// returns: 0..n - index in the 'str' where the substring starts
+//          -1   - if the substring is not found
+
+long    strstr          (char str,char substr); // find a substring, -1 - not found
+
+
+
+strlen
+
+
+// Return length of a string in bytes
+//      str - input string
+// Returns: length (0..n)
+
+long    strlen          (char str);             // calculate length
+
+
+xtol
+
+
+// Convert ascii string to a binary number.
+// (this function is the same as hexadecimal 'strtol' from C library)
+
+long    xtol            (char str);             // ascii hex -> number
+                                                // (use long() for atol)
+
+atoa
+
+
+// Convert address value to a string
+
+char    atoa            (long ea);              // returns address in
+                                                // the form 'seg000:1234'
+                                                // (the same as in line prefixes)
+
+
+ltoa
+
+
+// Convert a number to a string.
+//      n - number
+//      radix - number base (2,8,10,16)
+
+char    ltoa            (long n,long radix);    // convert to ascii string
+
+
+atol
+
+
+// Convert ascii string to a number
+//      str - a decimal representation of a number
+// returns: a binary number
+
+long    atol            (char str);             // convert ascii decimal to long
+
+
+AddHotkey
+
+
+// Add hotkey for IDC function
+//      hotkey  - hotkey name ('a', "Alt-A", etc)
+//      idcfunc - IDC function name
+// returns:
+#endif
+#define IDCHK_OK        0       // ok
+#define IDCHK_ARG       -1      // bad argument(s)
+#define IDCHK_KEY       -2      // bad hotkey name
+#define IDCHK_MAX       -3      // too many IDC hotkeys
+#ifdef _notdefinedsymbol
+
+long AddHotkey(char hotkey,char idcfunc);
+
+
+DelHotkey
+
+
+// Delete IDC function hotkey
+
+success DelHotkey(char hotkey);
+
+
+Jump
+
+
+// Move cursor to the specifed linear address
+//      ea - linear address
+
+success Jump            (long ea);              // move cursor to ea
+                                                // screen is refreshed at
+                                                // the end of IDC execution
+
+
+Wait
+
+
+// Wait for the end of autoanalysis
+// This function will suspend execution of IDC program
+// till the autoanalysis queue is empty.
+
+void    Wait            ();                     // Process all entries in the
+                                                // autoanalysis queue
+
+
+Compile
+
+
+// Compile an IDC file.
+// The file being compiled should not contain functions that are
+// currently executing - otherwise the behaviour of the replaced
+// functions is undefined.
+//      filename - name of file to compile
+// returns: "" - ok, otherwise it returns an error message.
+
+char    Compile         (char filename);        // Compile an IDC file.
+                                                // returns error message.
+
+
+Exit
+
+
+// Stop execution of IDC program, close the database and exit to OS
+//      code - code to exit with.
+
+void    Exit            (long code);            // Exit to OS
+
+
+
+DeleteAll
+
+
+// Delete all segments, instructions, comments, i.e. everything
+// except values of bytes.
+
+void    DeleteAll       ();                     // delete ALL information
+                                                // about the program
+
+
+MakeCode
+
+
+// Create an instruction at the specified address
+//      ea - linear address
+// returns: 0 - can't create an instruction (no such opcode, the instruction would
+//              overlap with existing items, etc)
+//          otherwise returns length of the instruction in bytes
+
+long    MakeCode        (long ea);              // convert to instruction
+                                                // returns number of bytes
+                                                // occupied by the instruction
+
+
+
+AnalyseArea
+
+
+// Perform full analysis of the area
+//      sEA - starting linear address
+//      eEA - ending linear address (excluded)
+// returns: 1-ok, 0-Ctrl-Break was pressed.
+
+long    AnalyseArea     (long sEA,long eEA);    // analyse area and try to
+                                                // convert to code all bytes
+                                                // Returns 1-ok,0-CtrlBreak pressed
+
+
+MakeName
+
+
+// Rename a byte
+//      ea - linear address
+//      name - new name of address. If name == "", then delete old name
+// returns: 1-ok, 0-failure
+
+success MakeName        (long ea,char name);    // assign a name to a location
+
+
+
+MakeComm
+
+
+// Set an indented regular comment of an item
+//      ea      - linear address
+//      comment - comment string
+
+success MakeComm        (long ea,char comment); // give a comment
+
+
+MakeRptCmt
+
+
+// Set an indented repeatable comment of an item
+//      ea      - linear address
+//      comment - comment string
+
+success MakeRptCmt      (long ea,char comment); // give a repeatable comment
+
+
+MakeArray
+
+
+// Create an array.
+//      ea      - linear address
+//      nitems  - size of array in items
+// This function will create an array of the items with the same type as the
+// type of the item at 'ea'. If the byte at 'ea' is undefined, then this
+// function will create an array of bytes.
+
+success MakeArray       (long ea,long nitems);  // convert to an array
+
+
+MakeStr
+
+
+// Create a string.
+// This function creates a string (the style is determinted by the value
+// of GetLongPrm(INF_STRTYPE), see below).
+//      ea - linear address
+//      endea - ending address of the string (excluded)
+//              if endea == BADADDR, then length of string will be calculated
+//              the the kernel
+// returns: 1-ok, 0-failure
+
+success MakeStr         (long ea,long endea);   // convert to ASCII string
+
+
+MakeByte
+
+
+// Convert the current item to a byte
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeByte        (long ea);              // convert to byte
+
+
+MakeWord
+
+
+// Convert the current item to a word (2 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeWord        (long ea);              // convert to word
+
+
+MakeDword
+
+
+// Convert the current item to a double word (4 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeDword       (long ea);              // convert to double-word
+
+
+MakeQword
+
+
+// Convert the current item to a quadro word (8 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeQword       (long ea);              // convert to quadro-word
+
+
+
+MakeFloat
+
+
+// Convert the current item to a floating point (4 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeFloat       (long ea);              // convert to float
+
+
+MakeDouble
+
+
+// Convert the current item to a double floating point (8 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeDouble      (long ea);              // convert to double
+
+
+
+MakePackReal
+
+
+// Convert the current item to a packed real (10 or 12 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakePackReal    (long ea);              // convert to packed real
+
+
+MakeTbyte
+
+
+// Convert the current item to a tbyte (10 or 12 bytes)
+//      ea - linear address
+// returns: 1-ok, 0-failure
+
+success MakeTbyte       (long ea);              // convert to 10 bytes (tbyte)
+
+
+
+MakeStruct
+
+
+// Convert the current item to a structure instance
+//      ea      - linear address
+//      strname - name of a structure type
+// returns: 1-ok, 0-failure
+
+success MakeStruct      (long ea,char strname); // convert to structure instance
+
+
+MakeLocal
+
+
+// Create a local variable
+//      start,end - range of addresses for the local variable
+//                  The current version doesn't use 'end' address
+//                  and creates a stack variable for the whole function
+//                  If there is no function at 'start' then this function
+//                  will fail.
+//      location  - variable location in the form "[bp+xx]" where xx is
+//                  a hexadecimal offset.
+//      name      - name of the local variable
+// returns: 1-ok, 0-failure
+
+success MakeLocal(long start,long end,char location,char name);
+
+
+
+MakeUnkn
+
+
+// Convert the current item to an explored item
+//      ea     - linear address
+//      expand - 0: just undefine the current item
+//               1: undefine other instructions if the removal of the
+//                  current instruction removes all references to them.
+//                  (note: functions will not be undefined even if they
+//                         have no references to them)
+// returns: 1-ok, 0-failure
+
+void    MakeUnkn        (long ea,long expand);  // convert to 'unknown'
+                                                // expand!=0 => undefine consequent
+                                                // instructions too
+
+
+OpBinary
+
+
+// Convert an operand of the item (instruction or data) to a binary number
+//      ea - linear address
+/       n  - number of operand
+//              0 - the first operand
+//              1 - the second, third and all other operands
+//              -1 - all operands
+// Note: the data items use only the type of the first operand
+// Returns: 1-ok, 0-failure
+
+success OpBinary        (long ea,int n);        // make operand binary
+                                                // n=0 - first operand
+                                                // n=1 - second, third etc. operands
+                                                // n=-1 - all operands
+
+// Convert an operand of the item (instruction or data) to an octal number
+// (see explanation of OpBinary functions)
+
+success OpOctal         (long ea,int n);
+
+// Convert operand to decimal,hex,char (see OpBinary() for explanations)
+
+success OpDecimal       (long ea,int n);
+success OpHex           (long ea,int n);
+success OpChr           (long ea,int n);
+
+
+
+OpOff
+
+
+// Convert operand to an offset
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+//      base - base of the offset as a linear address
+//             If base == BADADDR then the current operand becomes non-offset
+// Example:
+//  seg000:2000 dw      1234h
+// and there is a segment at paragraph 0x1000 and there is a data item
+// within the segment at 0x1234:
+//  seg000:1234 MyString        db 'Hello, world!',0
+// Then you need to specify a linear address of the segment base to
+// create a proper offset:
+//      OpOffset(["seg000",0x2000],0,0x10000);
+// and you will have:
+//  seg000:2000 dw      offset MyString
+// Motorola 680x0 processor have a concept of "outer offsets".
+// If you want to create an outer offset, you need to combine number
+// of the operand with the following bit:
+#define OPND_OUTER      0x80                    // outer offset base
+//  Please note that the outer offsets are meaningful only for
+// Motorla 680x0.
+
+success OpOff           (long ea,int n,long base);
+
+
+OpSeg
+
+
+// Convert operand to a segment expression
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+
+success OpSeg           (long ea,int n);
+
+
+OpNumber
+
+
+// Convert operand to a number (with default number base, radix)
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+
+success OpNumber        (long ea,int n);
+
+
+OpAlt
+
+
+// Specify operand represenation manually.
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+//      str - a string represenation of the operand
+// IDA will not check the specified operand, it will simply display
+// it instead of the orginal representation of the operand.
+
+success OpAlt           (long ea,long n,char str);// manually enter n-th operand
+
+
+OpSign
+
+
+// Change sign of the operand.
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+
+success OpSign          (long ea,int n);        // change operand sign
+
+
+OpEnum
+
+
+// Convert operand to a symbolic constant
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+//      enum - name of enumration type
+
+success OpEnum          (long ea,int n,char enum);// make operand a enum
+
+
+OpStroff
+
+
+// Convert operand to an offset in a structure
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+//      strid - id of a structure type
+
+success OpStroff        (long ea,int n,long strid);// make operand a struct offset
+
+
+OpStkvar
+
+
+// Convert operand to a stack variable
+// (for the explanations of 'ea' and 'n' please see OpBinary())
+
+success OpStkvar        (long ea,int n);        // make operand a stack variable
+
+
+MakeVar
+
+
+// Mark the location as "variable"
+// Note: All that IDA does is to mark the location as "variable". Nothing else,
+// no additional analysis is performed.
+// This function may disappear in the future.
+
+void    MakeVar         (long ea);              // the location is 'variable'
+
+
+ExtLinA
+
+
+// Specify an additional line to display before the generated ones.
+//      ea   - linear address
+//      n    - number of anterior additioal line (0..500)
+//      line - the line to display
+// IDA displays additional lines from number 0 up to the first unexisting
+// additional line. So, if you specify additional line #150 and there is no
+// additional line #149, your line will not be displayed.
+
+void    ExtLinA         (long ea,long n,char line); // insert an additional line before the generated ones
+
+
+ExtLinB
+
+
+// Specify an additional line to display after the generated ones.
+//      ea   - linear address
+//      n    - number of posterior additioal line (0..500)
+//      line - the line to display
+// IDA displays additional lines from number 0 up to the first unexisting
+// additional line. So, if you specify additional line #150 and there is no
+// additional line #149, your line will not be displayed.
+
+void    ExtLinB         (long ea,long n,char line); // insert an additional line after the generated ones
+
+
+DelExtLnA
+
+
+// Delete an additional anterior line
+//      ea   - linear address
+//      n    - number of anterior additioal line (0..500)
+
+void    DelExtLnA       (long ea,long n);       // delete an additional line before the generated ones
+
+
+DelExtLnB
+
+
+// Delete an additional posterior line
+//      ea   - linear address
+//      n    - number of posterior additioal line (0..500)
+
+void    DelExtLnB       (long ea,long n);       // delete an additional line aftr  the generated ones
+
+
+JmpTable
+
+
+// Create a jump table (obsolete)
+//      jumpea  - address on instruction that uses the jump table
+//      tableea - address of jump table
+//      nitems  - number of items in the jump table
+//      is32bit - 0: table entry is 16 bit
+//                1: table entry is 32 bit
+
+success JmpTable        (long jmpea,long tableea,long nitems,long is32bit);     // define a jump table
+
+
+PatchByte
+
+
+// Change value of a program byte
+//      ea    - linear address
+//      value - new value of the byte
+
+void    PatchByte       (long ea,long value);   // change a byte
+
+
+PatchWord
+
+
+// Change value of a program word (2 bytes)
+//      ea    - linear address
+//      value - new value of the word
+
+void    PatchWord       (long ea,long value);   // change a word (2 bytes)
+
+
+PatchDword
+
+
+// Change value of a double word
+//      ea    - linear address
+//      value - new value of the double word
+
+void    PatchDword      (long ea,long value);   // change a dword (4 bytes)
+
+
+SetFlags
+
+
+// Set new value of flags
+// This function should not used be used directly if possible.
+// It changes properties of a program byte and if misused, may lead to
+// very-very strange results.
+
+void    SetFlags        (long ea,long flags);   // change internal flags for ea
+
+
+SetReg
+
+
+// Set value of a segment register.
+//      ea - linear address
+//      reg - name of a register, like "cs", "ds", "es", etc.
+//      value - new value of the segment register.
+// IDA keeps tracks of all the points where segment register change their
+// values. This function allows you to specify the correct value of a segment
+// register if IDA is not able to find the corrent value.
+
+success SetReg          (long ea,char reg,long value); // set value of segment register
+
+
+AutoMark
+
+
+// Plan to perform an action in the future.
+// This function will put your request to a special autoanalysis queue.
+// Later IDA will retrieve the request from the queue and process
+// it. There are several autoanalysis queue types. IDA will process all
+// queries from the first queue and then switch to the second queue, etc.
+
+void    AutoMark        (long ea,long queuetype); // plan address to analyse
+void    AutoMark2       (long start,long end,long queuetype);
+                                                  // plan range of addresses
+
+#define AU_UNK  10      // make unknown
+#define AU_CODE 20      // convert to instruction
+#define AU_PROC 30      // make function
+#define AU_USED 40      // reanalyse
+#define AU_LIBF 60      // apply a flirt signature (the current signature!)
+#define AU_FINAL 200    // coagulate unexplored items
+
+
+Write
+
+
+void    WriteMap        (char file);            // produce a .map file
+void    WriteTxt        (char file,long ea1,long ea2); // produce an .asm file
+void    WriteExe        (char file);            // produce an executable file
+
+
+GetFlags
+
+
+// Get internal flags
+//      ea - linear address
+// returns: 32-bit value of internal flags. See start of IDC.IDC file
+// for explanations.
+
+long    GetFlags        (long ea);              // get internal flags for ea
+
+
+Byte
+
+
+// Get value of program byte
+//      ea - linear address
+// returns: value of byte. If byte has not a value then returns 0xFF
+
+long    Byte            (long ea);              // get a byte at ea
+
+
+Word
+
+
+// Get value of program word (2 bytes)
+//      ea - linear address
+// returns: value of word. If word has not a value then returns 0xFF
+
+long    Word            (long ea);              // get a word (2 bytes) at ea
+
+
+Dword
+
+
+// Get value of program double word (4 bytes)
+//      ea - linear address
+// returns: value of double word. If double word has not a value
+// then returns 0xFF
+
+long    Dword           (long ea);              // get a double-word (4 bytes) at ea
+
+
+LocByName
+
+
+// Get linear address of a name
+//      name - name of program byte
+// returns: address of the name
+//          BADADDR - no such name
+
+long    LocByName       (char name);            // BADADDR - no such name
+
+
+SegByBase
+
+
+// Get segment by segment base
+//      base - segment base paragraph or selector
+// returns: linear address of the start of the segment
+//          BADADDR - no such segment
+
+long    SegByBase       (long base);            // BADADDR - no such segment
+
+
+ScreenEA
+
+
+// Get linear address of cursor
+
+long    ScreenEA        ();                     // the current screen ea
+
+
+
+SelStart
+
+
+// Get start address of the selected area
+// returns BADADDR - the user has not selected an area
+
+long    SelStart        ();                     // the selected area start ea
+                                                // BADADDR - no selected area
+
+
+SelEnd
+
+
+// Get end address of the selected area
+// returns BADADDR - the user has not selected an area
+
+long    SelEnd          ();                     // the selected area end ea
+                                                // BADADDR - no selected area
+
+
+GetReg
+
+
+// Get value of segment register at the specified address
+//      ea - linear address
+//      reg - name of segment register
+// returns: value of segment register. The segment registers in 32bit program
+// usually contain selectors, so to get paragraph pointed by the segment
+// register you need to call AskSelector() function.
+
+long    GetReg          (long ea,char reg);     // get segment register value
+                                                // BADADDR - undefined or error
+                                                // (selector, use AskSelector() to
+                                                //  get its mapping)
+
+
+NextAddr
+
+
+// Get next addresss in the program
+//      ea - linear address
+// returns: BADADDR - the specified address in the last used address
+
+long    NextAddr        (long ea);              // returns next defined address
+                                                // BADADDR if no such address exists
+
+
+PrevAddr
+
+
+// Get previous addresss in the program
+//      ea - linear address
+// returns: BADADDR - the specified address in the first address
+
+long    PrevAddr        (long ea);              // returns prev defined address
+                                                // BADADDR if no such address exists
+
+
+NextHead
+
+
+// Get next defined item (instruction or data) in the program
+//      ea - linear address
+// returns: BADADDR - no (more) defined items
+
+long    NextHead        (long ea);              // returns next defined item address
+                                                // BADADDR if no such address exists
+
+
+PrevHead
+
+
+// Get previous defined item (instruction or data) in the program
+//      ea - linear address
+// returns: BADADDR - no (more) defined items
+
+long    PrevHead        (long ea);              // returns prev defined item address
+                                                // BADADDR if no such address exists
+
+
+NextNotTail
+
+
+// Get next not-tail address in the program
+// This function searches for the next displayable address in the program.
+// The tail bytes of instructions and data are not displayable.
+//      ea - linear address
+// returns: BADADDR - no (more) not-tail addresses
+
+long    NextNotTail     (long ea);              // returns next not tail address
+                                                // BADADDR if no such address exists
+
+
+PrevNotTail
+
+
+// Get previous not-tail address in the program
+// This function searches for the previous displayable address in the program.
+// The tail bytes of instructions and data are not displayable.
+//      ea - linear address
+// returns: BADADDR - no (more) not-tail addresses
+
+long    PrevNotTail     (long ea);              // returns prev not tail address
+                                                // BADADDR if no such address exists
+
+
+
+ItemEnd
+
+
+// Get address of the end of the item (instruction or data)
+//      ea - linear address
+// returns: address past end of the item at 'ea'
+
+long    ItemEnd         (long ea);              // returns address past end of
+                                                // the item
+
+
+ItemSize
+
+
+// Get size of instruction or data item in bytes
+//      ea - linear address
+// returns: 1..n
+
+long    ItemSize        (long ea);              // returns item size, min answer=1
+
+
+Name
+
+
+// Get visible name of program byte
+// This function returns name of byte as it is displayed on the screen.
+// If a name contains illegal characters, IDA replaces them by the substitution
+// character during displaying. See IDA.CFG for the definition of the
+// substitution character.
+//      ea - linear address
+// returns: "" - byte has no name
+
+char    Name            (long ea);              // get visible name of the byte
+
+
+GetTrueName
+
+
+// Get true name of program byte
+// This function returns name of byte as is without any replacements.
+//      ea - linear address
+// returns: "" - byte has no name
+
+char    GetTrueName     (long ea);              // get true name of the byte
+
+
+GetMnem
+
+
+// Get mnemonics of instruction
+//      ea - linear address of instruction
+// returns: "" - no instruction at the specified location
+// note: this function may not return exactly the same mnemonics
+// as you see on the screen.
+
+char    GetMnem         (long ea);              // get instruction name
+
+
+GetOpnd
+
+
+// Get operand of an instruction
+//      ea - linear address of instruction
+//      n  - number of operand:
+//              0 - the first operand
+//              1 - the second operand
+// returns: the current text representation of operand
+
+char    GetOpnd         (long ea,long n);       // get instruction operand
+                                                // n=0 - first operand
+
+
+GetOpType
+
+
+// Get type of instruction operand
+//      ea - linear address of instruction
+//      n  - number of operand:
+//              0 - the first operand
+//              1 - the second operand
+// returns:
+//      -1      bad operand number passed
+//      0       None
+//      1       General Register (al,ax,es,ds...)
+//      2       Memory Reference
+//      3       Base + Index
+//      4       Base + Index + Displacement
+//      5       Immediate
+//      6       Immediate Far Address
+//      7       Immediate Near Address
+//      8       FPP register
+//      9       386 control register
+//      10      386 debug register
+//      11      386 trace register
+//      12      Condition (for Z80)
+//      13      bit (8051)
+//      14      bitnot (8051)
+
+long    GetOpType       (long ea,long n);       // get operand type
+
+
+GetOperandValue
+
+
+// Get number used in the operand
+// This function returns an immediate number used in the operand
+//      ea - linear address of instruction
+//      n  - number of operand:
+//              0 - the first operand
+//              1 - the second operand
+// If the operand doesn't contain a number, it returns -1.
+
+long    GetOperandValue (long ea,long n);       // get instruction operand value
+
+
+LineA
+
+
+// Get anterior comment line
+//      ea - linear address
+//      num - number of anterior line (0..100)
+
+char    LineA           (long ea,long num);     // get additional line before generated ones
+
+
+LineB
+
+
+// Get posterior comment line
+//      ea - linear address
+//      num - number of posterior line (0..100)
+
+char    LineB           (long ea,long num);     // get additional line after generated ones
+
+
+Comment
+
+
+// Get regular indented comment
+//      ea - linear address
+
+char    Comment         (long ea);              // get comment
+
+
+RptCmt
+
+
+// Get repeatable indented comment
+//      ea - linear address
+
+char    RptCmt          (long ea);              // get repeatable comment
+
+
+AltOp
+
+
+// Get manually entered operand string
+//      ea - linear address
+//      n  - number of operand:
+//              0 - the first operand
+//              1 - the second operand
+
+char    AltOp           (long ea,long n);       // get manually entered operand
+
+
+Find
+
+
+//
+//      The following functions search for the specified byte
+//              ea - address to start from
+//              flag |=1 - search forward
+//              flag |=2 - search case-sensitive (only for FindText)
+//      return BADADDR - not found
+//
+long    FindVoid        (long ea,long flag);
+long    FindCode        (long ea,long flag);
+long    FindData        (long ea,long flag);
+long    FindProc        (long ea,long flag);
+long    FindUnexplored  (long ea,long flag);
+long    FindExplored    (long ea,long flag);
+long    FindImmediate   (long ea,long flag,long value);
+long    FindText        (long ea,long flag,long y,long x,char str);
+                // y - number of text line at ea to start from (0..100)
+                // x - x coordinate in this line
+long    FindBinary      (long ea,long flag,char str);
+                // str - a string as a user enters it for Search Text in Core
+                //      example:  "41 42" - find 2 bytes 41h,42h
+                // The default radix depends on the current IDP module
+                // (radix for ibm pc is 16)
+
+
+
+Prm
+
+
+// The following functions allow you to set/get common parameters.
+
+long    GetLongPrm (long offset);
+long    GetShortPrm(long offset);
+long    GetCharPrm (long offset);
+success SetLongPrm (long offset,long value);
+success SetShortPrm(long offset,long value);
+success SetCharPrm (long offset,long value);
+
+// 'offset' may be one of the following:
+
+INF_VERSION     // short; Version of database
+INF_PROCNAME    // char[8]; Name of current processor
+INF_LFLAGS      // char;  IDP-dependent flags
+  LFLG_PC_FPP   //          decode floating point processor
+                //          instructions?
+  LFLG_PC_FLAT  //          Flat model?
+INF_DEMNAMES    // char;  display demangled names as:
+  DEMNAM_CMNT   //          comments
+  DEMNAM_NAME   //          regular names
+  DEMNAM_NONE   //          don't display
+INF_FILETYPE    // short; type of input file (see core.hpp)
+  FT_EXE        //          MS DOS EXE File
+  FT_COM        //          MS DOS COM File
+  FT_BIN        //          Binary File
+  FT_DRV        //          MS DOS Driver
+  FT_WIN        //          New Executable (NE)
+  FT_HEX        //          Intel Hex Object File
+  FT_MEX        //          MOS Technology Hex Object File
+  FT_LX         //          Linear Executable (LX)
+  FT_LE         //          Linear Executable (LE)
+  FT_NLM        //          Netware Loadable Module (NLM)
+  FT_COFF       //          Common Object File Format (COFF)
+  FT_PE         //          Portable Executable (PE)
+  FT_USER       //          file is loaded using IDP loader function
+  FT_OMF        //          Object Module Format
+  FT_SREC       //          R-records
+  FT_ZIP        //          ZIP file
+  FT_OMFLIB     //          Library of OMF Modules
+  FT_AR         //          ar library
+  FT_LOADER     //          file is loaded using LOADER DLL
+  FT_ELF        //          Executable and Linkable Format (ELF)
+  FT_W32RUN     //          Watcom DOS32 Extender (W32RUN)
+  FT_AOUT       //          Linux a.out (AOUT)
+INF_OSTYPE      // short; OS type the program is for
+  OSTYPE_MSDOS
+  OSTYPE_WIN
+  OSTYPE_OS2
+  OSTYPE_NETW
+INF_APPTYPE     // short; Application type
+  APPT_CONSOLE  //          console
+  APPT_GRAPHIC  //          graphics
+  APPT_PROGRAM  //          EXE
+  APPT_LIBRARY  //          DLL
+  APPT_DRIVER   //          DRIVER
+  APPT_1THREAD  //          Singlethread
+  APPT_MTHREAD  //          Multithread
+  APPT_16BIT    //          16 bit application
+  APPT_32BIT    //          32 bit application
+INF_START_SP    // long;  SP register value at the start of
+                //        program execution
+INF_START_AF    // short; Analysis flags:
+  AF_FIXUP      //          Create offsets and segments using fixup info
+  AF_MARKCODE   //          Mark typical code sequences as code
+  AF_UNK        //          Delete instructions with no xrefs
+  AF_CODE       //          Trace execution flow
+  AF_PROC       //          Create functions if call is present
+  AF_USED       //          Analyse and create all xrefs
+  AF_FLIRT      //          Use flirt signatures
+  AF_PROCPTR    //          Create function if data xref data->code32 exists
+  AF_JFUNC      //          Rename jump functions as j_...
+  AF_NULLSUB    //          Rename empty functions as nullsub_...
+  AF_LVAR       //          Create stack variables
+  AF_TRACE      //          Trace stack pointer
+  AF_ASCII      //          Create ascii string if data xref exists
+  AF_IMMOFF     //          Convert 32bit instruction operand to offset
+  AF_DREFOFF    //          Create offset if data xref to seg32 exists
+  AF_FINAL      //          Final pass of analysis
+INF_START_IP    // long;  IP register value at the start of
+                //        program execution
+INF_BEGIN_EA    // long;  Linear address of program entry point
+INF_MIN_EA      // long;  The lowest address used
+                //        in the program
+INF_MAX_EA      // long;  The highest address used
+                //        in the program - 1
+INF_LOW_OFF     // long;  low limit of voids
+INF_HIGH_OFF    // long;  high limit of voids
+INF_MAXREF      // long;  max xref depth
+INF_ASCII_BREAK // char;  ASCII line break symbol
+INF_INDENT      // char;  Indention for instructions
+INF_COMMENT     // char;  Indention for comments
+INF_XREFNUM     // char;  Number of references to generate
+                //        0 - xrefs won't be generated at all
+INF_ENTAB       // char;  Use '\t' chars in the output file?
+INF_VOIDS       // char;  Display void marks?
+INF_SHOWAUTO    // char;  Display autoanalysis indicator?
+INF_AUTO        // char;  Autoanalysis is enabled?
+INF_BORDER      // char;  Generate borders?
+INF_NULL        // char;  Generate empty lines?
+INF_SHOWPREF    // char;  Show line prefixes?
+INF_PREFSEG     // char;  line prefixes with segment name?
+INF_ASMTYPE     // char;  target assembler number (0..n)
+INF_BASEADDR    // long;  base paragraph of the program
+INF_XREFS       // char;  xrefs representation:
+  SW_SEGXRF     //          show segments in xrefs?
+  SW_XRFMRK     //          show xref type marks?
+  SW_XRFFNC     //          show function offsets?
+  SW_XRFVAL     //          show xref values? (otherwise-"...")
+INF_BINPREF     // short; # of instruction bytes to show
+                //          in line prefix
+INF_CMTFLAG     // char;  comments:
+  SW_RPTCMT     //          show repeatable comments?
+  SW_ALLCMT     //          comment all lines?
+  SW_NOCMT      //          no comments at all
+  SW_LINNUM     //          show source line numbers
+INF_NAMETYPE    // char;  dummy names represenation type
+  NM_REL_OFF
+  NM_PTR_OFF
+  NM_NAM_OFF
+  NM_REL_EA
+  NM_PTR_EA
+  NM_NAM_EA
+  NM_EA
+  NM_EA4
+  NM_EA8
+  NM_SHORT
+  NM_SERIAL
+INF_SHOWBADS    // char;  show bad instructions?
+                //        an instruction is bad if it appears
+                //        in the ash.badworks array
+
+INF_PREFFLAG    // char;  line prefix type:
+  PREF_SEGADR   //          show segment addresses?
+  PREF_FNCOFF   //          function offsets?
+
+INF_PACKBASE    // char;  pack database?
+
+INF_ASCIIFLAGS  // uchar; ascii flags
+  ASCF_GEN      //          generate ASCII names?
+  ASCF_AUTO     //          ASCII names have 'autogenerated' bit?
+  ASCF_SERIAL   //          generate serial names?
+
+INF_LISTNAMES   // uchar; What names should be included in the list?
+  LN_NORMAL     //          normal names
+  LN_PUBLIC     //          public names
+  LN_AUTO       //          autogenerated names
+  LN_WEAK       //          weak names
+
+INF_START_SS    // long;
+INF_START_CS    // long;
+INF_STRTYPE     // ulong; current ascii string type
+  ASCSTR_TERMCHR//          Character-terminated ASCII string
+                //          The termination characters are kept in
+                //          the next bytes of string type
+  STRTERM1(strtype) ((strtype>>8)&0xFF)
+  STRTERM2(strtype) ((strtype>>16)&0xFF)
+                //          if the second termination character is
+                //          '\0', then it doesn't exist.
+  ASCSTR_PASCAL //          Pascal-style ASCII string (length byte)
+  ASCSTR_LEN2   //          Pascal-style, length has 2 bytes
+  ASCSTR_UNICODE//          Unicode string
+INF_AF2         // ushort;Analysis flags 2
+  AF2_JUMPTBL   //          Locate and create jump tables
+-------------------------------------------------
+
+
+SetPrcsr
+
+
+// Change current processor
+//      processor - name of processor in short form.
+//                  run 'ida ?' to get list of allowed processor types
+
+success SetPrcsr        (char processor);       // set processor type
+
+
+Direction
+
+
+// Set current search direction
+//      direction: 1 - down
+//                -1 - up
+// returns old value of direction flag
+
+long    Direction       (long direction);
+
+
+Batch
+
+
+// Enable/disable batch mode of operation
+//      batch:  0 - ida will display dialog boxes and wait for the user input
+//              1 - ida will not display dialog boxes, warnings, etc.
+// returns: old balue of batch flag
+
+long    Batch           (long batch);           // enable/disable batch mode
+                                                // returns old value
+
+
+Asks
+
+
+char    AskStr          (char defval,char prompt); // ask a string
+char    AskFile         (char mask,char prompt);   // ask a file name
+long    AskAddr         (long defval,char prompt); // BADADDR - no or bad input
+long    AskSeg          (long defval,char prompt); // BADADDR - no or bad input
+char    AskIdent        (char defval,char prompt);
+long    AskYN           (long defval,char prompt); // -1:cancel,0-no,1-ok
+void    Message         (char format,...); // show a message in msg window
+void    Warning         (char format,...); // show a warning a dialog box
+void    Fatal           (char format,...); // exit IDA immediately
+
+
+AskSelector
+
+
+***********************************************
+** get a selector value
+        arguments:      sel - the selector
+        returns:        selector value if found
+                        otherwise the input value (sel)
+        note:           selector values are always in paragraphs
+
+long    AskSelector     (long sel);     // returns paragraph
+
+
+FindSelector
+
+
+***********************************************
+** find a selector which has the specifed value
+        arguments:      val - value to search for
+        returns:        selector if found
+                        otherwise the input value (val)
+        note:           selector values are always in paragraphs
+
+long    FindSelector    (long val);
+
+
+SetSelector
+
+
+***********************************************
+** set a selector value
+        arguments:      sel - the selector, should be
+                        less than 0xFFFF
+                        val - new value of selector
+        returns:        nothing
+        note:           ida supports up to 64 selectors.
+                        if 'sel' == 'val' then the
+                        selector is destroyed because
+                        it has no importance
+
+void    SetSelector     (long sel,long value);
+
+
+DelSelector
+
+
+***********************************************
+** delete a selector
+        arguments:      sel - the selector to delete
+        returns:        nothing
+        note:           if the selector is found, it will
+                        be deleted
+
+void    DelSelector     (long sel);
+
+
+FirstSeg
+
+
+// Get first segment
+// returns: linear address of the start of the first segment
+// BADADDR - no segments are defined
+
+long    FirstSeg        ();             // returns start of the first
+                                        // segment, BADADDR - no segments
+
+
+NextSeg
+
+
+// Get next segment
+//      ea - linear address
+// returns: start of the next segment
+//          BADADDR - no next segment
+
+long    NextSeg         (long ea);      // returns start of the next
+                                        // segment, BADADDR - no more segs
+
+
+
+SegStart
+
+
+// Get start address of a segment
+//      ea - any address in the segment
+// returns: start of segment
+//          BADADDR - the specified address doesn't belong to any segment
+
+long    SegStart        (long ea);      // returns start of the segment
+                                        // BADADDR if bad address passed
+
+
+SegEnd
+
+
+// Get end address of a segment
+//      ea - any address in the segment
+// returns: end of segment (an address past end of the segment)
+//          BADADDR - the specified address doesn't belong to any segment
+
+long    SegEnd          (long ea);      // return end of the segment
+                                        // this address doesn't belong
+                                        // to the segment
+                                        // BADADDR if bad address passed
+
+
+SegName
+
+
+// Get name of a segment
+//      ea - any address in the segment
+// returns: "" - no segment at the specified address
+
+char    SegName         (long ea);              // returns name of the segment
+                                                // "" if bad address passed
+
+
+
+SegCreate
+
+
+// Create a new segment
+//      startea  - linear address of the start of the segment
+//      endea    - linear address of the end of the segment
+//                 this address will not belong to the segment
+//                 'endea' should be higher than 'startea'
+//      base     - base paragraph or selector of the segment.
+//                 a paragraph is 16byte memory chunk.
+//                 If a selector value is specified, the selector should be
+//                 already defined.
+//      use32    - 0: 16bit segment, 1: 32bit segment
+//      align    - segment alignment. see below for alignment values
+//      comb     - segment combination. see below for combination values.
+// returns: 0-failed, 1-ok
+
+success SegCreate(long startea,long endea,long base,
+                                           long use32,long align,long comb);
+
+
+
+SegDelete
+
+
+// Delete a segment
+//   ea      - any address in the segment
+//   disable - 1: discard all bytes of the segment from the disassembled text
+//             0: retain byte values
+
+success SegDelete       (long ea,long disable);
+
+
+
+SegBounds
+
+
+// Change segment boundaries
+//   ea      - any address in the segment
+//   startea - new start address of the segment
+//   endea   - new end address of the segment
+//   disable - discard bytes that go out of the segment
+
+success SegBounds       (long ea,long startea,long endea,long disable);
+
+
+
+SegRename
+
+
+// Change name of the segment
+//   ea      - any address in the segment
+//   name    - new name of the segment
+
+success SegRename       (long ea,char name);
+
+
+SegClass
+
+
+// Change class of the segment
+//   ea      - any address in the segment
+//   class   - new class of the segment
+
+success SegClass        (long ea,char class);
+
+
+SegAlign
+
+
+// Change alignment of the segment
+//   ea      - any address in the segment
+//   align   - new alignment of the segment
+
+success SegAlign        (long ea,long alignment);
+
+#define saAbs      0    // Absolute segment.
+#define saRelByte  1    // Relocatable, byte aligned.
+#define saRelWord  2    // Relocatable, word (2-byte, 16-bit) aligned.
+#define saRelPara  3    // Relocatable, paragraph (16-byte) aligned.
+#define saRelPage  4    // Relocatable, aligned on 256-byte boundary (a "page"
+                        // in the original Intel specification).
+#define saRelDble  5    // Relocatable, aligned on a double word (4-byte)
+                        // boundary. This value is used by the PharLap OMF for
+                        // the same alignment.
+#define saRel4K    6    // This value is used by the PharLap OMF for page (4K)
+                        // alignment. It is not supported by LINK.
+#define saGroup    7    // Segment group
+#define saRel32Bytes 8  // 32 bytes
+#define saRel64Bytes 9  // 64 bytes
+#define saRelQword 10   // 8 bytes
+
+
+SegComb
+
+
+// Change combination of the segment
+//   ea      - any address in the segment
+//   comb    - new combination of the segment
+
+success SegComb         (long segea,long comb);
+
+#define scPriv     0    // Private. Do not combine with any other program
+                        // segment.
+#define scPub      2    // Public. Combine by appending at an offset that meets
+                        // the alignment requirement.
+#define scPub2     4    // As defined by Microsoft, same as C=2 (public).
+#define scStack    5    // Stack. Combine as for C=2. This combine type forces
+                        // byte alignment.
+#define scCommon   6    // Common. Combine by overlay using maximum size.
+#define scPub3     7    // As defined by Microsoft, same as C=2 (public).
+
+
+SegAddrng
+
+
+// Change segment addressing
+//   ea      - any address in the segment
+//   use32   - 0: 16bit, 1: 32bit
+
+success SegAddrng       (long ea,long use32);
+
+
+SegByName
+
+
+// Get segment by name
+//      segname - name of segment
+// returns: segment base address or BADADDR
+
+long    SegByName       (char segname);         // returns segment base
+
+
+SegDefReg
+
+
+// Set default segment register value for a segment
+//   ea      - any address in the segment
+//   reg     - name of segment register
+//   value   - default value of segment register. -1-undefined.
+
+success SegDefReg       (long ea,char reg,long value);
+
+
+SetSegmentType
+
+
+***********************************************
+** set segment type
+        arguments:      segea - any address within segment
+                        type  - new segment type:
+#define SEG_NORM        0
+#define SEG_XTRN        1       // * segment with 'extern' definitions
+                                //   no instructions are allowed
+#define SEG_CODE        2       // pure code segment
+#define SEG_DATA        3       // pure data segment
+#define SEG_IMP         4       // implementation segment
+#define SEG_GRP         6       // * group of segments
+                                //   no instructions are allowed
+#define SEG_NULL        7       // zero-length segment
+#define SEG_UNDF        8       // undefined segment type
+#define SEG_BSS         9       // uninitialized segment
+#define SEG_ABSSYM     10       // * segment with definitions of absolute symbols
+                                //   no instructions are allowed
+#define SEG_COMM       11       // * segment with communal definitions
+                                //   no instructions are allowed
+
+        returns:        !=0 - ok
+
+success SetSegmentType  (long segea,long type);
+
+
+GetSegmentAttr
+
+
+***********************************************
+** get segment attribute
+        arguments:      segea - any address within segment
+
+long    GetSegmentAttr  (long segea,long attr);
+
+#define  SEGATTR_ALIGN  20      // alignment
+#define  SEGATTR_COMB   21      // combination
+#define  SEGATTR_PERM   22      // permissions
+#define  SEGATTR_USE32  23      // use32 (32-bit segment?)
+#define  SEGATTR_FLAGS  24      // segment flags
+#define  SEGATTR_SEL    26      // segment selector
+#define  SEGATTR_DEF_ES 28      // default ES value
+#define  SEGATTR_DEF_CS 30      // default CS value
+#define  SEGATTR_DEF_SS 32      // default SS value
+#define  SEGATTR_DEF_DS 34      // default DS value
+#define  SEGATTR_DEF_FS 36      // default FS value
+#define  SEGATTR_DEF_GS 38      // default GS value
+#define  SEGATTR_TYPE   40      // segment type
+
+
+
+Xrefs
+
+
+//      Flow types:
+#define fl_CF   16              // Call Far
+#define fl_CN   17              // Call Near
+#define fl_JF   18              // Jump Far
+#define fl_JN   19              // Jump Near
+#define fl_US   20              // User specified
+#define fl_F    21              // Ordinary flow
+                                        // Mark exec flow 'from' 'to'
+void    AddCodeXref(long From,long To,long flowtype);
+long    DelCodeXref(long From,long To,int undef);// Unmark exec flow 'from' 'to'
+                                        // undef - make 'To' undefined if no
+                                        //        more references to it
+                                        // returns 1 - planned to be
+                                        // made undefined
+
+// The following functions include the ordinary flows:
+long    Rfirst  (long From);            // Get first xref from 'From'
+long    Rnext   (long From,long current);// Get next xref from
+long    RfirstB (long To);              // Get first xref to 'To'
+long    RnextB  (long To,long current); // Get next xref to 'To'
+
+// The following functions don't take into account the ordinary flows:
+long    Rfirst0 (long From);
+long    Rnext0  (long From,long current);
+long    RfirstB0(long To);
+long    RnextB0 (long To,long current);
+
+//      Data reference types:
+#define dr_O    1                       // Offset
+#define dr_W    2                       // Write
+#define dr_R    3                       // Read
+#define dr_T    4                       // Text (names in manual operands)
+
+void    add_dref(long From,long To,long drefType);      // Create Data Ref
+void    del_dref(long From,long To);    // Unmark Data Ref
+
+long    Dfirst  (long From);            // Get first refered address
+long    Dnext   (long From,long current);
+long    DfirstB (long To);              // Get first referee address
+long    DnextB  (long To,long current);
+
+long    XrefType(void);                 // returns type of the last xref
+                                        // obtained by [RD]first/next[B0]
+                                        // functions. Return values
+                                        // are fl_... or dr_...
+
+// set number of displayed xrefs
+#define XrefShow(x)             SetCharPrm(INF_XREFNUM,x)
+
+
+fopen
+
+
+***********************************************
+** open a file
+        arguments: similiar to C fopen()
+        returns:        0 -error
+                        otherwise a file handle
+
+long    fopen           (char file,char mode);
+
+
+fclose
+
+
+***********************************************
+** close a file
+        arguments:      file handle
+        returns:        nothing
+
+void    fclose          (long handle);
+
+
+filelength
+
+
+***********************************************
+** get file length
+        arguments:      file handle
+        returns:        -1 - error
+                        otherwise file length in bytes
+
+long    filelength      (long handle);
+
+
+fseek
+
+
+***********************************************
+** set cursor position in the file
+        arguments:      handle  - file handle
+                        offset  - offset from origin
+                        origin  - 0 = from start of file
+                                  1 = from current cursor position
+                                  2 = from end of file
+        returns:        0 - ok
+                        otherwise error
+
+long    fseek           (long handle,long offset,long origin);
+
+
+ftell
+
+
+***********************************************
+** get cursor position in the file
+        arguments:      file handle
+        returns:        -1 - error
+                        otherwise current cursor position
+
+long    ftell           (long handle);
+
+
+loadfile
+
+
+***********************************************
+** load file into IDA database
+        arguments:      handle  - file handle
+                        pos     - position in the file
+                        ea      - linear address to load
+                        size    - number of bytes to load
+        returns:        0 - error
+                        1 - ok
+
+success loadfile        (long handle,long pos,long ea,long size);
+
+
+savefile
+
+
+***********************************************
+** save from IDA database to file
+        arguments:      handle  - file handle
+                        pos     - position in the file
+                        ea      - linear address to save from
+                        size    - number of bytes to save
+        returns:        0 - error
+                        1 - ok
+
+success savefile        (long handle,long pos,long ea,long size);
+
+
+fgetc
+
+
+***********************************************
+** read one byte from file
+        arguments:      handle  - file handle
+        returns:        -1 - error
+                        otherwise a byte read.
+
+long    fgetc           (long handle);
+
+
+fputc
+
+
+***********************************************
+** write one byte to file
+        arguments:      handle  - file handle
+                        byte    - byte to write
+        returns:        0 - ok
+                        -1 - error
+
+long    fputc           (long byte,long handle);
+
+
+fprintf
+
+
+***********************************************
+** fprintf
+        arguments:      handle  - file handle
+                        format  - format string
+        returns:        0 - ok
+                        -1 - error
+
+long    fprintf         (long handle,char format,...);
+
+
+readshort
+
+
+***********************************************
+** read 2 bytes from file
+        arguments:      handle  - file hanlde
+                        mostfirst 0 - least significant byte is first (intel)
+                                  1 - most  significant byte is first
+        returns:        -1 - error
+                        otherwise: a 16-bit value
+
+long    readshort       (long handle,long mostfirst);
+
+
+readlong
+
+
+***********************************************
+** read 4 bytes from file
+        arguments:      handle  - file hanlde
+                        mostfirst 0 - least significant byte is first (intel)
+                                  1 - most  significant byte is first
+        returns:        a 32-bit value
+
+long    readlong        (long handle,long mostfirst);
+
+
+writeshort
+
+
+***********************************************
+** write 2 bytes to file
+        arguments:      handle  - file hanlde
+                        word    - a 16-bit value to write
+                        mostfirst 0 - least significant byte is first (intel)
+                                  1 - most  significant byte is first
+        returns:        0 - ok
+
+long    writeshort      (long handle,long word,long mostfirst);
+
+
+writelong
+
+
+***********************************************
+** write 4 bytes to file
+        arguments:      handle  - file hanlde
+                        dword   - a 32-bit value to write
+                        mostfirst 0 - least significant byte is first (intel)
+                                  1 - most  significant byte is first
+        returns:        0 - ok
+
+long    writelong       (long handle,long dword,long mostfirst);
+
+
+readstr
+
+
+***********************************************
+** read a string from file
+        arguments:      handle  - file hanlde
+        returns:        a string
+                        on EOF, returns -1
+
+char    readstr         (long handle);
+
+
+writestr
+
+
+***********************************************
+** write a string to file
+        arguments:      handle  - file hanlde
+                        str     - string to write
+        returns:        0 - ok
+
+long    writestr        (long handle,char str);
+
+
+MakeFunction
+
+
+***********************************************
+** create a function
+        arguments:      start,end - function bounds
+        returns:        !=0 - ok
+
+success MakeFunction(long start,long end);
+
+
+DelFunction
+
+
+***********************************************
+** delete a function
+        arguments:      ea - any address belonging to the function
+        returns:        !=0 - ok
+
+success DelFunction(long ea);
+
+
+SetFunctionEnd
+
+
+***********************************************
+** change function end address
+        arguments:      ea - any address belonging to the function
+                        end - new function end address
+        returns:        !=0 - ok
+
+success SetFunctionEnd(long ea,long end);
+
+
+NextFunction
+
+
+***********************************************
+** find next function
+        arguments:      ea - any address belonging to the function
+        returns:        -1 - no more functions
+                        otherwise returns the next function start address
+
+long NextFunction(long ea);
+
+
+PrevFunction
+
+
+***********************************************
+** find previous function
+        arguments:      ea - any address belonging to the function
+        returns:        -1 - no more functions
+                        otherwise returns the previous function start address
+
+long PrevFunction(long ea)
+
+
+GetFunctionFlags
+
+
+***********************************************
+** retrieve function flags
+        arguments:      ea - any address belonging to the function
+        returns:        -1 - function doesn't exist
+                        otherwise returns the flags:
+#define FUNC_NORET      0x00000001L     // function doesn't return
+#define FUNC_FAR        0x00000002L     // far function
+#define FUNC_LIB        0x00000004L     // library function
+#define FUNC_STATIC     0x00000008L     // static function
+
+long GetFunctionFlags(long ea);
+
+
+SetFunctionFlags
+
+
+***********************************************
+** change function flags
+        arguments:      ea - any address belonging to the function
+                        flags - see GetFunctionFlags() for explanations
+        returns:        !=0 - ok
+
+success SetFunctionFlags(long ea,long flags);
+
+
+GetFunctionName
+
+
+***********************************************
+** retrieve function name
+        arguments:      ea - any address belonging to the function
+        returns:        null string - function doesn't exist
+                        otherwise returns function name
+
+char GetFunctionName(long ea);
+
+
+ChooseFunction
+
+
+***********************************************
+** ask the user to select a function
+        arguments:      title - title of the dialog box
+        returns:        -1 - user refused to select a function
+                        otherwise returns the selected function start address
+
+long ChooseFunction(char title);
+
+
+GetFuncOffset
+
+
+***********************************************
+** convert address to 'funcname+offset' string
+        arguments:      ea - address to convert
+        returns:        if the address belongs to a function then
+                          return a string formed as 'name+offset'
+                          where 'name' is a function name
+                          'offset' is offset within the function
+                        else
+                          return null string
+
+char GetFuncOffset(long ea);
+
+
+FindFuncEnd
+
+
+***********************************************
+** Determine a new function boundaries
+**
+        arguments:      ea  - starting address of a new function
+        returns:        if a function already exists, then return
+                        its end address.
+                        if a function end cannot be determined,
+                        the return BADADDR
+                        otherwise return the end address of the new function
+
+long FindFuncEnd(long ea);
+
+GetFrame
+
+
+***********************************************
+** Get ID of function frame structure
+**
+        arguments:      ea - any address belonging to the function
+        returns:        ID of function frame or -1
+                        In order to access stack variables you need to use
+                        structure member manipulaion functions with the
+                        obtained ID.
+                        If the function does't exist, return -1
+
+long GetFrame(long ea);
+
+GetFrameLvarSize
+
+
+***********************************************
+** Get size of local variables in function frame
+**
+        arguments:      ea - any address belonging to the function
+        returns:        Size of local variables in bytes.
+                        If the function doesn't have a frame, return 0
+                        If the function does't exist, return -1
+
+long GetFrameLvarSize(long ea);
+
+GetFrameRegsSize
+
+
+***********************************************
+** Get size of saved registers in function frame
+**
+        arguments:      ea - any address belonging to the function
+        returns:        Size of saved registers in bytes.
+                        If the function doesn't have a frame, return 0
+                        This value is used as offset for BP
+                        (if FUNC_FRAME is set)
+                        If the function does't exist, return -1
+
+long GetFrameRegsSize(long ea);
+
+GetFrameArgsSize
+
+
+***********************************************
+** Get size of arguments in function frame
+**
+        arguments:      ea - any address belonging to the function
+        returns:        Size of function arguments in bytes.
+                        If the function doesn't have a frame, return 0
+                        If the function does't exist, return -1
+
+long GetFrameArgsSize(long ea);
+
+GetFrameSize
+
+
+***********************************************
+** Get full size of function frame
+**
+        arguments:      ea - any address belonging to the function
+        returns:        Size of function frame in bytes.
+                        This function takes into account size of local
+                        variables + size of saved registers + size of
+                        return address + size of function arguments
+                        If the function doesn't have a frame, return size of
+                        function return address in the stack.
+                        If the function does't exist, return 0
+
+long GetFrameSize(long ea);
+
+MakeFrame
+
+
+***********************************************
+** Make function frame
+**
+        arguments:      ea      - any address belonging to the function
+                        lvsize  - size of function local variables
+                        frregs  - size of saved registers
+                        argsize - size of function arguments
+        returns:        ID of function frame or -1
+                        If the function did not have a frame, the frame
+                        will be created. Otherwise the frame will be
+                        modified
+
+long MakeFrame(long ea,long lvsize,long frregs,long argsize);
+
+GetSpd
+
+
+***********************************************
+** Get current delta for the stack pointer
+**
+        arguments:      ea      - address of the instruction
+        returns:        The difference between the original SP upon
+                        entering the function and SP for
+                        the specified address
+
+long GetSpd(long ea);
+
+GetSpDiff
+
+
+***********************************************
+** Get modification of SP made by the current instruction
+**
+        arguments:      ea      - address of the instruction
+        returns:        Get modification of SP made at the specified location
+                        If the specified location doesn't contain a SP
+                        change point, return 0
+                        Otherwise return delta of SP modification
+
+long GetSpDiff(long ea);
+
+SetSpDiff
+
+
+***********************************************
+** Setup modification of SP made by the current instruction
+**
+        arguments:      ea      - address of the instruction
+                        delta   - the difference made by the current
+                                  instruction.
+        returns:        1-ok, 0-failed
+
+success SetSpDiff(long ea,long delta);
+
+
+GetEntryPointQty
+
+
+***********************************************
+** retrieve number of entry points
+        arguments:      none
+        returns:        number of entry points
+
+long GetEntryPointQty(void);
+
+
+AddEntryPoint
+
+
+***********************************************
+** add entry point
+        arguments:      ordinal  - entry point number
+                                   if entry point doesn't have an ordinal
+                                   number, 'ordinal' should be equal to 'ea'
+                        ea       - address of the entry point
+                        name     - name of the entry point. If null string,
+                                   the entry point won't be renamed.
+                        makecode - if 1 then this entry point is a start
+                                   of a function. Otherwise it denotes data
+                                   bytes.
+        returns:        0 - entry point with the specifed ordinal already
+                                exists
+                        1 - ok
+
+success AddEntryPoint(long ordinal,long ea,char name,long makecode);
+
+
+GetEntryOrdinal
+
+
+***********************************************
+** retrieve entry point ordinal number
+        arguments:      index - 0..GetEntryPointQty()-1
+        returns:        0 if entry point doesn't exist
+                        otherwise entry point ordinal
+
+long GetEntryOrdinal(long index);
+
+
+GetEntryPoint
+
+
+***********************************************
+** retrieve entry point address
+        arguments:      ordinal - entry point number
+                                  it is returned by GetEntryPointOrdinal()
+        returns:        -1 if entry point doesn't exist
+                        otherwise entry point address.
+                        If entry point address is equal to its ordinal
+                        number, then the entry point has no ordinal.
+
+long GetEntryPoint(long ordinal);
+
+
+RenameEntryPoint
+
+
+***********************************************
+** rename entry point
+        arguments:      ordinal - entry point number
+                        name    - new name
+        returns:        !=0 - ok
+
+success RenameEntryPoint(long ordinal,char name);
+
+
+
+GetNextFixupEA
+
+
+***********************************************
+** find next address with fixup information
+        arguments:      ea - current address
+        returns:        -1 - no more fixups
+                        otherwise returns the next address with
+                                                fixup information
+
+long GetNextFixupEA(long ea);
+
+
+GetPrevFixupEA
+
+
+***********************************************
+** find previous address with fixup information
+        arguments:      ea - current address
+        returns:        -1 - no more fixups
+                        otherwise returns the previous address with
+                                                fixup information
+
+long GetPrevFixupEA(long ea);
+
+
+GetFixupTgtType
+
+
+***********************************************
+** get fixup target type
+        arguments:      ea - address to get information about
+        returns:        -1 - no fixup at the specified address
+                        otherwise returns fixup target type:
+#define FIXUP_MASK      0x7     // mask for fixup types:
+#define FIXUP_BYTE      0       //   Low-order byte (8-bit displacement or
+                                //   low byte of 16-bit offset).
+#define FIXUP_OFF16     1       //   16-bit offset.
+#define FIXUP_SEG16     2       //   16-bit base--logical segment base
+                                //   (selector).
+#define FIXUP_PTR32     3       //   32-bit long pointer (16-bit base:16-bit
+                                //   offset).
+#define FIXUP_OFF32     4       //   32-bit offset.
+#define FIXUP_PTR48     5       //   48-bit pointer (16-bit base:32-bit offset)
+#define FIXUP_HI8       6       //   high 8 bits of 16bit offset
+#define FIXUP_REL       0x08    // fixup is relative to linear address
+                                // specified in...?
+#define FIXUP_SELFREL   0x10    // self-relative?
+#define FIXUP_EXTDEF    0x20    // target is a location (otherwise - segment)
+#define FIXUP_UNUSED    0x40    // fixup is ignored by IDA
+
+long GetFixupTgtType(long ea);
+
+
+GetFixupTgtSel
+
+
+***********************************************
+** get fixup target selector
+        arguments:      ea - address to get information about
+        returns:        -1 - no fixup at the specified address
+                        otherwise returns fixup target selector
+
+long GetFixupTgtSel(long ea);
+
+
+GetFixupTgtOff
+
+
+***********************************************
+** get fixup target offset
+        arguments:      ea - address to get information about
+        returns:        -1 - no fixup at the specified address
+                        otherwise returns fixup target offset
+
+long GetFixupTgtOff(long ea);
+
+
+GetFixupTgtDispl
+
+
+***********************************************
+** get fixup target displacement
+        arguments:      ea - address to get information about
+        returns:        -1 - no fixup at the specified address
+                        otherwise returns fixup target displacement
+
+long GetFixupTgtDispl(long ea);
+
+
+SetFixup
+
+
+***********************************************
+** set fixup information
+        arguments:      ea        - address to set fixup information about
+                        type      - fixup type. see GetFixupTgtType()
+                                    for possible fixup types.
+                        targetsel - target selector
+                        targetoff - target offset
+                        displ     - displacement
+        returns:        none
+
+void SetFixup(long ea,long type,long targetsel,long targetoff,long displ);
+
+
+DelFixup
+
+
+***********************************************
+** delete fixup information
+        arguments:      ea - address to delete fixup information about
+        returns:        none
+
+void DelFixup(long ea);
+
+
+MarkPosition
+
+
+***********************************************
+** mark position
+        arguments:      ea      - address to mark
+                        lnnum   - number of generated line for the 'ea'
+                        x       - x coordinate of cursor
+                        y       - y coordinate of cursor
+                        slot    - slot number: 1..20
+                                  if the specifed value is not within the
+                                  range, IDA will ask the user to select slot.
+                        comment - description of the mark.
+                                  Should be not empty.
+        returns:        none
+
+void MarkPosition(long ea,long lnnum,long x,long y,long slot,char comment);
+
+
+GetMarkedPos
+
+
+***********************************************
+** get marked position
+        arguments:      slot    - slot number: 1..20
+                                  if the specifed value is <= 0
+                                  range, IDA will ask the user to select slot.
+        returns:        -1 - the slot doesn't contain a marked address
+                        otherwise returns the marked address
+
+long GetMarkedPos(long slot);
+
+
+GetMarkComment
+
+
+***********************************************
+** get marked position comment
+        arguments:      slot    - slot number: 1..20
+        returns:        null string if the slot doesn't contain
+                                        a marked address
+                        otherwise returns the marked address comment
+
+char GetMarkComment(long slot);
+
+
+GetStrucQty
+
+
+***********************************************
+** get number of defined structure types
+        arguments:      none
+        returns:        number of structure types
+
+long GetStrucQty(void);
+
+
+GetFirstStrucIdx
+
+
+***********************************************
+** get index of first structure type
+        arguments:      none
+        returns:        -1 if no structure type is defined
+                        index of first structure type.
+                        Each structure type has an index and ID.
+                        INDEX determines position of structure definition
+                         in the list of structure definitions. Index 1
+                         is listed first, after index 2 and so on.
+                         The index of a structure type can be changed any
+                         time, leading to movement of the structure definition
+                         in the list of structure definitions.
+                        ID uniquely denotes a structure type. A structure
+                         gets a unique ID at the creation time and this ID
+                         can't be changed. Even when the structure type gets
+                         deleted, its ID won't be resued in the future.
+
+long GetFirstStrucIdx(void);
+
+
+GetLastStrucIdx
+
+
+***********************************************
+** get index of last structure type
+        arguments:      none
+        returns:        -1 if no structure type is defined
+                        index of last structure type.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+long GetLastStrucIdx(void);
+
+
+GetNextStrucIdx
+
+
+***********************************************
+** get index of next structure type
+        arguments:      current structure index
+        returns:        -1 if no (more) structure type is defined
+                        index of the next structure type.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+long GetNextStrucIdx(long index);
+
+
+GetPrevStrucIdx
+
+
+***********************************************
+** get index of previous structure type
+        arguments:      current structure index
+        returns:        -1 if no (more) structure type is defined
+                        index of the presiouvs structure type.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+long GetPrevStrucIdx(long index);
+
+
+GetStrucIdx
+
+
+***********************************************
+** get structure index by structure ID
+        arguments:      structure ID
+        returns:        -1 if bad structure ID is passed
+                        otherwise returns structure index.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+long GetStrucIdx(long id);
+
+
+GetStrucId
+
+
+***********************************************
+** get structure ID by structure index
+        arguments:      structure index
+        returns:        -1 if bad structure index is passed
+                        otherwise returns structure ID.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+long GetStrucId(long index);
+
+
+GetStrucIdByName
+
+
+***********************************************
+** get structure ID by structure name
+        arguments:      structure type name
+        returns:        -1 if bad structure type name is passed
+                        otherwise returns structure ID.
+
+long GetStrucIdByName(char name);
+
+
+GetStrucName
+
+
+***********************************************
+** get structure type name
+        arguments:      structure type ID
+        returns:        -1 if bad structure type ID is passed
+                        otherwise returns structure type name.
+
+char GetStrucName(long id);
+
+
+GetStrucComment
+
+
+***********************************************
+** get structure type comment
+        arguments:      id         - structure type ID
+                        repeatable - 1: get repeatable comment
+                                     0: get regular comment
+        returns:        null string if bad structure type ID is passed
+                        otherwise returns comment.
+
+char GetStrucComment(long id,long repeatable);
+
+
+GetStrucSize
+
+
+***********************************************
+** get size of a structure
+        arguments:      id         - structure type ID
+        returns:        -1 if bad structure type ID is passed
+                        otherwise returns size of structure in bytes.
+
+long GetStrucSize(long id);
+
+
+GetMemberQty
+
+
+***********************************************
+** get number of members of a structure
+        arguments:      id         - structure type ID
+        returns:        -1 if bad structure type ID is passed
+                        otherwise returns number of members.
+
+long GetMemberQty(long id);
+
+
+GetStrucPrevOff
+
+
+***********************************************
+** get previous offset in a structure
+        arguments:      id     - structure type ID
+                        offset - current offset
+        returns:        -1 if bad structure type ID is passed
+                           or no (more) offsets in the structure
+                        otherwise returns previous offset in a structure.
+                        NOTE: IDA allows 'holes' between members of a
+                              structure. It treats these 'holes'
+                              as unnamed arrays of bytes.
+                        This function returns a member offset or a hole offset.
+                        It will return size of the structure if input
+                        'offset' is bigger than the structure size.
+
+long GetStrucPrevOff(long id,long offset);
+
+
+GetStrucNextOff
+
+
+***********************************************
+** get next offset in a structure
+        arguments:      id     - structure type ID
+                        offset - current offset
+        returns:        -1 if bad structure type ID is passed
+                           or no (more) offsets in the structure
+                        otherwise returns next offset in a structure.
+                        NOTE: IDA allows 'holes' between members of a
+                              structure. It treats these 'holes'
+                              as unnamed arrays of bytes.
+                        This function returns a member offset or a hole offset.
+                        It will return size of the structure if input
+                        'offset' belongs to the last member of the structure.
+
+long GetStrucNextOff(long id,long offset);
+
+
+GetFirstMember
+
+
+***********************************************
+** get offset of the first member of a structure
+        arguments:      id            - structure type ID
+        returns:        -1 if bad structure type ID is passed
+                           or structure has no members
+                        otherwise returns offset of the first member.
+                        NOTE: IDA allows 'holes' between members of a
+                              structure. It treats these 'holes'
+                              as unnamed arrays of bytes.
+
+long GetFirstMember(long id);
+
+
+GetLastMember
+
+
+***********************************************
+** get offset of the last member of a structure
+        arguments:      id            - structure type ID
+        returns:        -1 if bad structure type ID is passed
+                           or structure has no members
+                        otherwise returns offset of the last member.
+                        NOTE: IDA allows 'holes' between members of a
+                              structure. It treats these 'holes'
+                              as unnamed arrays of bytes.
+
+long GetLastMember(long id);
+
+
+GetMemberOffset
+
+
+***********************************************
+** get offset of a member of a structure by the member name
+        arguments:      id            - structure type ID
+                        member_name   - name of structure member
+        returns:        -1 if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns offset of the specified member.
+
+long GetMemberOffset(long id,char member_name);
+
+
+GetMemberName
+
+
+***********************************************
+** get name of a member of a structure
+        arguments:      id            - structure type ID
+                        member_offset - member offset. The offset can be
+                                        any offset in the member. For example,
+                                        is a member is 4 bytes long and starts
+                                        at offset 2, then 2,3,4,5 denote
+                                        the same structure member.
+        returns:        -1 if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns name of the specified member.
+
+char GetMemberName(long id,long member_offset);
+
+
+GetMemberComment
+
+
+***********************************************
+** get comment of a member
+        arguments:      id            - structure type ID
+                        member_offset - member offset. The offset can be
+                                        any offset in the member. For example,
+                                        is a member is 4 bytes long and starts
+                                        at offset 2, then 2,3,4,5 denote
+                                        the same structure member.
+                        repeatable - 1: get repeatable comment
+                                     0: get regular comment
+        returns:        null string if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns comment of the specified member.
+
+char GetMemberComment(long id,long member_offset,long repeatable);
+
+
+GetMemberSize
+
+
+***********************************************
+** get size of a member
+        arguments:      id            - structure type ID
+                        member_offset - member offset. The offset can be
+                                        any offset in the member. For example,
+                                        is a member is 4 bytes long and starts
+                                        at offset 2, then 2,3,4,5 denote
+                                        the same structure member.
+        returns:        -1 if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns size of the specified
+                                          member in bytes.
+
+long GetMemberSize(long id,long member_offset);
+
+
+GetMemberFlag
+
+
+***********************************************
+** get type of a member
+        arguments:      id            - structure type ID
+                        member_offset - member offset. The offset can be
+                                        any offset in the member. For example,
+                                        is a member is 4 bytes long and starts
+                                        at offset 2, then 2,3,4,5 denote
+                                        the same structure member.
+        returns:        -1 if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns type of the member, see bit
+                        definitions above. If the member type is a structure
+                        then function GetMemberStrid() should be used to
+                        get the structure type id.
+
+long GetMemberFlag(long id,long member_offset);
+
+
+GetMemberStrId
+
+
+***********************************************
+** get structure id of a member
+        arguments:      id            - structure type ID
+                        member_offset - member offset. The offset can be
+                                        any offset in the member. For example,
+                                        is a member is 4 bytes long and starts
+                                        at offset 2, then 2,3,4,5 denote
+                                        the same structure member.
+        returns:        -1 if bad structure type ID is passed
+                           or no such member in the structure
+                        otherwise returns structure id of the member.
+                        If the current member is not a structure, returns -1.
+
+long GetMemberStrId(long id,long member_offset);
+
+
+AddStruc
+
+
+***********************************************
+** define a new structure type
+        arguments:      index         - index of new structure type
+                        If another structure has the specified index,
+                        then index of that structure and all other
+                        structures will be increentedfreeing the specifed
+                        index. If index is == -1, then the biggest index
+                        number will be used.
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+
+                        name - name of the new structure type.
+
+        returns:        -1 if can't define structure type because of
+                        bad structure name: the name is ill-formed or is
+                        already used in the program.
+                        otherwise returns ID of the new structure type
+
+long AddStruc(long index,char name);
+
+
+DelStruc
+
+
+***********************************************
+** delete a structure type
+        arguments:      id            - structure type ID
+        returns:        0 if bad structure type ID is passed
+                        1 otherwise the structure type is deleted. All data
+                        and other structure types referencing to the
+                        deleted structure type will be displayed as array
+                        of bytes.
+
+success DelStruc(long id);
+
+
+SetStrucIdx
+
+
+***********************************************
+** change structure index
+        arguments:      id      - structure type ID
+                        index   - new index of the structure
+                        See GetFirstStrucIdx() for the explanation of
+                        structure indices and IDs.
+        returns:        !=0 - ok
+
+long SetStrucIdx(long id,long index);
+
+
+SetStrucName
+
+
+***********************************************
+** change structure name
+        arguments:      id      - structure type ID
+                        name    - new name of the structure
+        returns:        !=0 - ok
+
+long SetStrucName(long id,char name);
+
+
+SetStrucComment
+
+
+***********************************************
+** change structure comment
+        arguments:      id      - structure type ID
+                        comment - new comment of the structure
+                        repeatable - 1: change repeatable comment
+                                     0: change regular comment
+        returns:        !=0 - ok
+
+long SetStrucComment(long id,char comment,long repeatable);
+
+
+AddStrucMember
+
+
+***********************************************
+** add structure member
+        arguments:      id      - structure type ID
+                        name    - name of the new member
+                        offset  - offset of the new member
+                        flag    - type of the new member. Should be one of
+                                  FF_BYTE..FF_PACKREAL (see above)
+                                  combined with FF_DATA
+                        typeid  - structure id if 'flag' == FF_STRU
+                                  Denotes type of the member is the member
+                                  itself is a structure. Otherwise should be
+                                  -1.
+                                  if isOff0(flag) then typeid specifies
+                                  the offset base.
+                                  if isASCII(flag) then typeid specifies
+                                  the string type (ASCSTR_...).
+                        nitems  - number of items in the new member
+        returns:        0 - ok, otherwise error code:
+#define STRUC_ERROR_MEMBER_NAME   1     // already have member with this name (bad name)
+#define STRUC_ERROR_MEMBER_OFFSET 2     // already have member at this offset
+#define STRUC_ERROR_MEMBER_SIZE   3     // bad number of items or bad sizeof(type)
+
+long AddStrucMember(long id,char name,long offset,long flag,
+                    long typeid,long nitems);
+
+
+DelStrucMember
+
+
+***********************************************
+** delete structure member
+        arguments:      id            - structure type ID
+                        member_offset - offset of the member
+        returns:        !=0 - ok.
+                        NOTE: IDA allows 'holes' between members of a
+                              structure. It treats these 'holes'
+                              as unnamed arrays of bytes.
+
+long DelStrucMember(long id,long member_offset);
+
+
+SetMemberName
+
+
+***********************************************
+** change structure member name
+        arguments:      id            - structure type ID
+                        member_offset - offset of the member
+                        name          - new name of the member
+        returns:        !=0 - ok.
+
+long SetMemberName(long id,long member_offset,char name);
+
+
+SetMemberType
+
+
+***********************************************
+** change structure member type
+        arguments:      id            - structure type ID
+                        member_offset - offset of the member
+                        flag    - new type of the member. Should be one of
+                                  FF_BYTE..FF_PACKREAL (see above)
+                                  combined with FF_DATA
+                        typeid  - structure id if 'flag' == FF_STRU
+                                  Denotes type of the member is the member
+                                  itself is a structure. Otherwise should be
+                                  -1.
+                                  if isOff0(flag) then typeid specifies
+                                  the offset base.
+                                  if isASCII(flag) then typeid specifies
+                                  the string type (ASCSTR_...).
+                        nitems  - number of items in the member
+        returns:        !=0 - ok.
+
+long SetMemberType(long id,long member_offset,long flag,long typeid,long nitems);
+
+
+SetMemberComment
+
+
+***********************************************
+** change structure member comment
+        arguments:      id      - structure type ID
+                        member_offset - offset of the member
+                        comment - new comment of the structure member
+                        repeatable - 1: change repeatable comment
+                                     0: change regular comment
+        returns:        !=0 - ok
+
+long SetMemberComment(long id,long member_offset,char comment,long repeatable);
+
+
+GetEnumQty
+
+
+***********************************************
+** get number of enum types
+        arguments:      none
+        returns:        number of enumerations
+
+long GetEnumQty(void);
+
+
+GetnEnum
+
+
+***********************************************
+** get ID of the specified enum by its serial number
+        arguments:      idx - number of enum (0..GetEnumQty()-1)
+        returns:        ID of enum or -1 if error
+
+long GetnEnum(long idx);
+
+
+GetEnumIdx
+
+
+***********************************************
+** get serial number of enum by its ID
+        arguments:      enum_id - ID of enum
+        returns:        (0..GetEnumQty()-1) or -1 if error
+
+long GetEnumIdx(long enum_id);
+
+
+GetEnum
+
+
+***********************************************
+** get enum ID by the name of enum
+        arguments:      name - name of enum
+        returns:        ID of enum or -1 if no such enum exists
+
+long GetEnum(char name);
+
+
+GetEnumName
+
+
+***********************************************
+** get name of enum
+        arguments:      enum_id - ID of enum
+        returns:        name of enum or empty string
+
+char GetEnumName(long enum_id);
+
+
+GetEnumCmt
+
+
+***********************************************
+** get comment of enum
+        arguments:      enum_id - ID of enum
+                        repeatable - 0:get regular comment
+                                     1:get repeatable comment
+        returns:        comment of enum
+
+char GetEnumCmt(long enum_id,long repeatable);
+
+
+GetEnumSize
+
+
+***********************************************
+** get size of enum
+        arguments:      enum_id - ID of enum
+        returns:        number of constants in the enum
+                        Returns 0 if enum_id is bad.
+
+long GetEnumSize(long enum_id);
+
+
+GetEnumFlag
+
+
+***********************************************
+** get flag of enum
+        arguments:      enum_id - ID of enum
+        returns:        flags of enum. These flags determine representation
+                        of numeric constants (binary,octal,decimal,hex)
+                        in the enum definition. See start of this file for
+                        more information about flags.
+                        Returns 0 if enum_id is bad.
+
+long GetEnumFlag(long enum_id);
+
+
+GetConstByName
+
+
+***********************************************
+** get member of enum - a symbolic constant ID
+        arguments:      name - name of symbolic constant
+        returns:        ID of constant or -1
+
+long GetConstByName(char name);
+
+
+GetConstValue
+
+
+***********************************************
+** get value of symbolic constant
+        arguments:      const_id - id of symbolic constant
+        returns:        value of constant or 0
+
+long GetConstValue(long const_id);
+
+
+GetConstEnum
+
+
+***********************************************
+** get id of enum by id of constant
+        arguments:      const_id - id of symbolic constant
+        returns:        id of enum the constant belongs to.
+                        -1 if const_id is bad.
+
+long GetConstEnum(long const_id);
+
+
+GetConst
+
+***********************************************
+** get id of constant
+        arguments:      enum_id - id of enum
+                        value   - value of constant
+        returns:        id of constant or -1 if error
+
+long GetConst(long enum_id,long value);
+
+
+GetFirstConst
+
+
+***********************************************
+** get first constant in the enum
+        arguments:      enum_id - id of enum
+        returns:        value of constant or -1 no constants are defined
+                        All constants are sorted by their values
+                        as unsigned longs.
+
+long GetFirstConst(long enum_id);
+
+
+GetLastConst
+
+
+***********************************************
+** get last constant in the enum
+        arguments:      enum_id - id of enum
+        returns:        value of constant or -1 no constants are defined
+                        All constants are sorted by their values
+                        as unsigned longs.
+
+long GetLastConst(long enum_id);
+
+
+GetNextConst
+
+
+***********************************************
+** get next constant in the enum
+        arguments:      enum_id - id of enum
+                        value   - value of the current constant
+        returns:        value of a constant with value higher than the specified
+                        value. -1 no such constants exist.
+                        All constants are sorted by their values
+                        as unsigned longs.
+
+long GetNextConst(long enum_id,long value);
+
+
+GetPrevConst
+
+
+***********************************************
+** get prev constant in the enum
+        arguments:      enum_id - id of enum
+                        value   - value of the current constant
+        returns:        value of a constant with value lower than the specified
+                        value. -1 no such constants exist.
+                        All constants are sorted by their values
+                        as unsigned longs.
+
+long GetPrevConst(long enum_id,long value);
+
+
+GetConstName
+
+
+***********************************************
+** get name of a constant
+        arguments:      const_id - id of const
+        returns:        name of constant
+
+char GetConstName(long const_id);
+
+
+GetConstCmt
+
+
+***********************************************
+** get comment of a constant
+        arguments:      const_id - id of const
+                        repeatable - 0:get regular comment
+                                     1:get repeatable comment
+        returns:        comment string
+
+char GetConstCmt(long const_id,long repeatable);
+
+
+AddEnum
+
+
+***********************************************
+** add a new enum type
+        arguments:      idx - serial number of the new enum.
+                              If another enum with the same serial number
+                              exists, then all enums with serial
+                              numbers >= the specified idx get their
+                              serial numbers incremented (in other words,
+                              the new enum is put in the middle of the list
+                              of enums).
+                              If idx >= GetEnumQty() then the new enum is
+                              created at the end of the list of enums.
+                        name - name of the enum.
+                        flag - flags for representation of numeric constants
+                               in the definition of enum.
+        returns:        id of new enum or -1.
+
+long AddEnum(long idx,char name,long flag);
+
+
+DelEnum
+
+
+***********************************************
+** delete enum type
+        arguments:      enum_id - id of enum
+
+void DelEnum(long enum_id);
+
+
+SetEnumIdx
+
+
+***********************************************
+** give another serial number to a enum
+        arguments:      enum_id - id of enum
+                        idx     - new serial number.
+                              If another enum with the same serial number
+                              exists, then all enums with serial
+                              numbers >= the specified idx get their
+                              serial numbers incremented (in other words,
+                              the new enum is put in the middle of the list
+                              of enums).
+                              If idx >= GetEnumQty() then the enum is
+                              moved to the end of the list of enums.
+        returns:        comment string
+
+success SetEnumIdx(long enum_id,long idx);
+
+
+SetEnumName
+
+
+***********************************************
+** rename enum
+        arguments:      enum_id - id of enum
+                        name    - new name of enum
+        returns:        1-ok,0-failed
+
+success SetEnumName(long enum_id,char name);
+
+
+SetEnumCmt
+
+
+***********************************************
+** set comment of enum
+        arguments:      enum_id - id of enum
+                        cmt     - new comment for the enum
+                        repeatable - 0:set regular comment
+                                     1:set repeatable comment
+        returns:        1-ok,0-failed
+
+success SetEnumCmt(long enum_id,char cmt,long repeatable);
+
+
+SetEnumFlag
+
+
+***********************************************
+** set flag of enum
+        arguments:      enum_id - id of enum
+                        flag - flags for representation of numeric constants
+                               in the definition of enum.
+        returns:        1-ok,0-failed
+
+success SetEnumFlag(long enum_id,long flag);
+
+
+AddConst
+
+
+***********************************************
+** add a member of enum - a symbolic constant
+        arguments:      enum_id - id of enum
+                        name    - name of symbolic constant. Must be unique
+                                  in the program.
+                        value   - value of symbolic constant.
+        returns:        0-ok, otherwise error code:
+#define CONST_ERROR_NAME  1     // already have member with this name (bad name)
+#define CONST_ERROR_VALUE 2     // already have member with this value
+#define CONST_ERROR_ENUM  3     // bad enum id
+
+long AddConst(long enum_id,char name,long value);
+
+
+DelConst
+
+
+***********************************************
+** delete a member of enum - a symbolic constant
+        arguments:      enum_id - id of enum
+                        value   - value of symbolic constant.
+        returns:        1-ok,0-failed
+
+success DelConst(long enum_id,long value);
+
+
+SetConstName
+
+
+***********************************************
+** rename a member of enum - a symbolic constant
+        arguments:      const_id - id of const
+                        name     - new name of constant
+        returns:        1-ok,0-failed
+
+success SetConstName(long const_id,char name);
+
+
+SetConstCmt
+
+
+***********************************************
+** set a comment of a symbolic constant
+        arguments:      const_id - id of const
+                        cmt     - new comment for the constant
+                        repeatable - 0:set regular comment
+                                     1:set repeatable comment
+        returns:        1-ok,0-failed
+
+success SetConstCmt(long const_id,char cmt,long repeatable);
+
+
+CreateArray
+
+
+The arrays are virtual. IDA allocates space for and keeps only the specified
+elements of an array. Array index is 32-bit long. Actually, each array
+may keep a set of strings and a set of long(32bit) values.
+
+***********************************************
+** create array
+        arguments:      name - name of array. There are no restrictions
+                               on the name (its length should be less than
+                               120 characters, though)
+        returns:        -1 - can't create array (it already exists)
+                        otherwise returns id of the array
+
+long CreateArray(char name);
+
+
+GetArrayId
+
+
+***********************************************
+** get array id by its name
+        arguments:      name - name of existing array.
+        returns:        -1 - no such array
+                        otherwise returns id of the array
+
+long GetArrayId(char name);
+
+
+RenameArray
+
+
+***********************************************
+** rename array
+        arguments:      id      - array id returned by CreateArray() or
+                                  GetArrayId()
+                        newname - new name of array. There are no
+                                  restrictions on the name (its length should
+                                  be less than 120 characters, though)
+        returns:        1-ok, 0-failed
+
+success RenameArray(long id,char newname);
+
+
+DeleteArray
+
+
+***********************************************
+** delete array
+   This function deletes all elements of the array.
+        arguments:      id      - array id
+
+void DeleteArray(long id);
+
+
+SetArrayLong
+
+
+***********************************************
+** set 32bit value of array element
+        arguments:      id      - array id
+                        idx     - index of an element
+                        value   - 32bit value to store in the array
+        returns:        1-ok, 0-failed
+
+success SetArrayLong(long id,long idx,long value);
+
+
+SetArrayString
+
+
+***********************************************
+** set string value of array element
+        arguments:      id      - array id
+                        idx     - index of an element
+                        str     - string to store in array element
+        returns:        1-ok, 0-failed
+
+success SetArrayString(long id,long idx,char str);
+
+
+GetArrayElement
+
+
+***********************************************
+** get value of array element
+        arguments:      tag     - tag of array, specifies one of two
+                                  array types:
+#define AR_LONG 'A'     // array of longs
+#define AR_STR  'S'     // array of strings
+                        id      - array id
+                        idx     - index of an element
+        returns:        value of the specified array element.
+                        note that this function may return char or long
+                        result. Unexistent array elements give zero as
+                        a result.
+
+char or long GetArrayElement(long tag,long id,long idx);
+
+
+DelArrayElement
+
+
+***********************************************
+** delete an array element
+        arguments:      tag     - tag of array (AR_LONG or AR_STR)
+                        id      - array id
+                        idx     - index of an element
+        returns:        1-ok, 0-failed
+
+success DelArrayElement(long tag,long id,long idx);
+
+
+GetFirstIndex
+
+
+***********************************************
+** get index of the first existing array element
+        arguments:      tag     - tag of array (AR_LONG or AR_STR)
+                        id      - array id
+        returns:        -1 - array is empty
+                        otherwise returns index of the first array element
+
+long GetFirstIndex(long tag,long id);
+
+
+GetLastIndex
+
+
+***********************************************
+** get index of the last existing array element
+        arguments:      tag     - tag of array (AR_LONG or AR_STR)
+                        id      - array id
+        returns:        -1 - array is empty
+                        otherwise returns index of the last array element
+
+long GetLastIndex(long tag,long id);
+
+
+GetNextIndex
+
+
+***********************************************
+** get index of the next existing array element
+        arguments:      tag     - tag of array (AR_LONG or AR_STR)
+                        id      - array id
+                        idx     - index of the current element
+        returns:        -1 - no more array elements
+                        otherwise returns index of the next array element
+
+long GetNextIndex(long tag,long id,long idx);
+
+
+
+GetPrevIndex
+
+
+***********************************************
+** get index of the previous existing array element
+        arguments:      tag     - tag of array (AR_LONG or AR_STR)
+                        id      - array id
+                        idx     - index of the current element
+        returns:        -1 - no more array elements
+                        otherwise returns index of the previous array element
+
+long GetPrevIndex(long tag,long id,long idx);
+
+
+AddSourceFile
+
+
+  IDA can keep information about source files used to create the program.
+  Each source file is represented by a range of addresses.
+  A source file may contains several address ranges.
+
+***********************************************
+** Mark a range of address as belonging to a source file
+   An address range may belong only to one source file.
+   A source file may be represented by several address ranges.
+        ea1     - linear address of start of the address range
+        ea2     - linear address of end of the address range
+        filename- name of source file.
+   returns: 1-ok, 0-failed.
+
+success AddSourceFile(long ea1,ulong ea2,char filename);
+
+
+GetSourceFile
+
+
+***********************************************
+** Get name of source file occupying the given address
+        ea - linear address
+   returns: NULL - source file information is not found
+            otherwise returns pointer to file name
+
+char GetSourceFile(long ea);
+
+
+
+DelSourceFile
+
+
+***********************************************
+** Delete information about the source file
+        ea - linear address belonging to the source file
+   returns: NULL - source file information is not found
+            otherwise returns pointer to file name
+
+success DelSourceFile(long ea);
+
+
+SetLineNumber
+
+
+***********************************************
+** set source line number
+        arguments:      ea      - linear address
+                        lnnum   - number of line in the source file
+        returns:        nothing
+
+void SetLineNumber(long ea,long lnnum);
+
+
+GetLineNumber
+
+
+***********************************************
+** get source line number
+        arguments:      ea      - linear address
+        returns:        number of line in the source file or -1
+
+long GetLineNumber(long ea);
+
+
+
+DelLineNumber
+
+
+***********************************************
+** delete information about source line number
+        arguments:      ea      - linear address
+        returns:        nothing
+
+void DelLineNumber(long ea);
+
+
+Conv
+
+
+        Convenience function.
+        See Set..() functions for bit definitions.
+
+StringStp(x)            SetCharPrm(INF_ASCII_BREAK,x)
+LowVoids(x)             SetLongPrm(INF_LOW_OFF,x)
+HighVoids(x)            SetLongPrm(INF_HIGH_OFF,x)
+TailDepth(x)            SetLongPrm(INF_MAXREF,x)
+Analysis(x)             SetCharPrm(INF_AUTO,x)
+Tabs(x)                 SetCharPrm(INF_ENTAB,x)
+Comments(x)             SetCharPrm(INF_CMTFLAG,((x)
+                                ? (SW_ALLCMT|GetCharPrm(INF_CMTFLAG))
+                                : (~SW_ALLCMT&GetCharPrm(INF_CMTFLAG))))
+Voids(x)                SetCharPrm(INF_VOIDS,x)
+Indent(x)               SetCharPrm(INF_INDENT,x)
+CmtIndent(x)            SetCharPrm(INF_COMMENT,x)
+AutoShow(x)             SetCharPrm(INF_AUTOSHOW,x)
+MinEA()                 GetLongPrm(INF_MIN_EA)
+MaxEA()                 GetLongPrm(INF_MAX_EA)
+BeginEA()               GetLongPrm(INF_BEGIN_EA)
+set_start_cs(x)         SetLongPrm(INF_START_CS,x)
+set_start_ip(x)         SetLongPrm(INF_START_IP,x)
+For the list of built-in functions please click here.
+
+IDC script sample
+-----------------
+
+This is a sample IDC script:
+//
+//      This file demonstrates how to copy blocks of memory
+//      using IDC. To use it, press F2 and select this file.
+//      Once loaded and compiled all IDC functions stay in memory
+//      so afterwards you can copy blocks simply pressing Shift-F2
+//      and entering something like:
+//
+//              memcpy(0x30000,0x20000,0x100);
+//
+//      This construction copies 0x100 bytes from 0x20000 to 0x30000.
+//
+//      Also, you can delete main() function below.
+//      When you try to execute this file, you'll get an error:
+//      can find function 'main', don't pay attention.
+//      You will get memcpy() function in the memory.
+//      In this case you should create a segment youself (if nesessary).
+//
+
+//------------------------------------------------------------------------
+static memcpy(to,from,size) {
+  auto i;
+
+  for ( i=0; i < size; i=i+1 ) {
+    PatchByte( to, Byte(from) );
+    from = from + 1;
+    to = to + 1;
+  }
+}
+
+//------------------------------------------------------------------------
+static main(void) {
+  auto from,to,size;
+
+  from = 0x10000;
+  to = 0x20000;
+  size = 0x100;
+
+  if ( SegCreate(to,to+size,to>>4,0,1,2) )
+    memcpy(to,from,size);
+}
+
+===============================================================================
+                       SECTION IV : IDA FAQ
+===============================================================================
+
+How do I generate FLIRT signature from my own libraries ?
+
+     The process is simple if you have installed the FLAIR tools. As an example, we'll use an file called api.lib.
+     First a pattern file should be created. The command
+
+     plb api(.lib) api(.pat)
+
+     creates a pattern file whose format is described in our FLIRT paper. Have a look at this file with a text
+     editor.Then we'll create a signature file with the command
+
+     sigmake api(.pat) api(.sig)
+
+     and copy the resulting api.sig file in the IDA Pro SIG subdirectory.
+
+How do I apply my own SIGs to the disassembly ?
+
+     Open the signature window through the View Menu. Press the INS key. Wait a few seconds until the list of
+     available signatures is build. Move the cursor on the line containing your sig file and press the ENTER key.
+
+How do I define high level structures ?
+
+     See this short tutorial
+
+How do I load debugging information, MAP or SYM files into IDA ?
+
+     The following procedure may be used to load debugging information, MAP and SYM files into a
+     disassembly. This procedure is a temprarory solution, as future versions of IDA will have a built-in support
+     of debugging information.
+
+     Convert debugging information into text using your favorite dumper. (Borland's TDUMP.EXE is a good choice
+     when dealing with Borland and Microsoft debugging information). Load the text into a text editor and convert it
+     into IDC script:
+
+
+
+     static main() {
+
+       MakeName(addr,name);
+
+       ...........
+
+     }
+
+
+     where addr - address should be replaced be the address of the name and name is string constant. Example:
+
+
+
+     static main() {
+
+       MakeName(0x10000,"name1");
+
+     }
+
+
+     Launch IDA and execute the script by pressing F2 key. The names from the SYM file will appear in the
+     disassembly.
+
+How do I save a fragment of disassembly ?
+
+     Select the area of the disassembly that you want to save and press ALT-F10.
+
+===============================================================================
+                    SECTION V : SAMPLE OUTPUT FILE
+===============================================================================
+
+Here is assembler listing of an object file:
+
+;
+; +-----------------------------------------------------------------+
+; | This file is generated by The Interactive Disassembler (IDA)    |
+; | Copyright (c) 1997 by DataRescue sprl, <ida@datarescue.com>     |
+; +-----------------------------------------------------------------+
+;
+;
+
+
+; Module name      : hello2.c
+; Translator       : Turbo Assembler  Version 3.1
+; Borland debuginfo: version 3.0
+; Borland flags    : Optimization 00000000
+
+
+; This file should be compiled with TASM /ml/m5
+p386n
+
+; ---------------------------------------------------------------------------
+
+; Segment type: Group
+DGROUP          group _BSS,_DATA
+
+; ---------------------------------------------------------------------------
+
+; Segment type: Externs
+; extn00
+                extrn _puts:far         ; CODE XREF: _main+22P
+; snprintf(unsigned int,signed charfar *,signed charfar *,...)
+                extrn @snprintf$quinzcnxzce:far ; CODE XREF: _main+14P
+
+; ---------------------------------------------------------------------------
+
+; Segment type: Pure code
+HELLO2_TEXT     segment byte public 'CODE' use16
+                assume cs:HELLO2_TEXT
+                assume es:nothing, ss:nothing, ds:DGROUP, fs:nothing, gs:nothing
+
+;               S u b r o u t i n e
+; Attributes: bp-based frame
+
+public _main
+_main           proc far
+
+var_100         = byte ptr -100h
+
+                push    bp
+                mov     bp, sp
+                sub     sp, 100h
+                push    ds
+                push    offset aHelloWorld
+                push    ss
+                lea     ax, [bp+var_100]
+                push    ax
+                push    100h
+                call    @snprintf$quinzcnxzce ; snprintf(uint,signed char *,signed char *,...)
+                add     sp, 0Ah
+                push    ss
+                lea     ax, [bp+var_100]
+                push    ax
+                call    _puts
+                add     sp, 4
+                xor     ax, ax
+                leave
+                retf
+_main           endp
+
+HELLO2_TEXT     ends
+
+; ---------------------------------------------------------------------------
+
+; Segment type: Pure data
+_DATA           segment word public 'DATA' use16
+                assume cs:_DATA
+aHelloWorld     db 'Hello, world!',0Ah,0 ; DATA XREF: _main+8o
+_DATA           ends
+
+; ---------------------------------------------------------------------------
+
+; Segment type: Zero-length
+_BSS            segment word public 'BSS' use16
+_BSS            ends
+
+
+                end
+
+
+<eof>

@@ -1,0 +1,1271 @@
+Zaibatsu, lovely zaibatsu...
+ Monday, 19-Oct-98 03:09:50 
+
+
+      Maybe no-one sees the humor in this but me:
+
+      Wal-Mart Stores sued Amazon.com, accusing the Internet bookseller of stealing trade
+      secrets. The lawsuit, filed in New York, says Amazon has recruited former Wal-Mart
+      associates and targeted the firm's vendors to learn more about its database, which
+      analysts say is second in size only to the US government's and includes
+      data on consumer buying habits. A spokesman for Amazon denied the charge and said Amazon
+      was only
+      "hiring the brightest, hardest-working, and most-talented people." Amazon reportedly
+      wants to be the discount superstore of cyberspace. "
+
+
+      That's quite some database, considering the NSA, Hoover's paranoia, et al
+
+
+      _m 
+
+      mammon_ 
+---------------------------------------------------------------------
+And now somethng totally different
+ Tuesday, 20-Oct-98 20:45:17 
+
+
+      Hi
+      Indeed It would be nice database to have a look on.
+      Talking about accessing such source, have a look on the issue of scientific american of
+      October 1998.
+      Nice article about an inquisitive fellow who get caught by this ego.
+      This article could be a wonderful base for reality cracking with its mixture of hoaxes
+      and reality.
+      It raises a question is Ego the best anti-Underground tool ;)) ?
+
+      Harma
+
+      PS Hope you read your old thread
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: And now somethng totally different
+ Thursday, 22-Oct-98 04:02:42 
+
+
+      In a sense it is...there's always the hacker credo of "never tell a [flesh | meat|
+      personal] friend of your exploits...it is the surest way to be caught". Likewise, telling
+      of your activities on IRC (or posting a web page) leaves you activity open for monitoring
+      by others...and again, potential for being caught. The most successful underground figure
+      is one whose activities are never even suspected of having taken place, let alone knowing
+      who did them.
+
+      Also a threat is idle banter/chatter/etc, in emails or in chat room. You may reveal more
+      than you mean to (or you may mean to reveal more than you mean to reveal, a red
+      herring...), especially after a few of those Martini-Wodkas (or, worse, the true Martinis
+      which are not watered down with Tonic Water ;).
+
+      _m
+---------------------------------------------------------------------
+Re: Re: And now somethng totally different
+ Thursday, 22-Oct-98 13:35:35 
+
+
+      But what about public site or public messageboard, you are a "public person" for sure
+      monitored. How does it feel ??
+      I totally agreed to this point but then how do you communicate, teach, propagate your
+      knowledge.
+      The aim of such work is to verbessern our knowledge for everybody.
+      Our society is mutating in a new one were the power of information will allow more
+      liberty with all the implication of freedom of speech. You (or we) are able to use
+      cracking skills to reality cracking (wonderful idea by the way). May I know why you (it
+      is not personal) want to give this know-how ??
+      Mastering the art to extract information from data, analysing facts is a new strength
+      which can be applied to anything you want.
+
+      By the way I know that it is really +ORC to drink Martini, but the flavor of a good
+      Pomerol are also a good ZEN promoting tool ;))
+
+      HARMA
+
+
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: Re: Re: And now somethng totally different
+ Friday, 23-Oct-98 03:23:38 
+
+      I have personally found martinis to be abominably useless for cracking purposes. However,
+      in the height of my "cracking days" (I do not do all that much cracking any more,
+      contrary to popular belief) I found that a dram of Lagavulin 16-year would bring all of
+      the soft-ice command sinstantly to memory.
+
+      Now, to your questions:
+
+      How does it feel to be monitored? I'm a bleedin' paranoid, I always assume I am being
+      monitored, so I guess it feels normal. I have a bad habit of lying my @ss off in the
+      presence of strangers as well, so email/chat is not too much a problem.
+
+      How do you teach/spread knowledge without exposing yourself? You can't. Granted, you can
+      be very very careful like +ORC, but in general if decide to pass on illicit
+      knowledge--whether it is how to crack by +ORC or how to make meths in your basement by
+      Uncle Fester--you take upon yourself the responsibility of that knowledge (meaning you
+      should watch who you give it to, and weed out the undesireables), and you resign yourself
+      to the chances of getting caught.
+
+      Why teach? there are many reasons: 1) You only learn what you truly do and do not know by
+      teaching others; 2) To ensure that the information does not die; 3) To "awaken" the
+      talents/brains/individuality of others (as Fravia with his reality cracking and our hcu);
+      4) to have other people to talk about this stuff with (prime example: I work best in
+      dialogue, discussing and planning projects, and realized when working with visual
+      assembler that I knew no-one in the flesh who knew a damn thing about assembly or IDE
+      coding...very big impairment on my normal development process); 5) to make a mark or
+      leave a legacy (as +orc, obviously, has done).
+
+      Hey +Mammon, why don't you autoapprove your (and others) postings? (note the
+      infinitesimal change above... fravia+ :-)
+
+      As for the last bit (before the Pomerol ;), you are absolutely correct: separating
+      information from disinformstion is a prinamry survival trait. The brain is at its most
+      basic cognitive level a pattern-matching device, especially as this applies to perception
+      (e.g. detecting motion aganist a static background, hearing a steady tread behind random
+      noise, etc). This seems forgotten by quite a few, who think the brain is for
+      distracting...
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re4: the return of the Re :)
+ Friday, 23-Oct-98 18:00:33 
+
+
+      Dear _m,
+      May Iask you to be careful when writing Lagavulin 
+      16 years old, some stupid censor could not understand that this teen is in fact a old
+      bottle of whisky :))
+      Did you try this one ?
+      http://www.scala.dk/staff/gi/whisky/Edradour.htm
+
+      To come back to our discussion, I would like to point out that the most difficult part of
+      reversing something is to point out the exact information in an ocean of data. This could
+      be applied to software reverse engineering (SRE)and interrupt tracking, to
+      reverse-networking with the weakness in the defense and so on. The main problem of this
+      knowledge is the use done by the individual.
+      Each active individual is modelling his own referential. By referential I imply the
+      mixture of education, environment, culture, religion ,...
+      Then in a society where cyberspace allows discussion, forum without (nearly) any
+      geopolitical barrier. The new generations have more potentiality than mine ( Note for
+      stalkers:I am old enough to buy my old bottle of St Julien).
+      But they did not see all the perspectives of this new communication tool/weapon. 
+      The quest of knowledge is a Graal quest , there is no end: How could you consider that
+      you know enough ??
+      Just read +fravia , He/She/They still enjoy reading books, collecting knowledge and
+      wisdom.
+
+      Reality cracking is a everyday task, as M. Jourdain in Moliere Many people do it without
+      noticing. As SRE I think this is part of our Human duty to apply our brain to choices
+      more important than selecting between pepsi and coke.
+      But what is the real power of undergroung idea ??
+      If they are broadcasted, they are most of the time polished, changed. How many people
+      consider that TV can give false information ?
+      How many people think that controlling the correctness of the Net is a warranty of
+      Freedom ??
+      I am against porn and other smut sites BUT there were network even before the advent of
+      internet. Controlling the Net for whatever reason, is also controlling email, info. Ok, I
+      am also a little paranoid, but who is not here ??
+
+      Harma
+
+      PS It seems that this talk is a dialog. so in order not to bother this messageboard when
+      can continue by email.
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re5 ... It's...
+ Sunday, 25-Oct-98 05:50:53 
+
+
+      Edradour: the label looks familiar, but I do not think I have tried it. I am currently
+      working on an Ardbeg 17-year Islay (I favor malts from that region), then I will be off
+      to pick up a second bottle of 23-yr Northport (cask strength-- 109.4 !) while it's still
+      on the shelf.
+
+      Here's how I view the whole freedom of information deal:
+
+      Premise 1-- Information must be free. To supress information is to suppress
+      communication, education, and expression. Furthermore, to charge for information is to
+      enforce economic suppression, therefore information must remail free --in terms of
+      supression and in terms of cost-- if one at all respects freedom of education, freedom of
+      expression, and freedom of communication (i.e., between two parties).
+
+      Premise 2-- All information is inherently equal; there is no information that is more
+      valuable or more dangerous than any other. Therefore all information must be equally
+      free.
+
+      Immediately we have a problem with Premise 2. Why? Because all information is not equal.
+      Let me give you a couple of brief examples:
+      In high school I taught a friend how to make a simple pot.-chlorate mixture; for the next
+      few months he was blowing up every mailbox in the district with pipebombs.
+      I once tried to get a friend of mine into martial arts instead of straight-brutality
+      fighting; I introduced him to a few acupressure points...the result being that from then
+      on he would rap people on Cv17 as a "joke".
+
+      All information, when properly imparted, bestows upon the student not only the knowledge
+      itself, but the wisdom and responsibility of when to use it. In these two cases, I taught
+      the knowledge but not the responsibility; therefore there were two people running around
+      using my knowledge irresponsibly.
+
+      So Premise 2 is correct in spirit but causes havoc and harm if implemented. Parallels can
+      be found in rampant social problems--for example, the irresponsible (read: untrained) use
+      of guns, drugs, and sex leading to murder, addiction, and disease. 
+
+      So what is needed is not absolute control-- i.e., banning knowledge of martial arts or
+      banning explosives or banning discussions of software protections--but rather a requisite
+      "supplemental education" to go with the knowledge. I.e., the knowledge is free but first
+      you must go through this course on gun safety, or that seminar on the economics of
+      software piracy, or this discussion of STDs.
+
+      Now, as you have pointed out, the Internet is a new deal--one that makes such regulation
+      impossible. Therefore it is the duty of the teachers to make sure that the "supplemental
+      education" still takes place. This can be done through obscurity (you have to learn
+      enough about the web and people to be able to coax your way into inner circles and hidden
+      servers), through saturation (overdoing the technical end so that a cracker must have
+      produced--and hopefully distributed--some software in order to understand the essays that
+      s/he reads to learn how to crack), or through misinformation (leaving blanks in the
+      lessons, writing down wrong asm addresses, etc to make the student work for their
+      knowledge). This, in my opinion, is just not being done.
+
+      The same goes for reality cracking, only it is a little different. In this case, the
+      "supplemental education", or "prerequisite" for all of you undergrads, serves to make the
+      student mentally receptive to the reality cracking lesson. Most people not only tune out
+      what is being done to them, they also scorn criticism of their system. 
+      A good example comes to mind very recently, when a friend's SigOther asked me, since I
+      did not watch TV, what then did I do? The question was phrased a bit oddly, as in "what's
+      the use of writing computer code?" (I guess she thinks that's all I do ;), and tacked
+      onto the end was "If you could do only one recreational activity the rest of your life,
+      what would it be?". To me, this was an absurd question, I would never do ONE thing the
+      rest of my life (so I answered "everything"), but that is how the "uninitiated" think.
+      TV=variety(yeah right)=recreation.
+
+      OK, I'm dragging on. But the point is that reality cracking, in and of itself, is
+      preaching to the converted. You must first convince the herd that there is a reality to
+      crack ;)
+
+      As for email discussion, my address is above. However, I think there may be a few
+      interested in this discussion, however silent they may be... (excluding fravia who
+      vandalized my last post by saying "our hcu" instead of "the hcu", thus forcing upon me
+      false allegiences ;)
+
+      _m
+
+      PostScript: I do not in fact mind that the herd are exploited, as long as there is room
+      for me to slip through the cracks. My "training" (be that a combined life-experience and
+      educational system) leans towards a manipulative, propagandistic tendency which I have so
+      far refrained from capitalizing on (though it gets you what you want ;). I sleep well at
+      night knowing that 98% of the sods out there are marks; it means I can always come out
+      ahead by exploiting that weakness; though it is kind of like taking candy from a baby and
+      therefore not very gratifying (which is why I rarely do it). 
+
+      And it also means that hype-driven ignorant members of the MediaCult flock such as "That
+      stupid kid spamming this board" are by their very nature being exploited for their every
+      last dollar and every last loyalty (who do you trust? fravia or microsoft? ;), and THAT
+      gets my entire revenge for me and allows me to peacefuly smile and nod at futile
+      "Microsft will WIN" spammings.
+
+      hey fravia, was that you posting under my handle and pretending to be stupidkid recently
+      (I assume to get me to start moderating; it worked), or do you just pass anything with my
+      name on?
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Sunday, 25-Oct-98 21:12:01 
+
+ 
+
+      Nice choice of whiskey, but I still stick to my habits of red gorgeous St Julien ;) 
+
+      Information should be free: nice utopia with all my respect to your wisdom. It would be
+      great but unfortunatly everything leads to the
+      exact opposite direction. Years ago the web was full of free database or sites were you
+      could find many things free. Then some greedy people realized that making a pay-per-view
+      site for neews papers or litterature research was TheWay. In fact it is so easy, people
+      are believing anything. More and more nowadays that some of my colleagues were sure that
+      paying a lot
+      is the only way to make sure that you have the good information !!
+      Now you have to turn back information free using a knowledge reserved for few elites or
+      curious people. I knew fravia via Tapu and Tapu via a german friend fond of assembly and
+      klingon culture ;) BUT it did not occured to me to search the web for fravia+
+      reverse-engineering in order to learn weaknesses in java-protected site and so..
+      In life University is becoming a Business due to "budget cut" (I do not want to start
+      here an essay on politician and politics), so in order
+      to respond to the needs of industry some faculty closed leading to an  irreparable harm.
+      The purpose of University was also to increase the knowledge in fields with no direct
+      economic obvious profit. It is driving in an other way, faster and faster. WHY ? because
+      building information has a cost when you reversed Microsoft registry and make it free you
+      are living away the time/effort/ressources you spent to make these discoveries. Now try
+      to find how many people agreed to do the same. Not any,  isn't it?
+      A researcher gives away a vaccine against malaria, but did he find a manufacturer to make
+      it free ??
+      This leads to awful objectives: A drug is now a product so what is better:
+      1- A drug which heal
+      2- A drug which prevent/cures only if you take it everyday.
+      :)) You see my point, pharmaceutical are making
+      billions playing with health and diseases. In order to be cured you have to be among the
+      Elite (you have to afford to pay your medication).
+      I do not want this to happen to knowledge, and I am ready to figth for it.
+      Software/Reality/Network-Reverse-Engineering is mostly using your brain to understand,
+      assimilate and scatter knowledge. Free information could be achieved if people like us
+      are able to go through defenses to uncover informations.
+
+      Propaganda for freedom of information is a nice ideology, but how many among us are
+      really fighting for it. My main concern is the fact that this work is not a common task,
+      so do the research, some the work and some abuse it.
+
+      Information are equal: This point is tricky because by using the word information you are
+      considering valuable data extracted from a poly- or mono-source medium. There is a large
+      difference in value between name of John Smith's new girlfriend and the way to
+      fight/protect
+      against back-orifice. Off course all information are equal because if these data are
+      information by definition there are valuable. The "Substantifique
+      Moëlle" (the very substance, for the french speaking people)
+      is a double sided sword. All information are equal and they could also
+      be equally employed for good or for bad. That's why I would like to add:
+
+      Teaching responsabilities is part of the Information-deal:
+
+      In few words, education is part of information in order to get better
+      understanding diversity is needed. BUT the mentor did not give the cultural
+      wealth, he shows how to get it. After a laps of time (longer or sooner depending on the
+      ability of his/her protégé), he will witness the emerging of a new mature entity, able to
+      find by him/herself.
+      This would imply:
+      -Basic knowlege freely available
+      -Intermediate 1 for 1
+      -Advanced at this point discussion and transmissions are parts of your duties
+      We have right but we have also duties. I know that's too organisez to be applied
+      reallistically but everybody has his own utopia :)).
+
+      The story is pretty long and I need a new refill, let s talk about it
+      tomorrow.
+      Take care
+
+      HARMA[a]fnmail dot com
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: Re5 ... It's...
+ Monday, 26-Oct-98 11:46:53 
+
+
+      Hope you don't mind my jumping in here.
+      You state that information should be free.
+      I have some doubt that can be ever 
+      achived. Information=Knowledge, my employer
+      pays me for the knowledge I posses,I obtained that knowledge by obtaining information.My
+      employer doesn't give his product away,nor do I give my knowledge away.I worked to get
+      that knowledge therefor it was certainly not free.
+      That is my reality,not yours.
+      imho reality is highly overrated.
+      Information being equal is a personal thing,only 
+      of value to the possesor.
+      If you stated you had eaten a MacDonalds hambuger,and I stated that I had eaten one too,
+      that information would be equal.
+      The fact that I had dug mine out of a dumpster in
+      back of the place because I happened to be living on the street, makes the reality quite
+      different.
+      I think I'm starting to ramble!! We all see from
+      different aspects,but,most feel from the same place.
+
+
+      name_text
+
+
+      name_text 
+---------------------------------------------------------------------
+Re: Re: Re5 ... It's...
+ Monday, 26-Oct-98 18:38:32 
+
+      Hi
+
+      Just read carefully the thread before, and about McDonald that what i would consider as
+      data.
+
+      In addition, our society is based on a system where your information is exchanged by a
+      currency. Your boss pay for your information ( point 1 information is valuable ) from
+      this he makes profit (at least I hope for your future).
+
+      Now the point 2 is not to focus on your job-food-life. If you consider your life as your
+      main center of interest so keep your knowledge for yourself. On the other hand if you
+      consider that you can give a bit of your knowlege, not selling giving , you increase the
+      community knowledge and so improve the society.
+
+      If you masterize your subject why being afraid to teach people ?? You might be able to
+      learn from the others. 
+
+      Risky but at least you are acting for progress.
+
+      Do not take it personal, I also have a job. But try to think about life in term of
+      self-estime, education, progress, society, community.
+      By the way the Internet Community does imply something.......
+
+      +mammon that's your turn
+      HARMA
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re7 ... It's...
+ Tuesday, 27-Oct-98 03:00:21 
+
+
+
+      The value of information is determined by the "consumer", if you will, or the "buyer" of
+      that information--just as with material goods. If an individual is willing to pay $2K to
+      learn Novell or to find out that you eat at McDonald's (remember that even this trivial
+      info is useful to marketing analysts, and they will pay $$ for databases of it), then
+      they will do so...but if they can get it cheaper, or free, then they will obviously go
+      that route.
+
+      Thus it is totally possible for information to remain free. However, there exists in many
+      cultures a profiteering or capitalistic mindset, in which the supplier charges as much as
+      he can (as much as the market will bear) for his information or product. If the price is
+      too high, the buyer will not pay it; if the price is too low then in the "material" world
+      there could be a supply problem, however in the "immaterial" world of "raw information"
+      the supplier loses nothing (except subjectively-determined profit) by lowering the price.
+
+      This is not readily apparent because a lot of information/goods are in demand (though, if
+      you look closely, much of this demand is created by hype--do you really need to upgrade
+      Win95 to Win98, or NT4 to NT5, or Office 97 to Office 98, or IE3 to IE4, etc?); thus it
+      is hard to see that suppliers of information lose nothing (except, of course, the
+      time/materials which they put into trasnmitting the info) by supplying information for
+      free.
+
+      The only "loss" is profit, and the need for profit is spawned by immersion in a
+      capitalistic culture--though it may be unlearned. Those who work for profit and exist for
+      profit are blind to any sort of "greater good" or even concern beyond their own
+      status/skin by their very nature; they are not artists, or creators, or inventors, or
+      pioneers; rather they are investors, merchants, capitalists, schemers.
+
+      Now of course a person may choose to profit from an idea or a talent of theirs; in our
+      society that is not only expected, but is required as a survival trait. However whether
+      you produce to make profit or make profit from what you produce determines how much of a
+      role greed plays in your creativity/productivity.
+
+
+      Your employer does not pay your for the knowledge you possess; if he wanted your
+      knowledge he would learn it and do the job himself. Your employer pays for your time,
+      which is put into work that he does not want to do, or cannot do and does not want to
+      learn to do. The fact that you can supply such knowledge qualifies you to be on his
+      payroll, but gives you very little power as a supplier of information as your information
+      is not in such demand (I am generalizing, yes, I do not know what you do) that you cannot
+      be replaced.
+
+      As for working for information, one must work to get any knowledge...yet usually that
+      work is in the effort to understand the knowledge (for example, learning assembly
+      language to understand cracking). Work or effort is not money; charging for information
+      adds an additional price tag on top of the effort required to understand the information,
+      and it is at this point that information is no longer free.
+
+
+
+      Obviously this is not a utopian society where we can all work at jobs we enjoy and
+      produce goods and services that only benefit society as a whole; the last such
+      civilization that had such a system was wiped out by European colonists in the sixteenth
+      century ( read your Howard Zinn ;). Modern society excels in mechanical, chemical,
+      electrical, and communication technologies; however it is extremely ignorant of economic,
+      political, or social technologies (you cannot look at the stock market, the distribution
+      of wealth and resources, or *any* current system of government and argue against this
+      statement with a straight face).
+
+      Hmm, this is getting rather long.
+      Your serve!
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: keep on guys, it is interseting
+ Tuesday, 27-Oct-98 04:12:34 
+
+      I always apreciate people that could, like baron Munhausen, pull out from a swamp
+      theirselves (I have another reality here and I could watch yours from a different angle
+      and see things usual people there do not see; but it is easy to advice someone else; try
+      it onto yourself :)).
+      All of you guys are just such people. Plz, dont go e-mail (and do not allow to be dropped
+      by the 'obsolescence' timer..)
+
+
+      SvD 
+---------------------------------------------------------------------
+Do not take it personal
+ Tuesday, 27-Oct-98 22:19:17 
+
+      OK read the subject, it has nothing to do with you.
+      Thanks for the critics and the comparison.
+      I do not consider that we are like Munchausen, just because we did not lie or invent
+      stories to make us look important (Hope mammon+ think the same). But yes I accept critics
+      and look on my writing with the light of other people opinion.
+      BUT I think that critics just for the fun of it are not a constructive behavior.
+      Destroying a castle and leaving ruins is not the best way to progress.
+      I can understand that people do not like the idea of free information for everyone. Some
+      think that they are the only one powerful enough to free information. Losing this power
+      is frightening for them. BUT you can also be famous to scatter knowledge (fravia+ is a
+      good example).
+
+      Please feel free to give us a positive following to your mail. 
+
+      In life there is always a ying and a yang. You are pointing out the negative, I rather
+      want to work on the positive aspect. But mixing these two would promote faster the
+      spreading of knowledge.
+
+      HARMA
+
+      PS: I do not want to start a fight here. Remember that it is a moderated board.
+
+      Fravia+ here:
+
+      Yes, please remember it... all of you, and please also remember that this is an
+      'experimental board for reversing matters... 
+
+      HARMA 
+---------------------------------------------------------------------
+Rhetoric
+ Wednesday, 28-Oct-98 04:24:39 
+
+      I guess in a certain sense rhetoric is like pulling oneself up by one's bootstraps.
+      Certainly it has that pattern of laying a foundation upon premises which may be proven
+      later on...
+
+      This is not quite a group sitting around the pub in the student union arguing intangibles
+      simply for the sake of the argument, but it is close :) Remember that one's personal
+      beliefs rarely influence which side (pro or con) of a debate one takes; the crowning
+      achievement of the rhetorician (is that a word?) is that he can argue either side of an
+      issue admirably well, without ending up like the two unfortunate metahpysical
+      philosophers in Peter DeVries' "Slouching Towards Kalamazoo".
+
+
+      But more to the point: the issue is unresolved, we have --as it were-- been dealing with
+      tangents rather than the concrete problem at hand.
+
+      Restated thusly:
+      Without considering methods for enforcing or preventing F.O.I., and barring differences
+      in types/value of information, Should Information Be Free?
+
+      Note this is information, i.e. facts and data,. not necessarily knowledge and
+      understanding, and not inclusive of code, programs, ideas, intellectual property, etc.
+      Also consider the various meanings of "Free", i.e. free of cost, free from suppression,
+      free to express itself openly, free from concealment or obscurity.
+
+
+
+      Now, before everyone answers simply "yes" or "no", explain why :)
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: you absolutely misunderstood me
+ Wednesday, 28-Oct-98 05:16:25 
+
+      oh my god... Thanx a lot, I will now keep my too cute sense of humour (with dark aspects)
+      turned off, or nobody will understand me right in the western world...
+      What a critics? Where it is ?? it is not interseting, it is INTERESTING (oh,that's my
+      left hand's fault)! the Baron is A POSITIVE hero!! Aren't you inside the consumerism
+      swamp? Aren't you pulled yourself out from there?
+      I AM TRYING TO encourage you, not to stop !!!
+      if you asking me, this thread (without these shits, ofcourse), when seems finished, MUST
+      BE carefully transferred into an ESSAY of Reality Information Cracking! It is a MUST to
+      read for any man that is trying-to-understand-reality-and-change-it...
+
+      enough ranting.
+      The truth is born in a dispute, or what it was in latine :(...
+      Well, where it were up to...
+      ...IMO the employer pays you because you have the know-how (or "dont-know", as we call it
+      here :)), AND IT IS Not obvious how to transfer your knowledge to some other else. There
+      are employers, which will immediately throw you out if they think they got a cheaper one,
+      that have the same (in his opinion) knowledge; and there are employers that will
+      encourage you to spread you knowledge, just because it is important. It IS VERY HARD to
+      balance between these...
+      Here is another one, If tired from the previous.. 
+      There are a few people that understand (and want) that information must be free. All the
+      rest are a) holding bridles of some info source; or b) frighten that some info source
+      will pour them out and they will be drowned. What do you think about this?
+
+      Now I am unplugging my self and listening in great silence...
+      Cheerz, or Beers
+      P.S. have a good dark Guiness beer from me...
+
+
+      SvD 
+---------------------------------------------------------------------
+The magic word
+ Wednesday, 28-Oct-98 06:27:19 
+
+      Any one with Guinness running through their veins I can consider kindred ("blood is
+      thicker than water", heheh).
+
+      I understand what you mean about employers-there are two kinds of employers who will
+      encourage you to learn more: the ones who want to profit by it, and the ones who want to
+      reward you (and once again, you have a distinctly separate motive here: profit on the one
+      hand, and "for the good of another" on the other). You can tell the difference by what
+      the employer wants you to learn.
+
+      To illustrate with a couple of jobs where I had the longest tenure: I had a job as an
+      admin where I took it upon myself to fix the computers, because I did not like the
+      downtime--I went from knowing basic DOS commands to setting up a LAN, writing a database,
+      fixing accounting software, upgrading and building PCs, writing menu-driven BBS-style
+      software, and even data recovery in about two and a half years. My employer was more that
+      eager to let me research, browse the web, and more or less follow my own agenda on
+      learning simply because he liked my work, and was willing to put up with my printing out
+      Cyborg tutorials and 500-page Hacker's Handbooks in balance for all the times I bailed
+      him out of a tight spot.
+
+      To contrast, I later worked in a corporate environment doing tech support (and
+      introducing the rest of the techs to Soft-Ice ;) and was encouraged to learn--the company
+      offered to pay for study materials for an MCSE (I declined), and to send me to classes
+      for supporting MSOffice. My enquiries about matters of interest--Unix, network
+      administration, systems-level programming-- met with resistence as the company saw no
+      need for me to learn those areas. Needless to say, I am no longer with that company...
+
+
+      Of course the worst employers are the ones who want you to not learn at all...
+
+
+      Now, you mentioned people who have information and their motives for not giving it away.
+      Some people fear that by retaining a hold on information they retain power, and that by
+      releasing information they lose that power (never realizing that any power base relying
+      on such secrecy is inherently unstable--especially in the face of the Espionage and R&D
+      fields). To bore you with another anecdote, I met once a friend of a friend and witnessed
+      some of his paintings. I asked him how he achieved a particular technique, as I liked it
+      and was interested in applying it to my own work. My friend actually had to pressure him
+      into responding as he was loathe to give up what must have been his gimmick! (Not that he
+      had anything to worry about; my paintings suck horribly ;)
+
+
+      Other people just do not see the profit in giving information away/ [Note the above
+      statement implies that there is a profit, though truth be told it is more of an intagible
+      gain]. The question that started all of this off was "you spent a lot of time producing
+      information for free; why did you do it?"
+
+      To find out why information is not free, to root out the problem at its source, you must
+      ask the rest of the world "why do you not?"
+
+      _m
+---------------------------------------------------------------------
+<---------Back around here ;)
+ Wednesday, 28-Oct-98 06:44:36 
+
+      There are a few important questions that have been lost along the wayside.
+
+      We have here fuel for many a thought, that I must leave for the moment lest I spend my
+      whole night on this machine.
+
+      We have here the proper use of the human brain, the "human duty" versus individual
+      motivation (do you enquire? or do you slack?), the unquenchable thirst for knowledge and
+      why it only strikes a few, the internet and its implications for the freedom of
+      information, the responses of those controlling the information to this freedom, the
+      mainstreaming of alternative/underground information in order to broadcast ("free") it at
+      all, and of course "good" freedom (technical info, current affairs, history) versus "bad"
+      freedom (cyberstalking, porn, exploitation).
+
+      Any takers?
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: <-----Back around here ;)
+ Wednesday, 28-Oct-98 07:50:00 
+
+      oooooh why I had to put my nose here...it will grow now veeeeery long (from Pinoccio, the
+      wood kid, if you remember)...
+      just an addition: there are other kinds of dividing info into good and bad; it depends if
+      it is a statistical-related info, or it is personality-related. [ Example: if one finds
+      out (e.g.from the doctor), that he will die after 5 days, this could be "bad" info; but
+      if he learn that his mother-by-law (or whatever is called the mother of his wife) will
+      die in 5 days, this could be "good" ;o). I said "COULD" in both cases... (there was
+      someone's "clever" thought about: if one dies, it is a tragedy; if 100 died it is a
+      apocalipsis; if millions died, it is a statistica ;() ]
+      And another question to those listed by _m: who should divide the info into "good" and
+      "bad", i.e. to set the criteria ?
+
+      P.S. do you use some special browser for the messageboard threads? It is hard to follow,
+      using standart browsers. Or I have to write one somewhen ;)?
+
+
+      SvD 
+---------------------------------------------------------------------
+Re: Re: <--- Back around here ;)
+ Wednesday, 28-Oct-98 11:48:37 
+
+      This is getting hard for me to follow.
+      I only consider myself of avg. intellect, so 
+      maybe this is over my head!!!
+      I need a def. of what info. you're talking about.
+      Is this a matter of providing source code with a program?,or, are we talking about
+      general info.
+      Is information in it's entireity(spelling) a basis for knowledge???
+      If information can not be used by the possesor does it still qualify as knowledge??
+      I've heard a saying oncde that goes " you're a
+      encyclopedia of usless knowledge", does that statement hold truth??
+      Can there be useless knowledge,or, just useless information,if indeed information can be
+      useless?.
+      As to the REALITY of it all I go back to a statement by +mammon (forgive me if I misquote
+      you), "first we have to convince the herd there is a reality to crack".
+      Is it you intention to state that the teeming masses have no scence of there plight in
+      this god forsaken world we live in??, I think not.
+      (please excuse the venom I'm in contract negs. and my juices are flowing)
+      Nothing personal,we all see from diff. points.
+      Well I hope I added something of value to this discussion.If not e-mail and I shall
+      cease.
+
+
+
+
+      name_text 
+---------------------------------------------------------------------
+Re: Re: Re: <--- Back around here ;)
+ Thursday, 29-Oct-98 04:28:28 
+
+
+      It's not your intellect, it's the rather freeform flow of ideas.
+
+      The discussion is bouncing back and forth between freedom of data, of information, of
+      source code, of ideas, of expression.
+
+      I think it all started off with the freedom-of-information debate, but then you have the
+      question of "what is information"?
+
+      ============================================
+      Is the color of my shoelaces information?
+      Is my home address information?
+      Is my email address information?
+      Is my spending pattern information?
+      ============================================
+      Is source code information?
+      Is a compiled binary executable information?
+      Is a decompiled binary executable information?
+      Is it the same information as the source code?
+      ============================================
+      Is the parts-list to a nuke information?
+      Is the tutorial on building a nuke information?
+      Is a missile guidance system information?
+
+
+      We do need a few definitions here, specifically:
+      information, facts, data, knowledge, free.
+
+      let's start with the easy ones:
+      Data: a piece or token of information
+      Fact: a confirmed data/datum
+      Knowledge: applicable information
+
+      a few backups:
+      Confirmed: verified to be empirically true
+      Applicable: of practical or pragmatic value
+
+      now the funny ones:
+      Information: (root inform: "to give form", ation= a thing that is, thus a thing that
+      gives form) A communication that describes or makes clear some aspect of outer or inner
+      reality (communication being used in the sense of an encapsulation or a representation).
+
+      Free: unrestricted in its comings and goings.
+
+
+      anyone want to fix these? ;)
+
+
+      Now as for the rest, yes I do believe that the teeming masses are unaware of their
+      "plight"; this is a result my direct experience with quite a few members of the "teeming
+      masses", a good percentage (10-30) are aware of what is going on, but the majority of
+      whom either a)have no clue what is going on, b) have been given clues and tune them out
+      (denial/"faith"), or c) have been given clues and prefer to simply not think about it
+      (apathy).
+
+      Now of course there are instances when the masses are shocked into awareness and
+      action--say, at an election, a revolution, or a riot--but for the most part people go on
+      with their day-today lives, absorbed with trivialities and distracting themselves via
+      career / family / enterntainment / community / status / money from the fact that there is
+      a deeper reality, that many of the things we take for granted (our "operating
+      assumptions") are in fact questionable, that most of our reality is a self-perpetuating
+      fiction created by various aspects of society (the stock market, the media, peer groups,
+      churches, schools, etc). What I call "aware" are people who from day to day understand
+      this, who occasionally try to puzzle it out or fix it, and who are nevertheless competent
+      and capabale of dealing with the social world on a needs-exchange-sacrifice basis.
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Re: Re: Re: <--- Back around here ;)
+ Thursday, 29-Oct-98 12:54:08 
+
+      Do you consider yourself apart from the teeming masses?
+      Do you consider yourself anti-social,as in apart from the society that prepetulats these
+      fictions 
+      upon the teeming masses?
+      Are you one of the few "aware" ones?
+      I don't think rasing a family is trival!
+      I wouldn't think your parents would either!
+      To propagate the species is a demand of nature!
+      I take it you are not a parent,I know of very few
+      who don't live there lives on a needs-exchange-
+      sacrifice basis!
+      The first rule of nature is survival,we all have 
+      times when we chose what must be done over what should be done.
+      Society as a whole is ficticous,if it weren't
+      there would be know need for this thread.We would
+      all be of the same thought.(that is if a society 
+      is based upon a group of like entites).
+      Then comes REALITY, WHOSE, mine,yours,thiers,
+      does the fact that I live in a repressed geo-political enviroment have any effect on Mr.
+      Bill Gates,on you,on anyone,or is my reality mine
+      alone.(counting out for the moment mental disease)
+      Do my belifes make me an outcast(if so from what),a martry(spelling),an enlightened
+      person.
+      No to all the above,they just make me me!!
+      Apart from any belief in society,or reality,I am
+      niether above,or below.I am one!!!
+      To turely understand the teeming masses(I don't 
+      profess to understand all)I think it would help
+      to be one of them!!
+      I hope you dont take this in a bad way!!!!!
+      I mean you no disrespect,malice,or ill will in any way!!!!
+      I just happen to belive the saying "to understand 
+      a man,you must walk a mile in his shoes",and to 
+      the extent that we are all different thats alot 
+      of walking!!!!!
+      Peace be with you!!!
+
+
+      P.S. To all the female readers I am sorry about 
+      all the ' his,he' references.I'm lazy his/hers
+      is alot of work!!!!!
+
+
+
+
+      name_text 
+---------------------------------------------------------------------
+Re:x5<--- Back around here ;)
+ Friday, 30-Oct-98 07:29:47 
+
+      "Do you consider yourself apart from the teeming masses?
+      Do you consider yourself anti-social,as in apart from the society that
+      prepetulats these fictions 
+      upon the teeming masses?
+      Are you one of the few "aware" ones?"
+
+      Yep, I'm an anti-social bastard. I admit, I have no problems with it. I can deal with
+      people on a one-to-one level, but I have found that people acting in concert/en masse
+      simply reduces them to a very crude, very unevolved, conformant personality which I
+      utterly despise. I can truly say that all of the people whose existence I have
+      appreciated were individuals, and the ones whom I thought were a "waste of sperm", were
+      conformists. 
+
+      I'm a misanthrope, so sue me ;)
+
+
+      I didn't mean to imply that family was a trivial task; actually it is quite difficult. I
+      was lumping it under "distractions" because, well, it is one. Not that that is a bad
+      thing--reading is a distraction, computers are a distraction, good scotch is a
+      distraction...but how much you let the distratcion overwhelm your overa cognizance of the
+      state of affairs is the issue.
+
+      Of course your beliefs/view of reaity/etc make you an individual. I hardly argue with
+      that, nor with your points about survival, day-to-day life, and the empathy issue
+      (walking a mile...didn't I just write that somewhere else? hmmm...)
+
+      Let me restate....
+
+
+
+      I did not by my post mean to imply that I set myself apart from the rest of society, or
+      that I do not appreciate individuals, or that I categorically divide people inot "herd"
+      and "not-herd". That is just not the case, as fun as it is to ham up to the
+      "damn-you-all" persona that accompanies such views.
+
+      I take it for a given that every indivudal is different, that every person has a unique
+      view of reality, that every person must be understiod in order to communicate with them
+      properly; it is one of the skills that enables me to deal with others so easily in a
+      professional environment.
+
+      However, I also have a severe contempt for the blind "consumer" personality, and all who
+      play this role. I find that people who ignore or deny the maniplualtion of themselves,
+      their interests, their "class" and their pocketbook are, to me, pathetic.
+
+      If someone recognizes "yes, this is a corporate scam, but you gotta make the appearance
+      of complying" and goes along with it, I am OK (sort of...however, such behavior on a
+      broad scale only perpetuates the scam). If someone says "there is no scam, this is a good
+      product" (say, win98 ;) then I tend to view them --unless proven different on subsequent
+      occasions-- as a hype-driven drooling idiot.
+
+      Perhaps I stressed the wrong points in my previous post. However when you mean to talk of
+      traits that accompany the actions of people behaving en masse, then you must necessarily
+      speak of those people in generalizations, in the terms of a group. Each of those people
+      may have a unique position, a breathtakingly refreshing view on life and our consensual
+      reality...yet each of those people is partaking in a mode of behavior that I view as
+      indicative of decay in our society.
+
+      Therefore I must describe it, and as such I must place myself outside of the group
+      regardless of whether or not I share traits/behavior patterns with that group. Understand
+      me? I may perform the same behavior I condemn (not likely, but that is not the issue),
+      however the behavior is only destructive when it is performed en masse, and thus the
+      individual in and of him/herself is out of consideration.
+
+      yes, society is a collection of individuals...but those individuals act alike, and when
+      they do it is more often destructive than constructive.
+
+
+      bones?
+
+      _m
+
+
+
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Re: <---Back around here ;)
+ Wednesday, 28-Oct-98 22:47:06 
+
+      Yes you are right. Information is related to the person. From what you said I can find
+      another fact: you obviously have bad estim for oyur mother in law otr you like the
+      stereotype of the bad mother in law ;))
+
+      Information is neither good nor bad, but the use of information could have good or bad
+      effects. Virus programming could be used to create self-healing programm but also
+      destructive war weapons, it is the same for bot (hope the advanced page will give us some
+      good trick).
+
+      That's why free information is so powerful, you are allowed to be in the dark side if you
+      want....
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+:(( Die thread die...........
+ Wednesday, 04-Nov-98 18:10:36 
+
+
+      _m is fed up with this thread
+      Why not another subject ??
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: :(( Die thread die...........
+ Saturday, 07-Nov-98 07:43:36 
+
+      _m not fed up
+
+      _m just not spending much time on message boards these days 
+
+      Thinks they as bad as chat rooms, for time-sink factor
+
+      'course, _m still goes to linux board...
+
+
+      ;)
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Time is so valuable
+ Saturday, 07-Nov-98 15:50:41 
+
+      Hi
+
+      H <> _m => board=time*thread+reading
+
+      while !(_m_NewThread)
+      Sleep++
+      ;)
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+rev 2
+ Sunday, 08-Nov-98 19:11:06 
+
+      // Web Board Monitoring Utility ;)
+
+      char boards[] = yayayya.com; //we know all of these .. 
+
+      if (! ONLINE) spawn('ezppp');
+      while (ONLINE) {
+      for (x = 0; x<100; x++){
+      usleep( Visasm, 10000 );
+      usleep( WebPage, 10000 );
+      usleep( Apj, 10000 );
+      usleep( cracking, 10000 );
+      usleep( coding, 10000 );
+      usleep( jobsearch, 10000000 ); //bias :)
+      CheckBoard( boards[x]);
+      if (x == 100) x = 0; 
+      }
+      }
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: rev 2.1.c (Just a Microsoft touch)
+ Wednesday, 11-Nov-98 12:14:38 
+
+      TO give it a professional "Microcrap design" :)))
+      just add:
+      Check for Internet Explorer use only
+      and avoid any webpages containing the words:
+      fravia- ORC - _m ....
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Just going back to the left
+ Wednesday, 28-Oct-98 22:07:05 
+
+      It seems that this thread had a tendency to drift to the right ;)
+
+      Let's continue one of the longest threat of this messageboard. Why not to sum up this
+      into an essay.
+
+      Dear fravia++, what do you think about this discussion ?
+
+      Harma
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: Just going back to the left
+ Thursday, 29-Oct-98 04:32:24 
+
+      fravia++?
+
+      That is kind of funny from a programming standpoint ;)
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Re: Just going back to the left
+ Friday, 30-Oct-98 18:16:44 
+
+      You are the only one to have catched it.
+
+      I found Turbo Fravia no enough powerful, and Visual Fravia too Micro$oft oriented ;)
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Re: Re: Re: Just going back to the left
+ Saturday, 31-Oct-98 05:32:00 
+
+
+      How about "Fravia Builder", we can macth the new Borland product scheme ;)
+
+
+      Or better yet (heheh): gnuFravia (gravia? Their naming convention is a little haphazard--
+      gawk, gimp, gcc)
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Re: Re: Re: Just going back to the left
+ Monday, 02-Nov-98 11:39:14 
+
+ 
+
+      And what about FraviaRW ?
+
+      By the way no mor philosophical/political talk ??
+
+      HARMA
+
+
+
+      HARMA 
+---------------------------------------------------------------------
+Check the new thread and continue the discussion
+ Wednesday, 28-Oct-98 22:39:05 
+
+      Dear mammon_
+
+      I take a little break from the info/knowledge concpets to dive in the difficult question
+      of freedom of speech, specially good and bad.
+
+      Freedom of speech is a right in some Constitution. Wonderful tool used in may ways.
+      One of the biggest controversy about the Net is the spreading of smut sites, porn-sites
+      and so on. I would like to recall that this industry has promoted sales among society
+      from VCR to CR-reader to NEt connection. Why ? because whenever you look at Sex is the
+      best way to attract people and off course money.
+      Do people want to fight such sites ?
+      Yes in public but how many back home download some stream-live movie.
+
+      Now let's talk about good and bad freedom.
+
+      Allowing any theory to be broadcast lead to many ethical problem. Racism, Porn,
+      Pedophilia and such subjects are offending to most of us. BUT it allow also to reverse
+      the speech, to unconstruct the mechanism by which hata could be promoted. One of the tool
+      of propaganda is to convince people that the "propaganda" of your enemy is worst than
+      yours. Without freedom of speech these topics would still exist , but would be
+      underlying, being a secret spread among the initiated. It would be worst not to know what
+      your enemy think.
+
+      I know this is provocative but it eill boost our thread.
+
+      HARMA
+---------------------------------------------------------------------
+Freedom of speech
+ Thursday, 29-Oct-98 03:59:42 
+
+      This is going to sound a little strange, maybe because I'm just a little off-beat. I
+      think there should be absolute freedom of expresson--there should be no punishment or
+      ostracization for the expression of any idea or opinion.
+
+      I do not, however, believe in "freedom of audience". What I mean by this is that specific
+      audiences should not be permitted access to certain expressions. Let me give you an
+      example of audiences and "expressions" that do not go well together:
+      *pornography and children
+      *gullible types and sales pitches/deceptions
+      *crowded thetaer and the word "fire" (old one :)
+      *unstable types and suicide/violence/rape details
+      *Christian Fundamentalists and Evolution
+      *Scientologists and rational thought ;)
+
+      Certain audiences are going to be offended or negatively influenced by certain
+      expressions; that is just their nature (Peter Sotos, for example, I find to be a vivid
+      and intense author, yet there are very few friends with whom I can share his work without
+      offending them). In my opinion, any individual who is likely to be deeply offended or
+      personally altered by someone else's expression is to be viewed as a child; they must be
+      protected and taught self-reliance.
+
+      So why not limit the audiences rather than the exhibitors? OK, in practice this comes out
+      in "PG-R-X" rated films and "no-women-allowed" Promise Keeper meetings (by the way, if yu
+      haven't checked this group out you're missing some great entertainment ;), neither of
+      which really solves the problem. But hell, we're talking theory at the moment, eh? Leave
+      application for later.
+
+      Actually, in a certain sense the "corporate" environment does this. Corporate bookstores
+      have a limited, inoffensive selection of books; corporate video stores have a limited,
+      inoffensive selection of movies, etc. What this amounts to is suppression by way of non-
+      distribution.
+
+      This is no solution as it is still supression. perhaps a variety of "clique" tongues,
+      like in the old role-playing games where you have the "Thieve's Cant" and the "Chaotic
+      Tongue" and the "Monk Sygnes"...we could have the "Cracker's cant", the "Lecher's
+      Lexion", the "Scientist Speake". That way you can only read books/material you have
+      studied for (course there's still pictures...).
+
+      Hmm, this is sounding like that Jack Vance novel, Languages of Pao. I knew I read too
+      much of his stuff...
+
+
+      _m
+
+
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Freedom of speech
+ Thursday, 29-Oct-98 07:56:15 
+
+      ". . .So why not limit the audiences rather than the exhibitors? OK, in practice this
+      comes out in "PG-R-X" rated films and "no-women-allowed. . ." 
+      Um, excuse the interruption but I have to take exception there. That is a perfect example
+      of the kind of attitude that forestalls true freedom of expression in adult, fully
+      functional and inependant females. That "we've got to protect the little lady" attitude
+      infantalizes women and keeps them dependant. You need to ask yourself, "is she really
+      offended by this or is she pretending to be because it's what our culture demands of
+      her?" 
+
+      Michelle ;-)
+
+
+      M100 
+---------------------------------------------------------------------
+Re: Re: Freedom of speech
+ Friday, 30-Oct-98 07:09:02 
+
+
+      yep, that's one of the problems with it I was trying to point out. Effectively, you
+      cannot determine what a person should or should not see (short of, perhaps, walking the
+      letaphorical mile in their shoes); therefore this method of control is lacking in
+      application. 
+
+      By that I mean, if there were a way of determining how a given piece of information was
+      going to affect a person, and if there were an objective means of determining whether or
+      not this effect was for the good of ther person/society as a whole, then this would be a
+      good type of control (it is better, in my opinion, than preventing expression at all,
+      because if the expression is still taking place then sneaky buggers like me can sneak in
+      and check it out ;). Otherwise, yep, it is oppressive not to the performers but rather to
+      the audience--a flaw, of course, in the choosers of the audience.
+
+      What I was really trying to get at is that people lack an amazingly ability to
+      self-censor. I mean, Xtian Fundamentalists do not say "I am going to avoid listening to
+      the new MManson album as it will just torque me off", bigots do not say "I will stay home
+      this year instead of burning crosses outside of the MLK rally, that just makes me so
+      agitated", and louts in general do not say "I am going to stop listening to what that guy
+      is saying because it just makes me want to kick his ass".
+
+      It is tempting to force such limitation on people who cannot control their own intake,
+      much as you would watch a diabetic's or an addicts' consumpition. However, as you point
+      out, it is impractical...and, of course, like so many other issues in this
+      thread--irresolvable.
+
+      Hnnnh, guess a few inflammatory comments are all it takes to drag a few more people into
+      this discussion :)
+
+
+      _m
+
+
+      mammon_ 
+---------------------------------------------------------------------
+Re: Freedom of speech
+ Friday, 30-Oct-98 18:23:11 
+
+
+      I do not have much time now, but I think that classification is not the way. I know that
+      offending messages are broadcast around the world but whatever we do, there will always
+      be smut&dirt. 
+      Why do the media focus on all the negative aspect of the freedom of speech ??
+      Because it is first easier to point out abad aspect than the utility. People love blood,
+      smut and all this related info just have a look on how many soap, tabloids newspaper are
+      watched or read.
+      classify information is one of your task, up to you to discard such and such idea. But
+      ignore them are even worst. Know your enemy so you will be able to defeat him more
+      easily.....
+
+      HARMA 
+
+      HARMA 
+     

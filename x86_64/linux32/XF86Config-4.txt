@@ -1,0 +1,180 @@
+Section "Files"
+  RgbPath      "/usr/X11R6/lib/X11/rgb"
+  ModulePath   "/usr/X11R6/lib/modules"
+  FontPath     "/usr/X11R6/lib/X11/fonts/misc:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/local"
+  FontPath     "/usr/X11R6/lib/X11/fonts/75dpi:unscaled"
+  FontPath     "/usr/X11R6/lib/X11/fonts/100dpi:unscaled"
+  FontPath     "/usr/X11R6/lib/X11/fonts/Type1"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/URW"
+  FontPath     "/usr/X11R6/lib/X11/fonts/Speedo"
+  FontPath     "/usr/X11R6/lib/X11/fonts/misc"
+  FontPath     "/usr/X11R6/lib/X11/fonts/mdk"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/PEX"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/cyrillic"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/latin2/misc:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/latin2/75dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/latin2/100dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/latin2/Type1"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/latin7/75dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/baekmuk:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/japanese:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/kwintv"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/truetype"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/uni:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/CID"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/ucs/misc:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/ucs/75dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/ucs/100dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/hellas/misc:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/hellas/75dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/hellas/100dpi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/hellas/Type1"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/misc/sgi:unscaled"
+#  FontPath     "/usr/X11R6/lib/X11/fonts/xtest"
+EndSection
+
+Section "Module"
+  Load         "glx"
+  Load         "dri"
+  Load         "speedo"
+  Load         "freetype"
+  Load         "type1"
+  Load         "dbe"
+  Load         "extmod"
+#  Load         "v4l"		# video for linux
+EndSection
+
+Section "InputDevice"
+  Driver       "Keyboard"
+  Identifier   "Keyboard[0]"
+  Option       "Protocol" "Standard"
+  Option       "XkbLayout" "us"
+  Option       "XkbModel" "pc104"
+  Option       "XkbRules" "xfree86"
+EndSection
+
+
+Section "InputDevice"
+  Driver       "mouse"
+  Identifier   "Mouse[1]"
+  Option       "Device" "/dev/gpmdata"
+  Option       "Emulate3Buttons" "on"
+  Option       "InputFashion" "Mouse"
+  Option       "Name" "PS/2-Mouse;IMPS/2"
+  Option       "Protocol" "imps/2"
+EndSection
+
+Section "InputDevice"
+  Driver       "mouse"
+  Identifier   "Mouse[2]"
+  Option       "Device" "/dev/usbmouse"
+  Option       "Emulate3Buttons" "off"
+  Option       "InputFashion" "Mouse"
+  Option       "Name" "PS/2-Mouse;IMPS/2"
+#  Option       "Protocol" "imps/2"
+  Option       "Protocol" "Auto"
+  Option       "Buttons" "8"
+#  Option       "ZAxisMapping" "4 5"
+EndSection
+
+
+Section "Monitor"
+  Identifier   "Monitor[0]"
+  VendorName   "Hypersonic LCD"
+  ModelName    "1400X1050@70HZ"
+  Option       "CalcAlgorithm" "CheckDesktopGeometry"
+  DisplaySize  320 240
+  HorizSync    30-90
+  Option       "DPMS"
+  VertRefresh  57-70
+  UseModes     "Modes[0]"
+EndSection
+
+
+Section "Modes"
+  Identifier   "Modes[0]"
+  # Sony Vaio C1(X,XS,VE,VN)?
+  ModeLine 	"1024x480"    65.00 1024 1032 1176 1344   480  488  494  563 -hsync -vsync
+  Modeline 	"1024x768" 61.89 1024 1080 1184 1344 768 769 772 794
+  Modeline 	"1024x768" 73.89 1024 1080 1192 1360 768 769 772 799
+  Modeline 	"1400x1050" 145.06 1400 1496 1648 1896 1050 1051 1054 1093
+  Modeline 	"1400x1050" 118.42 1400 1488 1640 1880 1050 1051 1054 1086
+  Modeline 	"1400x1050" 140.79 1400 1496 1648 1896 1050 1051 1054 1092
+  # TV fullscreen mode or DVD fullscreen output.
+  ModeLine 	"768x576"     50.00  768  832  846 1000   576  590  595  630
+  ModeLine 	"768x576"     63.07  768  800  960 1024   576  578  590  616
+EndSection
+
+
+Section "Screen"
+    Identifier   "Screen[0]"
+    Device       "Device[0]"
+    Monitor      "Monitor[0]"
+    DefaultColorDepth 24
+    
+    Subsection "Display"
+        Depth 8
+        Modes "1400x1050" "1024x768" "800x600" "640x480"
+    EndSubsection
+    
+    Subsection "Display"
+        Depth 15
+        Modes "1400x1050" "1024x768" "800x600" "640x480"
+    EndSubsection
+    
+    Subsection "Display"
+        Depth 16
+        Modes "1400x1050" "1024x768" "800x600" "640x480"
+    EndSubsection
+    
+    Subsection "Display"
+        Depth 24
+        Modes "1400x1050" "1024x768" "800x600" "640x480"
+    EndSubsection
+EndSection
+
+Section "Device"
+        ### Available Driver options are:-
+        ### Values: <i>: integer, <f>: float, <bool>: "True"/"False",
+        ### <string>: "String", <freq>: "<f> Hz/kHz/MHz"
+        ### [arg]: arg optional
+        #Option     "ShadowFB"           	# [<bool>]
+        #Option     "DefaultRefresh"     	# [<bool>]
+  Identifier  "Device[0]"
+  Driver      "vesa"
+  VendorName  "ATI Technologies Inc"
+  BoardName   "Unknown Board"
+  Option       "AGPMode" "1"
+#	BusID       "PCI:1:0:0"
+EndSection
+
+Section "Device"
+  Identifier   "Device[1]"
+  VendorName   "ATI"
+  BoardName    "RV350 NP"
+  BusID        "1:0:0"
+  Driver       "radeon"
+#  Driver       "ati"
+#  Option       "noaccel"
+#  Option       "nolinear"
+  Option       "DPMS"
+  Option       "AGPMode" "1"
+#  Screen       0
+EndSection
+
+
+Section "ServerLayout"
+  Identifier   "Layout[all]"
+  InputDevice  "Keyboard[0]" "CoreKeyboard"
+  InputDevice  "Mouse[1]" "CorePointer"
+  InputDevice  "Mouse[2]"
+  Option       "Clone" "off"
+  Option       "Xinerama" "off"
+  Screen       "Screen[0]"
+EndSection
+
+Section "DRI"
+#    Group      "video"
+    Mode       0660
+EndSection

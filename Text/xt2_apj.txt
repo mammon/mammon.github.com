@@ -1,0 +1,395 @@
+                                                              Using Menus in Xt
+                                                              by mammon_
+
+
+A simple one-button application will not get you very far in the X world. A
+good application must have multiple components, including menus, dialog boxes,
+application windows, and accelerators. In this article I will present the use
+of Xt menus in assembly language as a first step towards producing a complete
+application; future articles will cover the integration of forms, dialog
+boxes, and other resources into a complete application.
+
+I presented some Xt macros for Nasm last issue, but have revised them after a
+bit more testing. The CALLBACK macros have been rewritten, and an InitXtApp
+macro has been written as well to take care of the generic Xt application
+startup code.
+;=======================================================================-xt.inc
+%macro InitXtApp 5
+;------Usage:    InitXtApp TopLevelWidget, Context, ClassName, ARGC, ARGV
+EXTERN XtVaAppInitialize
+	push dword 0
+	push dword 0
+	push dword 0
+        push dword %5
+	push dword %4
+	push dword 0
+	push dword 0
+	push dword %3
+        push dword %2
+	call XtVaAppInitialize
+	add esp, 36
+	mov [%1], eax
+%endmacro
+
+%macro CALLBACK 1
+;------Usage:   CALLBACK name
+GLOBAL %1
+%1:
+%define CallData 	[ebp+8]
+%define ClientData 	[ebp+12]
+%define Widget		[ebp+16]
+	push ebp
+	mov ebp, esp
+%endmacro
+
+%macro CALLBACK_RETURN 0
+;------Usage:          CALLBACK_RETURN
+	mov  esp, ebp
+	pop  ebp
+	ret
+%endmacro
+
+%macro ShowXtWidget 1
+;------Usage:       ShowXtWidget Widget
+EXTERN XtRealizeWidget
+	push dword [%1]
+	call XtRealizeWidget
+	add esp, 4
+%endmacro
+
+%macro XtAppLoop 1
+;------Usage:    XtAppLoop Context
+EXTERN exit
+EXTERN XtAppMainLoop
+	push dword [%1]
+	call XtAppMainLoop
+	add  esp, 4
+	push dword 0
+	call exit
+%endmacro
+;==============================================================================
+ The first thing that must be done in creating an application menu is to
+ create a "menubar" that will contain the component menu buttons. This often
+ takes the place of a Box or Form widget that resides on the top or left edge
+ of an application. The menu bar will later be "filled" with a button for each
+ menu [e.g. File, Edit, Options, Help].
+
+ I have opted to use the Box widget for the menubar as it requires less
+ initialization than the Form widget; normally it defaults to a vertical
+ stacking of the component buttons, but this can be fixed with further
+ configuration and will be addresses in a future article.
+
+ To create a menubar widget I have create a macro which will simply create a
+ Box widget; it takes as its parameters a pointer to the parent widget
+ [usually the top-level widget], the name of the menubar class, and a dword
+ variable which will become a pointer to the Box instance:
+;=======================================================================-xt.inc
+%macro CreateMenuBar 3
+;------Usage:        CreateMenuBar ParentWidget, ClassName, MenubarWidget
+EXTERN boxWidgetClass
+EXTERN XtCreateManagedWidget
+	push dword 0
+	push dword 0
+        push dword [%1]
+	push dword [boxWidgetClass]
+        push dword %2
+	call XtCreateManagedWidget
+        mov  [%3], eax
+	add esp, 20
+%endmacro
+
+;==============================================================================
+Following this, a button must be created for each menu as a component of the
+Box or menubar widget. Each button is then associated with a Menu widget
+through the XtCreatePopupShell call.
+
+In Xt Athena, a menu is a button which, when pressed, creates a "Popup Shell";
+that is, a container which contains the various menu items. These items are
+known as smeObjectClasses, or "simple menu entry" objects; selecting a simple
+menu entry from the popup shell [in plain English, "selecting a menu item"]
+will cause the callback for that menu item to be invoked and any data
+associated with the menu to be sent to the callback.
+
+The AddMenu macro will create a menu button and popup shell for a given menu;
+it takes as its parameters the pointer to the parent Menubar widget, the ASCII
+string to be displayed in the menu [e.g. "File", "Edit", etc], a dword
+variable to be filled with a pointer to the menu button, and a dword variable
+to be filled with a pointer to the menu [or "popup shell"] itself:
+;=======================================================================-xt.inc
+%macro AddMenu 4
+;------Usage:  AddMenu  MenubarWidget, MenuText, MenuButtonWidget, MenuWidget
+%ifndef _menu_classname
+EXTERN menuButtonWidgetClass
+EXTERN XtCreateManagedWidget
+EXTERN simpleMenuWidgetClass
+EXTERN XtCreatePopupShell
+[section .data]
+_menu_class	db	"menu",0
+[section .text]
+%define _menu_classname
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1]
+	push dword [menuButtonWidgetClass]
+	push dword %2
+	call XtCreateManagedWidget
+	mov  [%3], eax
+	add esp, 20
+
+	push dword 0
+	push dword 0
+	push dword [%3]
+	push dword [simpleMenuWidgetClass]
+	push dword _menu_class
+	call XtCreatePopupShell
+	mov  [%4], eax
+	add  esp, 20
+%endmacro
+;==============================================================================
+Once the menu is created, it must be filled with menu items. The standard menu
+item is an smeBSBObject, meaning "simple menu entry: Bitmap-String-Bitmap";
+that is, each line can consist of a bitmap followed by a string followed by a
+bitmap. This can be useful for providing "visual"/eyecandy menus, or for
+checking and unchecking [via an "x" bitmap] menu items. For this example, I am
+using only string menu entries.
+
+Menu items are added with the standard CreateManagedWidget function, then
+associated with a callback routine just like standard Xt widgets. The
+AddMenuItem macro performs both of these functions and takes as its parameters
+the pointer to the parent Menu, the text to be displayed in the menu item, a
+pointer to the data associated with the menu item, and the address of the
+callback routine:
+;=======================================================================-xt.inc
+%macro AddMenuItem 4
+;------Usage:      AddMenuItem MenuWidget, MenuItemText, MenuItemID, Callback
+%ifndef menu_entry_ptr
+EXTERN smeBSBObjectClass
+EXTERN XtCreateManagedWidget
+EXTERN XtAddCallback
+[section .data]
+MenuEntry:
+.ptr		dd	0
+_callback_type	db	"callback",0
+[section .text]
+%define menu_entry_ptr
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1.ptr]
+	push dword [smeBSBObjectClass]
+	push dword %2
+	call XtCreateManagedWidget
+	mov [MenuEntry.ptr], eax
+	add esp, 20
+
+	push dword %3
+	push dword %4
+	push dword _callback_type
+	push dword [MenuEntry.ptr]
+	call XtAddCallback
+	add  esp, 16
+%endmacro
+;==============================================================================
+Note that the pointer to the Menu Item Entry widget is needed only to install
+the callback, and can then be discarded.
+
+I have also included a separator menu  item to break up the menus a bit; this
+is simply a menu item of class smeLineObject which does nothing; as such, the
+AddMenuSeparator macro requires only the pointer to the parent Menu as a
+parameter:
+;=======================================================================-xt.inc
+%macro AddMenuSeparator 1
+;------Usage:           AddMenuSeparator MenuWidget
+%ifndef _szseperator
+EXTERN smeLineObjectClass
+EXTERN XtCreateManagedWidget
+[section .data]
+_szSep	db	"line",0
+[section .text]
+%define _szseperator
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1.ptr]
+	push dword [smeLineObjectClass]
+        push dword _szSep
+	call XtCreateManagedWidget
+	mov [MenuEntry.ptr], eax
+	add esp, 20
+%endmacro
+;==============================================================================
+Why so many macros? To ease the tedium. The Xt code presented below was many
+pages longer before I converted the menu creation routines --which run 10 to
+20 lines apiece-- into macros. Also, looking at the sample application, you
+will see that all of the "generic" Xt code has been compressed to a few lines,
+leaving the bulk of the "real code" in the callback routine and in the
+resource definitions.
+
+I have chosen to use a single callback for all of the menu items; this is the
+most simple and perhaps the most efficient method. Each menu entry has a
+unique integer ID which is passed to the callback as data when the menu item
+is selected; the callback compares its incoming ClientData variable with each
+of the menu entry IDs until it finds a match, whereupon it jumps to a specific
+subroutine for each different ID. In short, a typical message handler --
+though I refrained from my notorious call-table and SWITCH/CASE macros in this
+case for the sake of clarity.
+
+The structure of the Widget declarations in this file could also bear some
+discussion. I have chosen to treat all widgets declared in the application
+[*not* references to the external widget classes reference by the app, but
+rather the pointers to those classes] as primitive structures of the following
+form:
+WidgetInstance:
+.ptr    dd      0
+.name   db      'name',0
+This makes things easier, for the widget pointer can now be referred to as
+[WidgetInstance.ptr], and the widget name can be referred to as
+WidgetInstance.name. Notice that all widget pointers must be referenced in
+brackets; the typical C use of a pointer is to pass the address contained in
+the pointer, not the address of the pointer itself [unless the pointer is
+dereferenced by a "&", in which case the brackets should not be used in the
+assembly language equivalent].
+
+The menu widgets have a similar, but more advanced syntax:
+MenuName:
+.ptr
+.name
+.button
+.Entryname
+.EntrynameID
+This allows the pointer for each menu button to be stored along with the rest
+of the menu data, and also allows menu entries to be referenced as "members"
+of the menu "structure", e.g. MenuName.Entryname would be the text of the menu
+item, and MenuName.EntrynameID would be the integer ID for the menu item.
+
+Now for the actual implementation:
+;===================================================================-xtmenu.asm
+BITS 32
+EXTERN exit
+EXTERN printf
+%include "Xt.inc"
+;==========================================================================DATA
+[section .data]
+;______________Widgets__________________________
+Shell:
+.ptr		dd	0
+.name		db	"shell",0
+MenuBar:
+.ptr		dd	0
+.name		db	"menubar",0
+
+;_______________Menus___________________________
+FileMenu:
+.ptr		dd	0
+.name		db	"File",0
+.button		dd	0
+.New		db	"New",0
+.NewID		dd	"101"
+.Open		db	"Open",0
+.OpenID		dd	"102"
+.Save		db	"Save",0
+.SaveID		dd	"103"
+.Close		db	"Close",0
+.CloseID 	dd	104
+.Exit		db	"Exit",0
+.ExitID		dd	105
+
+HelpMenu:
+.ptr		dd	0
+.name		db	"Help",0
+.button		dd	0
+.About		db	"About",0
+.AboutID 	dd	201
+
+;____Classes____________________________________
+XtMenu:		db	"XtMenu",0
+
+;____Misc_______________________________________
+ARGC:	times 128 db	0
+szOutString	db	"%s selected",0ah,0dh,0
+AppContext	dd	0
+
+;==========================================================================CODE
+[section .text]
+CALLBACK CBMenuSelect
+	mov ebx, ClientData
+	mov eax, [ebx]
+	cmp eax, dword [FileMenu.NewID]
+	je  MenuNew
+	cmp eax, dword [FileMenu.OpenID]
+	je  MenuOpen
+	cmp eax, dword [FileMenu.SaveID]
+	je  MenuSave
+	cmp eax, dword [FileMenu.CloseID]
+	je  MenuClose
+	cmp eax, dword [FileMenu.ExitID]
+	je  MenuExit
+	cmp eax, dword [HelpMenu.AboutID]
+	je  MenuAbout
+	jmp unhandled
+MenuNew:
+	push dword FileMenu.New
+	jmp do_printf
+MenuOpen:
+	push dword FileMenu.Open
+	jmp do_printf
+MenuSave:
+	push dword FileMenu.Save
+	jmp do_printf
+MenuClose:
+	push dword FileMenu.Close
+	jmp do_printf
+MenuAbout:
+	push dword HelpMenu.About
+do_printf:
+	push dword szOutString
+	call printf
+	add  esp, 8
+unhandled:
+	CALLBACK_RETURN
+MenuExit:
+	mov  esp, ebp
+	pop  ebp
+	push dword 0
+	call exit
+	ret
+;____________________________________________________________PROGRAM_ENTRYPOINT
+GLOBAL main
+main:
+        InitXtApp Shell.ptr, AppContext, XtMenu, ARGC, 0
+
+;-------Make Menu
+	CreateMenuBar Shell.ptr, MenuBar.name, MenuBar.ptr
+	AddMenu MenuBar.ptr, FileMenu.name,FileMenu.button, FileMenu.ptr
+	AddMenu MenuBar.ptr, HelpMenu.name,HelpMenu.button, HelpMenu.ptr
+
+;-------Build File Menu
+	AddMenuItem FileMenu, FileMenu.New, FileMenu.NewID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Open, FileMenu.OpenID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Save, FileMenu.SaveID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Close, FileMenu.CloseID, CBMenuSelect
+        AddMenuSeparator FileMenu
+	AddMenuItem FileMenu, FileMenu.Exit, FileMenu.ExitID, CBMenuSelect
+;-------Build Help Menu
+	AddMenuItem HelpMenu, HelpMenu.About, HelpMenu.AboutID, CBMenuSelect
+
+;-------Show Top-Level Widget
+	ShowXtWidget Shell.ptr
+;-------Enter Xt Application Loop
+	XtAppLoop AppContext
+
+    ;___Compile_Strings_________________________________________
+    ;   nasm -f elf xtmenu.asm
+    ;   gcc -o xtmenu xtmenu.o -lXaw -lXt -lX11 -L/usr/X11R6/lib
+;==========================================================================-EOF
+The strings needed to compile and link Xt assembly apps are provided at the
+end of the file. Note once again how short the main application code is; the
+menu data could easily be moved into an xtmenu.inc file and thereby trim the
+"apparent size" of the application down to the initialization code and the
+callback.
+
+Further automation could involve creating a "resource editor" which would
+produce .INC files compatible with the Xt.inc macros, as well as creating
+high-level calls to automatically adjust the stack and high-level structures
+to deal with message handling in the callback.

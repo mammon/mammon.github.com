@@ -1,0 +1,552 @@
+<HTML>
+<HEAD>
+<TITLE>Mammon_'s Tales To His Grandson</TITLE>
+</HEAD>
+
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000">
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font>
+
+
+<center><i>Breathing Life into Dead Listings</i></center>
+
+<P><BR>
+<P>
+<center><a href="#hed">Hed</a> * <a href="#hiew">Hiew</a> * <a href="#ida">IDA</a> * <a href="#idc">IDC Scripts</a> * <a href="#sourcer">Sourcer</a> * <a href="#w32dasm">W32Dasm</a></center><P>
+<P>
+<BR>
+In reverse engineering, there are two approaches for examining the target: "live" or active examination, in which a program is run under the careful scrutiny of a) a debugger, b) a system monitor, or c) a capture utility that filters disk/file/memory access, API calls, messages, etc; and "dead" or passive examination, in which a program is opened in a hex editor or disassembler, with the end result being a .lst or .asm file containing a close approximation of the original source code of the program. Most passive utilities will produce an "assembly-language rendering" of the target, which then must be reviewed and corrected by the engineer and finally--if at all--translated into C/C++, Visual Basic, Pascal, Fortran, Java, or whichever language the target is presumed to have been written in. What follows is an introduction to a number of "dead-listing" tools which, once learned by the engineer, will prove invaluable in retrieving an accurate assembly language rendering from the target binary file.
+<P>
+<a name="hed"></a><HR><Font size=+1><b>HED</font></b><P>
+<b>Synopsis:</b>HED v.1.78 is a 370K (installed) "hacking tool disquised as a hex editor", running in a non-resizeable DOS box. Its features include traditional hex/ASCII or disassembly mode, multiple-file editting, excellent search and replace capabilities, macro recording,  win32 API function name resolution,integral expresion calculator and ASCII table, branch following, 10 bookmarks, and imports/exports/internal references tables. All in all, a pretty sophisticated hex editor at 193K with a 176K imports.dat file.<P>
+<b>Usage:</b> General hex/text editor with Win32 import/export information.<P>
+<! Table For Keyboard Shortcuts====================================>
+<table cellspacing=4>
+<caption><b>Shortcuts</b></caption>
+<tr><td width=100>Esc</td><td width=200>Activate Menu</td><td width=25> </td><td width=100>Alt-O</td><td width=200>Open File</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt-P</td><td width=200>Previous File</td><td width=25> </td><td width=100>Alt-N</td><td width=200>Next File</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt-Q</td><td width=200>Close File</td><td width=25> </td><td width=100>Alt-X</td><td width=200>Exit Program</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F2</td><td width=200>Save File</td><td width=25> </td><td width=100>Alt-F2</td><td width=200>Save As</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F9</td><td width=200>DOS Shell</td><td width=25> </td><td width=100>Alt-F9</td><td width=200>Execute a program</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-F4</td><td width=200>Calculator</td><td width=25> </td><td width=100>F11</td><td width=200>ASCII Table</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-M</td><td width=200>Record Macro</td><td width=25> </td><td width=100>Alt-F</td><td width=200>Text Filter</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-Ins</td><td width=200>Copy to HED clipboard</td><td width=25> </td><td width=100>Shift-Ins</td><td width=200>Paste from HED clipboard</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-G</td><td width=200>Goto Offset</td><td width=25> </td><td width=100>Ctrl-B</td><td width=200>Goto Previous Position</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt-Shift(0 ...9)</td><td width=200>Save Position (Bookmark) 0-9</td><td width=25> </td><td width=100>Alt-[0...9)</td><td width=200>Goto Position (Bookmark) 0-9</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F5</td><td width=200>Find Number</td><td width=25> </td><td width=100>F6</td><td width=200>Find Text String</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F7</td><td width=200>Find Hex Data</td><td width=25> </td><td width=100>Ctrl-F6</td><td width=200>Find in ASM text</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-F8</td><td width=200>Find reference</td><td width=25> </td><td width=100>Alt-F8</td><td width=200>SuperFind & Replace</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Shift-F7</td><td width=200>Find Again</td><td width=25> </td><td width=100>Alt-V</td><td width=200>Toggle Hex/ASM view</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+</table><! ============================================= Table END>
+
+<P>
+<b>Notes:</b> HED is a freeware (or, rather, "emailware") hex editor written for OS/2 by Dimitris Kotsonis, and ported to Win32 by Malakoudis S. Panagiotis. It is written in Visual C++ (GNU C for OS/2 version) and takes advantage of the Win32 DOS console interface...the result being that the code of the .exe is interesting to scroll through, but the program itself can slow down in certain functions. The "file open" dialog box, as it does not alphabetize the file names, is tedious to use in large directories such as C:\WINDOWS...creating a PIF file that takes a <i>filename</i> parameter or simply drag'n'dropping the target on the HED icon is recommended. HED will also open multiple files, so that typing C:\WINDOWS\*.* in the "file open" box will open <i>every</i> file in the Windows directory...<P>
+<a name="hiew"></a><HR><Font size=+1><b>HIEW</font></b><P>
+<b>Synopsis:</b> HIEW v.5.66 is a 177K (installed) hex editor that runs in a DOS box and takes multiple files names as its startup parameters. Features include MZ/PE file header parsing, multiple file editting, hex/ASCII/disassembly views, file search and replace, saved jump table, reference calling, bookmarks, win32 API function name resolution, built-in 80386 assembler, and cyrptographic/XOR functions. HIEW has three different viewing modes (Asm, Hex, and Text, or A, H, and T), from A and H modes the user can enter the "Edit" mode (E). The PE file header summary is particularly effective, allowing the user to jump to locations in the file (such as the .text or .rsrc directories) reference by the PE Header, its Directory Table, or its Object Table. <P>
+<b>Usage:</b>General hex/text editor with PE file header and assembler capabilities; a quick tour of its features would run as follows:
+<li>Load an executable such as rundll32.exe
+<LI>Press ENTER twice to get to decode
+<LI>Press F7 to search: Note that you can enter an ASCII character or a hexidecimal bytecode.
+<LI>Press F7 again to call the built-in assembler. Type "test eax, eax" and press enter.
+<LI>Press ESC to get out of the assembler, then ENTER to search.
+<LI>Press + to book mark, then Shift-F7 to search again.
+<LI>Bookmark second location, then press Alt-1 to return to the first bookmark.
+<LI>Press  Alt- - (Alt-minus) to clear the current bookmark. Note that there are different
+sets of 8 bookmarks for each mode (hex, text, asm).
+<LI>Search for a jne; when found, press F3 to edit. Press F2 to bring up the assembler,
+change the jne to a je.
+<LI>From the assembler or hex mode, press F8 to bring up the file header. The header may be toggled from the PE to MZ format (providing the file is PE) by pressing F8 again.
+<LI>The header display is a launching point for many of Hiew's features. Pressing F2 displays the flags set in the PE header, F6 displays the Object Table of the header (which lists the different segments or sections, such as .text and .rdata, which may be jumped), and F7 displays the directories within the PE header (such as Import, Export, Resource, and Debug). F4 brings you to the start of program code, and F5 brings you to the program entry point.
+<LI>From the header, press F7 to look for the location of the Imports directory. Press Esc, then F6 to bring up theObject Table: choose the section that contains the location you got from F7 (usually .idata), then press enter.
+<LI>In hex mode, scroll down past the section header and you will find all of the imports for the program.
+
+<P>
+<i>Crypting Operations:</i> The HIEW manual gives the following explanation for its cryptographic funtions...
+<pre>
+   Crypt operations are using for crypting/decrypting the code/data. Crypt
+algorithm is very simple. Code/data will be crypted by the bytes/words (to
+change the size ot the unit, press F2). Crypting routine must be terminated
+with "LOOP numberLine" operator.
+
+Available commands:
+        Reg mode    : neg,mul,div
+        Reg-Reg mode: mov,xor,add,sub,rol,ror,xchg
+        Reg-Imm mode: mov,xor,add,sub,rol,ror
+        Imm mode    : loop
+All 8/16 bit registers are available, except AL/AX that will be filled with (de)crypted byte/word.
+The differences from standard assembler:
+        there are no jumps;
+        'loop' means 'jmp/stop'
+        the operands of 'rol/ror' commands must have the same size, i.e.
+        ROL AX,CL not allowed.
+
+</pre>
+To access these functions, make sure you are in ASM mode. Press F3 to edit, press F7 to bring up the cryptographic functions. Note that the assembler
+window comes up: the idea here is to enter lines of assembly code--the encryption or decryption alogrithm--HIEW comes with two examples:
+<ol type =a> <li>) simple XOR by x0AA: In the assembler, type XOR al; type type LOOP 1.
+<li>) XOR with increment mask: type MOV dx, 0; type XOR ax,dx; type ADD dx,1; type LOOP1
+</ol>
+Note that you can toggle the XOR unit size between byte and word with the F2 key. The algorithms can be entered using the following commands:
+<code>neg, mul, div, mov, xor, add, sub, rol, ror, xchg, loop </code>(see Hiew.txt for clarifications)
+In addition, all algorithms must end with a LOOP statement, and only 8/16-bit registers are available. <P>
+<! Samples (Cryptography):><P>
+<! Table For Keyboard Shortcuts====================================>
+<table cellspacing=4>
+<caption><b>Shortcuts</b></caption>
+<tr><td width=100>Enter</td><td width=200>Toggle View Mode</td><td width=25> </td><td width=100>Alt-H</td><td width=200>Help</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F1</td><td width=200>File Info</td><td width=25> </td><td width=100>F2</td><td width=200>Wrap/Unwrap (T) Assemble (E)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F3</td><td width=200>Edit (A,H) Undo (E)</td><td width=25> </td><td width=100>F4</td><td width=200>Mode</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F5</td><td width=200>Goto (A,H)</td><td width=25> </td><td width=100>F6</td><td width=200>Linefeed (T) Find reference on current position (A)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F7</td><td width=200>Search(A,H,T) Crypt (E)</td><td width=25> </td><td width=100>F8</td><td width=200>Header (A,H) XLAT (T) XOR (E)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F9</td><td width=200>Open Files (A,H,T) Update File (E)</td><td width=25> </td><td width=100>F10</td><td width=200>Exit (A,H,T) Truncate File (E)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt-P</td><td width=200>Save screen to file</td><td width=25> </td><td width=100>Alt-R</td><td width=200>Reload file</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-F3</td><td width=200>Search and Replace</td><td width=25> </td><td width=100>Ctrl-F7 | Ctrl-Enter</td><td width=200>Search Next</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-F8</td><td width=200>Previous File</td><td width=25> </td><td width=100>Ctrl-F9</td><td width=200>Next File</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>+</td><td width=200>Bookmark</td><td width=25> </td><td width=100>Alt-(1...8)</td><td width=200>Goto Bookmark</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt- -</td><td width=200>Clear current bookmark</td><td width=25> </td><td width=100>Alt-0</td><td width=200>Clear all bookmarks</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>1...9 | A...Y</td><td width=200>Jump to target/save jump</td><td width=25> </td><td width=100>0 | Z</td><td width=200>Return from jump</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+</table><! ============================================= Table END>
+
+
+<P>
+<a name="ida"></a><HR><Font size=+1><b>IDA (Interactive DisAssembler)</font></b><P>
+<b>Synopsis:</b> IDA v. 3.7 is a 15.9 MB interactive disassembler (hence its name), similar in a way to the old Bubble Chamber disassembler: a file is loaded, disassembled by the program, then the user is given a chance to modify code and data interpretations before saving the final output file. IDA takes this method to the extreme, modifying the code after the user makes changes to re-interpret the program...basically saving the user a lot of work. Features include multiple file editting, integral byte patcher (creates and .exe file for DOS files, or a .dif difference file for other formats), integral calculator, extensive macro language, integral text editor/viewer, full navigational and code interpretation facilities.<P>
+<b>Usage:</b> IDA is different from other disassemblers in that the user is intended to modify the disassembled file "interactively" with the program until an adequate approximation of the original source code is produced. Obtaining a full disassembled listing therefore requires that the user take part in three distinct processes:
+<OL><LI>Giving IDA the correct loading information for the file at startup
+<LI>Modifying code and data when misinterpreted by IDA
+<LI>Commenting the disassembled file extensively</OL><P>
+The first and the third processes are pretty simple: the "Load File Of New Format" window provides plenty of options for the user to configure (be sure to set the DLL directory to c:\windows\system and not c:\windows; also uncheck "Rename DLLs" and check "Load Resources" and "Make Imports Section"), and typing ":" allows the user to enter comments that stand out in bright white (and therefore easily distinguishable from the brown IDA-generated comments).<P>
+The second process is the hardest, the most time consuming, and the one that requires the most technical knowledge. The user can use the <b>C</b> command to change data into code, and the <b>D</b> to do the opposite--note that each of these commands will cause changes throughout the file, for all relevant bytes beneath the changed line will be coverted to data or code as well. This means basically that the user must have very intimate knowledge of the program itself and the structure of the file format they are working on in order to get full use out of IDA.<P>
+Not all files require this much work to disassemble, however; with Windows files in particular, IDA does a good job on its own and usually provides the user with a more than adequate disassembly that only needs a little commenting and data modification. For cases like this, IDA provides excellent navigational commands (summarized in the <b>Shortcuts</b> section below) as well as the ability to change the data representation on the current line to hexidecimal (Q), ASCII (R), octal,  binary (B), or decimal (H). The user can also rename (N) functions or variables defined by IDA, and can even patch the file from within the IDA environment.<P>
+A more thorough examination of IDA Pro's functions, including FLIRT and IDC, can be found on <a href="http://www.eccentrica.org/Mammon/Text/ida.txt">this</a> summation of the <a href="http://www.unibest.ru/~ig/index.html">IDA Pro web site</a>. Some additional information and brief tutorials can be found at the <a href="http://www.datarescue.com/idaoutstanding.htm">Datarescue Site</a>.<P>
+IDA outputs an ASM, DIF, EXE, LST, or MAP file. The ASM file is intended to be compilable; the DIF can be used in the creation of a patcher, and the MAP can be used to create symbols for a debugger. Note that
+the EXE output will only work with DOS-style executables, and the MAP file created is incompatible with the NMSYM.EXE utility included with Soft-Ice. For a utility to handle this problem
+and for an overview of the symbol-file creation process, see Gij's <a href="http://www.eccentrica.org/Mammon/Lost/Gij_eids.zip">Map2Map</a> utility.
+<P>
+<center><b>Tutorial</b></center>
+<font color=ff0000>New</font> I have created a full-fledged <a href="idaprimer.txt">IDA Primer</a> per Fravia's request. It is another Tale entirely...<P>
+This brief example will make use of Rundll32.exe, found in every Windows directory. This program is 8K and thus is the
+perfect size for an introduction; its purpose is to manually load .DLL files into memory, as if they were executables. Run IDA
+by loading IDAW.EXE, then select c:\windows\rundll32.exe for the target file. IDA Pro fill present you with a dialog box of
+loading parameters:
+
+<Pre>
+Load as...
+* Portable executable
+_ MSDOS .exe
+_Binary file
+
+Loading segmemnt: 0x1000 (Exe & Bin) (paragraph where file will be loaded...only for exe/bin)
+Loading Offset: 0x0 (bin)  (binary only...offset of first byte from start of first segment)
+
+* Create Segments (bin)
+* Load Resources
+_Rename DLL entries unchecked, makled repeatedable comments for entries imported by ordinal...else renames 2nd occurence
+_Manual Load (NE, LE, LX ...IDA will ask for loading addrersses/selectors for each object in file)
+_Fill Segment Gaps      (NE)
+* Make Imports Section (PE) (convert .idata section to extra directives)
+_Don't align segments (OMF)
+_IBM Object Table (OMF)
+DLL directory: c:\windows\system
+</pre>
+
+First thing : save the database by going to File->SaveDatabase (or pressing Ctrl-W); this will allow you to come back to your work
+later simply by loading the .IDB file instead of an executable when IDA starts up.<P>
+Next, scroll through the code to get the lay of the land...this is a relatively small file. Note that at offset 0041416 there starts
+a continuous sequence of <code>add [eax], al</code> repeating over and over. Toggling to hex mode via F4 or just examining
+the bytes after the offset will show that this is just a continous block of 00's, terminating at 4015FE with the end of the .text
+segment--meaning that these 00's are padding to fit the File Alignment "magic number"; the code segment therefore really ends
+at offset 0041416.<P>
+IDA has produced one anomaly in this block of padding: at offset 00401464 it has generated the comment <font color=FF0000><code>
+CODE XREF: .text:004013F5^j</code></font>, meaning that this address is referenced by a jump at 4013F5. Press ENTER while the
+cursor is over the cross-reference "jump-to" address and IDA will switch to this line of code: <code>jnz short near ptr loc_401464+1</code>.
+The location at 00401464 is always going to be zero, so the value 401464+1 would be simply 1, or the first line of code..which happens to be a subroutine.<P>
+Okay, on to work. Just what does this program do? Go to the View menu and choose names; this will show the imports used by the
+ program and give you a brief overview: 28 names,  all standard functions such as lstrcpyA, wsprintf, MessageBoxA, and
+LoadIconA, plus library functions like LoadLibraryA, FreeLibrary, and GetProcAddress that one would expect due to the nature of
+this program. <P>
+The .text section in this small program is only 416 lines...easy enough to track through manually using IDA:
+<pre>
+Go to the program entry point by pressing Ctrl-E; you will start off at address 401028 which, as is standard for the start of a
+program or function, will prepare a stack frame. From here you can create a "skeleton" outline of the code by noting the "flow
+of execution", taking down relevant jumps and calls and any imports from the Windows API:
+
+<U>Start</u>:
+401028 Start of Program
+40102F API: GetCommandLine, store pointer in <b>esi</b>
+401075 API: GetStartupInfo, store STARTUPINFO structure in ebp+var_44
+401090 API: GetModule Handle..either 0Ah or ebp+var_14 (address of mudule to return handle for)
+401097 Call 401322
+40109F API: Exit process
+
+Type <b>G 401322</b> or double-click/press enter on the address 401322 in line 401097:
+
+<u>Main</u>:
+401334 API: SetErrorMode mask:8001h
+401344 Call 4010AC
+401352 Call 40124F (RegisterClassA_CreateWindowExA function)
+401373 Call J_SHELL32_122
+40137A Call 402010 (Bad Call: .data segment)
+401380 Call 4012F8 (DestroyWindow_FreeLibrary)
+40138S RET (end subroutine)
+
+Using the same method, investigate each of the called subroutines:
+
+<u>Call from Main #1</u>:
+...to 4010AC...	*****Function 4010AC*****
+4010DD Call 401000 (CharNextA function, parameters 20h, esi)
+4010EF Call 401000 (CharNextA function, parameters 2Fh, esi)
+4010F8 Jcc 401101
+4010FC JMP 40120B (RET)
+
+...to 401000...	*****Function 401000*****
+40101A API: CharNextA
+401025 RET
+
+...to 401101...
+401106 API: LoadLibrary
+401113 Jcc 4011C7
+40111A Call Kernel32_35
+401128 Jcc 401182
+40112C Call Kernel32_37
+401139 Jcc 401161
+401149 Call 40138D (LoadString_wsprintfA_MessageBox function)
+401154 Call Kernel32_36
+40115C JMP 40120B (RET)
+...to 4011C7...
+4011CE API: GetProcAddress
+4011DB Jcc 40116B
+4011F6 API: FreeLibrary
+4011FE JMP 40120B (RET)
+...to 401182...
+401192 API: GetLastError
+4011A0 API: FormatMessageA
+4011BE Call 40138D (LoadString_wsprintfA_MessageBox function)
+4011C5 JMP 40120B (RET)
+...to 401161...
+40116D Jcc 401200 (RET)
+401177 API: lstrcpy
+40117D JMP 401206 (RET)
+...to 401208...
+401211 RET
+
+...to 40138D...	*****Function 40138D*****
+4013AB API: LoadStringA
+4013C9 API: wsprintfA
+4013E1 API: MessageBox
+4013EA RET
+
+
+<U>Call From Main #2</u>:
+...to 401024F...	*****Function 401024F*****
+401277 API: Call LoadIconA
+401286 API: Call LoadCursorA
+401290 API: Call GetStockObject
+4012A7 API: Call RegisterClassA
+4012DF API: Call CreateWindowExA
+4012F5 RET
+
+<U>Call From Main #3</u>:
+...to 4013EE...	*****Function J_SHELL32_122*****
+4013EE API: Shell32.122 (Unknown, poss ExtractAssociatedIconExW)
+
+<U>Call From Main #4</u>:
+...to 402010...
+.data segment
+402010 db 00 00 00 00
+
+<U>Call From Main #5</u>:
+...to 4012F8...	*****Function 4012F8*****
+4012FE  API: DestroyWindow
+401313  API: Kernel32.36 (unknown)
+40131B API: FreeLibrary
+401321 RET
+
+</PRE>
+Comparing the above abstract with the list of internal routines in View-> Functions shows that all 8 of Rundll32.exe's
+ routines have been accounted for. While this source code still has a few mysteries that could be cleaned up, its
+functionality is relatively clear: this is simply a "loader" function that takes the name of a .DLL file as its startup parameter,
+then loads that .DLL using the GetProcAddress/LoadLibrary combo that is used in many applications for loading their own
+.DLLs.  Not very mysterious at all...more like a patch than a utility.
+<P><BR>
+<a name="idc"></a><center><b>IDC Scripts</b> <i>links repaired 1.17</i></center>
+IDA has a built-in macro language known as IDC; the syntax is the same as C with a few minor differences (no global variables, ouch!) and many internal functions.
+The best way to learn IDC is to print out a copy of IDC.IDC and reference the included IDC scripts while you develop your own; once you get used to IDA's terms and
+concepts, the C syntax makes these macros very easy to write. The following macros are intended to add functionality to the base IDA install; contributions are of
+course welcome:
+<LI><a href="http://www.eccentrica.org/Mammon/idc/func_calls.idc">Func_calls.idc</a> (Zer0+, mammon_ 12.7): Lists the first level calls made by a function.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/func_tree.idc">Func_tree.idc</a> (Zer0+, mammon_ 12.8): Lists all of the calls (XRefs) made by a function and the functions it calls.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/functree_out.idc">Functree_out.idc</a> (Zer0+, mammon_ 12.8):As above, and outputs the results to a file.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/entrytree.idc">Entryree.idc</a> (mammon_ 12.8): Recursively lists all of the calls stemming from a program's entry point(s).
+<LI><a href="http://www.eccentrica.org/Mammon/idc/entrytree_out.idc">EntryTree_out.idc</a> (mammon_ 12.8): As above, and outputs the results to a file.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/Res.idc">Res.idc</a> (mammon_ 12.27): Parses the .rsrc segment directory tree, formats resources within IDA code display.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/Reslib.idc">Reslib.idc</a> (mammon_ 1.31): Library file needed for resource IDC scripts such as Res.idc.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/seg_string.idc">Seg_string.idc</a> (mammon_ 1.27): [Helper for APIVision decompile] Parses strings in the current segment.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/extrn_name.idc">Extrn_name.idc</a> (mammon_ 1.27): [Helper for APIVision decompile] Fixes imported names (run from Extern segment).
+<LI><a href="http://www.eccentrica.org/Mammon/idc/strings.idc">Strings.idc</a> (mammon_ 1.30): Uses Reslib.idc to parse only the String Tables (can be configured for any resource type).
+<LI><a href="http://www.eccentrica.org/Mammon/idc/h2enum.idc">H2enum.idc</a> (mammon_ 2.27): Allows the user to import the #defines from a header file and convert them into program enums.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/copy.idc">Copy.idc</a> (mammon_ 3.09): Writes selected text to an output file (.ASM format).
+<LI><a href="http://www.eccentrica.org/Mammon/idc/ss.idc">Ss.idc</a> (mammon_ 4.02): Script to mimic the functionality of ss.exe (output all strings in .exe file).
+<LI><a href="http://www.eccentrica.org/Mammon/idc/global_str.idc">Global_str.idc</a> (mammon_ 10.17): Parses strings contained in the unexplored data of all segments.
+<LI><a href="http://www.eccentrica.org/Mammon/idc/fultree.idc">FulTree.idc</a> (slava 4.16): Slava's improvement on my func_tree.idc: works much better!
+<LI><a href="http://www.eccentrica.org/Mammon/idc/stree.idc">Stree.idc</a> (cephren 10.15): Cephren's version of fultree.idc with formatting & duplicate checking--very good call trace!
+<LI><a href="http://www.eccentrica.org/Mammon/idc/textsearch.idc">Textsearch.idc</a> (mammon_ 11.19): Front-end for "Search for Text In Core" that accepts ASCII input.
+<P>
+Attention UltraEdit users! Cephren has produced an <a href="http://www.eccentrica.org/Mammon/Lost/uedit_ida.zip">IDA Syntax Script</a> to make your IDC coding easier.
+<P>
+<P><BR>
+<center><b>Configuration</b></center>
+IDA, like Soft-Ice, has a configuration file (IDA.CFG) which the user can customize to suit his needs. Useful functions to add keyboard commands for are ViewFile (F9), EditFile (Alt-F9), ViewFunctions (Alt-F), and ViewNames (Alt-N). In addition to defining keyboard commands and #defining a lot of parameters, IDA.CFG contains analysis and display parameters that can be configured as follows (or to taste):
+<pre><font size=-1>
+//-------------------------------------------------------------------------
+//
+//	Analysis parameters
+//
+//-------------------------------------------------------------------------
+
+ENABLE_ANALYSIS		= YES	// Background analysis is enabled
+
+SHOW_INDICATOR		= YES	// Show background analysis indicator
+
+#define AF_FIXUP	0x0001	// Create offsets and segments using fixup info
+#define AF_MARKCODE	0x0002	// Mark typical code sequences as code
+#define AF_UNK		0x0004	// Delete instructions with no xrefs
+#define AF_CODE		0x0008	// Trace execution flow
+#define AF_PROC		0x0010	// Create functions if call is present
+#define AF_USED		0x0020	// Analyse and create all xrefs
+#define AF_FLIRT	0x0040	// Use flirt signatures
+#define AF_PROCPTR	0x0080	// Create function if data xref data->code32 exists
+#define AF_JFUNC	0x0100	// Rename jump functions as j_...
+#define AF_NULLSUB	0x0200	// Rename empty functions as nullsub_...
+#define AF_LVAR		0x0400	// Create stack variables
+#define AF_TRACE	0x0800	// Trace stack pointer
+#define AF_ASCII	0x1000	// Create ascii string if data xref exists
+#define AF_IMMOFF	0x2000	// Convert 32bit instruction operand to offset
+#define AF_DREFOFF	0x4000	// Create offset if data xref to seg32 exists
+#define AF_FINAL	0x8000	// Final pass of analysis
+				// See also ANALYSIS2, bit AF2_DODATA
+
+ANALYSIS	= 0xFFFF	// This value is combination of the defined
+				// above bits.
+
+#define AF2_JUMPTBL	0x0001	// Locate and create jump tables
+#define AF2_DODATA	0x0002	// Coagulate data segs in the final pass
+
+ANALYSIS2	= 0x0001
+
+//-------------------------------------------------------------------------
+//
+//	Text representation
+//
+//-------------------------------------------------------------------------
+
+OPCODE_BYTES       	= 6		// don't display bytes of instruction/data
+INDENTION		=0		// Indention of instructions
+COMMENTS_INDENTION	= 30		// Indention for on-line comments
+MAX_TAIL		= 16		// Tail depth
+MAX_XREF_LENGTH		= 80		// Maximal length of line with cross-references
+MAX_DATALINE_LENGTH	= 70		// Data directives (db,dw, etc):
+					//   max length of argument string
+SHOW_AUTOCOMMENTS	= YES		// Don't show silly comments
+SHOW_BAD_INSTRUCTIONS	= NO		// Don't bother about instruction lengthes
+SHOW_BORDERS		= YES		// Borders between data/code
+SHOW_EMPTYLINES		= NO		// Generate empty line to make
+					// text more readable
+SHOW_LINEPREFIXES	= YES		// Show line prefixes (1000:0000)
+SHOW_SEGMENTS		= YES		// Show segments in addresses
+USE_SEGMENT_NAMES	= YES		// Show segment names instead of numbers
+SHOW_REPEATABLE_COMMENTS = YES		// Of course, use repeatable comments
+					// Disabling this increases IDA speed.
+SHOW_VOIDS		= NO		// Don't display <void> marks
+SHOW_XREFS		= 100		// Show 2 cross-references
+SHOW_XREF_VALUES	= YES		// If not, xrefs are displayed
+					// as "..."
+SHOW_SEGXREFS		= YES		// Show segment part of addresses
+					// in cross-references
+SHOW_SOURCE_LINNUM	= YES		// Show source line numbers
+					// (used in .obj files and java)
+SHOW_ASSUMES		= YES		// Generate 'assume' directives
+SHOW_ORIGINS		= YES		// Generate 'org' directives
+USE_TABULATION		= YES		// Use '\t' in output file
+//-------------------------------------------------------------------------
+//	Proccesor specific parameters
+//-------------------------------------------------------------------------
+#ifdef __PC__				// INTEL 80x86 PROCESSORS
+USE_FPP			= YES
+					// Floating Point Processor
+					// instructions are enabled
+
+WINDIR			= "c:\\windows\\system"	// Default directory to look up for
+					// DLL files
+
+</font></pre>
+<P><BR>
+<! Table For Keyboard Shortcuts====================================>
+<table cellspacing=4>
+<caption><b>Shortcuts</b></caption>
+<tr><td width=100>Alt-Z</td><td width=200>DOS Shell</td><td width=25> </td><td width=100>Alt-X</td><td width=200>Exit</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-W</td><td width=200>Save Databse</td><td width=25> </td><td width=100>Ctrl-F10</td><td width=200>Produce .exe file</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Alt-F10</td><td width=200>Produce .asm file</td><td width=25> </td><td width=100>Shift- F10</td><td width=200>Produce .map file</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F1</td><td width=200>Help</td><td width=25> </td><td width=100>F2</td><td width=200>IDC File</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F3</td><td width=200>Open Window</td><td width=25> </td><td width=100>F4</td><td width=200>Toggle Hex/Asm view</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Shfit-F6</td><td width=200>Previous Window</td><td width=25> </td><td width=100>F6</td><td width=200>Next Window</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F7</td><td width=200>Tile Windows</td><td width=25> </td><td width=100>F8</td><td width=200>Cascade Windows</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F5</td><td width=200>Zoom</td><td width=25> </td><td width=100>F10</td><td width=200>Activate Menu</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>C</td><td width=200>Current line=Code</td><td width=25> </td><td width=100>D</td><td width=200>Current line=Data</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>A</td><td width=200>Display current line in ASCII</td><td width=25> </td><td width=100>N</td><td width=200>Name current line</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>:</td><td width=200>Add comment</td><td width=25> </td><td width=100>Alt-M</td><td width=200>Mark Position</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Q</td><td width=200>Operand=Hex</td><td width=25> </td><td width=100>H</td><td width=200>Operand=Decimal</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>B</td><td width=200>Operand=Binary</td><td width=25> </td><td width=100>R</td><td width=200>Operand=Character</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Enter</td><td width=200>Jump to location under cursor</td><td width=25> </td><td width=100>Esc</td><td width=200>Return from jump</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>G</td><td width=200>Goto Address</td><td width=25> </td><td width=100>Ctrl-L</td><td width=200>Goto Name</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-P</td><td width=200>Goto Function</td><td width=25> </td><td width=100>Ctrl-S</td><td width=200>Goto Segment</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-M</td><td width=200>Goto Marked Position</td><td width=25> </td><td width=100>Ctrl-X</td><td width=200>Goto Cross Reference</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-E</td><td width=200>Goto Entry Point</td><td width=25> </td><td width=100>Alt-T</td><td width=200>Search for text</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-C</td><td width=200>Search for next code</td><td width=25> </td><td width=100>Ctrl-D</td><td width=200>Search for next data</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>?</td><td width=200>Calculate expression</td><td width=25> </td><td width=100>Shift-F2</td><td width=200>Run IDC command</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+</table><! ============================================= Table END>
+<P>
+<a name="sourcer"></a><HR><Font size=+1><b>Sourcer</font></b><P>
+<b>Synopsis:</b> Sourcer v.7.0 is a DOS mode disassembler that uses a Windows pre-processor (essentially a script that calls resdump, dumppe, impdump, dumplx, and dumpne, then formats their output for use by Sr.exe); together the whole package is 1.79 MB. Output is a .lst file containing the asm source code for the original file; the goal of Sourcer is to provide source code that is re-compilable for the target assembler.<P>
+<b>Usage:</b> Sourcer is non-interactive; the user sets options for disassembly, then runs Sourcer--when it has finished, they can peruse the .lst or .asm file at their leisure in a standard text editor. Windows programs are first run through the winp.exe preprocessor, which produces a .r and .wdf file as input for sr.exe (the main Sourcer executable).<P>
+<i>Windows Preprocessor:</i>
+<PRE>
+Used with V Communications' Sourcer to disassemble 16 & 32 bit
+Windows or OS/2 programs, DLLs, drivers, VxDs, and VxD libraries
+
+WINP [-datfile f] [-seg n[,o][,p-q]] [-alert] [-math] [-etc..] filename
+
+  -datfile f         Specify an alternate .DAT file, f
+  -seg n[,o][,p-q]   Only disassemble segment(s) n, o & p thru q (decimal)
+  -alert             Display any warnings
+  -math              Program uses floating-point math coprocessor
+  -os2dd             Force OS/2 device-driver, should auto-detect
+  -nosym             Don't use CodeView (R), Turbo Debugger (R), .SYM,
+                     .DBG or .TDS symbols
+
+Example:
+  winp -datfile myfunc.dat \prog\progname.exe
+  sr progname.wdf
+</PRE>
+<P>
+<i>Sourcer:</i>
+<PRE>
+********************  SOURCER Commenting Disassembler  ********************
+Copyright (c) 1988-1997 V Communications, Inc.  All Rights Reserved.  V7.00
+Commands:  sr [filename|defname] [-d|-e|-h|-j|-l|-n|-n1|-s|-v|-x|-w|-2|-?]
+  -d  SDEFAULT.DEF file load inhibited
+  -e  EMS use inhibited: required for loading large files
+  -f  faster when -n1 option used (skips some display updates)
+  -h  hardware table path\filename
+  -j  Japanese SJIS characters allowed
+  -l  Long labels inhibited in EMS
+  -n  no direct screen writes
+  -n1 no direct screen writes, use ANSI.SYS
+  -s  set screen segment other than normal
+  -v  no EGA/VGA features for display
+  -x  no display output
+  -w  direct screen writes
+  -2  no check for uP above 80286
+
+</pre>
+Sourcer also provides a startup screen with the following additional configuration options:
+<LI><b>A </b> Analysis and Output options menu
+<LI><B>B </B> Beginning address of Disassembly
+<LI><b>C </b> Code Style : .EXE, .COM, zero=start, device driver, overlay, special, code fragment
+<LI><b>D </b> Disk Drive used for output
+<LI><B>E </B> Ending address of disassembly
+<LI><b>F </b> File Format: listing (.LST) or source (.ASM) toggle
+<LI><b>H </b> Header information in listings: type your own header for the listing
+<LI><b>L </b> Label type (eg data_6, data_006, d_6033_850E, data_c_850E
+<LI><b>M </b> Math Co-processor toggle
+<LI><b>O </b> Output filename
+<LI><b>P </b> Passes 2-9 (5 is average, 9 is intensive...the higher the better)
+<LI><b>Q </b> Quit
+<LI><b>R </b> Remarks in output (all, none, not data, not INT & I/O, not others, only data, only INT&I/O, only others)
+<LI><b>S </b> Segment display toggle: segment address, hex designation, or none
+<LI><b>T </b> Target Assembler: MASM 4.0 - 6.11, TASM 1.0 - 5.0, OPTASM, other, none
+<LI><b>U </b> UP instruction set selection: Processor (8086 to Pentium Pro), mode (protected vs real)
+<LI><b>W </b> Word case (upper, lower) of code
+<LI><b>X </b> Xref in listing (toggle)
+<LI><b>? </b> Help<P>
+
+<P>
+<a name="w32dasm"></a><HR><Font size=+1><b>W32DASM</font></b><P>
+<b>Synopsis:</b> W32DASM v.8.9 is a combined disassembler/debugger that totals up to 2.13MB. The disassembler allows viewing of one file at a time; starting a debug process allows the disassembled file to be run and patched in memory (debug-mode commands are marked with D, below). Features include import and export function tables, reference tables for strings, menus, and dialog boxes, hex dumps of data and code segments, and jump/call branching. The debugger is standard fare with the added features of in-memory code patching and Windows API call "detailing"--a valuable feature that gives the parameters and returns of any API call made by the program.<P>
+<b>Usage:</b> W32Dasm has a user-friendly interface that is pretty easy to figure out. The key points are to check out the <b>Refs</b> and <b>Functions</b> menu items, each of which gives a list of relocations/resources within the disassembled file that may be jumped to by double-clicking the list item. The <b>Hex Data</b> item would be more useful if it included resources (for all those Delphi/VB apps out there), but it does allow you to re-interpret the code and data (in your head) if need be. <b>Execute Text</b> and <b>Goto</b> are both worth checking out; the first allows you to follow jumps and calls (also available via keystrokes and on-screen buttons), the second will jump immediately to the entry point or a specific code location (no file header, unfortunately).<P>
+<i>Debugger:</i> W32Dasm has a serviceable debugger that has some nice features, but is rather difficult to use. The benefits include a data display that allows you to easily browse the data pointed to by different registers (e.g., ecx, ecx+0004, ecx +, 0008, etc), an API feature that displays the parameters and returns of API calls made by the program, and an integrated "copy" option that allows either of the two data displays, a list of active .DLLs, a message/command history, and a current register or memory location to be copied to the Windows clipboard. The downside is that the User Interface is a nightmare; the combination of the three staggered windows (reminiscent of newer "visual" IDEs) and the swarm of tiny checkboxes and buttons makes the whole thing visually disorienting--you pretty much have to go in with BRW and modify the UI to suit your taste.<P>
+<! Table For Keyboard Shortcuts====================================>
+<table cellspacing=4>
+<caption><b>Shortcuts</b></caption>
+<tr><td width=100>Ctrl-L</td><td width=200>Load Process</td><td width=25> </td><td width=100>Ctrl-T</td><td width=200>Terminate Process (D)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F5</td><td width=200>Auto Step Into(D)</td><td width=25> </td><td width=100>F6</td><td width=200>Auto Step Over(D)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F7</td><td width=200>Step Into(D)</td><td width=25> </td><td width=100>F8</td><td width=200>Step Over(D)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F9</td><td width=200>Run Process(D)</td><td width=25> </td><td width=100>Space</td><td width=200>Pause Process(D)</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>F2</td><td width=200>Breakpoint Toggle (D)</td><td width=25> </td><td width=100>Ctrl-C</td><td width=200>Copy Selection</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-S,F</td><td width=200>Find Text</td><td width=25> </td><td width=100>F3</td><td width=200>Find Next</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Ctrl-S</td><td width=200>Goto Code Start</td><td width=25> </td><td width=100>F10</td><td width=200>Goto Entry Point</td></tr>
+<! Row break--------------------------------------------------------------------------------------------------------><tr><td width=100>F11</td><td width=200>Goto Page</td><td width=25> </td><td width=100>F12</td><td width=200>Goto Code Location</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Lft Arrow</td><td width=200>Execute Jump</td><td width=25> </td><td width=100>Ctrl Rt Arrow</td><td width=200>Return From Jump</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+<tr><td width=100>Lft Arrow</td><td width=200>Execute Call</td><td width=25> </td><td width=100>Rt Arrow</td><td width=200>Return From Call</td></tr>
+<! Row break-------------------------------------------------------------------------------------------------------->
+</table><! ============================================= Table END>
+
+<P>
+<HR>
+
+</BODY>
+
+</HTML>

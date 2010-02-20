@@ -1,0 +1,1140 @@
+<HTML>
+<HEAD>
+<TITLE>Mammon_'s Tales To His Grandson</TITLE>
+</HEAD>
+
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000">
+<center><b><font size=+2>Mammon_'s Tales to his Grandson</B></center></font>
+<center><i>Registers, Memory, and how Assembly Language came to Mankind</i></center><P><BR>
+<center><a href="#Debug">Debug</a><font color=808080> * </font><a href="#Templates">Templates</a><font color=808080> * </font><a href="#Reg">CPU Registers</a><font color=808080> * </font><a href="#Memory">Memory</a><font color=808080> * </font><a href="#Opcodes">Opcodes</a><font color=808080> * </font><a href="#Service">Interrupt Services</a><font color=808080> *  </font><a href="#Review">Text Review</a></center><BR><P>
+<BR>
+<b><font size=+1>Overview</font></b><P>
+Assembly language is very simplistic; it views your computer as a combination of memory addresses and a CPU.
+The memory addresses contain values that can be moved into and out of the CPU registers for logical operations, arithmetic manipulation, or simply for relocation--for a value cannot be moved from
+one memory location to the next, but rather must be moved from a memory location to a CPU register, then from the CPU register to the destination memory location. The CPU is hard-coded with
+internal instructions called <B>opcodes</B> which are used for the manipulation and relocation of data values.<P>
+
+Many complex operations are used frequently and sometimes-- for example, in the case of hardware access-- rely on system-specific configuration
+information stored in the machine BIOS; the DOS and BIOS <b>interrupt services</b> are supplied to ease the burden on the programmer. The use of
+these services is much like using the standard C library ("stdio.h", et al); the same functionality can be duplicated without the interrupt services,
+though the coding will be lengthy and difficult.<P>
+
+One thing the high-level coder must keep in mind is that all data is considered to be a memory location of some form or another.
+Variables, structures, pointers, arrays...in assembly language, these are all just memory locations with a specific content.
+For example, the memory location<pre><code>
+0110:0100 54 68 69 73
+</pre></code>would contain the data 54 68 69 73 in hexadecimal, or "This" in ASCII. A pointer to this variable would look like<pre><code>
+0110:0299 00 01 10 01
+</pre></code>containing the address 01 10 [:] 01 00 in reverse ("little endian", used by Intel processors) notation. Thus, either of the following
+would put the value "This" into the CPU register EAX:<pre><code>
+     mov  eax, [0100]             ; Direct Addresssing
+     mov  eax, [0299]             ; Indirect Addressing
+     mov  eax, 0100               ; Place value 0100 into eax
+</pre></code>
+Note that the value at 0100 is a string, and hence an array, made up of four one-byte characters taking up four bytes of memory. Each element of
+the array could be accessed as an offset from the base of the array, or as a specific memory location, as in the following code:<pre><code>
+     mov  eax, [0100]              ; eax = "T"
+     mov  eax, [0101]              ; eax = "h"
+     mov  eax, [0100 + 2]          ; eax = "i"
+     mov  eax, [0102]              ; eax = "i"
+     mov  eax, [0299 + 2]          ; eax = address of "i"
+     mov  eax, [0103]              ; eax = "s"
+</pre></code> Needless to say, you won't be dealing with specific memory locations when writing assembly programs. Rather, you will use symbolic names
+for variables and memory locations which the assembler will later turn into memory addresses. In order to use symbolic names in your code, you must
+<i>define bytes</i> in memory and to <i>label</i> portions of your code, as follows:<pre><code>
+.DATA                              ;start of Data Segment (DS)
+MyVariable    db 'This'            ;MyVariable  = 'This' (MyVariable)
+MyVariable2   db MyVariable        ;MyVariable2 = 'This' (MyVariable)
+ptrMyVariable db offset MyVariable ;ptrMyVariable = address of MyVariable (*MyVariable)
+.CODE                              ;Start of Code Segment (CS)
+CodeStart:                         ;CodeStart = address of the next line of code
+     mov eax,  My Variable         ;eax contains 'This' (MyVariable)
+     mov eax,  offset MyVariable   ;eax contains the address of MyVariable (*MyVariable)
+     mov ebx,  offset eax          ;ebx contains the address of MyVariable (*MyVariable)
+     mov ebx,  eax                 ;ebx contains 'This' (MyVariable)
+     mov eax,  offset ptrMyVariable   ;eax contains the address of ptrMyVariable (*ptrMyVariable)
+     mov eax,  ptrMyVariable     ;eax contains the address of MyVariable (*MyVariable)
+     mov eax,  CodeStart  ;eax contains the address of the code following label CodeStart
+</pre></code>Note how when dealing with symbolic names, it is clear that an address and not a value
+is being placed in the register; therefore the brackets are used to enforce indirect addressing.
+The keyword <i>offset</i> is often used--and with some compilers, required--to clarify that
+the address of a variable, rather than its contents, is being referred to.<P>
+
+In assembly language, there are inherently no IFs, ELSEs, or FORs. Instead you must make do with the basic <b>compare</b> and
+<b>jump</b> commands. The basic form of a conditional statement in assembly is<pre><code>
+     cmp  op1, op2
+     jne  loc1
+loc2:
+     <i>misc code</i>
+     jmp  CarryOn
+loc1:
+     <i>more misc code</i>
+CarryOn:
+     <i>rest of program</i>
+</pre></code>This has the effect of saying "<code>if (op1 == op2) then loc2() else loc1()</code>".
+There are a number of comparison and conditional jump operators, such as <b>test</B>, <b>jnz</b>,
+<b>jbe</b>, etc, but these all boil down to a simple compare-and-jump-if-equal or compare-amd-jump-if-not-equal
+condition, with points for style added from there. There is also a <b>loop</b> opcode which will decrement the value in
+ecx and jump to the given value until ecx==0:<pre><code>
+     xor eax, eax      ;set eax == 0
+     mov ecx, 100      ;loop 100 times
+loop_1:
+     add eax, 1
+     loop loop_1
+</pre></code>This will loop 100 times and execute with eax==100. With these conditional flow statements you should be able to
+emulate standard high-level flow control statements, albeit somewhat crudely. As examples, a "switch...case" statement would be emulated
+with multiple "cmp ax, valueX...jmp caseX"; "for 0 to x" would be emulated with "loop_1: mov ecx, x...misc code...loop loop_1", and the
+standard "if(!x)..." would be emulated with a "mov eax, x; cmp eax, 0; jne code-label".<P>
+
+That should be enough of the philosophy of assembly language. There is a lot more to it, namely a number of different
+CPU <a href="#Reg">registers</a> and <a href="#Opcodes">opcodes</a>, various types of <a href="#Memory">memory</a> locations, and of course the
+extensive DOS and BIOS <a href="#Service">interrupt services</a>. Finally, there is the art of structuring your source code.<P>
+In C, a basic "hello world" program would look as follows:<pre><code>
+//----------------------------- Definitions Section
+#include <stdio.h>            //code module with definition for printf() function
+
+//---------------------------- Data Section
+char strHello = "Hello, eh?\n";
+
+//----------------------------- Code Section
+main()
+{
+     printf(%s, strHello);
+}
+</pre></code>Very simple, very easy. In assembly, things look a bit different:<pre><code>
+;----------------------------- Definitions Section
+.model small                         ;make this a COM file
+;----------------------------- Data Section
+.DATA
+strHello db 'Hello, eh?',0dh,0ah,$   ;define string, CR/LF, mark end of string with '$'
+;----------------------------- Code Section
+.CODE
+start:
+     mov  dx, offset strHello        ;Put address of string in DX
+     mov  ah, 09h                    ;Put function# of Int21 service "Display String" in ah
+     int  21h                        ;Call Interrupt Service 21
+exit:
+     mov  ah, 4ch                    ;Put function# of Int21 service "Terminate to DOS" in ah
+     int 21h
+END
+</pre></code>The assembly language program is a little less clear. First, in the definitions section, options must be
+configured for the memory model of the program (small, compact, medium, large, huge, etc) and other considerations such as
+target CPU. In the data section, strings must be declared according to how they will be used: often a dollar sign ('$') or
+a null terminator ('\0') will be appended to the string to mark its end. The code section must have a <B>start:</b> label
+to mark the program entry point and an <B>END</B> statement to mark the end of the file. This example uses two functions in
+the DOS Interrupt 21h service: Function 09h (Display String) and Function 4Ch (Terminate to DOS). Note how the function number
+must be loaded into <B>ah</b>, the lower byte of register EAX, before calling the interrupt. Some interrupts, like higher-level
+procedures, require that parameters be passed in specific registers: in this example, Int_21h:Func_09h requires that the address
+of the string be passed in the lower two bytes of the ebx register, or <b>bx</b>.<P>
+A more complex example, one that tests to see if the DOS version is 3.0 or above:<pre><code>
+.model small
+.DATA
+strLowerVersion db 'Error! DOS version is lower than 3.0!',0dh,0ah,$
+strHigherVersion db 'DOS version is 3.0 or higher.',0dh,0ah,$
+
+.CODE
+start:
+     xor  eax, eax
+     mov  ah, 30h                    ;GetDosVersion function
+     int  21h
+     cmp  al, 3
+     jae  is_3
+     mov  dx, offset strLowerVersion
+     jmp  exit
+is_3:
+     mov  dx, offset strHigherVersion
+exit:
+     mov  ah, 09h                    ;DisplayString function
+     int  21h
+     mov  ah, 4ch                    ;TerminateToDOS function
+     int 21h
+END
+</pre></code>
+This program starts by clearing eax with the <b>xor</b> instruction--a shortcut the more
+conventional <code>mov eax, 0</code>...in the xor operator, each bit is compared with a bit in
+the same position in the other register, and the first bit is replaced with "0" if the bits are
+equal, and "1" if the bits are unequal; thus when all bits are equal, all of the bits in the first
+register are set to 0.<P>
+Next comes a call to Int 21h Function 30h, which returns the DOS major version (the "3" in "3.11") in al
+and minor version (the "11" in "3.11) in ah. The <b>cmp</b> instruction compares al with "3", and is followed
+by a conditional jump (Jcc...these are a "j" followed by a mnemonic flag ID, such as Jz [Jump-if-Zero],
+Jnz [Jump-if-Not-Zero], Je [JEqual], Jne, Ja [JAbove], Jb[JBelow], Jc[Jump-if-Carry], etc)
+Jae [Jump-if-Above-or-Equal] ) which branches to code label "is_3". The two branches of the program
+("is_3" and "is_not_3", or default) simply load pointers to different strings into dx, after which
+the DOS  Display String function is called (Int 21h, Funct 09h). At the end, of course, the program is
+terminated so that the user can regain control of the machine (this can by all means be left out if the
+program is to be run on <i>someone else's</i> machine...).
+<P><BR>
+<a name="Debug"></a><HR><b><font size=+1>Coding with Debug</font></b><P>
+All versions of DOS and Windows come with debug.exe--an extraordinary 20K file
+that allow you to write code directly into memory, edit disks and partition tables,
+debug software, and compile COM programs. Debug has absolutely no user interface, like
+<b>adb</b> (or, to speak out of context, <b>vi</b> ;) in the Unix world, yet it has a very
+simple set of mnemonic commands:<pre><font size=-1>
+? HELP       display debug commands
+a ASSEMBLE   assemble 8086/87/88 mnemonics to binary
+c COMPARE    compare two portions of memory
+d DUMP       display the contents of an area of memory
+e ENTER      enter data in memory at specificed address
+f FILL       fill range of memory with specified values
+g GO         run executable
+h HEX        perform hex math
+i INPUT      input 1 byte from specified port
+l LOAD       load contents of file or disk sector
+m MOVE       copy contents of a bloack of memory
+n NAME       specify file to L or W
+o OUTPUT     output one byte to port
+p PROCEED    execute a loop, reps, int or subroutine
+q QUIT       exit debug
+r REGISTER   display/alter registers
+s SEARCH     search memory for pattern of bytes
+t TRACE      execute one instruction, then display registers/flags/cs:IP
+u UNASSEMBLE disassemble binary to 8086/87/88 mnemonics
+w WRITE      write file to disk
+xa XALLOC    allocate expanded memory
+xd XDEALLOC  deallocate expanded
+xm XMAP      map expanded memory pages
+xs XSTATUS   display status of expanded memory
+</pre></font>
+
+<i>"Live" Coding</i><P>
+When running debug, you can assemble code directly into memory using the <b>a</b>
+command. It is best to start assembling at offset 100h, though by no means necessary;
+however doing so will get you into the habit by the time COM file coding comes around,
+a few paragraphs down.<P>
+Start debug and type <code>a100</code> at the "-" prompt, then enter the following:
+<pre><code>
+mov dl, 48
+mov ah, 2
+int 21
+mov dl, 65
+int 21
+mov dl, 79
+int 21
+mov dl, 21
+int 21
+mov dl, 0d
+int 21
+mov dl, 0a
+int 21
+int 20
+
+</pre></code>
+Be sure to hit enter at the end to complete your code entry. Note that Int 21h, Func 02h is
+the Display Character function, with the character to be displayed loaded into dl. Therefore, 02h
+(you may note that debug assumes hexadecimal numbers) is loaded into ah and kept there while
+successive values are loaded into dl--the hex values for certain ascii characters which, when you run the
+program by typing "g" at the "-" prompt, will spell<code><pre>
+Hey!
+</code></pre>
+A long way to go for nothing, to be sure. The Int 20h at the end is an older Terminate To DOS function which
+is useful in "debug programming" because it requires no parameters (ergo one less line to type).<P>
+It is considered easier to define your data at startup in strings, rather than outputting it one character at a time.
+To do so, you must initiate your debug code with a <b>jmp</b> past the data area, then you must refer to the
+string explicitly (<i>not</i> by a symbolic name) when preparing the Display String service. The following code,
+which you can enter as before by typing "a100" at the "-" prompt and running with the "g" command, should become
+clearer as you type it (i.e., watch the address of the db statement):<code><pre>
+jmp 0114
+db 'Hey! ASM rocks!',0d,0a,'$'
+mov dx, 102
+mov ah, 9
+int 21
+int 20
+</pre></code>
+Once again, using 0D and 0A as a CR/LF to avoid screwing up the console display. 102 is the address of the
+string (the <b>jmp</b> statement takes two bytes), and 114 is the start of the code. At this point one might
+be tempted to ask, how do you know the offset of the code to jump to when defining the data? Trial and error, naturally;
+of course, if one wanted to waste a few meager bytes of RAM, one could start with a <b>jmp 200</b>, enter a few strings which
+will hopefully be less than 100h (unless one is coding a VB app through debug ;), finish the assembling with a carriage return, and
+then re-entering the assembler mode with the <b>a200</b> (assemble at 200h) command.
+<p>But enough bare-metal programming; these are not the days of mainframes after all. We are a civilized people, and we have a
+compiler! Known affectionately as...debug.<P>
+
+<i>Using debug as a compiler</i><P>
+
+Debug can be used more or less as a standard assembler by preparing .asm files
+beforehand and invoking them through standard dos redirection, i.e.
+<CODE><PRE>
+debug.exe < hello.asm
+</code></pre>
+A text file can be prepared for assembly as follows:
+<CODE><PRE>
+<i>-----hello.asm-----</i>
+a100
+jmp 0114
+db 'Hey! ASM rocks!',0d,0a,'$'
+mov dx, 102
+mov ah, 9
+int 21
+int 20
+
+rcx
+1d
+n hello.com
+w
+q
+
+</code></pre><P>
+This is essentially a script of commands you would enter in debug; it can be called from
+a batch file with the line <code>debug < hello.asm</code>. The first
+line stands for "Assemble at 100h", or "start coding a com file". At this point
+each line of asm code you enter will be assembled into the final file, starting
+with address 100h. Note that the string ends with a 0D + 0A CR/LF combo, as well as the requisite '$';
+the 102 loaded into dx is the address of the first byte of the string, following which there is a call to
+Function 09h of Interrupt 21h (Display '$'-terminated string) and a call to Interrupt 20h (Terminate) to
+return control to DOS. <P>
+The blank line at the end of the code is important as it
+signifies that the code input is over. Next you must edit the register CX (using the "rcx" command) to reflect the byte
+count of the file; the "rcx" goes on one line and the number of bytes to write--1D--goes
+on another. The file must be named of course, which is taken care of in the "n hello.com" line, then written with the "w"
+line (remember, each line in a dos text file has a CR/LF, which is the
+equivalent of pressing ENTER when writing scripts like this). Finally, debug is
+exitted with the "q" command followed by a blank line (the last is <b>very</b> important, for
+without it debug will lock up and receive no further input, which as you remember is coming from
+a file).
+<P>
+Note that this method is a little tricky as you do not know the address of each
+line while you are writing the code. Thus, the starting JMP statement is usually
+a guess (e.g. JMP 1FF) that is fixed later; ditto for any jumps or data references in the
+code. A good practice would be to write the asm file as follows:
+<CODE><PRE>
+<i>hello.asm</i>
+a100
+jmp FFFF
+...
+mov dx, FFFF
+...
+int 20
+...
+</PRE></CODE>
+Then, after running the .asm file through debug, unassemble the resulting com
+file in debug and fix the jumps:
+<PRE><code>
+debug hello.com
+-u
+0C93:0100 EB12          JMP     FFFF
+0C93:0102 48            DEC     AX
+0C93:0103 65            DB      65
+0C93:0104 7921          JNS     0127
+0C93:0106 204153        AND     [BX+DI+53],AL
+0C93:0109 4D            DEC     BP
+0C93:010A 20726F        AND     [BP+SI+6F],DH
+0C93:010D 63            DB      63
+0C93:010E 6B            DB      6B
+0C93:010F 7321          JNB     0132
+0C93:0111 0D0A24        OR      AX,240A
+0C93:0114 BA0201        MOV     DX,FFFF
+0C93:0117 B409          MOV     AH,09
+0C93:0119 CD21          INT     21
+0C93:011B CD20          INT     20
+0C93:011D 46            INC     SI
+0C93:011E EBBB          JMP     00DB
+-a100
+0C93:0100 JMP 114
+
+-a114
+0C93:0114 mov DX,102
+
+-w
+-q
+</PRE></CODE>
+Notice how the data between 102 and 114 is unassembled as code; this is
+because debug is a "dumb" (i.e., not following the flow of execution)
+disassembler. However, with practice--and good habits like placing all
+data at the start of your code, therefore enabling you to simply count the number of
+bytes (or characters) following the DB in order to determine where the first JMP
+should point to--you will be able to interpret such crudely disassembled code
+with ease. Or, to go the easier route, pad each of your data declarations with two or three <b>nop</b>'s,
+which should stand out enough to make differentiating the strings a trivial problem.
+<P>
+Alas, the days of relying on debug are over. Now the closest you can get is NASM (just kidding ;), as many of
+the commercial assemblers are trying to make things <i>easier</i> for the programmer by allowing such
+luxuries as multiple segments, symbolic names, decimal integers, and code labels (all of which, thanks to
+this past section, you will now be able to really appreciate).
+
+<a name="Templates"></a><HR><b><font size=+1>Templates</font></b><P>
+It is often useful to have a base program to work from...something more useful than the
+banal "hello"-style programs that mimic no known functionality in the real world. What follows are two
+templates, one for a .COM and one for an .EXE file, which can be used as building blocks upon which to build your
+own assembly-language programs. Each template, if compiled as-is, will produce a program which will check the
+command-line parameters for "-h" or "-v" (case insensitive); on "h" it will display a help screen, on "v" it will
+display the DOS version currently running, and on neither it will give an error message and the help screen. Quick,
+easy, and ready to be mutated into your own command-line option utilities...<P>
+<u>DOS COM File Template</u>
+<code><pre>
+.286
+.model tiny                      ; COM file: use EXE2BIN or link with TLINK /t
+                                 ; Set up some PSP definitions for later use
+NUM_ARGS        equ     80h      ; 80h = # of Command Line Arguments
+ARGS            equ     81h      ; 81-FFh = Arguments
+
+.CODE
+org  100h                        ; load image at 100h
+
+start:
+        jmp  CodeStart           ; Jump over data declarations
+;               Replace from here with your own data
+szNoArgs        db      'Incorrect number of arguments',0Dh,0Ah, '$'
+szHelp          db      'Command-Line Arguments:',0Dh,0Ah
+                db      '-h : Display this Help screen',0Dh,0Ah
+                db      '-v : Display DOS Version',0Dh,0Ah,'$'
+szDOSVer        db      'DOS Version X.X ',0Dh,0Ah,'$'
+
+;===========================================
+;start of program, equivalent to main() in C
+Codestart:
+;             Replace from here with your own command-line parser
+        mov  si, ARGS + 2    ;Get third byte of CmdLine into al
+        lodsb
+        cmp  al, 48h            ;is it "H" ?
+        je  callHelp
+        cmp  al, 68h            ;is it "h" ?
+        je  callHelp
+        cmp  al, 56h            ;is it "V" ?
+        je  callGetDosVer
+        cmp  al, 76h            ;is it "v" ?
+        je  callGetDosVer
+;             Handler routines...Replace these with your own handlers
+callNoArgs:
+        mov  dx, offset szNoArgs
+        mov  ah, 09h
+        int  21h                ;note follow-through to display Help
+callHelp:
+        mov  dx, offset szHelp
+        mov  ah, 09h
+        int  21h
+        jmp  exit
+callGetDosVer:
+        mov  ah, 33h            ;Get DOS Verison Number
+        mov  al, 06h            ;Int 21h, Func 33-06
+        int  21h
+        add  bl, 30h            ;convert hex to ASCII decimal number
+        mov  szDOSVer + 12, bl
+        add  bh, 30h            ;convert hex to ASCII decimal number
+        cmp  bh, 39h            ;is Minor Version # less than 10?
+        jle  OutputDosVer       ;yes, keep it for output
+        mov  bl, bh
+        sub  bl, 0Ah            ;Find "ones" column by subtracting 10 from version byte
+        mov  szDOSVer + 15, bl
+        mov  bh, 31h            ;set "tens" column to "1"
+OutputDosVer:
+        mov  szDOSVer + 14, bh
+        mov  dx, offset szDOSVer
+        mov  ah, 09             ;OutPut String
+        int  21h                ;Int21h Func 09
+exit:
+        mov ah,4ch              ;Terminate to DOS
+        int 21h                 ;Int 21h Func 4C
+        ;End of main() routine
+end     start
+</code></pre>
+<i>Notes</i>: The file begins with ".286" to specify the miniminum processor needed, followed by a ".model"
+directive with a "tiny" specification (tiny == COM file). Some useful equates --like <b>#define</b>'s in C--
+provide useful definitions for locations in the Program Segment Prefix of the COM file. After that, the ".CODE" directive marks
+the start of the executable code, followed by an "org 100h" directive (like a100 in debug, this causes the image to be loaded at
+100h, just after the PSP) and a "start:" label to mark the program entry point.<P>
+The program immediately jumps over the data declarations and starts loading the command-line parameters
+with the <code>mov si, ARGS + 2</code> instruction. This is merely a setup for the <b>lodsb</b> (LOaD String Byte) instruction that
+follows; lodsb loads a byte from si into al. The byte loaded is the third byte of the command-line arguments (the first is a space,
+the second is a "-"), and it is compared with the hexadecimal values of the ASCII characters h, H, v, and V (now you know what those
+weird ASCII tables in the back of your old DOS manuals were for, eh?).<P>
+The rest of the program is fairly straightforward, merely a few Display String calls, except for the GetDosVersion area.
+The problem here is converting the hexadecimal major and minor versions ( version [0-f].[0-f] ) into decimal for output.
+The major version is no problem; DOS is only on 7.0 and so adding 30h to the major version number will bump it nicely into the
+ASCII decimal-digits areas. The same goes for the minor version...until v.10-15 comes up. This is bypassed by adding a "tens" digit which
+is always set to 1 (to make things a little simpler; this was tested on a Win95 machine...DOS 7.10 ;), and subtracting 10 (0Ah) from the
+"ones" digit to bring it back in the realm of the 30's (the flaw here is that only the first nibble, or half-byte, of the minor version
+number is being treated...but it is sufficient for the exercise). The converted values are then written directly to their place in the string
+using offsets which represent the number of bytes from the start of the string that the value is to be written at.
+<P>
+<u>DOS EXE File Template</u>
+<code><pre>
+.286
+.model small
+.stack 200h
+
+PSP segment at 00h                      ; Define PSP as a segment for easy access
+        org     2ch                     ; 2Ch = Environment Field (not used)
+ENVIRON_PTR     dw      ?
+        org     80h                     ; 80h = Command Line Arguments Field
+NUM_ARGS        db      ?               ; Byte 1 = # of Arguments
+ARGS            db      127 dup(?)      ; Bytes 2-128 = Command Line Args
+PSP ends
+
+.DATA              ; Replace from here with your own data
+szNoArgs        db      'Incorrect number of arguments',0Dh,0Ah, '$'
+szHelp          db      'Command-Line Arguments:',0Dh,0Ah
+                db      '-h : Display this Help screen',0Dh,0Ah
+                db      '-v : Display DOS Version',0Dh,0Ah,'$'
+szDOSVer        db      'DOS Version X.X ',0Dh,0Ah,'$'
+
+.CODE
+;===========================================
+;start of program, equivalent to main() in C
+start:
+assume  es:PSP
+        mov     ax,@data                ;set segment registers
+        mov     ds, ax
+        ;                 Replace from here with your own command-line parser
+        mov  al, es:ARGS + 2    ;Get third byte of CmdLine
+        cmp  al, 48h            ;is it "H" ?
+        je  callHelp
+        cmp  al, 68h            ;is it "h" ?
+        je  callHelp
+        cmp  al, 56h            ;is it "V" ?
+        je  callGetDosVer
+        cmp  al, 76h            ;is it "v" ?
+        je  callGetDosVer
+callNoArgs:
+        call  NoArgs            ;note follow-through to display Help
+callHelp:
+        call  Help
+        jmp  exit
+callGetDosVer:
+        call  GetDosVer
+exit:
+        mov ah,4ch              ;Terminate to DOS
+        int 21h                 ;Int 21h Func 4C
+;===========================================
+;End of main() routine
+
+;                     Procedures: Replace these with your own routines
+;-------------------------------------------
+;GetDosVer:  Gets DOS version, prepares it for output, displays
+;            output to screen and returns
+GetDosVer       proc
+        mov  ah, 33h            ;Get DOS Verison Number
+        mov  al, 06h            ;Int 21h, Func 33-06
+        int  21h
+        add  bl, 30h            ;convert hex to ASCII decimal number
+        mov  szDOSVer + 12, bl
+        add  bh, 30h            ;convert hex to ASCII decimal number
+        cmp  bh, 39h            ;is Minor Version # less than 10?
+        jle  OutputDosVer       ;yes, keep it for output
+        mov  bl, bh
+        sub  bl, 0Ah            ;Find "ones" column by subtracting 10 from version byte
+        mov  szDOSVer + 15, bl
+        mov  bh, 31h            ;set "tens" column to "1"
+OutputDosVer:
+        mov  szDOSVer + 14, bh
+        mov  dx, offset szDOSVer
+        mov  ah, 09             ;OutPut String
+        int  21h                ;Int21h Func 09
+        ret
+GetDosVer       endp
+
+;-------------------------------------------
+;Help: Prints the message in szHelp and returns
+Help            proc
+        mov  dx, offset szHelp
+        mov  ah, 09h
+        int  21h
+        ret
+Help            endp
+
+;-------------------------------------------
+;NoArgs : Prints the error message in szNoArgs and returns
+NoArgs          proc
+assume DS: DGROUP
+        mov  dx, offset szNoArgs
+        mov  ah, 09h
+        int  21h
+        ret
+NoArgs          endp
+
+end     start
+</code></pre>
+<i>Notes</i>: EXE files allow a bit more flexibility. This example has 3 segments: the PSP (defined for convenience; it will not
+be present in the final executable), the data segment, and the code segment. The PSP segment is organized to allow certain parameters to be
+readily accessible; the code segment (beginning at the "start:" label) demonstrates the advantage of this definition with the line
+<code>mov al, es:ARGS + 2</code>. This is followed by the asm equivalent of a switch...case statement (very inelegant, to be sure) to
+handle the command-line options. This template also demonstrates the use of procedures to break up the code and make it more modular (since
+procedures can be stored in separate .asm files and included into the main asm file using the <b>include</b> statement): the procedures contain code
+very similar to that in the COM file template.
+<P>
+<a name="Reg"></a><HR><b><font size=+1>Registers</font></b><P>
+The first thing you will need to become familiar with in order to learn Assembly Language (ASM) is the idea of a <b>register</b>. A register is a specific piece of memory located <i>within the cpu itself</i> (it is not counted as part of your RAM), usually from 8 to 32 bits in size, that is used to store information for CPU processing. Some registers can only hold certain information--such as the memory address of the line of code currently being executed--while other registers are "scratch-pad" registers that can be used for the dynamic storage or manipulation of data.<P>
+The <b>General Purpose registers</b> are EAX, EBX, ECX, and EDX. These are 32-bit registers that have evolved from 8-bit and 16-bit registers, so their lowest 16 bits (0-15) can be accessed as the AX, BX, CX, and DX registers, each of which can further be divided into 8-bit H (<i>high</i>) and L (<I>low</i>) registers, such that AX can be divided into AH and AL. Remember that 8 bits is one byte, so that AH and AL are each 1 byte, AX is two bytes (or 1 <i>word</i>), and EAX is four bytes (2 words or 1 double word, or <i>dword</i>). These registers are used for manipulating data, such as variable compares (MOV EAX, 003F; MOV EBX, [EBP-04); CMP EAX, EBX) or mathematical operations (MOV AX,2; MOV BX,4; ADD AX,BX), as well as for writing a value to a memory location, for a memory location cannot be written to directly but can be "dumped" the contents of a register. Note that CX is often used as a Count register; in fact the LOOP instruction in assembly will decrement CX with each "looping" and will end the loop when CX=0. Also, AH is used to determine what service of an interrupt function (discussed below) is to be used when the INT (interrupt) call is generated.<P>
+The <b>Segment Registers</b> are CS, DS, ES, FS, GS, and SS. These registers are all 16 bits (0-15) and contain the first half of a segment:offset memory address (segment:offset addresses are converted by the OS kernel to physical memory locations, for the OS will move code and data all over hell and back in the course of "paging" and "memory management"; thus you will always deal with segment:offset addresses when accessing memory, as physical memory locations are in a constant state of flux that is only handled or understood by the OS). CS is the Code Segment, of the segment containing the executable code of the program currently being executed (note that "currently being executed" is determined by what program has its code in the CS:IP of the CPU; this can be changed and managed by the OS, though it still seems to be an example of the serpent biting its own tail...); DS is the Data Segment of the program currently being located (i.e., string tables, constants, etc); SS is the Stack Segment of the program currently being executed (the stack being the dynamic data area of the program, where variables and "scratch" information are kept); and ES, FS and GS are all extra data segments that may or may not be used, depending on the memory model of the currently executing program. <P>
+The <b>Offset Registers</b> are EIP, ESP, EBP, ESI, and EDI. These are 32-bit registers whose lower halves can be accessed as the 16-bit registers IP, SP, BP, SI, and DI. EIP is the Instruction Pointer, and contains the offset of the line of code to be executed next (such that CS:IP forms the complete address); ESP is the Stack Pointer, and contains the address of the "top" of the stack, or where the next item pushed onto the stack will go to (with the complete address being SS:SP); EBP is the Base Pointer, and contains a memory address in the stack from which data in the stack can be referenced (to quote Fravia, when examining a program's code, "function parameters have positive offsets from BP [eg, BP 04], local variables have negative offsets from BP [eg, BP-04]"; the complete address referenced by this register would be SS:BP)"; ESI  is the Source Index, and contains the source of data in a "block move" (the complete address being DS:SI); and EDI is the Destination Index, and contains the destination of data in a "block move" (the complete address being ES:EDI).<P>
+The <b>Control Registers</b> are CR0, CR1, CR2, and CR3. These are 32-bit registers that are responsible for things like processor mode (real or protected or V86), paging, FPU emulation, etc.. They are accessible only to Ring-0 (kernel) programs; if you attempt to write to a CR with a Ring-3 (application) you will cause a GPF. <P>
+The <b>Debug Registers</b> are DR0, DR1, DR2, DR3, DR4, DR5, DR6, and DR7, they are 32-bits in size ( bits 0-31). DR0 through 3 contain breakpoint addresses, the rest set what happens when a breakpoint is activated (i.e., they determine how a debug exception is generated).  Apparently you can access these from DOS or using the Dos Protected-Mode Interface in Windows, if you are intent on writing a debugger.<P>
+The <b>Test Registers</b> are TR6 and TR7. These are 32-bit registers that are used only to test the memory-paging system in an OS. If you are writing your own operating system, these will be handy for determining whether or not your memory management is up to snuff.<P>
+The protected mode <b>Memory Management Registers</b> are TR for the TSS (Task State Segment), LDTR for the LDT (Local Descriptor Table), IDTR for the IDT (interrupt Descriptor Table), and GDTR for the GDT (Global Descriptor Table). TR and LDTR are 68-bit registers, the first 20 bits setting the TSS or LDT limit, the next 32 bits setting the TSS or LDT base address, and the final 16 bits setting the TSS or LDT selector. IDTR and GDTR are 52-bit registers, with the first 20 bits setting the IDT or GDT limit, and the last 32 bits setting the IDT or GDT base address. These registers are used in conjunction with CR0 by the kernel  to manage tasks, interrupts, and memory allocation. <P>
+The <b>Flag Register</b> is EFLAG. This is a 32-bit register whose lower 16 bits (0-15) contain the Carry, Parity, Auxilliary, Zero, Sign, Trap, Interrupt Enable, Direction, Overflow, I/O Privelege Level, and Nested Task flags; bits 16-31 contain the Resume and Virtual 8086 mode flags, as well as a number of reserved flags. Each flag bit can be either on ("1") or off ("0"), indicating that the flag is set or is not set. If the result of a comparison returned 0, for example, the Zero flag would be set ("1"), and a subsequent JZ (Jump if Zero) instruction would be executed.<P>
+Note that these are the registers common to the i386 processor and above; every subsequent processor will have additional specialized registers that allow expanded processor functions. Additional information about registers, and about the PC in general, can be obtained from Addison Wesley's <a href="http://www.awl.com/devpress/titles/87697.html">The Indispensable PC Hardware Book</a>, just released in its 3rd edition in mid-1997 and worth every penny of its $42.95 US price..<P>
+<center><HR width="15%"></center>
+<code><i>Soft-Ice Interlude</i>: When you break into Soft-Ice, the state of the registers for the current process (identified at the bottom-left of the screen) will be displayed at the top of the screen--if it is missing, you can toggle the register display on by typing "WR".
+<LI>The general-purpose EAX, EBX, ECX, and EDX registers will contain data or pointers to data that is in use by the current process--for example, during a login sequence EAX might point to a memory location that contains your user name (which you would be able to view by typing "d eax"), while ECX might contain a character count which increases as the program parses your username.
+<LI>The segment registers CS, DS, ES, FS, GS, and SS will contain the valid segments for the current process. The CS register will contain the Code Segment (location in RAM of the program's executable code), the DS register will contain the Data Segment (location in RAM of the program's data), and the SS register will contain the Stack Segment (location in RAM of the program's stack space). The ES, FS, and GS registers contain "extra segments" that the program may have reserved for data.
+<LI>The offset registers IP, SP, BP, SI, and DI complement the segment registers to provide complete memory addresses (segment:offset). IP, or <i>instruction pointer</i>, will contain the offset of the the line of code about to be executed by the CPU, such that CS:IP is the complete memory address for that line of code. SP, or <i>stack pointer</i>, contains the offset of the top of the program's stack, so that the next piece of data pushed onto the stack will be stored at SS:SP. BP, or <i>base pointer</i>, is a pointer used to reference data placed on the stack. SI (<i>source index</i>) and DI (<i>destination index</I>) will contain the offsets of string data that is being manipulated (moved, compared, etc).
+<LI>The Flags register will appear as a string of letters reading o d i s z a p c; these letters represent the current state of the Overflow, Direction, Interrupt, Sign, Zero, Auxilliary, Parity, and Carry flags. A capital letter indicates that flag has been toggled "on", while a lowercase letter indicates that the flag has been toggled "off".</code>
+<center><HR width="15%"></center>
+This should give you some idea of how a CPU works. The CS register contains the line of code to be executed; its contents are determined first by the OS kernel (through settings in the control registers that allow it to mimic multi-tasking), and then by the outcome of the previous line of code (for example, a jump--JMP--statement would load a different "next line to be executed" than a move --MOV--statement would). Program variables and data are shuffled between the CPU and the stack using the general-purpose registers, and are stored in such registers for CPU manipulation (compares, addition, subtraction, etc). When the program is intialized, it is assigned a Code Segment, a Data Segment, a Stack Segment, and any additional ("extra") segments it may need. The values allocated for these segments are stored in the appropriate registers; from then on the CPU can access the program's code, data, or stack by writing to or reading from the memory locations stored in the segment registers.
+<P>
+
+<a name="Memory"></a><HR><font size=+1><b>Memory</font></b><P>
+"Memory" is perhaps the single most nebulous term used in the PC industry. Commonly it is used to refer
+ simply to a system's RAM, but when you get into the world of assembly language, everything changes. Suddenly
+you have to worry about real-mode vs. protected mode memory, physical vs. logical memory, flat vs segmented memory address
+space, global vs. local memory allocation, and memory space vs I/O space. For this reason, it would be best to define a few terms that may come up later.<P>
+
+<LI><B>real-mode addressing</B>: The standard DOS segment:offset memory addressing. This form of
+addressing is the result of trying to assign 20-bit memory addresses using a 16-bit CPU, but for
+reasons of backwards compatibility it plagues DOS to this day.
+ The size of the CPU's address register determines how many bytes of memory can be addressed:
+each byte must be assigned a unique number or "address", so that a register with
+8 bits would be able to produce 256 different combinations of bits (each bit
+can be on or off, so the number of possible states for each bit is 2; 2 to the
+power of 8 [8 bits, remember] is 256), or 256 unique memory addresses. At 1 byte per address,
+this boils down
+to an allocation of 256 bytes. A 16-bit register can therefore address (or allocate)
+65536 bytes of memory (64K), a 20-bit register can address 1048576 bytes (1 MB), and a
+32-bit register can address  4294967296 bytes (4 GB). OK, back to the problem: Intel at one point
+only had a 16-bit CPU
+available, when DOS applications required 1 MB of memory. To solve the problem, two registers of
+the CPU were used to store the
+ address of a single byte of memory: one would hold the "segment" (the total amount of memory is
+divided into 64K chunks, with each 64K being a segment)
+ address and the other would hold the "offset" (the number of bytes into the segment that you are
+going to address) address;
+ the segment address is multiplied by 16 and added to the offset to produce the 20-bit address. A
+very confusing (yet somehow very reliable) system that is for the most part behind us...
+
+<LI><B>protected-mode addressing</B>: Eventually 32-bit CPUs were produced which were
+able to enter Protected Mode (a processor mode with support for multi-tasking
+OSs that assigns privelege levels--Ring 0 through Ring 3, the lower the level
+the greater the privelege--so that access to different segments is limited to
+programs of a certain privelege level), and a new addressing scheme was developed. Protected-mode
+addressing resembles real-mode addressing (mostly for backwards-compatibility reasons), with
+ its addresses stored in selector:offset format. The selector is a 16-bit value that is used as an
+index to a descriptor table (a table containing a list of the available segments and the privelege levels needed
+to access them), and the offset is again an offset to the base address that is
+retrieved by accessing the descriptor table. Note that the base address provided by the
+descriptor table is 24 bits instead of merely 16; this allows up to a 16 MB address space
+(the equivalent of using a 24-bit segment register with the 16-bit offset register). In addition
+to increasing the amount of available memory, the use of the descriptor table supports robust memory paging:
+an OS can allocate more memory than is physically available by assigning each program a selector-offset address, then trapping
+all memory access so that it can write certain selector:offset addresses to disk in order to keep a program "alive" but not
+ necessarily "running". By swapping different areas of memory to and from disk millions of times a second, the OS can fool
+the user (and the applications) into believing that they actually have 20 MB of programs loaded into 8 MB of RAM (when, in fact,
+they only have 8 MB loaded into RAM at any one time; the remaining 12 MB is stored on disk until
+it is needed, in which case parts of it are exchanged for parts of the 8 MB).
+
+<LI><B>physical memory</b>: The total amount of memory installed on a computer. A physical address
+is the actual address value passed to the memory bus; it specifies which memory chip is to be accessed.
+ In Real Mode operation, a physical address is known as a <i>linear address</i>; in Protected Mode,
+physical addresses are not accessed by the high-level operating system (i.e., by programmers),
+but instead are referenced by a <i>page table</i> that redirects linear address calls to physical
+addresses. Note that the Real Mode linear address is a 20-bit value that can be obtained from a
+logical address (see below) by multiplying the segment value by 16 and adding it to the offset value.
+Physical memory is addresses using a 20 bit Linear" address.
+
+
+<LI><B>logical memory</b>: The amount of memory which the CPU pretends it has available. By entering Protected Mode,
+the CPU can allocate more memory than it has available by paging (see protected mode addressing above). Logical
+memory is usually addressed using a segment:offset or selector:offset format.
+
+<LI><B>flat address space</b>: The method for allocating memory in virtually every operating system except for
+DOS. All avalable memory is treated as a single unbroken (or "flat") address space, meaning that the
+OS can access any address from x00000001 to xFFFFFFFF in the same manner.
+
+<LI><b>segmented address space</b>: The conventional DOS memory model. Originally the 8086 processors could
+only access 16 bit addresses (up to 64K of RAM); by segmenting the flat address space into 16 bit
+segments and 16 bit offsets, DOS was able to access 20 bit (one would have thought 32, but this is micromath)
+addresses. Memory is therefore accessed in 64K chunks or <b>segments</b>, with the bytes in each segment being
+referenced by a 16 bit offset (0-64K) from the start of that segment. The idea of a segmented address space
+has also been used to refer to the strange allocation of memory in DOS, where the first 640K is
+the <b>conventional</b> memory area (which contains the DOS kernel and all application-accessible memory),
+from 640K to 1024K is the <b>upper</b> memory area, there is 64K of "hidden" address space (don't ask me, ask Intel)
+next known as the <b>high</b> memory area, and finally everything over the first 1 MB is known as
+<b>extended</b> memory (there's also expanded memory which is basically memory paging, but why complicate things even more...).
+
+<LI><b>global allocation</b>: Memory space allocated from the global or system heap.
+
+<LI><b>local allocation</b>: Memory space allocated from the local or application heap.
+
+<LI><b>memory space</b>: The physical address space of the computer's memory chips--as opposed to I/O space.
+
+<LI><b>I/O space</b>: The physical address space of the computer's ports, 64K in size. The CPU assigns addresses--which
+it transmits along the same address lines (more or less) as it does the memory addresses-- to the various
+input/output (I/O) ports such as the keyboard, printer, hard disk controller, real-time clock, and
+coprocessor ports. Each port is given a unique 16 bit number, such that by accessing that number the
+CPU accesses that port.
+<LI><b>page</b>: Usually, 4K
+<LI><b>paragraph</b>: 16 bytes<P>
+
+<i>Executable File Memory Model</i><P>
+How does memory come into play in the context of an application? Very basic executable files
+are .COM files with a single segment for data, code, and stack, that is mapped directly into
+system memory for execution. More complicated, and less obsolete, executable files (.EXE files)
+are made of multiple segments in memory--some for code, some for data, some for stack--and
+contain internal structures in addition to code and application data that allow the system to
+map the file correctly across multiple segments (see the applicable file format documentation
+for more info).<P>
+An executable file is mapped into memory at its simplest with a text segment, a data
+segment, a stack segment, and a heap. The text segment contains the executable code for the
+application (note that this may span mutiple segments). The data segment contains <i>
+initialized data</i>, or variables that are explicitly assigned a value in the source code
+(e.g. <code>int serial_number = 159900;</code>),
+ and <i>uninitialized data</i> (sometimes called BSS data), or variables that are allocated
+ space in the source code but are not explicitly assigned a value (e.g.,
+ <code>char username[20];</code> ).
+The stack segment contains local variables
+(e.g. <code>checkkey(serial_number, username){ int x; DWORD key_check; ... }</code>),
+parameters passed to functions, and return addresses pushed for call returns. Finally,
+the heap is an area of memory from which local allocation is made
+(e.g. <code>malloc( 1024 );...</code>).<P>
+<i>The Program "in vivo"</i><P>
+<BR>
+
+<a name="Opcodes"></a><HR><font size=+1><b>Instructions</font></b><P>
+<center><a href="#Flow">Program Flow</a><font color=808080> * </font><a href="#Cmp">Compare Ops</a><font color=808080> * </font><a href="#Math">Mathematical Ops</a><font color=808080> * </font><a href="#Logic">Logical Ops</a><font color=808080> * </font><a href="#Mem">Memory/Assignment Ops</a><font color=808080> * </font><a href="#Flags">Flag Operations</a></center><br><P>
+The x86 CPU is hardcoded with certain instructions to manipulate and compare data. What follows is a
+an brief overview of the most common instructions; this is not a complete or authoritative reference, but more of a
+quick reference guide for beginners. First, a few brief definitions to save clarification later:
+<font size=-1><PRE>immediate value: an integer such a 09h (e.g. mov edx, 09h)
+memory value: a value stored at a memory location, such as DS:Variable1 (e.g. mov edx, DS:Variable1)
+register value: a value stored in a register, such as EAX (e.g. mov edx, eax)
+relative offset: a value to be  calculated from the end of the current instruction, or a code label (e.g. jnz Exit or jmp 015h)</PRE></font>
+<a name="Flow"></a><u>Program Flow</u><P><font size=-1>
+<b>Call</b> <i>dest</i> Call Procedure: Turn execution over to the procedure specified in
+dest. When calling near procedures, CALL will push the address of the next instruction onto the stack
+as a return address; when calling far procedures, CALL will push CS followed by the address of
+the next instruction as a return address. The dest value can be a relative offset,
+a register value, or a memory value.<P>
+<b>INT</b> <i>dest</i>  Generates a call to an interrupt handler. The dest value
+must be an integer (e.g., Int 21h). INT3 and INTO are interrupt calls that take
+no parameters but call the handlers for interrupts 3 and 4, respectively.<P>
+<B>IRET</b> Interrupt Return: Return from interrupt handler to standard execution.<P>
+<b>JCC</b> <i>dest</i>  Jump if Condition is Met: These instructions check the flags
+and jump to the dest location if the condition is met; otherwise execution continues as
+normal. The dest value must be a relative offset. The various conditional jumps are:<PRE>
+JA      short/near Jump if Above:             CF=0 and ZF=0
+JAE     short/near Jump if Above/Equal:       CF=0
+JB      short/near Jump if Below:             CF=1
+JBE     short/near Jump if Below/Equal:       CF=1 or ZF=1
+JC      short/near Jump if Carry:             CF=1
+JCXZ    short      Jump if CX=0               CX=0
+JE      short/near Jump if Equal:             ZF=1
+JECXZ   short      Jump if ECX=0              ECX=0
+JG      short/near Jump if Greater:           ZF=0 and SF=OF
+JGE     short/near Jump if Greater/Equal:     SF=OF
+JL      short/near Jump if Less:              SF <> OF
+JLE     short/near Jump if Less/Equal:        ZF=1 and SF <> OF
+JNA     short/near Jump if Not Above:         CF=1 or ZF=1
+JNAE    short/near Jump if Not Above/Equal:   CF=1
+JNB     short/near Jump if Not Below:         CF=0
+JNBE    short/near Jump if Not Below/Equal:   CF=0 and ZF=0
+JNC     short/near Jump if Not Carry:         CF=0
+JNE     short/near Jump if Not Equal:         ZF=0
+JNG     short/near Jump if Not Greater:       ZF=1 or SF <> OF
+JNGE    short/near Jump if Not Greater/Equal: SF <> OF
+JNL     short/near Jump if Not Less:          SF=OF
+JNLE    short/near Jump if Not Less/Equal:    ZF=0 and SF=OF
+JNO     short/near Jump if Not Overflow:      OF=0
+JNP     short/near Jump if Not Parity:        PF=0
+JNS     short/near Jump if Not Sign:          SF=0
+JNZ     short/near Jump if Not Zero:          ZF=0
+JO      short/near Jump if Overflow:          OF=1
+JP      short/near Jump if Parity:            PF=1
+JPE     short/near Jump if Parity Even:       PF=1
+JPO     short/near Jump if Parity Odd:        PF=0
+JS      short/near Jump if Sign:              SF=1
+JZ      short/near Jump if Zero:              ZF=1
+</pre><P>
+<b>JMP</b> <i>dest</i> Jump: Transfers control to the location specified by dest.
+The dest value can be either a relative offset, or a register or memory value that contains such an offset.
+ <P>
+<b>LOOP/LOOPE/LOOPNE/LOOPNZ/LOOPZ</b> <i>dest</i> Loop with CX Counter: Decrements ECX by 1, then jumps to the
+location indicated by dest; when ECX=0, the jump is bypassed and program execution
+continues. The variations of LOOP (-E,-NE,-NZ,-Z) will execute the jump only if the CX register is != 0 and
+if their conditions are met (ZF=1, ZF=0, ZF=0, and ZF=1, in order). The dest value must be a relative offset.<P>
+<b>NOP</b> No Operation: A one-byte instruction that does nothing.<P>
+<b>REP/REPE/REPZ/REPNE/REPNZ</b> <i>ins</i> Repeat Following String Instruction: Repeats ins
+until CX=0 or until indicated condition (ZF=1, ZF=1, ZF=0, ZF=0) is met.
+The ins value must be a string operation such as CMPS, INS, LODS, MOVS, OUTS, SCAS,
+or STOS.<P>
+<b>RET/RETF/RETN</b> <i>dest</i> Return From Procedure: Transfers control to a return address
+located on the stack. The optional dest parameter indicates the number of stack bytes or
+words (depending on whether the code is 16-bit or 32-bit) to release (POP) after the return
+address is popped off the stack. This would be the case if the procedure was CALLed with a
+number of parameter pushed onto the stack before the call, and if the proceudre itself is
+responsible for cleaning up the stack when it returns. RETF is Return-Far and RETN is Return-Near; the difference is
+that Far returns pop both CS and IP from the stack to form the return address, while near returns pop only the IP register.<P></font>
+<a name="Cmp"></a><u>Compare Operations</u><P><font size=-1>
+<b>CMP</b> <i>dest, src</i> Compare: Compares dest with src and discards the result so
+that only the flags (Overflow, Sign, Zero, Aux, Parity, Carry) are affected. The dest value
+may be a register or memory value, while src may be a register, memory, or immediate value.<P>
+<b>CMPS/CMPSB/CMPSW/CMPSD</b> Compare String Byte/Word/Dword: Compares the bytes, words,
+or dwords at ES:EDI with the ones at DS:ESI. The result is discarded and only the
+flags (Overflow, Sign, Zero, Aux, Parity, Carry) are affected. Each location is incremented after
+the compare and the REP instructions can be combined with these for string processing.<P>
+<b>TEST</b> <i>dest, src</i> Logical Compare: Performs a bitwise AND of dest and src; the result is
+discarded and only the flags (Zero, Sign and Parity) are effected. The dest value
+may be a register or memory value, while the src value may be a register or immediate value.<P></font>
+<a name="Math"></a><u>Mathematical Operations</u><P><font size=-1>
+<b>ADC</b> <i>dest, src</i> Add With Carry: Adds dest, src, and the carry flag
+(CF); stores the result in dest. Can be used to add two registers (ADC edx, eax),
+a register to a register/memory/immediate value (ADC edx, eax/Variable1/09h),
+or a memory to a register/memory/immediate value (ADC Variable2, eax/Variable1/09h). <P>
+<b>ADD</b> <i>dest, src</i> Add: Adds dest and src, stores the result in dest.
+Can be used to add two registers (ADD edx, eax), a register to a register/memory/
+immediate value (ADD edx, eax/Variable1/09h), or a memory to a register/memory/
+immediate value (ADD Variable2, eax/Variable1/09h).<P>
+<b>DEC</b> <i>dest</i> Decrement by 1: Decrements memory or register value by 1<P>
+<b>DIV</b> <i>src</i>  Unsigned Divide: Divides AX by src if src is size byte, DX:AX by src if src
+is size word, and EDX:EAX by src if src is size dword. Quotient will be stored in AL, AX, or EAX
+depending on the above conditions, and the remainder will likewise be stored in AH, DX, or EDX.
+The src value may be a register or memory value.<P>
+<b>IDIV</b> <i>src</i> Signed Divide: Divides AX by src if src is size byte, DX:AX by src if src
+is size word, and EDX:EAX by src if src is size dword. Quotient will be stored in AL, AX, or EAX
+depending on the above conditions, and the remainder will likewise be stored in AH, DX, or EDX.
+The src value may be a register or memory value.<P>
+<b>IMUL</b> <i>dest, src</i> Signed Multiply: If only src is specified, the the action is
+similar to MUL: AL is multiplied by src if src is size byte, AX is multiplied by src if src is
+size word, and EAX is multipled by src if src is size dword--the result being stored in AX,
+DX:AX, and EDX:EAX respectively, and src may be a register or memory value. If both operands are
+specified, dest is multiplied by src, the result being stored in dest; dest can be a
+register or memory value, and src must be an immediate value.<P>
+<b>INC</b> <i>dest</i> Increment by 1: Increments memory or register value by 1<P>
+<b>MUL</b> <i>src</i>Unsigned Multiply: Multiples AL by src if src is of size byte,
+AX by src is src is size word, and EAX by src if src is of size dword. The result is stored in AX,
+DX:AX, and EDX:EAX respectively. The src value may be a register or memory value.<P>
+<B>RCL/ROL</b> <i>dest, src</i> Rotate Left:  The bits in dest are rotated  9, 17, or 33 bits (depending on
+whether dest is an 8, 16, or 32-bit value) to the left the number of times indicated in src. The result is that the top bit is
+returned to the bottom and the second-top most bit is moved to the top (ROL), or that the
+topmost bit is moved into the carry flag CF, CF is moved into the bottom-most bit, and the second-topmost bit is moved to
+the top. The dest value can be a memory or register value, while src must be CL or an immediate value.<P>
+<b>RCR/ROR</b> <i>dest, src</i> Rotate Right: The bits in dest are rotated  9, 17, or 33 bits (depending on
+whether dest is an 8, 16, or 32-bit value) to the right the number of times indicated in src. The result is that the bottom bit is
+moved to the top and the second-bottom-most bit is moved to the bottom (ROR), or that the
+bottom-most bit is moved into the carry flag CF, CF is moved into the top-most bit, and the second-bottom-most bit is moved to
+the bottom. The dest value can be a memory or register value, while src must be CL or an immediate value.<P>
+<b>SAL/SHL</b> <i>dest, src</i> Shift Left: Shifts the bits of src to the left, so that
+by shifting once the lowest bit becomes the second lowest
+(e.g., shifting the binary value 10111100 once to the left would make it 01111000)
+. dest can be a register or memory value, while src must be an immediate value or the CL register. Shifting an
+integer once to the left has the effect of multiplying it by two.<P>
+<b>SAR/SHR</b> <i>dest, src</i> Shift Right: Shifts the bits of src to the right, so that
+by shifting once the highest bit becomes the second-highest (e.g., shifting the binary value
+10111100 once to the right would make it 01011110). dest can be a register or memory value, while src must be an immediate value or the CL register. Shifting an
+integer once to the right has the effect of dividing it by two.<P>
+<b>SUB</b> <i>dest, src</i> Integer Subtraction: Subtracts src from dest and stores the
+result in dest; dest may be a register or memory value, while src may be a
+register, memory, or immediate value.<P>
+</font>
+<a name="Logic"></a><U>Logical Operations</u><font size=-1><P><pre>
+              Reference Table
+<u>operation        src     dest    result</u>
+   AND            1        1       1
+                  1        0       0
+                  0        1       0
+   <u>               0        0       0   </u>
+   OR             1        1       1
+                  1        0       1
+                  0        1       1
+   <u>               0        0       0   </u>
+   XOR            1        1       0
+                  1        0       1
+                  0        1       1
+   <u>               0        0       0  </u>
+   NOT            0       N/A      1
+                  1       N/A      0    </pre>
+<b>AND</b> <i>dest, src</i> Logical AND: Compares each bit of dest and src,
+and overwrites the bit in dest with 1 if both dest and src bits are 1; otherwise
+it overwrites the bit in dest with 0. For example, binary 01001001 ANDed with
+11100010 would result in 01000000. The dest value may be a register or memory value, while
+the src value may be a register, memory, or immediate value.<P>
+<B>NEG</b> <i>src</i> Two's Complement Negation: The operand is subtracted from 0
+and replaced with the result. For example, the binary value 01001001 NEGed would
+produce 1011011, while the hex value 13h would produce EDh.
+<b>NOT</b> <i>src</i> One's Complement Negation: Toggles each bit of the operand
+so that a 1 becomes a 0 and a 0 becomes a 1. For example, binary value 01001001 NOTed
+would produce 10110110.<P>
+<b>OR</b> <i>dest, src</i> Logical Inclusive OR: Compares each bit of dest and src,
+then overwrites the bit in dest with 0 if both dest and src bits are 0; otherwise
+it overwites the dest bit with 1. For example, binary 01001001 ORed with
+11100010 would result in 11101011. The dest value may be a register or memory value, while
+the src value may be a register, memory, or immediate value.<P>
+<b>XOR</b> <i>dest, src</i> Logical Exclusive OR: Compares each bit of dest and src,
+then overwrites the bit in dest with 1 if the dest and src bits are the same; otherwise if
+the bits are different it overwrites the dest bit with 0. For example, binary
+01001001 XORed with 11100010 would result in 10101011, while 01001001 XORed with
+itself would result in 00000000. The dest value may be a register or memory value, while
+the src value may be a register, memory, or immediate value.<P></font>
+<a name="Mem"></a><u>Memory Operations</u><P><font size=-1>
+<b>IN</b> <i>dest, src</I> Input from Port: Transfers a byte, word or dword from the port specified in
+src to the register specified in dest. The dest operator may be AL, AX, or EAX, while src may be any
+valid 1-byte port number, or DX with a 2-byte port number stored therein.<P>
+<b>INS/INSB/INSW/INSD</b> <i>dest, src</i> Input from Port to String: Inputs data
+from the input port specified in src into the location specified by ES:DI; note that dest
+is ignored and src must be DX. After the transfer, DI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec). The B,W,and D versions of this instruction take no
+operands, and move data of the specified size (Byte, Word, Dword) from the port
+specified in DX to the location specified in ES:DI.<P>
+<b>LEA</b> <i>dest, src</i> Load Effective Address: Calculates the effective address (offset) of
+src and stores it in dest; dest must be a register value, while src must be a memory value or symbolic name.<P>
+<b>LODS/LODSB/LODSW/LODSD</b> <i>src</i> Load String Data: Loads the byte, word, or dword
+addressed by ES:SI into the AL, AX, or EAX register; the src operand is ignored. After the transfer,
+SI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec). The B, W, and D
+versions of this instruction take no operands and move the specified amount of
+data (Byte, Word, Dword) into the EAX register.<P>
+<b>MOV</b> <i>dest, src</i>  Move Data: Copies value of the src into dest. If dest is a
+register value, then src may be a register, memory, or immediate value; if dest is a memory value,
+then src may be a register or immediate value.<P>
+<b>MOVS/MOVSB/MOVSW/MOVSD</b> <i>dest, src</i> Move Data from String to String: Copies the byte, word, or
+dword at DS:ESI to ES:EDI, regardless of operands. After the move, SI and
+DI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec). The B, W, and D versions of
+this instruction take no operands and copy the specified amount of data from DS:ESI to
+ES:EDI.<P>
+<b>MOVSX</b> <i>dest, src</i> Move with Sign-Extend: Reads the byte or word at src and copies it to
+the word or dword at dest with a sign-extend. The dest value may only be a register value,
+while src may be a register or memory value.<P>
+<b>MOVZX</b> <i>dest, src</i> Move with Zero-Extend: Reads the byte or word at src and copies it to
+the word or dword at dest with zero-extend. The dest value may only be a register value,
+while src may be a register or memory value.<P>
+<b>OUT</b> <i>dest, src</i> Output to Port: Transfers data from src to the port specified in
+dest. The src value may be AL, AX, or EAX; the dest value may be any one-byte port number, or a DX with a
+two-byte port number stored therein.<P>
+<b>OUTS/OUTSB/OUTSW/OUTSD</b> <i>dest, src</i> Output String to Port: Transfers data from DS:ESI
+to the port specified in the DX register, regardless of operands. After the transfer,
+SI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec). The B, W, and D versions of this
+instruction transfer the specified amount of data (byte, word or dword) from DS:ESI to the
+port specified in DX.<P>
+<b>POP</b> <i>dest</i> POP Word/Dword from Stack: Moves the value on the top of the stack to
+dest; the stack pointer SP is incremented by 2 (word) or 4(dword) so that the POPed data is off the
+stack. The dest value may be a register or memory value.<P>
+<b>POPA/POPAD/POPAW</b> Pop All General Registers: Reverses a previous PUSHS by popping the top of the
+stack into the general registers. POPA and POPAW are equivalent to POP DI, SI, BP, BX, DX, CX, AX;
+POPAD is equivalent to POP EDI, ESI, EBP, EBX, EDX, ECX, EAX.<P>
+<b>POPF/POPFD/POPFW</b> Pop to Flags Register: Pops the top word (POPF/POPFW) or dword (POPFD) from the
+stack into the flags register.<P>
+<b>PUSH</b> <i>src</i> Push Word/Dword to Stack: Decrements the stack pointer SP by two (word) or four (dword)
+to add space on the stack, then copies the value in src to that newly-made space at the top of the stack. The src value
+may be a register, memory, or immediate value.<P>
+<b>PUSHA/PUSHAD/PUSHAW</b> Push All General Registers: Save the 16-bit (PUSHA/PUSHAW) or
+32-bit (PUSHAD) registers to the top of the stack; PUSHA and PUSHAW are equivalent to
+PUSH AX, CX, DX, BX, SP, BP, SI, DI and PUSHAD is equivalent to PUSH EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI.<P>
+<b>PUSHF/PUSHFD/PUSHFW</b> Push Flags Register: Saves the FLAGS (PUSHF/PUSHFW) or
+EFLAGS (PUSHFD) to the top of the stack.<P>
+<b>SCAS/SCASB/SCASW/SCASD</b> <i>src</i> Compare String Data: Compares byte, word, or dword at
+ES:DI with AL, AX, or EAX, regardless of operand; the result is discarded and only the flags are
+affected. After the compare, DI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec).The B, W, and D versions of this instruction compare values of the indicated size with AL, AX, or EAX.<P>
+<b>STOS/STOSB/STOSW/STOSD</b> <i>src</i> Store String Data: Transfers the contents of
+AL, AX, or EAX to the memory location specified in ES:EDI, regardless of operands. After the transfer,
+DI is incremented/decremented by the number of bytes transferred, in the direction specified by the
+direction flag ( 0=inc, 1=dec). The B, W, and D versions of this instruction transfer values of the indicated
+size to ES:EDI.<P>
+<b>XCHG</b> <i>dest, src</i> Exchange Memory or Register with Register: Moves the original value of src
+into dest and the original value of dest into src. If dest is a register value, then src can be a register or
+memory value; if dest is a memory value, then src must be a register value.</font><P>
+<a name="Flag"></a><u>Flag Operations</u><P><font size=-1>
+<b>CLC</b> Clear Carry Flag: Set CF=0<P>
+<b>CLD</b> Clear Direction Flag: Set DF=0<P>
+<b>CLI</b> Clear Interrupt Flag: Set IF=0<P>
+<B>LAHF</b> Load AH from Flags: Set bits 7, 6, 4, 2, and 0 with the value of flags SF ZF AF PF CF.<P>
+<b>SAHF</b> Store AH into Flags: Sets flags SF ZF AF PF CF with bits 7, 6, 4, 2, and 0 from AH.<P>
+<b>STC</b> Set Carry Flag: Sets CF=1<P>
+<b>STD</b> Set Direction Flag: Sets DF=1<P>
+<B>STI</B> Set Interrupt Enable Flag: Sets IF=1
+<P></font>
+<P>
+<a name="Service"></a><HR><font size=+1><b>Interrupt Services</font></b><P>
+Interrupt services are handlers for software interrupts--handlers which are routines provided
+by the ROM-BIOS or the Operating System (assumed to be DOS in this case). When an NIT instruction is
+encountered, the CPU pushes the flags register and then the return address (CS:IP), then
+looks up the interrupt number in the Interrupt Vector Table (IVT to its friends) and calls the handler
+associated with that inteerupt vector. Execution continues in the handler until the CPU encounters an IRET
+statement, whereupon it returns to the stored CS:IP and restores the flags.<P>
+Interrupts are called by moving required values into registers--notice that the stack is not used--
+and then calling the interrupt number via the INT function. Some interrupts have a number of functions, which are identified
+in the INT statement by a value placed in AH, and some functions also have sub-functions, which are
+identified by a value placed in AL.<P>
+The following is a listing and brief description of the more common BIOS and DOS
+interrupt services. It is not intended to fully explain each interrupt but rather to provide a quick
+reference as to the interrupt number, name, parameters, and return values.<P>
+<i>Bios Services</i><P>
+
+<U>Video Services</u><P><font size=-1>
+Int5h PrintScreen <i>Entry: N/A Exit: N/A Notes: Sends ASCII contents of video buffer to printer</i><P>
+Int10h-00h Set Video Mode <i>Entry: ah=00 al=mode Exit: N/A Notes: modes 0-3 are 16-color text, modes 4-6 are 4-color graphics, mode 7 is mono text, modes 8-18 are card-dependent, mode 19 is 256-color graphics</i><P>
+Int10h-01h Set Cursor Size <i>Entry: ah=01 ch=start scanline cl=end scanline Exit: N/A Notes: Cursor appears between start and end scanlines, each scanline is one pixel high</i><P>
+Int10h-02h Set Cursor Position <i>Entry: ah=02 bh=video page# dh=cursor row dl=cursor col Exit: N/A Notes: Primary page = 0</i><P>
+Int10h-03h Read Cursor Position & Size <i>Entry: ah=03 bh=video page# Exit: bh=video page# ch=start scanline cl=end scanline dh=cursor row dl=cursor col  Notes:</i><P>
+Int10h-05h Select Active Display Page <i>Entry: ah=05 al=display page Exit: N/A Notes: text mode only; page range is usually 0-7</i><P>
+Int10h-06h Scroll Window Up <i>Entry: ah=06 al=lines to scroll bh=display attr for blank lines ch=row for upper left corner of window cl=col for upper left corner dh=row for lower right corner dl=col for lower right corner  Exit: N/A Notes: Selectively scross portion of screen; attr= 1-byte hex value, top nibble=background, bot nibble=foreground, colors 0-F (black, blue, green, cyan, red, magenta, brown, white, gray, lt blue, lt green, lt cyan, lt red, lt magenta, yellow, white), such that 0x0Fh is white fore, black back</i><P>
+Int10h-07h Scroll Window Down <i>Entry: ah=07 al=lines to scroll bh=display attr for blank lines ch=row upper left cl=col upper left dh=row lower right dl=col lower right Exit: N/A Notes: As above</i><P>
+Int10h-08h Read Char and Attribute <i>Entry: ah=08 bh=video page# Exit: ah=attr byte al=ASCII code Notes: Attr is as above</i><P>
+Int10h-09h Write Char and Attribute <i>Entry: ah=09 al=ASCII code bh=video page# lb=attr byte cx=#of characters to display Exit: N/A Notes: Attr as above</i><P>
+Int10h-0Ah Write Char <i>Entry: ah=0A al=ASCII code bh=video page# bl=color cx=# of chars to write Exit: N/A Notes:</i><P>
+Int10h-0Ch Write Pixel Dot <i>Entry: ah=0C al=pixel value cx=pixel col dx=pixel row Exit: N/A  Notes: </i><P>
+Int10h-0Dh Read Pixel Dot <i>Entry: ah=0D cx=pixel col dx=pixel row Exit: al=pixel value cx=pixel col dx=pixel row  Notes:</i><P>
+Int10h-0Eh TTY Char Output <i>Entry: ah=0E al=ASCII code bh=video page# bl=char color Exit: N/A Notes: Translates ASCII bell, backspace, CR and LF chars</i><P>
+Int10h-0Fh Get Current Video State <i>Entry: ah=0F Exit: ah=screen widt al=display mode bh=active display page  Notes:</i><P>
+Int10h-13h Write String <i>Entry: ah=13h al=mode bh=video page# bl=char attr cx=lengthof string dh=cursor row dl=cursor col es=seg bp=offset Exit: N/A Notes: ES:BP=addr of string</i><P></font><P>
+
+<U>System Services</u><P><font size=-1>
+Int11h Get Equipment Status <i>Entry: N/A Exit: ax=status Notes: bitstruct returned</i><P>
+Int12h Get Memory Size <i>Entry: N/A Exit: ax=memory blocks Notes: ax=# of contiguous 1K blocks</i><P>
+Int18h Boot Process Failure <i>Entry: N/A Exit: N/A Notes: Calls ROM Basic if available</i><P>
+Int19h Warm Boot <i>Entry: N/A Exit: N/A Notes: Reboot!</i><P>
+Int1Bh Control-Break Handler <i>Entry: N/A Exit: N/A Notes: Called when Ctrl-Brk pressed (can be hooked)</i><P></font><P>
+
+<U>Disk Services</u><P><font size=-1>
+Int13h-00h Reset Disk Drives <i>Entry: ah=00 dl=drive# Exit: N/A Notes: reset disk controller: for error handling</i><P>
+Int13h-01h Get Floppy Disk Status <i>Entry: ah=01 dl=drive# Exit: ah=status byte Notes: bitstruct returned</i><P>
+Int13h-02h Read Disk Sectors <i>Entry: ah=02 al=#sectors es=segment bx=offset ch=track cl=sector dh=head/side# dl=drive# Exit: return code Notes: es:bx=addr of buffer</i><P>
+Int13h-03h Write Disk Sectors <i>Entry: ah=03 al=#sectors es=seg bx=offset ch=track cl=sector dh=head/side# dl=drive# Exit: return code Notes: es:bx=addr of string</i><P>
+Int13h-05h Format Disk Track <i>Entry: ah=05 es=seg bx=offset ch=trach dh=head/side# dl=drive# Exit: return code Notes: es:bx=addr of track address field. Repeat int for formatting entire disk</i><P>
+</font><P>
+
+<U>Peripheral Services</u><P><font size=-1>
+Int14h-00h Initialize Communications Port <i>Entry: ah=00 al=parameter dx=COM# Exit: ah=line status al=modem status Notes: COM#=0 for COM1, 3 for COM4</i><P>
+Int14h-01h Transmit Character <i>Entry: ah=01 al=ASCII char dx=COM# Exit: N/A Notes:</i><P>
+Int14h-02h Receive Character <i>Entry: ah=02 dx=COM# Exit: ah=return code al=char Notes:</i><P>
+Int14h-03h Get COM Port Status <i>Entry: ah=03 dx=COM# Exit: ah=line status al=modem statis Notes:</i><P>
+Int15h-84h Joystick Support <i>Entry: ah=84 dx=code Exit: al=switch settings/ax= a(x) bx=a(y) cx=b(x) dx=b(y) Notes: code=00 (read switches) or 01 (get position)</i><P>
+Int16h-00h Read Keyboard Character <i>Entry: ah=00 Exit: ah=scan code al=ASCII value Notes:</i><P>
+Int16h-02h Read Keyboard Shift Status <i>Entry: ah=02 Exit: al=code Notes: code=bitstruct</i><P>
+Int17h-00h Print Character <i>Entry: ah=00 al=char dx=printer Exit: ah=printer status Notes: printer=0 (LPT1) to 2 (LPT3)</i><P>
+Int17h-01h Initialize Printer <i>Entry: ah=01 dx=printer Exit: ah=printer status Notes:</i><P>
+Int17h-02h Get Printer Status <i>Entry: ah=02 dx=printer Exit: ah=printer status Notes:</i><P></font><P>
+
+<i>DOS Services</i><P>
+<U>Input/Output Services</u><P><font size=-1>
+Int21h-01h Character Input With Echo <i>Entry: ah=1 Exit: al=char Notes: Echo to screen</i><P>
+Int21h-02h Output Character <i>Entry: ah=2, dl=char Exit: N/A Notes:</i><P>
+Int21h-03h Auxiliary Input <i>Entry: ah=3 Exit: al=char Notes: Reads std aux (COM1)</i><P>
+Int21h-04h Auxiliary Output <i>Entry: ah=4 dl=char Exit: N/A Notes: Sends std aux (COM1)</i><P>
+Int21h-05h Printer Output <i>Entry: ah=5 dl=char Exit: N/A Notes: Sends std prt (LPT1)</i><P>
+Int21h-06h Direct Console I/O <i>Entry: ah=6 dl=char Exit: al=char Notes: set dl=0FFh for input</i><P>
+Int21h-08h Char Input, No Echo <i>Entry: ah=8 Exit: al=char Notes: Catches Ctrl-combos</i><P>
+Int21h-09h Output Character String <i>Entry: ah=9 ds=seg dx=offset Exit: N/A Notes: ds:dx = addr of string</i><P>
+Int21h-0Ah Buffered Input <i>Entry: ah=0A ds=seg dx=offset Exit: N/A Notes: ds:dx=addr of buffer</i><P>
+Int21h-44h-02h Character Device Read <i>Entry: ah=44 al=02 bx=dev handle cx=bytes-to-read ds=seg dx=offset Exit: ax=bytes read Notes: ds:dx=addr of buffer</i><P>
+Int21h-44h-03h Character Device Write <i>Entry: ah=44 al=03 bx=dev handle cx=bytes-to-write ds=seg dx=offset Exit: ax=bytes written Notes: ds:dx=addr of buffer</i><P>
+Int21h-44h-04h Block Device Read <i>Entry: ah=44 al=04 bl=drive# cx=bytes-to-read ds=seg dx=offset Exit: ax=bytes read Notes: ds:dx=addr of buffer</i><P>
+Int21h-44h-05h Block Device Write <i>Entry: ah=44 al=05 bl=drive# cx=bytes-to-write ds=seg dx=offset Exit: ax=bytes written Notes: ds:dx=addr of buffer</i></font><P>
+
+<P>
+<U>Disk Services</u><p><font size=-1>
+Int21h-0Dh Reset Disk <i>Entry: ah=0D Exit: N/A Notes: flushes DOS disk buffers</i><P>
+Int21h-0Eh Set Default Drive <i>Entry: ah=0E dl=drive# Exit: al=# Logical Drives Notes: </i><P>
+Int21h-0Fh Open File (FCB) <i>Entry: ah=0F ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-10h Close File (FCB) <i>Entry: ah=10 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-11h Search First FileName Match (FCB) <i>Entry: ah=11 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB; returns match in DTA</i><P>
+Int21h-12h Search Next FileName Match (FCB) <i>Entry: ah=12 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB, match returns in DTA</i><P>
+Int21h-13h Delete File (FCB) <i>Entry: ah=13 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-14h Sequential Read (FCB) <i>Entry: ah=14 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB, returns 1 block in DTA</i><P>
+Int21h-15h Sequential Write (FCB) <i>Entry: ah=15 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB, block written from DTA</i><P>
+Int21h-16h Create File (FCB) <i>Entry: ah=16 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-17h Rename File (FCB) <i>Entry: ah=17 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of modified FCB</i><P>
+Int21h-19h Get Current Drive <i>Entry: ah=19 Exit: al=drive# Notes: 0=A, 1=B, 2=C, etc</i><P>
+Int21h-1Ah Set Disk Transfer Area <i>Entry: ah=1A ds=seg dx=offset Exit: N/A Notes: ds:dx=addr of DTA</i><P>
+Int21h-1Bh Get FAT Info For Default Drive <i>Entry: ah=1B Exit: al=sectors/cluster ds=seg bx=offset cx=bytes/sector dx=clusters/disk Notes: ds:bx points to FAT ID byte</i><P>
+Int21h-1Ch Get FAT Info For Drive <i>Entry: ah=1C dl=drive# Exit: al=sectors/cluster ds=seg bx=offset cx=bytes/sector dx=clusters/disk Notes: ds:bx points to FAT ID byte</i><P>
+Int21h-1Fh Get Default Disk Parameter Block <i>Entry: ah=1F Exit: al=status ds=seg bx=offset Notes: ds:bx=addr of disk parameter block</i><P>
+Int21h-21h Random Read (FCB) <i>Entry: ah=21 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB; reads one record to DTA</i><P>
+Int21h-22h Random Write (FCB) <i>Entry: ah=22 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB, info written from DTA</i><P>
+Int21h-23h Get File Size(FCB) <i>Entry: ah=23 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-24h Set Random Record (FCB) <i>Entry: ah=24 ds=seg dx=offset Exit: al=status Notes: ds:dx=addr of FCB</i><P>
+Int21h-27h Read Random Records (FCB) <i>Entry: ah=27 cx=#records to read ds=seg dx=offset Exit: al=status cx=#records read Notes: ds:dx=addr of FCB, info returned in DTA</i><P>
+Int21h-28h Write Random Records (FCB) <i>Entry: ah=28 cx=#records ro write ds=seg dx=offset Exit: al=status cx=#records written Notes: ds:dx=addr of FCB, info written from DTA</i><P>
+Int21h-29h Parse FileName (FCB) <i>Entry: ah=29 al=parsing ds=seg si=offset es=seg di=offset Exit: al=status ds=seg si=offset Notes: ds:si=addr of string to parse, es:di=addr of FCB, al=bit-flag for parsing; ds:si returns addr of first char after parsed string</i><P>
+Int21h-2Fh Get Disk Transfer Area <i>Entry: ah=2F Exit: es=seg bx=offset Notes: es:bx=addr of DTA</i><P>
+Int21h-32h Get Disk Parameter Block <i>Entry: ah=32 dl=drive# Exit: al=error ds=seg bx=offset Notes: ds:bx=addr of disk parameter block</i><P>
+Int21h-33h-05h Get Boot Drive<i>Entry: ah=33 al=05 Exit: dl=drive# Notes:</i><P>
+Int21h-36h Get Disk Free Space <i>Entry: ah=36 dl=drive# Exit: ax=sectors/cluster bx=avail clusters cx=bytes/sector dx=clusters/driveNotes:</i><P>
+Int21h-39h Create Subdir <i>Entry: ah=39 ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of path name</i><P>
+Int21h-3Ah Remove Subdir <i>Entry: ah=3A ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of path name</i><P>
+Int21h-3Bh Set Dir <i>Entry: ah=3B ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of path name</i><P>
+Int21h-3Ch Create File <i>Entry: ah=3C cx=file attr ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of path name, attr"0"=normal</i><P>
+Int21h-3Dh Open File <i>Entry: ah=3D al=open code ds=seg dx=offset Exit: ax=file handle Notes: ds:dx=addr of path name, open code=bit flag</i><P>
+Int21h-3Eh Close File <i>Entry: ah=3E bx=file handle Exit: ax=error Notes:</i><P>
+Int21h-3Fh Read File <i>Entry: ah=3F bx=file handle cx=bytes-to-read ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of buffer</i><P>
+Int21h-40h Write File <i>Entry: ah=40 bx=file handle cx=bytes-to-write ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of buffer</i><P>
+Int21h-41h Delete File <i>Entry: ah=41 ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of pathname</i><P>
+Int21h-42h Move File Pointer <i>Entry: ah=42 al=move code bx=file handle cx=distance hiword dx=distance loword Exit: ax=Location loword dx=location hiword Notes: Movement code is 0 (rel to beginning of file), 1 (rel to curr loc), or 2(rel to end of file)</i><P>
+Int21h-43h Get/Set File Attributes <i>Entry: ah=43 al=code cx=desired attr ds=seg dx=offset Exit: ax=error cx=curr attr Notes:ds:dx=addr of path name, code = 0 (get attr) or 1 (set attr)</i><P>
+Int21h-47h Get Dir Path <i>Entry: ah=47 dl=drive# ds=seg si=offset Exit: ax=error Notes: ds:si=addr of buffer</i><P>
+Int21h-4Eh Search First Filename Match <i>Entry: ah=4E cx=File attr ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of filename, info returned in DTA</i><P>
+Int21h-4Fh Search Next Filename Match <i>Entry: ah=4F Exit: ax=error Notes: returns info in DTA</i><P>
+Int21h-56h Rename File <i>Entry: ah=56 ds=seg dx=offset es=seg di=offset Exit: ax=error Notes: ds:dx=addr of old filename es:di=addr of new filename</i><P>
+Int21h-57h Get/Set File Date & Time <i>Entry: ah=57 al=code bx=file handle cx=new time dx=new date Exit: ax=error cx=file time dx=file date Notes: code is 0 (Get) or 1 (Set)</i><P>
+Int21h-5Ah Create Temporary File <i>Entry: ah=5A cx=file attr ds=seg dx=offset Exit: ax=error ds=seg dx=offset Notes: ds:dx=addr of path name, ds:dx returns with complete path/filename</i><p>
+Int21h-5Bh Create File <i>Entry: ah=5B cx=file attr ds=seg dx=offset Exit: ax=error Notes: ds:dx=addr of path name</i><P>
+Int21h-68h Flush Buffer <i>Entry: ah=68 bx=file handle Exit: ax=error Notes: write file buffer to disk</i><P>
+Int25h Absolute Disk Read <i>Entry: al=drive# ds=seg bx=offset cx=sectors to read dx=logical starting sector Exit: ax=return code Notes: ds:bx=addr of buffer</i><P>
+Int26h Absolute Disk Write <i>Entry: al=drive# ds=seg bx=offset cx=sectors to write dx=logical starting sector Exit: ax=error Notes: ds:bx=addr of buffer</i><P></font>
+<P>
+<u>System Services</u><P><font size=-1>
+Int20h Terminate Program <i>Entry: N/A Exit: N/A Notes:</i><P>
+Int21h-00h Terminate Program <i>Entry: ah=0 cs=seg of PSP Exit: N/A Notes:</i><P>
+Int21h-25h Set Interrupt Vector <i>Entry: ah=25 al=int# ds=seg dx=offset Exit: N/A Notes: ds:dx=addr of new int handler</i><P>
+Int21h-26h Create PSP <i>Entry: ah=26 dx=seg of new PSP Exit: N/A Notes: copies current PSP (256 bytes) to new location </i><P>
+Int21h-30h Get DOS Version <i>Entry: ah=30 al=0 Exit: al=Major version ah=Minor version bh=OEM seial# bl=hi-order 8 bits of serial# cx=lo-order 16 bits of serial#  Notes:</i><P>
+Int21h-31h Terminate & Stay Resident <i>Entry: ah=31 al=return code dx=memory paragraphs to reserver Exit: N/A Notes:</i><P>
+Int21h-33h-06h Get DOS Version <i>Entry: ah=33 al=06 Exit: bl=Major version bh=Minor version dl=Revision# dh=DOS Memory flags Notes: dh: bit-3-set=DOS in ROM, bit-4-set=DOS in HMA</i><P>
+Int21h-34h Get InDOS Flag <i>Entry: ah=34 Exit: es=seg bx=offset Notes: es_bx=addr of InDOS flag; used to determine if DOS is currently executing an Int21 service</i><P>
+Int21h-35h Get Interrupt Vector <i>Entry: ah=35 al=int# Exit: es=seg bx=offset Notes: es:bx=addr of int handler</i><P>
+Int21h-38h Get/Set Country Info <i>Entry: ah=38 al=country# bx=country# ds=seg dx=offset Exit: ax=error bx=country# Notes: ds:dx=addr of country info block (34 bytes); using country#=0 specifies the currently installed country</i><P>
+Int21h-44h-00h Get Device Info <i>Entry: ah=44 al=00 bx=device handle Exit: dx=device info  Notes: dx returns a bit flag structure</i><P>
+Int21h-44h-01h Set Device Info <i>Entry: ah=44 al=01 bx=device handle dh=0 dl=device info Exit: N/A Notes: dl is a bit-flag structure</i><P>
+Int21h-44h-06h Get Input Status <i>Entry: ah=44 al=06 bx=device handle Exit: al=status Notes: al=0F if ready, 00 if not ready</i><P>
+Int21h-44h-07h Get Output Status <i>Entry: ah=44 al=07 bx=device handle Exit: al=status Notes: al=0F if ready, 00 if not ready</i><P>
+Int21h-48h Allocate Memory <i>Entry: ah=48 bx=paragraphs to allocate Exit: ax=error bx=max paragraphs avail (if error)  Notes:</i><P>
+Int21h-49h Free Allocated Memory <i>Entry: ah=49 ES=seg of memory block Exit: ax=error Notes: free blocks allocated with above service</i><P>
+Int21h-4Ah Change Memory-Block Alloc <i>Entry: ah=4A BX=total paragraphs to allocate ES=seg of memory block Exit: ax=error bx=max paragraphs avail (if error) Notes:</i><P>
+Int21h-4Bh-00h Load Program <i>Entry: ah=4B al=00 es=seg bx=offset ds=seg dx=offset Exit: ax=error Notes: es:bx=addr of parameter block, ds:dx=addr of path name</i><P>
+Int21h-4Bh-03h Load Overlay <i>Entry: ah=4B al=03 es=seg bx=offset ds=seg dx=offset Exit: ax=error Notes: es:bx=addr of parameter block, ds:dx=addr of path name</i><P>
+Int21h-4Bh-05h Set Execution State <i>Entry: ah=4B al=05 ds=seg dx=offset Exit: N/A Notes: ds:dx=addr of parameter block; this prepares DOS ti transfer control to a new program/overlay</i><P>
+Int21h-4Ch Process Terminate <i>Entry: ah=4C al=return code Exit: N/A Notes: Terminate current process</i><P>
+Int21h-4Dh Get Return Code of SubProcess <i>Entry: ah=4D Exit: ax=return code Notes:</i><P>
+Int21h-50h Set PSP Address <i>Entry: ah=50 bx=seg of new PSP Exit: N/A Notes: redfine PSP for currently-running program</i><P>
+Int21h-51h Get PSP Address <i>Entry: ah=51 Exit: bx=seg addr of PSP Notes:</i><P>
+Int21h-59h Get Ext Error Info <i>Entry: ah=59 bx=0 Exit: ax=ext error code(1-90) bh=error class(1-13) bl=suggested remedy(1-7) ch=locus(1-5) Notes:</i><P>
+Int21h-5Dh-0Ah Set Ext Errror Values <i>Entry: ah=5D al=0A ds=seg si=offset Exit: N/A Notes: ds:si=addr of ext error table to be returned at next system error</i><P>
+Int21h-65h-20h Convert Character <i>Entry: ah=65 al=20 dl=char Exit: ax=error dl=char  Notes: converts the character in dl to its upercase equivalent</i><P>
+Int21h-65h-21h Convert String <i>Entry: ah=65 al=21 cx=string length ds=seg dx=offset Exit: ax=error Notes: converts the string pointed to by ds:dx to its uppercase equivalent</i><P>
+Int21h-65h-22h Convert ASCIIZ String <i>Entry: ah=65 al=22 ds=seg dx=offset Exit: ax=error Notes: converts null-terminated string at ds:dx  to uppercase</i><P>
+Int21h-66h Get/Set Global Code Page <i>Entry: Exit: Notes:</i><P>
+Int21h-67h Change Handle Count <i>Entry: ah=67 bx=# of handles Exit: ax=error Notes: Change the # of handles available to DOS</i><P>
+Int27h Terminate & Stay Resident <i>Entry: dx=pointer to last byte of program Exit: N/A Notes: only for com files</i><P></font>
+
+<u>Miscellaneous Services</u><font size=-1><P>
+Int21h-2Ah Get System Date <i>Entry: ah=2A Exit: al=Day of week(0-6), cx=Year(1980-2099), dh=Month(1-12), dl=Day(1-31) Notes:</i><P>
+Int21h-2Bh Set System Date <i>Entry: ah=2B cx=Year dh=Month dl=Day Exit: al=status Notes:</i><P>
+Int21h-2Ch Get System Time <i>Entry: ah=2C Exit: ch=Hour(0-23), cl=Minute(0-59), dh=Second(0-50), dl=Hundredths(0-99) Notes:</i><P>
+Int21h-2Dh Set System Time <i>Entry: ah=2D ch=Hour cl=Minute dh=Second dl=Hundredths Exit: al=status Notes:</i><P>
+Int21h-5Eh-00h Get Machine Name <i>Entry: ah=5E al=0 ds=seg dx=offset Exit: ax=error ch=IsNamed cl=NetBIOS# Notes: ds:dx=offset of buffer</i><P>
+Int21h-5Fh-02h Get Redirection List Entry <i>Entry: ah=5F al=02 bx=redirection list index es=seg di=offset ds=seg si=offset Exit: ax=error bh=device status bl=device type cx=parameter val Notes: es:di=addr of network name buffer ds:si=addr of local name buffer</i><P>
+Int21h-5Fh-03h Redirect Device <i>Entry: ah=5F al=03 bl=device type cx=caller value es=seg di=offset ds=seg si=offset Exit: ax=error Notes: es:di=addr of network path ds:si=addr of device name</i><P>
+Int21h-5Fh-04h Cancel Redirection <i>Entry: ah=5F al=04 ds=seg si=offset Exit: ax=error Notes:ds:si=addr of device name/path</i></font><P>
+
+<a name="Review"></a><HR><font size=+1><b>Review of the Literature</font></b><P>
+Information regarding assembly language is available everywhere on the Internet...for example, browse through <a href="http://www.yahoo.com/Computers_and_Internet/Magazines/">these</a> and you will come across quite a few porgramming gems. Another good resource is <a href="http://www.mfi.com/">Miller Freeman</a>, the United News & Media-owned company that produces <I>MSJ</I>, <I>Windows Developer's Journal</I>, <i>Dr. Dobb's Journal</I> and <I>Sourcebook</I>, <I>C/C   User's Journal</I>, and all of <a href="http://w3t.mfi.com/allmfi.htm?Submit=List all MFI Properties">these</a> The following are texts on assembly language that I have reviewed and found more or less worthy (at least in some respects), grouped by publisher.
+<P><BR>
+<B><a href="http://www2.awl.com/cseng/">Addison-Wesley</a></B><P>
+<I>Applied PC Interfacing, Graphics, and Interrupts</I> by William Buchanan: Mixes C, Pascal (yuck), and assembler-- an excellent resource for those getting into device drivers.
+low-level utilities, or even IC programming. Written for advanced students, this book has very technical information presented in an approachable manner--just the thing for polishing your well-honed DOS asm skills.<P>
+<B><a href="http://mspress.microsoft.com/">Microsoft</a></B><P>
+<I>Systems Programming For Windows 95</I> by Walter Oney: This book is by-lined as the "C/C   programmer's guide to VxDs, I/O devices, and operating system extensions"--it covers a bit of low-level Windows 95 programming, including quite a bit (surprisingly) in assembly language. Reading it is kind of tough; as is typical with Microsoft publications, subjects are treated only very generally, with the examples beign of a useless "hello world" nature. This is a lot of theory with very little practice, and the writing (again typical of Microsoft) is unclear at best. Still, it provides you with information you couldn't have gotten elsewhere (especially regarding VXDs), providing you have the wit and guile to draw the facts from Oney's onerous prose. Current price: US$40.<P>
+<B><a href="http://www.prenhall.com/list_ref/index.html">Prentice Hall</a></B><P>
+<I>Assembly Language For The PC</i> by Peter Norton and John Socha: My second book ever on assembly language, and the best introduction to the language that you can ask for. Most of Norton's books these days are at the casual user level; this one effectively teaches assembly language by guiding you through the creation of a hex editor, such that not only so you learn how to open/display/edit files and how to create a rudimentary GUI, but you also end up writing a tool that you can customize to meet your own twisted needs! Current price is US$40, but you can often find it for around US$10.<P>
+<B><a href="http://www.mcp.com/60769111715267/que/bookshelf/">QUE</a></B><P>
+<I>Using Assembly Language</i> by Allen Wyatt: I'm not sure whether or not I can recommend this book. It was my first text on assembly language, and I found it inadequate...though it has a pretty decent reference section in terms of opcodes and DOS/BIOS services, and it covers interfacing assembly with other development platforms such as Clipper, C/C  , Pascal, and FoxPro. It also has a good intro on how to choose your assembler and linker (though it only examines MASM and TASM); its shortcoming seems to be in actual assembly language programming. Current price is US$30.<P>
+<B><a href="http://www.rdbooks.com">R&D Books</a></B><P>
+<I>Windows Assembly Language And Systems Programming</i> by Barry Kauler: This book was originally published by Prentice Hall; it has now (finally) come out in a new edition which covers 32-Bit Windows programming. This is by far the best source I have found on Windows assembly language (though there are not many); it is concise and clear, with useful examples (some of which are <a href="http://www.fortunecity.com/roswell/leehigh/0/kauler1.zip">here</a>)and a coverage of topics such as OOP assembly, VXDs, direct hardware access (in Windows!), and Ring0/Ring3 programming. Current price: US$45.<P>
+<B><a href="http://www.wordware.com">Wordware Publishing</a></B><P>
+<I>Developing Utilities In Assembly Language</I> by Deborah Cooper: This book is small and inexpensive, as well as an excellent introduction to developing programs in assembly language. The utilities it teaches are rather mundane (DIRNAME, FILEFIND, TRAPBOOT, TRAPDEL, SAFE [disables FORMAT.EXE], CAPSLOCK, and ICU [displays cursor location]), but the techniques (such as key-trapping and TSR programming) are widely applicable, as is the very sensible way in which the programs are developed. Currently US$16. <P>
+<B><a href="http://www.wrox.com">Wrox Press</a></B><P>
+<I>Master Class Assembly Language</i> by Many People: Excellent text, though most of the sample source code is on disk--so it's a tough read without a computer next to you. Beginners should by no means be turned away: the summation (about 35 pages) of assembly is one of the best I have seen, and may help clarify other texts or tutorials. From there is jumps straight into systems programming and covers topics such as disassembly (!), anti-virus programs, 486/Pentium optimization, generic code optimization, device drivers, data compression, and protected mode programming. All of this is written very succinctly, a very "no BS" approach that is refreshing in computer books these days...it very much so blows away <i>PC Undergound</I> (or whatever that book was by the guys who did <i>PC Intern</I>). Current Price: US$50 (ouch!) <P>
+<HR>
+
+</BODY>
+</HTML>

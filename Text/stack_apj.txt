@@ -1,0 +1,282 @@
+                                               Stack Frames and High-Level Calls
+                                               by mammon_
+
+
+Last month I covered how to implement high-level calls in Nasm. Since then it
+has come to my attention that many beginning programmers are unfamiliar with
+calling conventions and the stack frame; to remedy this I have prepared a brief
+discussion of these topics.
+
+The CALL Instruction
+--------------------
+At its most basic, an assembly language call takes this for:
+	push [parameters]
+	call [address]
+Some assemblers will require that the CALL statement take as an rgument only
+addresses leading to external functions or addresses created with a macro or
+directive such as PROC. However, as a quick glance through a debugger or a
+passing familiarity with Nasm will demonstrate, the CALL instruction simply
+jumps to an address [often a label in the source code] while pushing the
+contents of EIP [containing the address of the instruction following the call]
+onto the stack. The CALL instruction is therefore equivalent to the following
+code:
+	push EIP
+	jmp  [address]
+
+The address that has been called will thefore have the stack set up as follows:
+	[Last Parameter Pushed]: DWORD
+	[Address of Caller]    : DWORD
+	---  "Top" of Stack [esp]  ---
+At this point, anything pushed onto the stack will be on top of [that is, with a
+lower memory address, since the stack "grows" downwards] the return address.
+
+The Stack Frame
+---------------
+Note that the parameters to the call therefore cannot be POPed from the stack,
+as this will destroy the saved return address and thus cause the application to
+crash upon returning from the call [unless, of course, a chosen return address
+is PUSHed onto the stack before returning from the call]. The logical way to
+reference these parameters, then, would be as offsets from the stack pointer:
+    [parameter 2]      : DWORD esp + 8
+    [parameter 1]      : DWORD esp + 4
+    [Address of Caller]: DWORD esp
+    -----  "Top" of Stack [esp]  -----
+In this example, "parameter 1" is the parameter pushed onto the stack last, and
+"parameter 2" is the parameter pushed onto the stack before parameter 1, as
+follows:
+	push [parameter 2]
+	push [parameter 1]
+	call [procedure]
+The problem with referring to parameter as offsets from esp is that esp will
+change whenever a value is PUSHed onto the stack during the routine. For this
+reason, it is standard for routines which take parameters to set up a "stack
+frame".
+
+In a stack frame, the base pointer [ebp] is set equal to the stack pointer [esp]
+at the start of the call; this provides a "base" address from which parameters
+can be addressed as offsets. It is assumed that the caller had a stack frame
+also; thus the value of ebp must be preserved in order to prevent causing damage
+to the caller. The stack frame usually takes the following form:
+	push ebp
+	mov  ebp, esp
+	... [actual code for the routine] ...
+	mov  esp, ebp
+	pop  ebp
+This means that once the stack frame has been entered, the stack has the
+following structure:
+    [parameter 2]      : DWORD ebp + 12
+    [parameter 1]      : DWORD ebp + 8
+    [Address of Caller]: DWORD ebp + 4
+    [Old Base Pointer] : DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    -----  "Top" of Stack [esp]  -----
+The use of the base pointer also allows space to  be allocated on the stack for
+local variables. This is done by simply subtracting bytes from esp; since esp is
+restored when the stack frame is exitted, this space will automatically be
+deallocated. The local variables are then referred to as *negative* offsets from
+ebp; these may be EQUed to meaningful symbol names in the source code. A routine
+that has 3 local DWORD variables would take the following form:
+     Var1 EQU [ebp-4]
+     Var2 EQU [ebp-8]
+     Var3 EQU [ebp-12]		;provide meaningful names for the variables
+	push ebp
+	mov  ebp, esp
+	sub  esp, 3*4   	;3 DWORDs at 4 BYTEs apiece
+	... [actual code for the routine] ...
+	mov  esp, ebp
+	pop  ebp
+This routine would then have the following stack structure after the allocation
+of the local variables:
+    [parameter 2]      : DWORD ebp + 12
+    [parameter 1]      : DWORD ebp + 8
+    [Address of Caller]: DWORD ebp + 4
+    [Old Base Pointer] : DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    [Var1]             : DWORD ebp - 4
+    [Var2]             : DWORD ebp - 8
+    [Var3]             : DWORD ebp - 12
+    -----  "Top" of Stack [esp]  -----
+
+The stack frame has can also be used to provide a call trace, as it stores the
+base pointer of [and thus a pointer to the caller of] the caller. Assume that a
+program has the following flow of execution:
+proc_1:	push dword call1_p2
+	push dword call1_p1
+	call proc_2
+________proc_2:	push call2_p1
+		call proc_3
+________________proc_3:	push call3_p1
+			call proc_4
+Upon creation of the stack frame in proc_4, the stack has the following
+structure:
+    [call1_p2]             : DWORD ebp + 36
+    [call1_p1]             : DWORD ebp + 32
+    [Return Addr of Call1] : DWORD ebp + 28
+    [Old Base Pointer]     : DWORD ebp + 24
+    ----  Base Pointer of Call 1  ----
+    [call2_p1]             : DWORD ebp + 20
+    [Return Addr of Call2] : DWORD ebp + 16
+    [Base Pointer of Call1]: DWORD ebp + 12
+    ----  Base Pointer of Call 2  ----
+    [call3_p1]             : DWORD ebp + 8
+    [Return Addr of Call3] : DWORD ebp + 4
+    [Base Pointer of Call2]: DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    -----  "Top" of Stack [esp]  -----
+As you can see, for each previous call the return address is [ebp+4], where ebp
+is the address of the saved base pointer for the call previous to that one.
+Thus, if one could traverse the history of stack frames as follows:
+	mov eax, ebp		; eax = address of previous ebp
+	mov ecx, 10		; trace the last 10 calls
+loop_start:
+	mov ebx, [eax+4]	; ebx = return address for call
+	call print_stack_trace
+	mov eax, [eax]		; step back one stack frame
+	loop loop_start
+This is exceptionally useful for exception handling; the handling function will
+be able to print out a stack history to aid debugging. This principle can also
+be applied in conjunction with debugging code [for example, the Win32 debug API]
+to create a utility which will trace the calls [in reality, the stack frames of
+the calls] made by a target. Essentially, this would boil down to the following
+logic:
+	1) Breakpoint on changes to EBP
+	2) On Break, get return address [ebp+4]
+	3) Get instruction prior to return address
+	4) Print or log the instruction
+Note that this can be enhanced to resolves symbol names in the logged CALL
+instruction, such that local or API address labels [e.g. GetWindowTextA] can be
+logged rather than just the address itself.
+
+The ENTER Instruction
+---------------------
+The ENTER instruction is used to create a stack frame with a single instruction;
+it is equivalent to the code
+	push ebp
+	mov  ebp, esp
+The ENTER instruction takes a first parameter that specifes the number of bytes
+to reserve for local variables; an optional second parameter gives the nesting
+level [0-31] of the current stack frame in the overall program structure. This
+is often used by high-level languages to save call trace information for error
+handlers, as it specifies the number of additional [previous] stack frame pointers
+to save on the stack.
+
+The RET Instruction
+-------------------
+Any routine which is accessed by a CALL instruction must be terminated with a
+return [RET] instruction. As one can see from the operation of the CALL
+instruction, if you were to attempt to circumvent the RET instruction by JMPing
+to the retrun address, the stack would still be corrupted. The RET statement is
+roughly equivalent to the following code:
+	pop  EIP
+
+Note that the RET must take place after exiting the stack frame in order to
+avoid corruption of the stack.
+
+The LEAVE Instruction
+---------------------
+The LEAVE instruction is used to exit a stack frame created with the ENTER
+instruction; it is equivalent to the code
+	mov  esp, ebp
+	pop  ebp
+The LEAVE instruction takes no parameters and still requires a RET statement to
+follow it.
+
+High-level Language Calling Conventions
+---------------------------------------
+At this point one may wonder what has happened to the parameters pushed onto the
+stack prior to the call. Are they still on the stack after the RET, or have they
+been cleared? Since the parameters cannot be POPed from the stack while within
+the call, they still are on the stack at the RET instruction.
+
+At this point the programmer has two options.  They can have the caller clean up
+the stack by adding the number of bytes pushed to esp immediately after the
+call:
+	push dword param2
+	push dword param1
+	call procedure
+	add  esp, 2 * 4 		;2 DWORDs at 4 BYTEs apiece
+Or they can clear the stack by passing to the RET instruction the number of
+bytes that need to be cleared:
+	push dword param2
+	push dword param1
+	call procedure
+	...
+procedure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret  8				;2 DWORDs at 4 BYTEs apiece
+Which method is chosen is left up to the programmer; however, when writing a
+library or API, one must make clear who is responsible for cleaning up the
+stack. In addition, when interfacing with high-leve languages, one also has to
+make clear which order the parameters are to be pushed in. For this reason there
+are calling conventions	for the high-level languages.
+
+The C calling convention is used to interface with the C and C++ programming
+languages; it is used in the standard C library and in Unix APIs. It pushes the
+parameters from right to left, and does not clean up the stack upon return from
+the call. A call to a C-style routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param2
+	push dword param1
+	call procedure
+	add  esp, 8
+A C-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret
+
+The Pascal calling convention is used interface with the Pascal, BASIC, and
+Fortran programming languages; it is used in the Win16 API. It pushes the parameters
+from left to right, and cleans up the stack upon return from the call; as such
+it is the opposite of the C convention. A call to a Pascal routine would look as
+follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param1
+	push dword param2
+	call procedure
+A Pascal-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret 8		;clear the 2 dword parameters
+
+The Stdcall ["standard call" or __stdcall] calling convention is a combination
+of the C and Pascal conventions; it is used in the Win32 API. It pushes the
+parameters from right to left, and cleans the stack upon return from the call. A
+call to a Stdcall routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param2
+	push dword param1
+	call procedure
+A Stdcall-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret 8
+
+There is also a Register calling convention [also called "fastcall"] which uses
+registers rather than the stack to pass parameters. The first parameter is
+passed in eax, the second in EDX, and the third in EBX; subsequent parameters
+are passed via the stack. A call to a Register routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2, param3)
+	mov  eax, param1
+	mov  edx, param2
+	mov  ebx, param3
+	call procedure
+Note that there is no defined standard method of clearing the stack ro the
+Register convention; however most implemntations clear the stack in the Pascal
+style.

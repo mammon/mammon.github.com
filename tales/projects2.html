@@ -1,0 +1,162 @@
+<HTML>
+<HEAD>
+<TITLE>Mammon_'s Tales To His Grandson</TITLE>
+</HEAD>
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000">
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font>
+<center><i>On The Fruit of Labor II</i></center>
+<P><BR>
+<P>
+<center><a href="http://www.eccentrica.org/Mammon/projects.html#project1">Project1</a> * <a href="http://www.eccentrica.org/Mammon/projects.html#project2">Project2</a> * <a href="#http://www.eccentrica.org/Mammon/projects.htmlproject3">Project3</a> * <a href="#project4">Project4</a></center><P>
+<HR>
+<a name="project4"></a><font size=+1><B>Project Four</b></font><P>
+<I>The Target</I><P>
+It has become somewhat popular in the school of web page design to try to 
+increase the paranoia of audiences by showing them their autoexec.bat, 
+their config.sys, their .pwd files, or even their IP address. It is the last 
+of these that is the most irritating, usually because it implies that the browser 
+is actually transmitting the IP address to the server, perhaps to a log file, but a 
+quick perusal of the code for such pages--this one gathered from Fravia's noanon.htm page--
+will demonstrate that this is not the case:
+<pre>
+window.onerror=null;
+myAddress  = java.net.InetAddress.getLocalHost();
+myAddress2 = java.net.InetAddress.getLocalHost();
+host = myAddress.getHostName();
+ip   = myAddress2.getHostAddress();
+document.write("Your host name is "+host);
+document.write("<BR>Your IP address is "+ip);
+</pre>
+As can be seen, the Javascript sequence simply calls a java.net class using 
+LiveConnect in order to determine the local host name and IP address; these are 
+written directly to browser's current display (document.write is similar to printf), 
+and are not trasnmitted to any foreign server (which Java/script would not allow). 
+Nevertheless, it would be useful to know--without doing a "View Source"--which web pages 
+are pulling this info from the java.net function, and which have actually used a CGI script (or 
+something even more malicious ;) to pull the information directly using the Winsock functions.<P>
+A quick look into the Netscape\Program directory (version 3.01 Gold, of course) will reveal the 
+target file very quickly: JRT3230.dll which, if dll naming conventions have not changed, should 
+be the Java Runtime Library file.
+<P>
+
+<LEFT><HR width="20%" align="left"></LEFT>
+<I>The Job</i><P>
+Quick View Plus reveals no exports from the file; to gather more information, load it into IDA Pro 
+(version 3.7) and select View->Names from the menu. A small bit of scrolling will reveal functions 
+with names sych as "Java_java_io_FileOutputStream_wr" and Java_java_lang_Double_toString_s; this seems 
+to be the correct file. Scroll through the Names window to "Java_java_net_InetAddress_getLoc" and press 
+enter; the code display will jump to subroutine ...InetAddress_getLocalHostName at location <code>10060F69</code>, which 
+calls a single subroutine at location <code>10076E40</code>.<P>
+This subroutine calls one Winsock function at location <code>10076E4F</code>: 
+<pre>
+10076E4F E8 5A 1A 00 00    call     j_WSOCK32_57        ; GetHostName(buffer,length)
+</pre>
+Looking up oridinal 57 in Wsock32.dll demonstrates that the function is GetHostName (hence the 
+above user-added comment), and that it takes the location fo a buffer to receive the local host name as 
+one of its parameters. The code for the call looks like this:
+<PRE>
+10076E46     push     ebx
+10076E47     push     esi
+10076E48     push     edi
+10076E49     push     40h
+10076E4B     lea      eax, [ebp+var_44]
+10076E4E     push     eax
+10076E4F     call     j_WSOCK32_57
+10076E54     lea      eax, [ebp+var_44]
+10076E57     push     eax
+10076E58     call     j_strlen
+</pre>
+The buffer is therefore [ebp+var_44]; therefore, the code between <code>
+10076E49</code> and <code>10076E54</code> can be replaced with code that 
+loads the value 127.0.0.1 into [ebp+var_44], as follows:
+<pre>
+<i>Old Code</i>
+6A 40 		push 40h
+8D 45 BC 	lea eax, [ebp+var_44]
+50	 	push eax
+E8 5A 1A 00 00	call j_WSOCK32_57
+
+<i>New Code</i>
+33 C0           xor ax, ax 
+68 01 00 00 7F  push 0100007F
+58              pop eax
+89 45 BC        mov [ebp+var_44], eax   
+
+<i>Byte Patch</i>
+from 6A 40 8D 45 BC 50 E8 5A 1A 00 00
+to   33 C0 68 01 00 00 7F 58 89 45 BC
+</pre>
+<P>
+
+
+<LEFT><HR width="20%" align="keft"></LEFT>
+<I>Notes</i><P>
+
+It happpened that while working on this project, the Dialup Networking on my 
+95 machine started to crash each time I ran it more than once in a single sitting. 
+As I tend to approach the Internet with a "hit-and-run" mindset rather than a 
+"channel-surfing" one, this proved quite an irritation. On to work:<P>
+<i>Symptoms</i>: At the second instance of Rnaapp.exe (the Dialup Networking 
+executable), the system breaks into Soft-Ice in a GPF loop that cannot (normally) 
+be broken out of. Execution has halted in segment RNAAPP.text (code segment of RNAAPP) at 
+the address <code>014F:004025F3</code>:
+
+<pre>
+:004025EB FF7634                  push [esi+34]
+:004025EE E8FD020000              call 004028F0
+:004025F3 F6430C40                test [ebx+0C], 40 ;this causes GPF
+:004025F7 57                      push edi          ;this is never reached
+:004025F8 7407                    je 00402601
+:004025FA E8DB000000              call 004026DA
+:004025FF EB05                    jmp 00402606
+</pre>
+Nothing is to be lost by a little experimentation; use the <b>A</b> command in Soft-Ice 
+to assemble location <code>004025F3</code> into four <code>nop</code> instructions:
+<pre>
+<b>a 014F:004025F3</b>
+nop [enter]
+nop [enter]
+nop [enter]
+[enter]
+</pre>
+Ctrl-D to return control back to the program; instantly another GPF, again an endless loop 
+that traps execution at location <code>014F:00402701</code>:
+<pre>
+:004026FA FFD6                    call esi
+:004026FC 8BF0                    mov esi, eax
+:004026FE 8B432C                  mov eax, dword ptr [ebx+2C]
+:00402701 394630                  cmp dword ptr [esi+30], eax  ;this causes GPF #2
+:00402704 7548                    jne 0040274E                 ;this is never reached
+:00402706 50                      push eax
+:00402707 8D5E38                  lea ebx, dword ptr [esi+38]
+:0040270A 57                      push edi
+:0040270B E8CA020000              call 004029DA
+</pre>
+Use the <b>A</b> command once again to assemble the three bytes at <code>00402701</code> into three <code>nop</code> 
+statements. Ctrl-D to return control to the program...no more GPFs. Not very elegant, but serviceable.<P>
+Time to patch the program: search for Rnaapp (you will find it as Rnaapp.exe in the Windows\System 
+directory; right-click->properties reveals that this is the main Dialup Networking executable), send 
+it to a hex editor. Search for the string <code>E8FD020000F6430C40</code>, replace the <code>F6430540</code> with <code>90909090</code>. Next, 
+search for the string <code>8B432C394630754850</code> and replace <code>394630</code> with <code>909090</code>. Save the file (with a backup copy, of course), 
+run Dialup Networking a few thousand times to test...no more GPFs. Faulty MS programming fixed with a simple <code>nop</code> patch: 
+film at eleven.
+<P>
+
+<HR>
+<P>
+
+<HR>
+
+<center><a href="index.html"><font color=808080>Home<font></a><font color=808080> * <font><a href="tools.html"><font color=808080>Tools<font></a><font color=808080> * <font><a href="http://www.geocities.com/SiliconValley/Vista/2299/"><font color=808080>95/NT Tech Info<font></a><font color=808080> * <font><a href="links.html"><font color=808080>Links<font></a></center>
+
+<P><BR>
+
+
+
+
+
+</BODY>
+
+
+
+</HTML>

@@ -1,0 +1,907 @@
+<HTML>
+<HEAD>
+<TITLE>Mammon_'s Tales To His Grandson</TITLE>
+</HEAD>
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000">
+
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font>
+<center><i>On The Fruit of Labor</i></center>
+<P><BR>
+<P>
+<center><a href="#project1">Project1</a> * <a href="#project2">Project2</a> * <a href="#project3">Project3</a> * <a href="http://www.eccentrica.org/Mammon/projects2.html#project4">Project4</a></center><P>
+<HR>
+<a name="project1"></a><font size=+1><B>Project One</b></font><P>
+<I>The Target</I><P>
+Notepad is a program with which every user should be familiar: a very quick, very small (34K) windows text editor. It has quite a few limitations, such as editting only one file at a time, having a limited target file size, and displaying files in an ugly system fixed font. It is this last shortcoming that we are going to change.
+
+<P>
+
+<LEFT><HR width="20%" align="left"></LEFT>
+
+<I>The Job</i><P>
+
+To begin with, open Notepad.exe in any win32 disassembler; I am using w32DASM as it is freely available (as a demo version) and fairly reliable. The first step is to NOT stare at the code until your eyes water, or to try to trace through the disassembled listing line-by-line. This is a surgical strike; we are after one thing and one thing only: a font. 
+
+<P>Notepad is a system applet that uses a standard system font; the font will therefore be a windows system resource, and it will be in GDI32.dll (GDI manages objects such as pens, brushes, bitmaps, fonts, and Device Contexts; USER manages windows,  menus, icons, controls, timers, task management, messaging, the clipboard, and networks; KERNEL handles memory management, dynamic linking, task scheduling, and program loading). Therefore we will use the Functions->Imports menu item in W32DASM and examine the GDI imports:
+
+<PRE>GDI32.AbortDoc
+GDI32.CreateDCA
+GDI32.CreateFontA
+GDI32.DeleteDC
+GDI32.DeleteObject
+GDI32.EndDoc
+GDI32.EndPage
+GDI32.GetDeviceCaps
+GDI32.GetStockObject
+GDI32.GetTextCharset
+....</PRE>
+
+CreateFontA appears at the end of the following section of code:
+
+<PRE>-----ASM Excerpt 1----------------------------------------------------------------------
+	* Menu: MenuID_0001, Item: "Save"
+	* String Resource ID=00001: "Cannot open the %% file.
+Make sure a disk is in the drive y"
+                                  |
+:004037B2 6A01                    push 00000001
+:004037B4 53                      push ebx
+	* GDI32.SetBkMode, Ord:010Dh
+                                  |
+:004037B5 FF15C0724000            Call dword ptr [004072C0]
+:004037BB 8D8558FFFFFF            lea eax, dword ptr [ebp FFFFFF58]
+	* GDI32.GetTextMetricsA, Ord:00CDh
+                                  |
+:004037C1 8B35BC724000            mov esi, dword ptr [004072BC]
+:004037C7 50                      push eax
+:004037C8 53                      push ebx
+:004037C9 FFD6                    call esi
+	* Menu: MenuID_0001, Item: "Page Setup..."
+	* Dialog: DialogID_000E, CONTROL_ID:0020, "&Header:"
+	* String Resource ID=00032: "%%"
+                                  |
+:004037CB 6A20                    push 00000020
+:004037CD 8D4590                  lea eax, dword ptr [ebp-70]
+:004037D0 50                      push eax
+	* String Resource ID=00057: "Courier New"
+                                 |
+:004037D1 6A39                    push 00000039
+:004037D3 FF3570514000            push dword ptr [00405170]
+	* USER32.LoadStringA, Ord:0168h
+                                  |
+:004037D9 FF15B0734000            Call dword ptr [004073B0]
+:004037DF 8D4D90                  lea ecx, dword ptr [ebp-70]
+:004037E2 51                      push ecx
+:004037E3 6A31                    push 00000031
+:004037E5 6A00                    push 00000000
+	* Menu: MenuID_0001, Item: "Page Setup..."
+	* Dialog: DialogID_000E, CONTROL_ID:0020, "&Header:"
+	* String Resource ID=00032: "%%"
+                                  |
+:004037E7 6A20                    push 00000020
+:004037E9 6A00                    push 00000000
+:004037EB FF75F8                  push [ebp-08]
+:004037EE 6A00                    push 00000000
+:004037F0 6A00                    push 00000000
+:004037F2 6A00                    push 00000000
+:004037F4 FFB574FFFFFF            push dword ptr [ebp FFFFFF74]
+:004037FA 6A00                    push 00000000
+:004037FC 6A00                    push 00000000
+:004037FE 6A00                    push 00000000
+:00403800 FFB558FFFFFF            push dword ptr [ebp FFFFFF58]
+	* Reference To: GDI32.CreateFontA, Ord:002Bh       <---------------CreateFontA------
+                                  |
+:00403806 FF15C4724000            Call dword ptr [004072C4]
+------------------------------------------------------------End of ASM Excerpt 1------------</PRE>
+
+It appears that CreateFontA is being called as part of a Save and/or Print dialog box; if you run Notepad.exe, you will see that this is the case--files are saved (in Wordpad format) or printed in Courier New, not in the system font. At any rate this code is called by a dialog box and not during the program startup--therefore it is not the program default font for which we are looking.
+
+
+
+The next candidate is GetStockObject. According to the Win32 API reference, "The GetStockObject function retrieves a handle to one of the predefined stock pens, brushes, fonts, or palettes. " Sounds like our target; here is the code leading up to this function:
+
+<PRE>-----ASM Excerpt 2---------------------------------------------------------------------
+
+:004027A0 688C614000              push 0040618C
+	* Data Obj ->"Edit"
+                                  |
+:004027A5 6890614000              push 00406190
+:004027AA 6800020000              push 00000200
+:004027AF FFD7                    call edi
+:004027B1 A304604000              mov dword ptr [00406004], eax
+:004027B6 3BC3                    cmp eax, ebx
+:004027B8 0F8401030000            je 00402ABF
+	* String Resource ID=00016: "Cannot find "%%""
+                                  |
+:004027BE 6A10                    push 00000010
+	* GDI32.GetStockObject, Ord:00BCh
+                                  |
+:004027C0 FF1594724000            Call dword ptr [00407294]
+:004027C6 6A00                    push 00000000
+------------------------------------------------------------End of ASM Excerpt 2------------</pre>
+
+When you disassemble a Windows API call, the parameters for the function are pushed onto the stack; the API function pops these parameters, then returns a result in the AX (and possibly the DX as well) register. These parameters are pushed in the order that they are required by the function prototype. The prototype for GetStockObject is as follows:
+
+<PRE>
+
+HGDIOBJ GetStockObject(
+    int  fnObject 	// type of stock object 
+   );
+</PRE>
+
+with the fnObject having one of the following parameters:
+
+<PRE>
+BLACK_BRUSH, DKGRAY_BRUSH, GRAY_BRUSH, HOLLOW_BRUSH, LTGRAY_BRUSH, NULL_BRUSH, WHITE_BRUSH, BLACK_PEN, NULL_PEN, WHITE_PEN, ANSI_FIXED_FONT, ANSI_VAR_FONT, DEVICE_DEFAULT_FONT, OEM_FIXED_FONT, SYSTEM_FONT, SYSTEM_FIXED_FONT, DEFAULT_PALETTE.
+</PRE>
+
+Since GetStockObject takes only one parameter, we know that the "00000010" that is pushed immediately before the call represents fnObject. But which value does 10 represent? For this we need to search WinGDI.h, located in the Include directory of any Windows C/C   compiler. Searching this file for SYSTEM_FONT, we find the following definitions:
+
+<PRE>
+/* Stock Logical Objects */
+#define WHITE_BRUSH         0
+#define LTGRAY_BRUSH        1
+#define GRAY_BRUSH          2
+#define DKGRAY_BRUSH        3
+#define BLACK_BRUSH         4
+#define NULL_BRUSH          5
+#define HOLLOW_BRUSH        NULL_BRUSH
+#define WHITE_PEN           6
+#define BLACK_PEN           7
+#define NULL_PEN            8
+#define OEM_FIXED_FONT      10
+#define ANSI_FIXED_FONT     11
+#define ANSI_VAR_FONT       12
+#define SYSTEM_FONT         13
+#define DEVICE_DEFAULT_FONT 14
+#define DEFAULT_PALETTE     15
+#define SYSTEM_FIXED_FONT   16
+#if(WINVER >= 0x0400)
+#define DEFAULT_GUI_FONT    17
+</PRE>
+
+So it appears that 10h, or 16 decimal, is the value for SYSTEM_FIXED_FONT, so that we can change the function call in our ASM listing to
+
+<PRE>
+:004027BE 6A10                    fnObject =  SYSTEM_FIXED_FONT;
+:004027C0 FF1594724000            HGDIOBJ GetStockObject( fnObject );
+</PRE>
+
+or, more simply, 
+
+<PRE>
+:004027BE 6A10FF1594724000        HGDIOBJ GetStockObject( SYSTEM_FIXED_FONT );
+</PRE>
+
+After some experimentation with a hex editor, I found that Courier 10 is set by selecting  ANSI_FIXED_FONT, or <code>x0B</code>. To change this parameter, we need to change the code at :004027BE from 6A10 to 6A0B. So, load up your favorite hex editor and search for 3BC30F84010300006A10, followed by the bytes FF1594724000 (it is v-e-r-y important to patch the right piece of code). Change the 6A10 to 6A0B, save the file, and you have your patched Notepad.
+
+<P>
+
+<LEFT><HR width="20%" align="keft"></LEFT>
+
+<I>Notes</i><P>
+
+It may be helpful at this point to elaborate on how to read API calls in assembly. For pratcice, let's look at the CreateFontA call:
+
+<PRE>
+HFONT CreateFontA(
+    int  nHeight,	        // logical height of font 
+    int  nWidth,	        // logical average character width 
+    int  nEscapement,	        // angle of escapement 
+    int  nOrientation,	        // base-line orientation angle 
+    int  fnWeight,	        // font weight 
+    DWORD  fdwItalic,	        // italic attribute flag 
+    DWORD  fdwUnderline,        // underline attribute flag 
+    DWORD  fdwStrikeOut,        // strikeout attribute flag 
+    DWORD  fdwCharSet,	        // character set identifier 
+    DWORD  fdwOutputPrecision,	// output precision 
+    DWORD  fdwClipPrecision,	// clipping precision 
+    DWORD  fdwQuality,	        // output quality 
+    DWORD  fdwPitchAndFamily,	// pitch and family 
+    LPCTSTR  lpszFace 	        // address of typeface name string 
+   );
+</PRE>
+
+So, before this call there will be pushed onto the stack 5 integers and 9 double-words (a Long Pointer--the LP of LPCTSTR--is a dword value). These can be deduced from the code as follows:
+
+<PRE>
+:004037DF 8D4D90                  lea ecx, dword ptr [ebp-70]
+:004037E2 51                      push ecx        <--INT nHeight
+:004037E3 6A31                    push 00000031   <--INT nWidth
+:004037E5 6A00                    push 00000000   <--INT nEscapement
+:004037E7 6A20                    push 00000020   <--INT nOrientation
+:004037E9 6A00                    push 00000000   <--INT fnWeight
+:004037EB FF75F8                  push [ebp-08]   <--DWORD fdwItalic
+:004037EE 6A00                    push 00000000   <--DWORD fdwUnderline
+:004037F0 6A00                    push 00000000   <--DWORD fdwStrikeout
+:004037F2 6A00                    push 00000000   <--DWORD fdwCharset
+:004037F4 FFB574FFFFFF            push dword ptr [ebp FFFFFF74] <--DWORD fdwOutputPrecision
+:004037FA 6A00                    push 00000000   <--DWORD fdwClipPrecision
+:004037FC 6A00                    push 00000000   <--DWORD fdwQuality
+:004037FE 6A00                    push 00000000   <--DWORD fdwPitchAndFamily
+:00403800 FFB558FFFFFF            push dword ptr [ebp FFFFFF58] <---DWORD: lpszFace 
+:00403806 FF15C4724000            CreateFontA( );
+</PRE>
+
+This boils down to the following API call:
+
+<PRE>
+HFONT CreateFontA( [ebp-70], 31, NULL, 20, NULL, [ebp-08], NULL, NULL, NULL, [ebp FFFFFF74], NULL, NULL, NULL, ebp FFFFFF58] );
+</PRE>
+
+The HFONT indicates the return type; the line
+
+<pRE>
+:0040380C 8945E4                  mov dword ptr [ebp-1C], eax
+</PRE>
+
+shows the HFONT value, which is returned in eax, being passed to the variable [ebp-1C]. The following lines show the handle being tested to
+
+
+
+determine if it is valid or NULL; if valid the Font is selected via a call to SelectObject(), if NULL (je=jnz) the call is bypassed.
+
+<PRE>
+:0040380F 85C0                    test eax, eax     ; is eax=0/is HFONT=0
+:00403811 740B                    je 0040381E       ; if yes jump to 0040381E
+:00403813 50                      push eax          ; if pass HFONT as parameter 1 (HDC)
+:00403814 53                      push ebx          ; pass EBX as parameter 2 (hGDIobj
+:00403815 FF1590724000            Call GDI32.SelectObject, Ord:0106h
+</PRE>
+
+<P>
+
+<HR>
+
+
+
+<a name="project2"></a><font size=+1><B>Project Two</b></font> <font color="ff0000">New</font>: <a href="project5.txt">Updated</a> and sent to the  HCU 9.18: See <a href="http://207.30.50.126/fravia/fravia.htm">Fravia</a> for details<P>
+
+<I>The Target</I><P>
+
+Netscape is the HTML browser of choice, as far as I am concerned. I am currently using 3.01 gold, which has six useless buttons called "What's New", "What's Cool", "Destinations", "People", "Software", and "Net Search". The task here is to make these buttons do something useful. A quick note: netscape.exe for this version is 3  MB and disassembles to a 45 MB ASM file. Be warned.
+
+<P>
+
+<LEFT><HR width="20%" align="left"></LEFT>
+
+<I>The Job</i><P>
+
+This is a relatively simple task. I checked the obvious places (the registry, 
+
+INI files, etc) for the settings of the button I wanted to change the most 
+
+("Net Search"), and found nothing. I therefore disassembled netscape.exe to 
+
+check the string/dialog refs in w32DASM (not a recommended technique, in this 
+
+case), and sure enough, all of the URLs for these buttons were there (note: I 
+
+had looked for them as plain ASCII text using XED editor and found nothing...
+
+therefore a simple hex editor will be of no use in this case). So on to the real technique...<P>
+
+Open up netscape.exe in BRW (available, last I checked, from ACP--fantastic site
+
+, BTW, good job ACP!) or your favorite resource editor (I recommend Borland or Symantec
+
+ over the one that comes with VC  ...the latest version of this IDE is too integrated;
+
+ I no longer trust the tools to do their jobs correctly. Plus you must have MSIE installed to even use it...)
+
+ and check out the String Tables. The ones for these useless buttons start at #621 (on my version, at least) and
+
+#624. Opening each of these tables, you will see first the URLs--all six of them--followed 
+
+by the text of the buttons that load them. These are simple enough to change by directly overwriting the text with your own values and saving the file as netscape.exe. A quick patch, the only time it takes is to type in the URLs that you particularly favor. 
+
+I changed the buttons to the following:
+
+<LI>621 (What's New): from ...whats-new.html to <b>http://207.30.50.126/fravia/academy.htm</b> (New Title:  HCU)
+
+<LI>622 (What's Cool): from ...whats-cool.html to <b>http://kryten.eng.monash.edu.au/gspamt.html</b> (New Title: Net Tools)
+
+<LI>623 (Destinations): from ...index.html to <b>http://www.hotmail.com</b> (New Title: HotMail)
+
+<LI>624 (Net Search): from ...search.html to <b>http://cuiwww.unige.ch/eao/www/Internet/Nedashkovsky.html</b> (New Title: Search Engines)
+
+<LI>625 (People): from ...white-pages.html to <b>http://www.anonymizer.com/open.html</b> (New Title: Anonymizer)
+
+<LI>626 (Software): from ...upgrades.html to <b>http://www.fortunecity.com/skyscraper/firelli/29/killer.html</b> (New Title: Applet Killer)<P>
+
+You may wish to try some of these, they are pretty good pages (the last one is not yet finished). If I ever get around to <I>adding</i> buttons, I will be sure to update this project. Have fun!
+
+<P>
+
+<LEFT><HR width="20%" align="keft"></LEFT>
+
+<I>Notes</i><P>
+
+ACP has an execllent essay on Fravia's site that details how to automatically kill cookies. Personally, I use CookiePal (mostly because of the sound effects that tell you when a site is trying to "cookie" you), but the technique is nonetheless excellent and illustrative of the type of patches that can be made to Netscape. I will try to sum up ACP's essay here: <P>
+
+<LI>1: Run netscape, go into Soft-Ice and BPX MessageBoxA .
+
+<LI>2: Go to a page that has a cookie (ACP supplies a test page with his essay).
+
+<LI>3: Soft-Ice will pop up. Press F12 to continue with the program, and press the "Cancel" button for the cookie box.
+
+<LI>4: Soft-Ice will pop up again. F12 back until you reach the following code in netscape.exe:
+
+<PRE>
+    Add ESP,8     <-- we land HERE after the last 'P RET' !
+    Test EAX,EAX
+    JZ xxxxxxxx
+</PRE>
+
+<LI>5: Scroll up the code window (CTRL-UpArrow) until you see the following code:
+
+<PRE>
+     Call xxxxxxxx     <-- this is some internal call, doesn't interest us!
+     Mov EAX,[EBP xx]
+     Add ESP,8         <-- DO **NOT** skip this code line!
+     Push EAX          <-- put a "JMP DO_NOT_SAVE_COOKIE" here.
+     Mov EAX,[ESP xx]
+     Push EAX
+     Mov EAX,[EBP xx]
+     Call [EBP xx]     <-- our "ConfirmCoockie()" call.
+     Add ESP,8         <-- ******* Where you started scrolling from ********
+     Test EAX,EAX
+     JZ DO_NOT_SAVE_COOKIE <-- jump out of the save coockie routine!
+</pre>
+
+<LI>6: The line <b>Call [EBX xx]</b> calls the function ("ConfirmCookie") that displays the cookie dialog box; it returns EAX=0 if you pressed Cancel, and EAX=1 if you pressed OK. You want to skip this call entirely, so ACP recommends putting a Jump to the JNZ line in place of the first Push EAX line.
+
+ To do this, in Soft-Ice you must assemble (A) the command <b>JMP xxxx:xxxx</b> (with the x's being replaced with the address of the JNZ statement) at the address of the first Push EAX statement.
+
+The patch, as implemented by ACP for Netscape 3.0 gold, will be as follows:
+
+<pre>
+         Offset     Old    New
+       00095788:  50     E9
+       00095789:  8B     74
+       0009578A:  44     20
+       0009578B:  24     00
+       0009578C:  3C     00
+</pre>
+
+<b>Final note:</b> As a matter of interest, tracing through Netscape.exe (after BMSGing on the <b>Location:</b> window, having got the HWND from SysInfo) reveals that Netscape converts anything tyoes into the <b>Location:</b> field into an .html file; i.e., about:global becomes protocol: about file: global.html...<i>even though no such file exists</i>. This is Netscape's way of tricking itself  into having executable commands...it renames the command to a filename, parses the command as if it were a filename, then through the <b>about:</b> protocol handler loads the correct "page" (which, as you will see if you read the essay at Fravia's, is dynamically created by the <b>about:</b> handler from tags/commands in the <b>Location:</b> field). File it under "strange but true".
+
+<P>
+
+<HR>
+
+
+
+<a name="project3"></a><font size=+1><B>Project Three</b></font><P>
+
+<I>The Target</I><P>
+
+Explorer.exe has proven a tough target to reverse due to its size (200K) and the unrecognized (undocumented?) resources 
+
+used by Microsoft (namely but not limited to the TaskBar). Borland Resource Workshop patently refuses to disassenble Explorer, 
+
+while Symantec Resource Editor gives only a partial listing. What this project will consist of, then, is an examination of the PE header 
+
+itself and a hexdump of the program to identify and alter these mysterious, resource-editor-crashing resources.
+
+<P>
+
+<LEFT><HR width="20%" align="left"></LEFT>
+
+<I>The Job</i><P>
+
+
+
+The hex editor used to wade through explorer.exe in this project is 
+
+<a href="http://ftpsearch.ntnu.no/cgi-bin/search?query=hiew566.zip&doit=Search&type=Case insensitive substring search&hits=50&matches=&hitsprmatch=&limdom=&limpath=&f1=Count&f2=Mode&f3=Size&f4=Date&f5=Host&f6=Path&header=none&sort=none&trlen=20">Hiew 5.66</a>; it and <a href="http://www.fortunecity.com/skyscraper/firelli/29/hed.zip">HED</a> are the only known hex editors that are designed for Windows 95 reverse-engineering/cracking. Hiew was chosen over HED for its better interface (the Fkeys are far superior to a menu in a console app) and its file header-parsing functionality.<P>
+
+The PE file header is the most important part of an executable file for reverse-engineering purposes. For the most part, PE header parsing is performed automatically by disassemblers and "dump" programs, so for many engineers it is an unknown structure. There are times, however, when you may not have the tools or time to disassemble an .exe, or the .exe itself may not disassemble correctly; in these cases the disassembly must be done manually, and a working knowledge of the PE header will prove vital. Information on the PE file header format can be obtained from <a href="http://www.microsoft.com/win32dev/base/pefile.htm">Micro$oft</a> or <a href="ftp://ftp.ilf.net/pub/users/rebyc/zines/vlad/vlad6.zip">VLAD</a>;  these two sources read together are somewhat contradictory--it is advisable to use the M$oft document for reference (if you can get used to "short" instead of "word" and "long" instead of "DW") and the VLAD document for examples.<P>
+
+The PE file header contains information about the file that is needed by Windows to load and execute that file correctly. Synopsis of the information it contains: Target CPU, Date/Time Stamp, OS Version, Subsystem Version, Magic Number (heh), Size of Code, Size of Image, Size of Initialized Data, Size of Uninitialized Data, Size of Headers, Base of Code, Base of Data, Image Base, File Alignment, Number of Sections, Number of Directories, Size of Optional (PE) Header, Linker Version, Image Version, Entrypoint RVA (Relative Virtual Address...relative to the ImageBase), Stack, Heap, and Checksum. Note that the Image Base is the address to which the program requests itself be loaded; File Alignment is responsible for "padding" each section of the file with null characters, for every section must begin and end on a multiple of File Alignment. <P>
+
+The first part of the PE header contains the summary information listed above; after that, it is divided into a number of sections, of which there are nine types (note that not all need be present): .text (executable code), .bss (uninitialized data, eg static variables), .rdata (read-only data, eg literal strings, constants, debug dir info), .data (global variables), .rsrc (resource tables/data), .edata (export data), .idata (import data), .pdata (not discussed...possibly fixups), and .debug (debug information)--explorer.exe also has a .reloc section. The total number of sections (or "objects") contained in the header is listed in the header summary (see above); the list of which sections are present and where they are located (relative to the Image Base) is called the <b>Object Table</b>. This should suffice as an introduction to file headers for the purpose of this project; those unfamiliar with the PE header format are encouraged to read (or rather, skim) both of the above-mentioned documents and play with Hiew's header viewing capabilities.<P>
+
+From here on only the resource section or object will be of interest; the rest of the PE header is of little or no consequence. The .rsrc section begins with an entry in the Object Table labelled .rsrc (at offset 000001F0 in Hiew), which is followed by the following "summary" information (displayed by pressing F8 in Hiew to bring up the PE header summary, then F6 to bring up the object table...be sure to compare this with the bytes following x01F0 so you know exactly where Hiew gets its information from): Virtual Size x0000A774 bytes, RVA x00027000, Physical Size x0000A800 bytes, Offset x00024600, Flag 40000040 (Readable/Initialized Data Object...see VLAD re the Object Table Flags). Note that this Object Table Entry points to the start of the .rsrc section (x00027000), which is also the location of the Resource directory. To view the directories of a file, press F8 in Hiew to bring up the PE header, then F7 to list the directories...notice the wealth of information which you can browse by pressing <b>enter</b> on any of the selections: Exported functions, Imported functions, Resources, Fixups, Debug information (keep in mind that directories in this list with a "000000" address are not present in the file). Select the <b>Resources</b> option to have Hiew change the addresses to RVAs (which will be useful when working with data at offsets from that RVA later on) and change the cursor position to x00027000 (which will be the base from which all Resource data offsets will be calculated).<P>
+
+The structure for the root Resource Directory is as follows:<PRE>
+
+<b>DWORD</b> Characteristics
+<b>DWORD</b> Time/Date Stamp
+<b>WORD</b> Major Version
+<b>WORD</b> Minor Version
+<b>WORD</b> Number of Named Entries
+<b>WORD</b> Number Of ID Entries
+</pre>The first line of the Resource Directory will look like this:
+
+<PRE><code>
+
+ 27000:  00 00 00 00 C9 5D F3 2F - 00 00 00 00 00 00 0A 00       É]ó/      ú 
+  Characteristics (4 bytes):     00000000
+  Time/Date Stamp (4 bytes):     C95DF32F
+  Major Version (2 bytes):           0000
+  Minor Version (2 bytes):           0000
+  # Of Named Resources (2 bytes):    0000
+  # Of Numbered Resources (2 bytes): 000A (10)     </code></pre>
+This is a standard directory header: it lists the flags or characteristics of the directory, the time/date on which the directory was last modified, the major/minor version of the file (the programmer can set this), the number of subdirectories (or data) identified by names (note: this only counts 1 level, i.e., this is the number of named subdirectories that branch from this main directory), and the number of subdirectories identified by numbers (note that a subdirectory or data entry will be counted in <i>either</i> Named or Numbered, not in both). <P>
+
+The structure of a subdirectory is as follows:<PRE>
+<b>DWORD</B> Name (Type ID)
+<b>DWORD</b> Offset to Data
+</pre>Immediately following this line will be the ten subdirectories (note that if you use a standard hexdump program instead of Hiew, all address will be based from 24600 instead of 27000, for hexdump programs will ignore FileAlignment and use the Physical Offset of the Resource Directory...this will cause problems later when data is specified at addresses--such as x 0002B694--which assume that the code is based on the RVA):
+
+<PRE><code>
+<u>Directory 1</u>
+ 27010:  01 00 00 00 60 00 00 <b>8</b>0 - 02 00 00 00 78 00 00 <b>8</b>0   ú   `  €ú   x  €
+  Type ID: 00000001 Offset: <b>8</b>0000060 (Subdir @ 27060)
+  Type ID: 00000002 Offset: <b>8</b>0000078 (Subdir @ 27078)
+ 27020:  03 00 00 00 D8 00 00 <b>8</b>0 - 04 00 00 00 58 01 00 <b>8</b>0   ú   Ø  €ú   Xú €
+  Type ID: 00000003 Offset: <b>8</b>00000D8 (Subdir @ 270D8)
+  Type ID: 00000004 Offset: <b>8</b>0000158 (Subdir @ 27158)
+ 27030:  05 00 00 00 98 01 00 <b>8</b>0 - 06 00 00 00 E0 01 00 <b>8</b>0   ú   ˜ú €ú   àú €
+  Type ID: 00000005 Offset: <b>8</b>0000198 (Subdir @ 27198)
+  Type ID: 00000006 Offset: <b>8</b>00001E0 (Subdir @ 271E0)
+ 27040:  09 00 00 00 98 02 00 <b>8</b>0 - 0C 00 00 00 C0 02 00 <b>8</b>0   ú   ˜ú €ú   Àú €
+  Type ID: 00000009 Offset: <b>8</b>0000298 (Subdir @ 27298)
+  Type ID: 0000000C Offset: <b>8</b>00002C0  (Subdir @ 272C0)
+ 27050:  0E 00 00 00 D8 02 00 <b>8</b>0 - 10 00 00 00 28 03 00 <b>8</b>0   ú   Øú €ú   (ú €
+  Type ID: 0000000E Offset: <b>8</b>00002D8 (Subdir @ 272D8)
+  Type ID: 00000010 Offset: <b>8</b>0000328 (Subdir @ 27328)</code></pre>
+For those that do not know why all of the numbers seem "backwards" in the hex code, this is because the Intel processor takes in data using a "little-endian" approach---that is, it takes the lowest bit/byte first (the "Ones" column), and the highest bit/byte last (the "tens", then the "hundreds"). Thus, the number x9800 becomes 00 98 in a hex listing, the number x00027000 becomes 00 70 02 00, and the number x10 stays 10. Note that the 8 in the first byte od the offset indicates that this is a <b>subdirectory entry</b> as opposed to a <b>data entry</b>.<P>
+
+Notice the Type IDs: these tell what type of resource each subdirectory contains (<i>very</i> important!) Type IDs can be resolved to meaningful strings by referring to the Windows 95 include files. Typing <b>grep32 "MAKEINTRES" f:\devstudio\vc\include\*.*</b> (adjust, I need not say, to suit your own grep file and include path) 
+
+reveals the following string definitions:
+
+<pre><FONT COLOR=#408080>
+f:\devstudio\vc\include\mapiwin.h:#define MAKEINTRESOURCEA            MAKEINTRESOURCE
+f:\devstudio\vc\include\penwin.h:#define IDC_PEN                         MAKEINTRESOURCE(32631)
+f:\devstudio\vc\include\penwin.h:#define IDC_ALTSELECT             MAKEINTRESOURCE(32501)
+...
+f:\devstudio\vc\include\winuser.h:#define RT_CURSOR              MAKEINTRESOURCE(1)
+f:\devstudio\vc\include\winuser.h:#define RT_BITMAP                 MAKEINTRESOURCE(2)
+f:\devstudio\vc\include\winuser.h:#define RT_ICON                     MAKEINTRESOURCE(3)
+f:\devstudio\vc\include\winuser.h:#define RT_MENU                   MAKEINTRESOURCE(4)
+f:\devstudio\vc\include\winuser.h:#define RT_DIALOG                 MAKEINTRESOURCE(5)
+f:\devstudio\vc\include\winuser.h:#define RT_STRING                 MAKEINTRESOURCE(6)
+f:\devstudio\vc\include\winuser.h:#define RT_FONTDIR               MAKEINTRESOURCE(7)
+f:\devstudio\vc\include\winuser.h:#define RT_FONT                     MAKEINTRESOURCE(8)
+f:\devstudio\vc\include\winuser.h:#define RT_ACCELERATOR      MAKEINTRESOURCE(9)
+f:\devstudio\vc\include\winuser.h:#define RT_RCDATA                 MAKEINTRESOURCE(10)
+f:\devstudio\vc\include\winuser.h:#define RT_MESSAGETABLE    MAKEINTRESOURCE(11)
+f:\devstudio\vc\include\winuser.h:#define RT_GROUP_CURSOR        
+                                                                   MAKEINTRESOURCE((DWORD)RT_CURSOR   DIFFERENCE)
+f:\devstudio\vc\include\winuser.h:#define RT_GROUP_ICON   
+                                                                   MAKEINTRESOURCE((DWORD)RT_ICON   DIFFERENCE)
+                                                                   ;note DIFFERENCE is set to 11 in WinUser.h
+f:\devstudio\vc\include\winuser.h:#define RT_VERSION              MAKEINTRESOURCE(16)
+f:\devstudio\vc\include\winuser.h:#define RT_DLGINCLUDE       MAKEINTRESOURCE(17)
+f:\devstudio\vc\include\winuser.h:#define RT_PLUGPLAY          MAKEINTRESOURCE(19)
+f:\devstudio\vc\include\winuser.h:#define RT_VXD                     MAKEINTRESOURCE(20)
+f:\devstudio\vc\include\winuser.h:#define RT_ANICURSOR        MAKEINTRESOURCE(21)
+f:\devstudio\vc\include\winuser.h:#define RT_ANIICON              MAKEINTRESOURCE(22)
+f:\devstudio\vc\include\winuser.h:#define IDC_ARROW              MAKEINTRESOURCE(32512)
+f:\devstudio\vc\include\winuser.h:#define IDC_IBEAM                MAKEINTRESOURCE(32513)
+...
+f:\devstudio\vc\include\winuser.h:#define IDI_EXCLAMATION   MAKEINTRESOURCE(32515)
+f:\devstudio\vc\include\winuser.h:#define IDI_ASTERISK          MAKEINTRESOURCE(32516)
+f:\devstudio\vc\include\winuser.h:#define IDI_WINLOGO          MAKEINTRESOURCE(32517)</FONT>
+</pre>
+
+Therefore the subdirectories will contain resources of type RT_CURSOR, RT_BITMAP, RT_ICON, RT_MENU, RT_DIALOG, RT_STRING, RT_ACCELERATOR, RT_GROUP_CURSOR, RT_GROUP_ICON, and RT_VERSION.<P>
+
+After the "root" resource directory comes immediately the first subdirectory, following the same structure:
+
+<pre><code>
+<u>Directory 1.1</u>
+27060:  00 00 00 00 C9 5D F3 2F - 00 00 00 00 00 00 01 00       É]ó/      ú 
+  Characteristics: 00000000
+  Time/Date Stamp: C95DF32F
+  M/m Version:     00000000
+  # Of Named   : 0000
+  # Of ID      : 0001      
+</code></pre>
+From here on the first line of any directory can be safely ignored, except for the "Number of Entries" bytes at xE-F. This (level-2) subdirectory has one entry:
+
+<pre><code>
+ 27070:  0F 00 00 00 40 03 00 80 - 00 00 00 00 C9 5D F3 2F   ú   @ú €    É]ó/
+  ID: 0000000F Offset: 80000340 (Subdir @ 27340)
+  Characteristics: 00000000 ; directory 1.2
+  Time/Date Stamp: C95DF32F ; directory 1.2
+</code></pre>
+Another subdirectory (the time/date stamp is the beginning of the next Level-2 subdirectory...ignore it); the ID field this time refers to the "name" of the resource: resource #0F, or resource 15. Jumping to x27340 reveals the following entry:
+
+<pre><code>
+<u>Directory 1.1.1</u>
+ 27340:  00 00 00 00 C9 5D F3 2F - 00 00 00 00 00 00 01 00       É]ó/      ú 
+  Characteristics: 00000000
+  Time/Date Stamp: C95DF32F
+  M/m Version:     00000000
+  # Of Named   :   0000
+  # Of ID      :   0001      
+ 27350:  09 04 00 00 00 0A 00 00 - 00 00 00 00 C9 5D F3 2F   úú   ú      É]ó/
+  ID: 00000409 Offset: 00000A00 (Subdir @ 27A00)
+  Characteristics: 00000000 ;directory 1.2.1
+  Time/Date Stamp: C95DF32F ;directory 1.2.1
+</code></pre>
+
+Notice the <i>lack</i> of a leading "8" in this offset...this is a "leaf node" (as opposed to a "subdirectory node"--or "root node"?) that points to a data entry at xA00, which will have the following format:
+
+<pre>
+<b>DWORD</b> Offset to Data
+<b>DWORD</B> Size
+<b>DWORD</b> CodePage
+<b>DWORD</b> Reserved
+</pre>
+
+At x27A00 appears the data entry (keep track of this...the info here is at level 1.1.1.1, and there points to the actual data...no wonder the OS is so huge and slow) :
+
+<pre><code>
+<u>Directory 1.1.1.1</u>
+ 27A00:  A0 B0 02 00 34 01 00 00 - 00 00 00 00 00 00 00 00   €~ú 4ú          
+  Offset:   0002B0A0  Size :    00000134 bytes  
+  CodePage: 00000000  Reserved: 00000000
+ 27A10:  E8 B1 02 00 E8 00 00 00 - 00 00 00 00 00 00 00 00   ´ú è           
+ 27A20:  D0 B2 02 00 3C 02 00 00 - 00 00 00 00 00 00 00 00   œ€ú <ú          
+</code></pre>
+
+There it is--this is the data relocation table. Resource 1 of Type 1 consists of x134 bytes of data at x2B0A0. But that is not all...following this is <i>every other</i> resource data relocation: A10 shows x0E8 bytes of data at x2B1E8 (Resource 1 of Type 2), A20 shows x23C bytes of data at 2B2D0 (Resource 2 of Type 2), and so on. This is a <b>shortcut</b>: after getting the basic structure (types of resources, and how many of each type) from the root (Level 1) directory, you can pull all of the data relocations from this table and "plug them in"  to the skeleton provided by the root directory.<P>
+
+To verify this, the entire directory tree was traversed and labelled. The explorer.exe PE header .rsrc directory has the following structure (for reference only; if you read this your eyes will glaze over):
+
+<PRE><code><FONT COLOR=#408080>
+Level 1: 10 Entries
+	1. 1 Entry (x0060)s: Type ID 01 (RT_CURSOR)
+		1. 1 Entry (x0340)s: Name ID 0F
+			1.Resource #00000409 @ x0A00 
+				1. 00000134 bytes at 0002A0B0 
+	2. 10 Entries (x0078)s: Type ID 02 (RT_BITMAP)
+		1. 1 Entry (x0358)s: Name ID 8F
+			1. Resource #00000409 @ x0A10
+				1.  000000E8 bytes at 0002B1E8
+		2. 1 Entry  (x0370)s: Name ID 90
+			1. Resource #00000409 @  x0A20
+				1. 0000023C bytes at 0002B2D0
+		3. 1 Entry (x0388)s: Name ID 91
+			1. Resource #00000409 @ x0A30
+				1. 00000186 bytes at 0002B50C
+		4. 1 Entry (x03A0)s: Name ID 95
+			1. Resource #00000409 @ x0A40
+				1. 00001398 bytes at 0002B694
+		5. 1 Entry (x03B8)s: Name ID 96 
+			1. Resource #00000409 @ x0A50
+				1. 00000C04 bytes at 0002CF84
+		6. 1 Entry (x03D0)s: Name ID 97
+			1. Resource #00000409 @ x0A60
+				1. 00000558 bytes at 0002CA2C
+		7. 1 Entry (x03E8)s: Name ID 98
+			1. Resource #00000409 @ x0A70
+				1. 000000FE bytes at 0002DB88
+		8. 1 Entry (x0400)s: Name ID 99
+			1. Resource #00000409 @ x0A80
+				1. 000001A8 bytes at 0002DC88
+		9. 1 Entry (x0418)s: Name ID 9D
+			1. Resource #00000409 @ x0A90
+				1. 0000051C bytes at 0002DE30
+		A. 1 Entry (x0430)s: Name ID A0
+			1. Resource #00000409 @ x0AA0
+				1. 000000EC bytes at 0002E34C
+	3. 15 Entries (x00D8)s: Type ID 03 (RT_ICON)
+		1.  1 Entry (x0448)s: Name ID 01
+			1. Resource #00000409 @ x0AB0
+				1. 000002E8 bytes at 0002916C
+		2. 1 Entry (x0460)s: Name ID 02
+			1. Resource #00000409 @ x0AC0
+				1. 00000128 bytes at 00029454
+		3. 1 Entry (x0478)s: Name ID 03
+			1. Resource #00000409 @ x0AD0
+				1. 00000130 bytes at 000295a0
+		4. 1 Entry (x0490)s: Name ID 04
+			1. Resource #00000409 @ x0AE0
+                        		1. 000002E8 bytes at 000296D0
+		5. 1 Entry (x04A8)s: Name ID 05
+			1. Resource #00000409 @ x0AF0
+                       		 1. 00000128 bytes at 000299B8
+		6. 1 Entry (x04C0)s: Name ID 06
+			1. Resource #00000409 @ x0B00
+		                   1. 000002E8 bytes at 00029B10
+		7. 1 Entry (x04D8)s: Name ID 07
+			1. Resource #00000409 @ x0B10
+		                        1. 00000128 bytes at 00029DF8
+		8. 1 Entry (x04F0)s: Name ID 08
+			1. Resource #00000409 @ x0B20
+	             		1. 000002E8 bytes at 00029F44
+		9. 1 Entry (x0508)s: Name ID 09
+			1. Resource #00000409 @ x0B30
+		                        1. 00000128 bytes at 0002A22C
+		A. 1 Entry (x0520)s: Name ID 0A
+			1. Resource #00000409 @ x0B40
+		                        1. 000002E8 bytes at 0002A378
+		B. 1 Entry (x0538)s: Name ID 0B
+			1. Resource #00000409 @ x0B50
+		                        1. 00000128 bytes at 0002A660
+		C. 1 Entry (x0550)s: Name ID 0C
+			1. Resource #00000409 @ x0B60
+		                        1. 000002E8 bytes at 0002A7AC
+ 		D. 1 Entry (x0568)s: Name ID 0D
+			1. Resource #00000409 @ x0B70
+		                        1. 000002E8 bytes at 0002AAA8
+		E. 1 Entry (x0580)s: Name ID 0E
+			1. Resource #00000409 @ x0B80
+		                        1. 000002E8 bytes at 0002ADA4
+	4. 6 Entries (x158)s:  Type ID 04 (RT_MENU)
+		1. 1 Entry (x0598)s: Name ID C9
+			1. Resource #00000409 @ x0B90
+				1. 00000388 bytes at 0002E670
+		2. 1 Entry (x05B0)s: Name ID CA
+			1. Resource #00000409 @ x0BA0
+				1. 000002A0 bytes at 0002E9F8
+		3. 1 Entry (x05C8)s: Name ID CC
+			1. Resource #00000409 @ x0BB0
+				1. 00000248 bytes at 0002EC98
+		4. 1 Entry (x05E0)s: Name ID CD
+			1. Resource #00000409 @ x0BC0
+				1. 000000FE bytes at 0002E538
+		5. 1 Entry (x05F8)s: Name ID CE
+			1. Resource #00000409 @ x0BD0
+				1. 00000038 bytes at 0002EEE0
+		6. 1 Entry (x0610)s: Name ID CF
+			1. Resource #00000409 @ x0BE0
+				1. 00000038 bytes at 0002E638
+	5.  7 Entries (x198)s:Type ID 05 (RT_DIALOG)
+		1. 1 Entry (x0628)s: Name ID 06
+			1. Resource #00000409 @ x0BF0
+				1. 000001D0 bytes at 00028378
+		2. 1 Entry (x0640)s: Name ID 07
+			1. Resource #00000409 @ x0C00
+				1. 00000254 bytes at 00027E80
+		3. 1 Entry (x0658)s: Name ID 08
+			1. Resource #00000409 @ x0C10
+				1. 000002A4 bytes at 000280D4
+		4. 1 Entry (x0670)s: Name ID 09
+			1. Resource #00000409 @ x0C20
+				1. 0000030E bytes at 00028548
+		5. 1 Entry (x0688)s: Name ID 0B
+			1. Resource #00000409 @ x0C30
+				1. 0000025A bytes at 00028858
+		6. 1 Entry (x06A0)s: Name ID 0C
+			1. Resource #00000409 @ x0C40
+				1. 00000366 bytes at 00028AB4
+		7. 1 Entry (x06B8)s: Name ID 0D
+			1. Resource #00000409 @ x0C50
+				1. 0000034E bytes at 00028E1C
+	6. 21 Entries (x1E0)s: Type ID 06 (RT_STRING)
+		1. 1 Entry (x06D0)s: Name ID 20
+			1. Resource #00000409 @ x0C60
+				1. 000001B8 bytes at 0002F24C
+		2. 1 Entry (x06E8)s: Name ID 21
+			1. Resource #00000409 @ x0C70
+				1. 000002E6 bytes at 0002F440
+		3. 1 Entry (x0700)s: Name ID 22
+			1. Resource #00000409 @ x0C80
+				1. 000006B2 bytes at 000301B0
+		4. 1 Entry (x0718)s: Name ID 23
+			1. Resource #00000409 @ x0C90
+				1. 00000048 bytes at 00030FC4
+		5. 1 Entry (x0730)s: Name ID 25
+			1. Resource #00000409 @ x0CA0
+				1. 00000760 bytes at 00030864
+		6. 1 Entry (x0748)s: Name ID 26
+			1. Resource #00000409 @ x0CB0
+				1. 000001E8 bytes at 0002FFC8
+		7. 1 Entry (x0760)s: Name ID 2C
+			1. Resource #00000409 @ x0CC0
+				1. 00000362 bytes at 0003100C
+		8. 1 Entry (x0778)s: Name ID 2D
+			1. Resource #00000409 @ x0CD0
+				1. 00000404 bytes at 00031370
+		9. 1 Entry (x0790)s: Name ID 33
+			1. Resource #00000409 @ x0CE0
+				1. 0000008C bytes at 0002F6EC
+		A. 1 Entry (x07A8)s: Name ID 37
+			1. Resource #00000409 @ x0CF0
+				1. 0000008E bytes at 0002F778
+		B. 1 Entry (x07C0)s: Name ID 3B
+			1. Resource #00000409 @ x0D00
+				1. 0000007C bytes at 0002F808
+		C. 1 Entry (x07D8)s: Name ID 3F
+			1. Resource #00000409 @ x0D10
+				1. 0000007C bytes at 0002F884
+		D. 1 Entry (x07F0)s: Name ID 43
+			1. Resource #00000409 @ x0D20
+				1. 0000006C bytes at 0002F900
+		E. 1 Entry (x0808)s: Name ID 47
+			1. Resource #00000409 @ x0D30
+				1. 00000062 bytes at 0002FE94
+		F. 1 Entry (x0820)s: Name ID 33
+			1. Resource #00000409 @ x0D40
+				1. 00000036 bytes at 0002FD7C
+		10. 1 Entry (x0838)s: Name ID 35
+			1. Resource #00000409 @ x0D50
+				1. 0000014A bytes at 0002F96C
+		11. 1 Entry (x0850)s: Name ID 37
+			1. Resource #00000409 @ x0D60
+				1. 00000194 bytes at 0002FAB8
+		12. 1 Entry (x0868)s: Name ID 39
+			1. Resource #00000409 @ x0D70
+				1. 0000012E bytes at 0002FC4C
+		13. 1 Entry (x0880)s: Name ID 3B
+			1. Resource #00000409 @ x0D80
+				1. 000000DE bytes at 0002FDB4
+		14. 1 Entry (x0898)s: Name ID 43
+			1. Resource #00000409 @ x0D90
+				1. 00000098 bytes at 0002FEF8
+		15. 1 Entry (x08B0): Name ID 45
+			1. Resource #00000409 @ x0DA0
+				1. 00000038 bytes at 0002FF90
+	7. 3 Entries (x298)s: Type ID 09 (RT_ACCELERATOR)
+		1. 1 Entry (x08C8)s: Name ID FA
+			1. Resource #00000409 @ x0DB0
+				1. 00000080 bytes at 0002E438
+		2. 1 Entry (x08E0)s: Name ID FB
+			1. Resource #00000409 @ x0DC0
+				1. 00000048 bytes at 0002E4B8
+		3. 1 Entry (x08F8)s: Name ID FC
+			1. Resource #00000409 @ x0DD0
+				1.00000038 bytes at 0002E500
+	8. 1 Entry (x2C0)s: Type ID 0C (RT_GROUP_CURSOR)
+		1. 1 Entry (x0910)s: Name ID 65
+			1. Resource # 00000409 @ (x0DE0)
+				1. 00000014 bytes at 0002B1D4
+	9. 8 Entries  (x2D8)s: Type ID 0E (RT_GROUP_ICON)
+		1. 1 Entry (x0928)s: Name ID 64
+			1. Resource #00000409 @ x0DF0
+				1. 00000022 bytes at 0002957C
+		2. 1 Entry (x0940)s: Name ID 65
+			1. Resource #00000409 @ x0E00
+				1. 00000030 bytes at 00029AE0
+		3. 1 Entry (x0958)s: Name ID 66
+			1. Resource #00000409 @ x0E10
+				1. 00000022 bytes at 00029F20
+		4. 1 Entry (x0970)s: Name ID 67
+			1. Resource #00000409 @ x0E20
+				1. 00000022 bytes at 0002A354
+		5. 1 Entry (x0988)s: Name ID 68
+			1. Resource #00000409 @ x0E30
+				1. 00000022 bytes at 0002A788
+		6. 1 Entry (x09A0)s: Name ID 69
+			1. Resource #00000409 @ x0E40
+				1. 00000014 bytes at 0002AA94
+		7. 1 Entry (x09B8)s: Name ID 6B
+			1. Resource #00000409 @ x0E50
+				1. 00000014 bytes at 0002AD90
+		8. 1 Entry (x09D0)s: Name ID 6C
+			1. Resource #00000409 @ x0E60
+				1. 00000014 bytes at 0002B08C
+	A. 1 Entry (x328)s: Type ID 10 (RT_VERSION)
+		1. 1 Entry (x09E8)s: Name ID 01
+			1. Resource #00000409 @ x0E70
+				1. 00000334 bytes at 0002EF18
+</font></code></PRE>
+
+OK, now you have the data, now what? Unfortunately, there is no way of knowing for sure which entries were causing the resource editors to crash. After some experimentation it appears that the entries in RT_CURSOR and RT_ICON are causing the conflicts, but when viewed in the hex editor these areas appear normal. At this point one is, however, free to edit whatever one wishes in the file. 
+
+Menus, dialogs, version info, and strings are pretty easy: the values are there in the ASCII window. But the graphical resources are a little more elusive; we must 
+
+learn to identify file formats in hex.<P>
+
+Here's an experiment: open c:\windows\cursors\arrow_m.cur in Hiew. The first x78 bytes seem to be a header of 
+
+some sort, prehaps defining the properties of a cursor; likewise the bytes from x27E on appear to "wrap up" the file. 
+
+In between these two offsets, in stark FF foreground against a 00 background, is the shape of arrow_m.<P>
+
+Now for icons, using here an icon exported from c:\windows\moricons.dll (near the end of the file, an icon of file folders hooked together 
+
+in a tree with a red arrow): A little harder to distinguish, but there it is upside-down: a clumsy version of the linked folders (also visible, 
+
+this time, in the ASCII window) between x70 and x270 (interestingly enough, this file is exactly the same size as arrow_m.cur). With a good file format 
+
+reference (in order to look up the headers for .ico and .cur files) you could easily repaint these graphics from within your hex editor.<P>
+
+The resource data entries in the executable (the data itself is outside the header, at the end of the file) do not seem to have any "header" or "footer" information...just raw data of the image/etc, if you look closely and maybe squint a little. The best course for modifying graphic resources would be to create the image using a resource editor/graphics program, then cut the hex-code data of the image only (be sure to get a hex editor that can support this, such as Hex Workshop) and paste it over the resource-to-be-modified in explorer.exe (be sure the images are the same size).
+
+
+
+
+
+<P>
+
+<LEFT><HR width="20%" align="keft"></LEFT>
+
+<I>Notes</i><P>
+
+<li><a href="http://www.geocities.com/SoHo/4535/reshack.html">Robert Brooks</a> is developing a freeware resource editor called ResHack.
+
+<li>Information on file formats (including RES files) can be obtained from the <a href="http://www.ora.com/centers/gff/gff-faq/index.htm">Graphics File Format FAQ</a>, the <a href="http://www.ora.com/centers/gff/index.htm">GFF</a> page, and <a href="http://www.wotsit.demon.co.uk/">Wotsit's File Format</a> page.
+
+<li>It is somewhat suprising to find that the taskbar is not actually a new win32 resource, and therefore does not appear in the .rsrc directory. Using SysInfo on the taskbar (taking advantage of the "Pick Window" feature, it can be seen that the taskbar is made up of the following windows:
+
+<ol type=i>
+
+<li><i>Taskbar</i> 
+
+<u>Class:</u> Shell_TrayWnd 
+
+<u>Style:</u> WS_POPUP WS_VISIBLE WS_CLIPSIBLINGS WS_CLIPCHILDREN WS_BORDER WS_THICKFRAME 
+
+(WS_EX_TOPMOST WS_EX_TOOLWINDOW WS_EX_WINDOWEDGE ) 
+
+<u>Properties:</u> 0000138B = OleEndPointID
+
+004216AC = OleDropTargetInterface
+
+<li><i>Start Button</i> 
+
+<u>Class:</u> Button 
+
+<u>Style:</u> WS_CHILD WS_VISIBLE WS_CLIPSIBLINGS WS_SYSMENU BS_PUSHBUTTON BS_BITMAP BS_LEFT 
+
+BS_TOP BS_BOTTOM  BS_VCENTER  
+
+<u>Properties: </u>00001389 = OleEndPointID
+
+00421688 = OleDropTargetInterface
+
+<li><i>Program "minimize" Boxes</i> 
+
+<u>Class:</u> SysTabControl32 
+
+<u>Style:</u> WS_CHILD WS_VISIBLE WS_CLIPSIBLINGS TCS_TABS TCS_BUTTONS TCS_SINGLELINE TCS_MULTILINE 
+
+TCS_RIGHTJUSTIFY TCS_FIXEDWIDTH TCS_OWNERDRAWFIXED TCS_FOCUSNEVER  
+
+<u>Properties:</u>  (none) 
+
+<li><i>Icon Tray</i> 
+
+<u>Class:</u> TrayNotifyWnd 
+
+<U>Style:</u>  WS_CHILD WS_VISIBLE WS_CLIPSIBLINGS WS_CLIPCHILDREN 
+
+(WS_EX_STATICEDGE ) 
+
+<u>Properties:</u> (none) 
+
+<li><i>Clock</i> 
+
+<u>Class:</u> TrayClockWClass 
+
+<u>Style:</u> WS_CHILD WS_VISIBLE WS_CLIPSIBLINGS  
+
+<u>Properties:</u> (none)
+
+</ol>
+
+Interestingly enough, the windows desktop turns out to be a window with the following structure: 
+
+<ul>
+
+<li><u>Class:</U> SysListView32 
+
+<u>Style:</u> WS_CHILD WS_VISIBLE WS_CLIPCHILDREN 
+
+LVS_SHAREIMAGELISTS LVS_EDITLABELS LVS_NOSCROLL LVS_ALIGNLEFT   <u>Properties:</u> 00001388 = OleEndPointID
+
+005404F0 = OleDropTargetInterface
+
+</ul>
+
+
+
+<P>
+
+<HR>
+
+<center><a href="index.html"><font color=808080>Home<font></a><font color=808080> * <font><a href="tools.html"><font color=808080>Tools<font></a><font color=808080> * <font><a href="http://www.geocities.com/SiliconValley/Vista/2299/"><font color=808080>95/NT Tech Info<font></a><font color=808080> * <font><a href="links.html"><font color=808080>Links<font></a></center>
+
+<P><BR>
+
+
+
+
+
+</BODY>
+
+
+
+</HTML>

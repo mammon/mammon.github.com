@@ -1,0 +1,875 @@
+<HTML> 
+<HEAD> 
+<TITLE>Mammon_'s Tales To His Grandson</TITLE> 
+</HEAD> 
+
+<BODY BACKGROUND="" BGCOLOR="#c0c0c0" TEXT="#000000" LINK="#0080c0" VLINK="#808040" ALINK="#ff0000"> 
+<font size=+2><center><B>Mammon_'s Tales to his Grandson</b></center></font> 
+
+
+<center><i>Of The Engine Reversi</i></center> 
+
+<P><BR> 
+
+
+<HR> 
+<font size=+1><B>Starting Out On The Path</b></font><P> 
+What does one need to reverse engineer? What does one need to crack? I should begin by pointing out that cracking and re-engineering are for the most part one and the same; cracking is a dynamic form of re-engineering--more like a surgical strike than a full de-compilation--that exploits flaws inherent in the program (or, more commonly, in the API of the OS) to achieve a certain end, while reverse engineering is the attempt to recover the original source code from an existing binary file--usually to copy or change the functions in that binary file. The skills and tools used for cracking and re-engineering are the same; re-engineering is just a more involved process.<P> 
+First off, to re-engineer one must know assembly language. It is only necessary to be able to read ASM, not to program in it--though that skill will prove useful as well. In addition, one must be familiar with the language in which the target file was written--if it was written in Java, learn Java; if in C++, learn C++; if in Visual Basic, then you must lower yourself to learn that (for lack of a better word) language as well (and it may be worth learning, for more and more applications are being written in the psuedocode that is VB5 now that MS has become dominant in the PC market). You must have an intimate knowledge of your PC, especially the CPU and the memory addressing scheme. And finally, you must have patience and a good problem-solving ability.<P> 
+The "tools" end of the package is much easier to fill. It is essential to have a disassembler such as W32DASM, WCB, or Sourcer; it is also good to have a debugger in order to clarify and correct the code produced by your disassembler. Numega's unbelievable Soft-Ice is the prime choice, but with a good disassembler one can get by with CodeView, Turbo Debugger, Brand-X or even DEBUG. An API reference for the language and OS of the target program is absolutely required, as well as a text editor or word processor (hopefully one that colorizes source code for a number of languages, such as Multi-Edit) that can handle the large files created by the disassembler (5 to 10 times the size of the original binary).<P> 
+Any additional tools are more or less mandated by style--resource editors for Windows programs, hex editors to patch files, compilers for re-generating executables, and system monitor utilities for information gathering.<P> 
+Oh yes, you will also need a computer. And <I>lots</i> of time to play with it....<P>
+
+Documentation on the trade of reverse engineering can be found in abundance on the internet, usually on sites that cover application porting, 
+source code recovery, cracking, or decompiler writing. In addition, knowledge of the target executable file format, the target operating system, 
+and the hardware which the target is to run on is important as well. One of the best discussions of the behavior of executables running on DOS-based operating 
+systems is <a href="http://www.eccentrica.org/Mammon/Text/rev_ch3.html">Chapter 3</a> of Cristina Cifuentes' doctoral thesis.<P> 
+<HR> 
+
+<font size=+1><B>Basic Training</b></font><P> 
+The problem with taking up a pursuit such as Reverse Engineering is that there is no established method of acquiring the skills and knowledge one will need. Perhaps the best introduction can be found in Andrew Schulman's <u>Undocumented Windows</u>, which covers Windows 3.1 in practice but which can be applied to Win32. Matt Pietrek's <u>Windows Internals</u> book is also quite useful, while Barry Kauler's <u>Windows Assembly Language and Systems Programming</u> provides a good demonstration of mixing Windows and Assembly Language. In addition, there are numerous online pages and newsgroups devoted to reverse engineering, including Georgia Tech, the DCC homepage, and the New Jersey Machine Code Toolkit page...the problem being that most of these efforts focus on Unix and mainframe platforms. The alternative is to acquire the skills the hard way...by examining files and consulting reference material (such as the Win32 API and the PE file header format) for guidance. This "dive right in" approach may be the best way to go with Windows programs, as their secrets are given up easily enough to keep a novice interested.<P> 
+
+Take for an example the file Mkcompat.exe, located in the C:\Windows\System directory. Doing a right-click/Properties on this file shows that it is a 33,792-byte "Windows 95 Make Compatible App Hacker" program, supplied with version 4.00.950 of the Windows OS. As this is a stand alone file and not an application, there are not .cfg, .ini, or .dat files through which to sift for clues. Instead, the executable itself must be examined, and this can be done on a standard Win95 install by right-clicking the Mkcompat icon and choosing "QuickView". This will give you an output split into five parts: <font size=-1> 
+<LI><B>Image file Header:</b> Summary of the MZ-executable file header, standard in all DOS .exe files 
+<LI><B>Image Optional Header</b>: Summary of the PE-executable file header, standard in all Win32 files 
+<LI><B>Import Table</b>: List of all functions called by the file that are contained in external (usually .DLL) files 
+<LI><B>Section Table</b>: List of the sections or directories in the file as defined by the PE Header 
+<LI><B>Header Information</b>: Memory management information for the file <P> 
+</font>Note that other files may have additional sections displayed by QuickView, such as the <b>Export Table</b>. All of this information is contained in the PE header; study this structure, read <a href="ftp://ftp.ilf.net/pub/users/rebyc/zines/vlad/vlad6.zip">VLAD #6</a> or Microsoft's <a href="http://www.microsoft.com/win32dev/base/pefile.htm">Reference</a> or <a href="projects.html#project3">Project 3</a> on this site...you will learn much about Win32 files and how to reverse them.<P> 
+The Image File Header and the Image Optional Header sections reveal some basic information about the 
+target OS, the date of writing, size of the file, linker version, and quite a bit of information about the  
+structure of the binary file itself. The Section Table details out the different sections or directories of the 
+file, the most notable being .text, .reloc, and .rsrc, which contain the program's execuable code,  
+relocations (jump tables), and resources respectively. The Header Information is only really useful to the  
+operating system and memory management programs.<P> 
+All of the important information in this QuickView display is contained in the Import Table, which reads as  
+follows: 
+<pre><font size=-1> 
+Import Table 
+KERNEL32.dll 
+Ordinal	Function Name	 
+00bc	GetCommandLineA 
+028e	_lclose 
+0124	GetStartupInfoA 
+0291	_lopen 
+0071	ExitProcess 
+00f9	GetModuleHandleA 
+0119	GetProfileIntA 
+0287	WriteProfileStringA 
+0290	_llseek 
+0292	_lread 
+0172	InitializeCriticalSection 
+005e	EnterCriticalSection 
+0261	VirtualAlloc 
+0262	VirtualFree 
+024f	TlsGetValue 
+0250	TlsSetValue 
+00d0	GetCurrentThreadId 
+024b	TlsAlloc 
+0126	GetStdHandle 
+00b5	GetCPInfo 
+00e7	GetFileType 
+00af	GetACP 
+00f7	GetModuleFileNameA 
+0102	GetOEMCP 
+01e8	RtlUnwind 
+0146	GetVersion 
+0258	UnhandledExceptionFilter 
+0188	LeaveCriticalSection 
+00ef	GetLastError 
+029f	lstrcpyA 
+00da	GetEnvironmentStrings 
+ 
+USER32.dll 
+Ordinal	Function Name	 
+00ff	GetMessageA 
+020f	TranslateMessage 
+0101	GetMessagePos 
+0173	MapWindowPoints 
+015e	LoadIconA 
+0219	UpdateWindow 
+00cf	GetClientRect 
+011e	GetWindow 
+0081	DestroyWindow 
+013b	InvalidateRect 
+01ec	SetWindowPos 
+01ad	SendDlgItemMessageA 
+01c6	SetDlgItemTextA 
+00dd	GetDlgItem 
+022d	wsprintfA 
+00f9	GetMenuItemInfoA 
+01af	SendMessageA 
+00f3	GetMenu 
+017d	ModifyMenuA 
+00a5	EnableMenuItem 
+00c2	GetAsyncKeyState 
+0050	CreateWindowExA 
+002f	CheckMenuItem 
+0116	GetSystemMetrics 
+0086	DispatchMessageA 
+01f9	ShowWindow 
+0168	LoadStringA 
+0078	DefWindowProcA 
+0196	RegisterClassExA 
+015a	LoadCursorA 
+0176	MessageBoxA 
+ 
+GDI32.dll 
+Ordinal	Function Name	 
+00bc	GetStockObject 
+ 
+COMCTL32.dll 
+Ordinal	Function Name	 
+0024	ImageList_LoadImage 
+ 
+SHELL32.dll 
+Ordinal	Function Name 
+<i>none listed</i> 
+</font> 
+</pre> 
+Note that this list tells you all of the .DLL files that Mkcompat uses, as well as the exported functions (in this case, exported Windows API functions) that Mkcompat calls from each of those .DLLs. Note that most of the functions listed here are pretty standard (there is no third-party "timelock" .DLL with a GetRegistrationInfo function, for example), but you can tell right away that the program takes a command line parameter (Kernel.00BC), has some exception handling (KERNEL.0172, etc), and uses threads (Kernel.024B).<P> 
+At this point you should look for routines that you do not recognize or that are out of the ordinary, for which two candidates seem to present themselves: 
+<LI>RtlUnwind(Kernel32.dll) 
+<LI>ImageList_LoadImage(Comctl32.dll)<P> 
+Neither of these shows up in a Win32 API reference; doing a Quickview on Comctl32.dll reveals a number of ImageList_ functions, with names such as AddIcon, Drag, and GetBkColor, so it can be assumed that this function has to do with graphics images and not file images. Similarly, Kernel32.dll contains a few RTL functions with names such as RTLMoveMemory and RTLZeroMemory, so it appears that RTLUnwind is some sort of (undocumented?) memory management function. Apparently there are no surprises in Mkcompat's imports, which is not really a shock; much of its .exe-modifying code must be internal.<P> 
+Loading Mkcompat in a Resource Editor such as BRW reveals little of interest save for some strings that must be internal filenames: "TTIGNORERASTERDUDE", "STUPIDPALLETTEAPP", and "RANDOM3XUI". These strings can also be viewed in a hex editor such as HIEW (at offset 008F10) in "wide" format, or even in a simple text editor such as Notepad (you do have Notepad.exe in your SendTo folder, right?). Still, getting an idea of the internal function names helps in understanding the file (and the banality of the programmers).<P> 
+At this stage, the easy stuff is all over; from here on you will have to deal with Assembly Language. This is a small file that can be loaded into a disassembler/code browser such as W32DASM (very good for novices and for browsing the code quickly) relatively quickly, so poring over the code will not be too tedious; however, be sure you have some knowledge of asm as well as a more-than-casual acquaintance with Windows programming before going any further. It is also good to limit your search to a single, simple aspect of the target (especially in a basic example like this) so that you do not end up reversing the entire program "just for kicks". <P> 
+ 
+At this point nothing really stands out aside from a few odd names in the string table, no obvious clues as to how the program performs its magic 
+upgrading. Time for some action: run MKCOMPAT.EXE and, once inside, open SYSEDIT.EXE (a 16-bit application). 
+Now run Filemon to get a record of what is happening (the Filemon log file will indicate all file accesses, including system/user.dat (registry) acesses and 
+DLL loads/unloads; it makes for a good survey of an application's live behavior), check a few of the option boxes in 
+MKCOMPAT (in this case, the last 3 were set), and save the changes.<P>
+
+The Filemon log indicates no registry or unexpected DLL access, however there is a write to WIN.INI...evidently this 
+app is not so tricky after all, just a win.ini write! Open up WIN.INI (in sysedit, of course) and search for "sysedit".
+There is one hit, under the [Compatibility] tag, the last key added under that tag:<code> SYSEDIT=0x80000090</code>.
+<P>
+To test the assumption, uncheck the boxes in MKCOMPAT and save again:<code> SYSEDIT=0x0</code>. That would be it, then....<P>
+
+So, on to the disassembler, the target naturally being the <code>0287	WriteProfileStringA</code>
+import shown in QuickView. The disassembler used in this case is IDA Pro, preferred both for its interactive 
+interface (allowing the reinterpretation and labelling of code and data on-the-fly) and its 
+disassembling capability. There are two calls WriteProfileString,  at locations 4019A9 and 4019BA. 
+These are in the same subroutine, which can be renamed in IDA to WriteToWIN_INI; the subroutine is as follows:<P>
+
+<code><pre><font size=-1>
+0040196D                         ;   S u b r o u t i n e
+0040196D                         ; Attributes: bp-based frame
+0040196D                         WriteToWIN_INI proc near      ; CODE XREF: sub_401CDE+49j
+0040196D 55                                                    ; sub_401E31+21p
+0040196D                         var_50= byte ptr -50h
+0040196D                         push    ebp
+0040196E 8B 0D 14 40 40 00       mov     ecx, dword_404014     
+00401974 8B EC                   mov     ebp, esp
+00401976 83 EC 50                sub     esp, 50h
+00401979 3B 0D 10 40 40 00       cmp     ecx, dword_404010
+0040197F 56                      push    esi
+00401980 74 46                   jz      short loc_4019C8
+00401982 51                      push    ecx
+00401983 8D 45 B0                lea     eax, [ebp+var_50]
+00401986 68 2C 40 40 00          push    offset a0xX
+0040198B 50                      push    eax
+0040198C FF 15 90 62 40 00       call    ds:wsprintfA          
+00401992 83 C4 0C                add     esp, 0Ch              
+00401995 8D 4D B0                lea     ecx, [ebp+var_50]
+00401998 8B 35 D4 61 40 00       mov     esi, ds:WriteProfileStringA ; WriteProfileStringA:
+0040199E 51                      push    ecx
+0040199F 68 A0 52 40 00          push    offset byte_4052A0
+004019A4 68 50 52 40 00          push    offset unk_405250
+004019A9 FF D6                   call    esi
+004019AB 68 28 40 40 00          push    offset unk_404028
+004019B0 68 28 40 40 00          push    offset unk_404028
+004019B5 68 28 40 40 00          push    offset unk_404028
+004019BA FF D6                   call    esi
+004019BC 8B 0D 14 40 40 00       mov     ecx, dword_404014     
+004019C2 89 0D 10 40 40 00       mov     dword_404010, ecx     
+004019C8                         loc_4019C8:                   ; CODE XREF: WriteToWIN_INI+13
+004019C8 5E                      pop     esi
+004019C9 8B E5                   mov     esp, ebp
+004019CB 5D                      pop     ebp
+004019CC C3                      retn
+004019CC                         WriteToWIN_INI endp</code></pre></font>
+The first thing to do is to start labelling the code locations passed to the API calls (WriteProfileStringA and wsprintfA).
+According to the Win32 API reference, these two functions are as follows:
+<pre><code></font size=-1>
+BOOL WriteProfileString(
+
+    LPCTSTR  lpszSection,	// address of section name 
+    LPCTSTR  lpszKey,	    // address of key name 
+    LPCTSTR  lpszString 	// address of string to write 
+   );
+   
+int wsprintf(
+
+    LPTSTR  lpOut,	// address of buffer for output 
+    LPCTSTR  lpFmt 	// address of format-control string 
+   );</pre></font></code>
+WriteProfileString is a standard API function, so its parameters are pushed in reverse order, and the
+parameters can be labelled as follows:<pre><code><font size=-1>
+004019A9: push ecx                 ;contains pointer to string
+          push keyname
+          push Section
+          call WriteProfileString
+004019BA: push weirdvar            ;used because the three addresses are the same, which is...weird
+          push weirdvar
+          push weirdvar
+          call WriteProfileString
+</pre></code></font>
+WsprintfA is a _cdecl function, so its parameters are pushed in order and can be labelled as follows:
+<pre><code><font size=-1>
+0040198B: push eax   			;buffer
+          push formatstring
+          call wsprintfA
+</pre></code></font>
+The subroutine now has the following structure in C:
+<pre><code><font size=-1>
+WriteToWinINI(  )
+{
+	WritePrivateProfileString( loc_405250, loc_4052A0, wsprintfA( lpszString, "0x%x"), loc_404014 );
+        WritePrivateProfileString( loc_404028, loc_404028, loc_404028_, loc_404014);
+}
+</pre></code></font> It is time for some work to be done to clear up the mysterious "loc" names and cause the whole code to make sense.<P>
+At the start of the routine, it appears that dword_404014 is being compared with dword_404010 and then being pushed
+as a parameter to the WriteProfileString call. The next question is where did the dword_404014 and dword_404010 come from? Click on the first dword reference in IDA to find out:
+<pre><code><font size=-1>
+ dword_404014 dd 0             ; DATA XREF: sub_4015B5+58^r
+                               ; sub_4015B5+7D^r
+                               ; sub_4018C1+21^w
+                               ; WriteToWIN_INI+1^r
+                               ; WriteToWIN_INI+4F^r
+                               ; sub_401CDE+F^r
+                               ; sub_401DC6+48^r
+                               ; sub_401DC6+58^w
+</pre></code></font>
+A quick summary of the unknown locations:
+<pre><code><font size=-1>
+0040160D 23 15 14 40 40 00       and     edx, dword_404014  ; It is already set here
+00401632 A1 14 40 40 00          mov     eax, dword_404014  ; And here
+004018E2 A3 14 40 40 00          mov     dword_404014, eax  ; Paydirt! See below
+00401CED 39 05 14 40 40 00       cmp     dword_404014, eax  ; not followed
+00401E0E A1 14 40 40 00          mov     eax, dword_404014  ; not followed
+00401E1E A3 14 40 40 00          mov     dword_404014, eax  ; not followed</pre></code</font>
+
+The "paydirt" line demonstrates what both dword_404014 and dword_404010 contain:
+<pre><code><font size=-1>
+004018C1                         ;   S u b r o u t i n e                                      
+004018C1                                                                                      
+004018C1                         sub_4018C1 proc near          ; CODE XREF: sub_4018E8+76vp   
+004018C1 A1 04 40 40 00          mov     eax, dword_404004                                    
+004018C6 80 38 00                cmp     byte ptr [eax], 0                                    
+004018C9 74 1C                   jz      short locret_4018E7                                  
+004018CB 6A 00                   push    0                     ; Default                      
+004018CD 68 A0 52 40 00          push    offset keyname        ; KeyName                      
+004018D2 68 50 52 40 00          push    offset SectionName    ; Section                      
+004018D7 FF 15 D0 61 40 00       call    ds:GetProfileIntA     ; GetProfileIntA:              
+004018DD A3 10 40 40 00          mov     dword_404010, eax    ; 404010 = string following keyname
+004018E2 A3 14 40 40 00          mov     dword_404014, eax    ; 404014 = string following keyme
+004018E7                                                                                      
+004018E7                         locret_4018E7:                ; CODE XREF: sub_4018C1+8j    
+004018E7 C3                      retn                                                         
+004018E7                         sub_4018C1 endp</pre></code</font> 
+GetProfileInt returns the string following the keyname in the section specified by the GetProfileInt call.
+In an .INI file, the entries look like this:<pre><code><font size=-1>
+[section]<P>
+key=string<P>
+</code></pre></font>so dword_404014 ("string") definitely refers to the compatibility value stored in WIN.INI ("section"
+will of course be "Compatibility", and "key" will be the application name). The "string" value is set by responding to
+dialog box messages (too convoluted to go into here, but check it out in the source code if you have the extra hour or three),
+then copied into the "string" variable (now renamed to "new_stringval") and written to WIN.INI. The Windows 95 loader checks the
+"Compatibility" section of WIN.INI for the app name and, if it finds it, uses the bitmask in the given string to alter the loading parameters.
+Further investigation would require some analysis of the PE file format and the Windows 95 file loader, and is beyond the scope of this
+simple demonstration.<P>
+
+The subroutine can now be "cleaned up" with more meaningful names and a few comments:
+<code><pre><font size=-1>
+0040196D                         ;   S u b r o u t i n e
+0040196D                         ; Attributes: bp-based frame
+0040196D
+0040196D                         WriteToWIN_INI proc near      ; CODE XREF: sub_401CDE+49j
+0040196D 55                                                    ; sub_401E31+21p
+0040196D
+0040196D                         CompatStringBuf= byte ptr -50h
+0040196D
+0040196D                         push    ebp
+0040196D_________________________WriteToWIN_INI( );
+0040196E 8B 0D 14 40 40 00       mov     ecx, new_stringval    ; 404014 = EXEName
+00401974 8B EC                   mov     ebp, esp              ; set up stack frame (ENTER)
+00401976 83 EC 50                sub     esp, 50h              ; make room for variable
+00401979 3B 0D 10 40 40 00       cmp     ecx, old_stringval
+0040197F 56                      push    esi                   ; save esi
+00401980 74 46                   jz      short exit_WriteToWIN_INI_proc ; Get rid of stack frame (LEAVE)
+00401982 51                      push    ecx                   ; ecx=new string val for win.ini
+00401983 8D 45 B0                lea     eax, [ebp+CompatStringBuf]
+00401986 68 2C 40 40 00          push    offset aFormatString0x_x ; Format String == 0x%X
+0040198B 50                      push    eax                   ; Buffer of string == CompatStringBuf
+0040198C FF 15 90 62 40 00       call    ds:wsprintfA          ; wsprintfA:
+00401992 83 C4 0C                add     esp, 0Ch              ; adjust stack --wsprintfA = c_decl
+00401995 8D 4D B0                lea     ecx, [ebp+CompatStringBuf]
+00401998 8B 35 D4 61 40 00       mov     esi, ds:WriteProfileStringA ; WriteProfileStringA:
+0040199E 51                      push    ecx                   ; string to write
+0040199F 68 A0 52 40 00          push    offset keyname
+004019A4 68 50 52 40 00          push    offset SectionName
+004019A9 FF D6                   call    esi
+004019A9_________________________WritePrivateProfileString( keyname, SectionName, wsprintf( CompatStringBuf, aFormatString0x_x)) 
+004019AB 68 28 40 40 00          push    offset unk_404028     ; String to write
+004019B0 68 28 40 40 00          push    offset unk_404028     ; KeyName
+004019B5 68 28 40 40 00          push    offset unk_404028     ; SectionName
+004019BA FF D6                   call    esi
+004019BA_________________________WritePrivateProfileString( loc_404028, loc_404028, loc_404028)
+004019BC 8B 0D 14 40 40 00       mov     ecx, new_stringval    ; 404014=EXEName
+004019C2 89 0D 10 40 40 00       mov     old_stringval, ecx    ; Set 404010=EXEName
+004019C8
+004019C8                         exit_WriteToWIN_INI_proc:     ; CODE XREF: WriteToWIN_INI+13
+004019C8 5E                      pop     esi                   ; Get rid of stack frame (LEAVE
+004019C9 8B E5                   mov     esp, ebp
+004019CB 5D                      pop     ebp
+004019CC C3                      retn
+004019CC                         WriteToWIN_INI endp</code></pre></font>
+Now, in C, this would be
+<code><pre><font size=-1>
+//global data
+char new_stringval[], old_stringval[], keyname[], SectionName[], strangeval[];
+//....
+WriteToWIN_INI() {
+	char CompatStringBuf[50];
+        if (new_stringval != old_stringval) {
+		WritePrivateProfileString( keyname, SectionName, wsprintf( CompatStringBUf, aFormatString0x_x) );
+		WritePrivateProfileString( strange_var, strange_var, strange_var);
+	}
+	ret;
+}</code></pre></font>
+<P>
+<BR>
+<! -------------------------------------------------------------->
+<HR> 
+
+<font size=+1><B>Recovering Source Code</b></font><P>
+The primary function of reverse engineering is the recovery of lost or inaccessible source code. Often only a specific 
+section of the source code is needed, for example the routine which provides copy protection or 
+time limits, an area of code whose functionality the reverse engineer wishes to duplicate but whose workings he is 
+unclear on (case in point: Microsoft's reverse-engineering of Stacker to duplicate its functionality in DOS), 
+or a procedure which has an error that needs to be modified. With the migration of legacy code to modern machines 
+and operating systems, in particular relating to the Y2K "crisis", it is necessary to regain the entire source code of an 
+application in order to rewrite it, or to port it to another system.<P>
+The example used in this case is the <a href="http://www.eccentrica.org/Mammon/Lost/ghf.com">ghf crackme</a> (supplied as a curio by Blitz), a DOS application that
+prompts for a password and then exits. Quick perusals of this .COM file with debug and sourcer prove it to be encrypted and
+somewhat tricky: it makes a good case-in-point for recovering a program's source code not only to bypass its protection (in this
+case, a simple password), but to learn some advanced assemlbly coding techniques from its author.<P>
+To start with, open the file in a disassembler (IDA is used throughout this example, and is highly recommended for this type of work
+for reasons to be made clear) and mark the obvious code/data areas:
+<PRE><CODE><FONT size=-1>
+seg000:0100 90		      public start
+seg000:0100		      start proc near
+seg000:0100		              nop			    	 ; No Operation
+seg000:0101 90		          nop			    	 ; No Operation
+seg000:0102 90		          nop			    	 ; No Operation
+seg000:0103 B4 09	          mov     ah, 9
+seg000:0105 BA 25 01	      mov     dx, 125h
+seg000:0108 CD 21	          int     21h			 ; DOS - PRINT STRING
+seg000:0108							                 ; DS:DX -> string terminated by "$"
+seg000:010A B4 0A	          mov     ah, 0Ah
+seg000:010C BA 1A 01	      mov     dx, 11Ah
+seg000:010F CD 21	          int     21h			 ; DOS - BUFFERED KEYBOARD INPUT
+seg000:010F							                 ; DS:DX -> buffer
+seg000:0111 89 E5	          mov     bp, sp
+seg000:0113 BC 78 02	      mov     sp, 278h
+seg000:0116 FA		          cli				     ; Clear Interrupt Flag
+seg000:0117 E9 B3 00	      jmp     loc_0_1CD		
+seg000:0117		      ;	---------------------------------------------------------------------------
+seg000:011A 0A 00 00 00	      dd 0Ah
+seg000:011E 00 00 00 00	      dd 0
+seg000:0122 00 00	          dw 0
+seg000:0124 00		          db 0 	 
+seg000:0125 20 20 5B 67	48 46+aGhfCrackingTut db '  [gHF] Cracking tutorial ',0Dh,0Ah
+seg000:0125 5D 20 43 72	61 63+db '       By Sun-Tzu`        ',0Dh,0Ah
+seg000:0125 6B 69 6E 67	20 74+db 'Crack to be a trial member',0Dh,0Ah
+seg000:0125 75 74 6F 72	69 61+db 0Dh,0Ah
+seg000:0125 6C 20 0D 0A	20 20+db 'Enter the Password: $'
+seg000:0190 0D 0A 49 6E	63 6F+aIncorrect db 0Dh,0Ah
+seg000:0190 72 72 65 63	74 21+db 'Incorrect!',0Dh,0Ah,'$'
+seg000:019F 0D 0A 43 6F	6E 67+aCongratulation db 0Dh,0Ah
+seg000:019F 72 61 74 75	6C 61+db 'Congratulations. Contact #[gHF] on DALNet',0Dh,0Ah,'$'
+seg000:01CD		      ;	---------------------------------------------------------------------------
+seg000:01CD		      
+seg000:01CD		      loc_0_1CD:			             ; CODE	XREF: start+17^j
+seg000:01CD B9 79 02	      mov     cx, 279h
+seg000:01D0 81 E9 FC 01	      sub     cx, 1FCh			 ; Integer Subtraction
+seg000:01D4 BE FA 01	      mov     si, 1FAh
+seg000:01D7 31 DB	          xor     bx, bx			 ; Logical Exclusive OR
+seg000:01D9 8E C3	          mov     es, bx
+seg000:01DB		      assume es:nothing
+seg000:01DB 26 A1 84 00	      mov     ax, es:84h
+seg000:01DF 26 A3 0C 00	      mov     es:0Ch, ax
+seg000:01E3 26 A1 86 00	      mov     ax, es:86h
+seg000:01E7 26 A3 0E 00	      mov     es:0Eh, ax
+seg000:01EB		      
+seg000:01EB		      loc_0_1EB:			             ; CODE	XREF: start+FA^j
+seg000:01EB 58		          pop     ax
+seg000:01EC 32 04	          xor     al, [si]			 ; Logical Exclusive OR
+seg000:01EE 50		          push    ax
+seg000:01EF 4C		          dec     sp			     ; Decrement by	1
+seg000:01F0 4E		          dec     si			     ; Decrement by	1
+seg000:01F1 81 FE EB 01	      cmp     si, 1EBh			 ; Compare Two Operands
+seg000:01F5 73 03	          jnb     loc_0_1FA			 ; Jump	if Not Below (CF=0)
+seg000:01F7 BE FA 01	      mov     si, 1FAh
+seg000:01FA		      
+seg000:01FA		      loc_0_1FA:			             ; CODE	XREF: start+F5^j
+seg000:01FA E2 EF	          loop    loc_0_1EB			 ; Loop	while CX != 0
+seg000:01FC E9 35 4C	      jmp     near ptr 4E34h	 ; Jump
+seg000:01FC		      start endp
+seg000:01FC		      
+seg000:01FF		      ;	---------------------------------------------------------------------------
+seg000:01FF 00 17	          add     [bx], dl			 ; Add
+seg000:0201 CC		          int     3				     ; Trap	to Debugger
+seg000:0202 03 CC	          add     cx, sp			 ; Add
+seg000:0204 7B BC	          jnp     near ptr aCongratulation+23h ; Jump if Not Parity	(PF=0)
+seg000:0206 70 04	          jo      loc_0_20C			 ; Jump	if Overflow (OF=1)
+seg000:0208 D2 80 06 FB	      rol     byte ptr [bx+si-4FAh], cl	 ; Rotate Left
+seg000:020C		      
+seg000:020C		      loc_0_20C:			             ; CODE	XREF: seg000:0206^j
+seg000:020C 76 7E						                 ; seg000:0220^j
+seg000:020C		              jbe     near ptr 28Ch		 ; Jump	if Below or Equal (CF=1	| ZF=1)
+seg000:020E 48		          dec     ax			     ; Decrement by	1
+seg000:020F ED		          in      ax, dx
+seg000:0210 FA		          cli				         ; Clear Interrupt Flag
+seg000:0211 CD 33	          int     33h			     ; - MS	MOUSE -	
+seg000:0213 75 6F	          jnz     near ptr 284h		 ; Jump	if Not Zero (ZF=0)
+seg000:0215 BA 70 1C	      mov     dx, 1C70h
+seg000:0218 C4 6A 2C	      les     bp, [bp+si+2Ch]	 ; Load	Full Pointer to	ES:xx
+seg000:021B		      assume es:nothing
+seg000:021B 08 50 6A	      or      [bx+si+6Ah], dl	 ; Logical Inclusive OR
+seg000:021E 7C 9F	          jl      near ptr aCongratulation+20h ; Jump if Less (SF!=OF)
+seg000:0220 7A EB	          jp      near ptr loc_0_20C+1	 ; Jump	if Parity (PF=1)
+seg000:0222 89 76 4C	      mov     [bp+4Ch],	si
+seg000:0225 5C		          pop     sp
+seg000:0226 25 FC 69	      and     ax, 69FCh			 ; Logical AND
+seg000:0226		      ;	---------------------------------------------------------------------------
+
+</pre></code></font>
+At line <code>seg000:0113</code> this program is already doing something tricky. Browse over lines
+<code>seg000:01CD</code> to <code>seg000:01FA</code> to get the full effect. The program is setting the
+top of the stack to <i>the last address of the program</i>; then the address on the top of the stack is POPed into
+AX, XORed with the address in SI, and pushed back onto the stack. The stack pointer (SP) is manually decremented so
+that the next address to be decrypted ( the address preceding the one that was just decrypted) becomes the top of the
+stack. The value in SI loops through the 16 bytes between <code>seg000:01FA</code> and <code>seg000:01EB</code>, with the overall
+effect that the opcodes between <code>seg000:01FC</code> and <code>seg000:0278</code> are XORed with the opcodes
+between <code>seg000:01FA</code> and <code>seg000:01EB</code>. The following IDc script emulates this decryption and
+directly patches the bytes in IDA:
+<PRE><CODE><FONT size=-1>
+// ghf.idc : XOR decryption for ghf-crackme
+//code 1998 per mammon_
+
+#include <idc.idc>
+static main(){
+    auto start_xor, curr_xor, curr_byte;
+    start_xor = SegStart( FirstSeg() ) + 0xFA;
+    curr_xor = start_xor;
+    curr_byte = SegEnd( FirstSeg() ) - 1;
+    Message( "StartXor " + atoa(start_xor) + " Curr_Byte " + atoa(curr_byte) +"\n");
+    while ( atoa(curr_byte) != "seg000:01FB" ) {
+        PatchByte(curr_byte, Byte(curr_byte) ^ Byte(curr_xor) );
+        curr_xor = PrevAddr(curr_xor);
+        if ( curr_xor ==  SegStart( FirstSeg() ) + 0xEA) curr_xor = start_xor;
+        curr_byte = PrevAddr(curr_byte);
+    }
+    Message("Done!\n");
+}
+</pre></code></font>
+Running this script and changing programs names/comments to reflect what is know about the code 
+will provide the following information (not showing the first 0xCC lines of the program):
+<PRE><CODE><FONT size=-1>
+seg000:01CD		      PrepareForSMC:			         ; CODE	XREF: start+17^j
+seg000:01CD B9 79 02	      mov     cx, 279h			 ; Count = 1 more than stack
+seg000:01D0 81 E9 FC 01	      sub     cx, 1FCh			 ; Count -Starting Address = 7D
+seg000:01D4 BE FA 01	      mov     si, 1FAh			 ; XOR with this address
+seg000:01D7 31 DB	      	  xor     bx, bx			 ; set BX=0
+seg000:01D9 8E C3	          mov     es, bx			 ; set ES=0
+seg000:01DB		      assume es:nothing
+seg000:01DB 26 A1 84 00	      mov     ax, es:84h		 ; byte	4 of command line
+seg000:01DF 26 A3 0C 00	      mov     es:0Ch, ax		 ; offset of Int 22h Termination handler
+seg000:01DF		      Command-Line byte	4 to offset (0)	of Int22h Handler
+seg000:01E3 26 A1 86 00	      mov     ax, es:86h		 ; byte	6 of command line
+seg000:01E7 26 A3 0E 00	      mov     es:0Eh, ax		 ; segment of Int23h Ctrl-C handler
+seg000:01EB		      SMC_XOR_loop: XOR	addresses 278-1FC descending
+seg000:01EB		      
+seg000:01EB		      SMC_XOR_loop:			             ; CODE	XREF: start+FA^j
+seg000:01EB 58		          pop     ax			     ; Get byte to XOR
+seg000:01EC 32 04	          xor     al, [si]			 ; XOR with contents of	SI
+seg000:01EE 50		          push    ax			     ; Write byte back to file
+seg000:01EF 4C		          dec     sp			     ; Decrement top of stack to nextencryptedbyte
+seg000:01F0 4E		          dec     si			     ; Decrement SI	to nextXOR-with	address
+seg000:01F1 81 FE EB 01	      cmp     si, 1EBh			 ; if SI < 1EBh	then SI= 1FAh
+seg000:01F5 73 03	          jnb     NextXOR			 ; Jump	if Not Below (CF=0)
+seg000:01F7 BE FA 01	      mov     si, 1FAh
+seg000:01FA		      
+seg000:01FA		      NextXOR:				             ; CODE	XREF: start+F5^j
+seg000:01FA E2 EF	          loop    SMC_XOR_loop		 ; Get byte to XOR
+seg000:01FC B9 79 02	      mov     cx, 279h			 ; Set Count = 1 more than Last	BYte in	File     
+seg000:01FF 81 E9 27 02	      sub     cx, 227h			 ; Set Count = 52h
+seg000:0203 BF 78 02	      mov     di, 278h			 ; First byte to modify= last byte in file
+seg000:0206		      SMC2 _XOR_loop: XOR addresses 278-226 descending
+seg000:0206		      
+seg000:0206		      SMC2_XOR_loop:			         ; CODE	XREF: seg000:0225^j
+seg000:0206 8A 05	          mov     al, [di]			 ; Get byte to XOR
+seg000:0208 30 D8	          xor     al, bl			 ; XOR with bl (starting bl=0)
+seg000:020A 34 FF	          xor     al, 0FFh			 ; XOR with FF
+seg000:020C 26 32 06 6C	04    xor     al, es:46Ch		 ; XOR with 0
+seg000:0211 26 32 06 6C	04    xor     al, es:46Ch		 ; XOR with 0
+seg000:0216 8A 1D	          mov     bl, [di]			 ; Get byte to XOR with
+seg000:0218 26 32 1E 0C	00    xor     bl, es:0Ch		 ; XOR with 66
+seg000:021D 26 32 1E 84	00    xor     bl, es:84h		 ; XOR with 66
+seg000:0222 88 05	          mov     [di], al			 ; Write byte back to code
+seg000:0224 4F		          dec     di			     ; Next	code byte (preceding address)
+seg000:0225 E2 DF	          loop    SMC2_XOR_loop		 ; Get byte to XOR
+seg000:0225		      ;	---------------------------------------------------------------------------
+</pre></code></font>
+Here there is a second decryption routine, handled differently. The count (CX) for the loop is set to
+52 (279-227), indicating that 52 lines of the program will be decrypted. The first address to decrypt is set
+to <code>seg000:0278</code>, the last line of the program, and is decremented during the loop so that all code
+down to <code>seg000:0226</code> will be decrypted. At the start of the loop BL is set to 0 (far, far up in the code
+at <code>seg000:01D7</code>); the opcode to be decrypted is XORed with BL and then with FFh and written back to
+memory, and the original opcode (before decryption) is saved in BL. Note that lines <code>seg000:020C</code> and
+<code>seg000:0211</code> cancel each other out, as do lines <code>seg000:0218</code> and <code>seg000:021D</code> (though
+the last one tries to be tricky). Once again, an IDC script is prepared for the decryption:
+<PRE><CODE><FONT size=-1>
+// ghf2.idc : Second XOR decryption for ghf-crackme
+//code 1998 per mammon_
+
+#include <idc.idc>
+static main(){
+    auto bl_xor, count, curr_byte, temp_byte;
+    bl_xor = 0x0;
+    count = 0x52;
+    curr_byte = SegEnd( FirstSeg() ) - 1;
+    while ( count > "0" ) {
+        temp_byte = Byte(curr_byte);
+        Message( "XORing " + atoa(curr_byte) + " with " + ltoa(bl_xor, 16) + "\n");
+        temp_byte = temp_byte ^ bl_xor;
+        temp_byte = temp_byte ^ 0xFF;
+        bl_xor = Byte(curr_byte);
+        PatchByte(curr_byte, temp_byte );
+        curr_byte = PrevAddr(curr_byte);
+        count = count - 1;
+    }
+    Message("Done!\n");
+}
+</pre></code></font>
+This provides the following final version of the disassembled code which, once commented, makes everything clear:
+<PRE><CODE><FONT size=-1>
+seg000:0100 90		      public start
+seg000:0100		      start proc near
+seg000:0100		              nop				         ; No Operation
+seg000:0101 90		          nop				         ; No Operation
+seg000:0102 90		          nop				         ; No Operation
+seg000:0103 B4 09	          mov     ah, 9
+seg000:0105 BA 25 01	      mov     dx, 125h
+seg000:0108 CD 21	          int     21h			     ; DOS - PRINT STRING
+seg000:0108							                     ; DS:DX -> string terminated by "$"
+seg000:010A B4 0A	          mov     ah, 0Ah
+seg000:010C BA 1A 01	      mov     dx, 11Ah
+seg000:010F CD 21	          int     21h			     ; DOS - BUFFERED KEYBOARD INPUT
+seg000:010F							                     ; DS:DX -> buffer
+seg000:0111 89 E5	          mov     bp, sp			 ; save	Stack Pointer
+seg000:0113 BC 78 02	      mov     sp, 278h			 ; Set Top of Stack = last byte	in file
+seg000:0116 FA		          cli				         ; Clear Interrupt Flag
+seg000:0117 E9 B3 00	      jmp     PrepareForSMC		 ; Count = 1 more than stack
+seg000:0117		      ;	----------------------------------------------------------------------
+seg000:011A		      ------------- Keyboard Input Buffer -------------
+seg000:011A 0A		      MaxBufferLength db 0Ah		 ; Max length of input = 0ah or	10 dec
+seg000:011B 00		      KeyboardInputLength db 0		 ; DATA	XREF: seg000:022F^r
+seg000:011B							                     ; seg000:0242^r
+seg000:011B							                     ; Number of characters	entered
+seg000:011C 00 00 00 00	      KeyboardInputBuffer dd 0
+seg000:0120 00 00 00 00	      dd 0
+seg000:0124 00		          db 0
+seg000:0124		      ^------------ Keyboard Input Buffer ------------^
+seg000:0125 20 20 5B 67	48 46+aGhfCrackingTut db '  [gHF] Cracking tutorial ',0Dh,0Ah
+seg000:0125 5D 20 43 72	61 63+db '       By Sun-Tzu`        ',0Dh,0Ah
+seg000:0125 6B 69 6E 67	20 74+db 'Crack to be a trial member',0Dh,0Ah
+seg000:0125 75 74 6F 72	69 61+db 0Dh,0Ah
+seg000:0125 6C 20 0D 0A	20 20+db 'Enter the Password: $'
+seg000:0190 0D 0A 49 6E	63 6F+aIncorrect db 0Dh,0Ah
+seg000:0190 72 72 65 63	74 21+db 'Incorrect!',0Dh,0Ah,'$'
+seg000:019F 0D 0A 43 6F	6E 67+aCongratulation db 0Dh,0Ah
+seg000:019F 72 61 74 75	6C 61+db 'Congratulations. Contact #[gHF] on DALNet',0Dh,0Ah,'$'
+seg000:01CD		      ;	----------------------------------------------------------------------
+seg000:01CD		      
+seg000:01CD		      PrepareForSMC:			         ; CODE	XREF: start+17^j
+seg000:01CD B9 79 02	      mov     cx, 279h			 ; Count = 1 more than stack
+seg000:01D0 81 E9 FC 01	      sub     cx, 1FCh			 ; Count -Starting Address = 7D
+seg000:01D4 BE FA 01	      mov     si, 1FAh			 ; XOR with this address
+seg000:01D7 31 DB	          xor     bx, bx			 ; set BX=0
+seg000:01D9 8E C3	          mov     es, bx			 ; set ES=0
+seg000:01DB		      assume es:nothing
+seg000:01DB 26 A1 84 00	      mov     ax, es:84h		 ; byte	4 of command line (66 displayed	in debug)
+seg000:01DF 26 A3 0C 00	      mov     es:0Ch, ax		 ; offset of Int 22h Termination handler
+seg000:01DF		      Command-Line byte	4 to offset (0)	of Int22h Handler
+seg000:01E3 26 A1 86 00	      mov     ax, es:86h		 ; byte	6 of command line (63 displayed	by debug)
+seg000:01E7 26 A3 0E 00	      mov     es:0Eh, ax		 ; segment of Int23h Ctrl-C handler
+seg000:01EB		      SMC_XOR_loop: XOR	addresses 278-1FC descending
+seg000:01EB		      
+seg000:01EB		      SMC_XOR_loop:			             ; CODE	XREF: start+FA^j
+seg000:01EB 58		          pop     ax			     ; Get byte to XOR
+seg000:01EC 32 04	          xor     al, [si]			 ; XOR with contents of	SI
+seg000:01EE 50		          push    ax			     ; Write byte back to file
+seg000:01EF 4C		          dec     sp			     ; Decrement top of stack to nextencryptedbyte
+seg000:01F0 4E		          dec     si			     ; Decrement SI	to nextXOR-with	address
+seg000:01F1 81 FE EB 01	      cmp     si, 1EBh			 ; if SI < 1EBh	then SI= 1FAh
+seg000:01F5 73 03	          jnb     NextXOR			 ; Jump	if Not Below (CF=0)
+seg000:01F7 BE FA 01	      mov     si, 1FAh
+seg000:01FA		      
+seg000:01FA		      NextXOR:				             ; CODE	XREF: start+F5^j
+seg000:01FA E2 EF	          loop    SMC_XOR_loop		 ; Get byte to XOR
+seg000:01FC B9 79 02	      mov     cx, 279h			 ; Set Count = 1 more than Last	BYte in	File
+seg000:01FC		      start endp
+seg000:01FC		      
+seg000:01FF 81 E9 27 02	      sub     cx, 227h			 ; Set Count = 52h
+seg000:0203 BF 78 02	      mov     di, 278h			 ; First byte to modify= last byte in file
+seg000:0206		      SMC2_XOR_loop: XOR addresses 278-226 descending
+seg000:0206		      
+seg000:0206		      SMC2_XOR_loop:			         ; CODE	XREF: seg000:0225^j
+seg000:0206 8A 05	          mov     al, [di]			 ; Get byte to XOR
+seg000:0208 30 D8	          xor     al, bl			 ; XOR with bl (starting bl=0)
+seg000:020A 34 FF	          xor     al, 0FFh			 ; XOR with FF
+seg000:020C 26 32 06 6C	04    xor     al, es:46Ch		 ; XOR with 0--do nothing
+seg000:0211 26 32 06 6C	04    xor     al, es:46Ch		 ; XOR with 0--undo last line
+seg000:0216 8A 1D	          mov     bl, [di]			 ; XOR next byte with original encrypted present byte
+seg000:0218 26 32 1E 0C	00    xor     bl, es:0Ch		 ; XOR with 66
+seg000:021D 26 32 1E 84	00    xor     bl, es:84h		 ; XOR with 66--Undo last line
+seg000:0222 88 05	          mov     [di], al			 ; Write byte back to code
+seg000:0224 4F		          dec     di			     ; Next	code byte (preceding address)
+seg000:0225 E2 DF	          loop    SMC2_XOR_loop		 ; Get byte to XOR
+seg000:0227		      String Compare Routine:
+seg000:0227 89 EC	          mov     sp, bp			 ; restore stack pointer to real stack
+seg000:0229 8C C8	          mov     ax, cs			 ; set ax=Code Segment
+seg000:022B 8E C0	          mov     es, ax			 ; Set ES = Code Segment
+seg000:022D		      assume es:seg000
+seg000:022D 30 ED	          xor     ch, ch			 ; Set CH = 0
+seg000:022F 2E 8A 0E 1B	01    mov     cl, cs:KeyboardInputLength ; Set CL= length of user input
+seg000:0234 BE 1C 01	      mov     si, 11Ch			 ; String 1 (User Input)
+seg000:0237 BF 57 02	      mov     di, 257h			 ; String 2 (Stored Pwd)
+seg000:023A		      
+seg000:023A		      loc_0_23A:			             ; CODE	XREF: seg000:0240^j
+seg000:023A 80 35 FF	      xor     byte ptr [di], 0FFh	 ; XOR pwd byte	with FF
+seg000:023D A6		          cmpsb				         ; Compare Strings
+seg000:023E 75 0F	          jnz     Incorrect_Guess	 ; Incorrect
+seg000:0240 E2 F8	          loop    loc_0_23A			 ; XOR pwd byte	with FF
+seg000:0242 2E 80 3E 1B	01 00 cmp     cs:KeyboardInputLength, 0	 ; Number of characters	entered
+seg000:0248 74 05	          jz      Incorrect_Guess	 ; Incorrect
+seg000:024A BA 9F 01	      mov     dx, 19Fh			 ; Congrats
+seg000:024D EB 03	          jmp     short loc_0_252	
+seg000:024F		      
+seg000:024F		      Incorrect_Guess:			         ; CODE	XREF: seg000:023E^j
+seg000:024F BA 90 01						             ; seg000:0248^j
+seg000:024F		              mov     dx, 190h			 ; Incorrect
+seg000:0252		      
+seg000:0252		      loc_0_252:			             ; CODE	XREF: seg000:024D^j
+seg000:0252 B4 09	          mov     ah, 9
+seg000:0254 CC		          int     3				     ; Trap	to Debugger--Prob supposed to be Int21h
+seg000:0255 EB 09	          jmp     short Jmp_Over_Data	 ; Count = 26A
+seg000:0257		      Encrypted	Password:
+seg000:0257 AC AA B1 D2	      dd 0D2B1AAACh			     ; 53 55 4E 2D
+seg000:025B AB A5 AA C6	      dd 0C6AAA5ABh			     ; 54 5A 55 39
+seg000:025F CA		          db 0CAh				     ; 35
+seg000:025F		      Unencypted Password: SUN-TZU95
+seg000:0260		      
+seg000:0260		      Jmp_Over_Data:			         ; CODE	XREF: seg000:0255^j
+seg000:0260 B9 6A 02	      mov     cx, 26Ah			 ; Count = 26A
+seg000:0263 81 E9 00 01	      sub     cx, 100h			 ; Count - 100h	= 16A
+seg000:0267 BF 00 01	      mov     di, 100h			 ; Set byte-to-encrypt to 100h (NOP)
+seg000:026A		      
+seg000:026A		      SMC3_XOR_loop:			         ; CODE	XREF: seg000:0270^j
+seg000:026A 8A 45 FF	      mov     al, [di-1]
+seg000:026D 30 05	          xor     [di], al			 ; Logical Exclusive OR
+seg000:026F 47		          inc     di			     ; Increment by	1
+seg000:0270 E2 F8	          loop    SMC3_XOR_loop		 ; Loop	while CX != 0
+seg000:0272 8C C8	          mov     ax, cs
+seg000:0274 8E D8	          mov     ds, ax
+seg000:0276 B4 4C	          mov     ah, 4Ch
+seg000:0278 CC		          int     3				     ; Trap	to Debugger
+seg000:0278		      seg000 ends	      
+seg000:0278		      end start
+</pre></code></font>
+Note how the password is encrypted with a simple XOR FFh; the bytes are left encrypted in the file (no need
+going through the trouble of an IDC script with this one) and stored in their unencrypted state in the
+comments.<P>
+The last XOR routine (SMC3) is used to encrypt the entire file rather than to decrypt any more
+of it; in this way, since once the program has terminated it is still present in memory and can be
+viewed with a debugger, the code will be once again encrypted and any would-be cracker would not be able to
+save it directly to disk. For the curious, the following IDC script can be used to simulate the SMC3
+loop within IDA:
+<PRE><CODE><FONT size=-1>
+// gh3.idc : XOR decryption for ghf-crackme
+//code 1998 per mammon_
+
+#include <idc.idc>
+static main(){
+    auto curr_xor, curr_byte, count;
+    curr_byte = SegStart( FirstSeg() ) + 0x100;
+    curr_xor = curr_byte - 1;
+    count = 0x16A;
+    while ( count > 0 ) {
+        PatchByte(curr_byte, Byte(curr_byte) ^ Byte(curr_xor) );
+        curr_xor = curr_byte;
+        curr_byte = NextAddr(curr_byte);
+        count = count - 1;
+    }
+    Message("Done!\n");
+}
+</pre></code></font>
+At this point the basic source code is available for recovery. IDA can output an .asm file
+which, with the addition of symbolic labels (rather than absolute addresses) and the
+stripping of unneeded information, will look like the following:
+<PRE><CODE><FONT size=-1>
+; This file is generated by The Interactive Disassembler (IDA)
+; File Name   :	D:\GHF.COM
+; Format      :	MS DOS COM File
+; Base Address:	1000h Range: 10100h - 10279h Loaded length: 0179h
+
+seg000 segment byte public 'CODE'
+assume cs:seg000
+org 100h
+assume es:nothing, ss:nothing, ds:seg000
+
+start:
+	nop				  
+	nop				  
+	nop				  
+	mov	ah, 9
+	mov	dx, offset aGhfCrackingTut
+	int	21h			   				; DOS - PRINT STRING
+				   
+	mov	ah, 0Ah
+	mov	dx, offset MaxBufferLength  ; start of buffer
+	int	21h			   				; DOS - BUFFERED KEYBOARD INPUT
+
+	mov	bp, sp			   
+	mov	sp, offset EOF		   
+	cli				   
+	jmp	PrepareForSMC		   
+
+;------------- Keyboard Input Buffer -------------
+MaxBufferLength			db 0Ah		;should be 09h [FIX]
+KeyboardInputLength 	db 0	   
+KeyboardInputBuffer 	dd 0
+						dd 0
+						db 0
+
+;------------ Strings ----------------------------
+aGhfCrackingTut	db '  [gHF] Cracking tutorial ',0Dh,0Ah
+				db '       By Sun-Tzu`        ',0Dh,0Ah
+				db 'Crack to be a trial member',0Dh,0Ah
+				db 0Dh,0Ah
+				db 'Enter the Password: $'
+aIncorrect 		db 0Dh,0Ah
+		   		db 'Incorrect!',0Dh,0Ah,'$'
+aCongratulation	db 0Dh,0Ah
+		   		db 'Congratulations. Contact #[gHF] on DALNet',0Dh,0Ah,'$'
+
+
+PrepareForSMC:			   
+	mov	cx, offset EOF + 1		   		; Count = 1 more than stack
+	sub	cx, offset Encrypted_Section_1	; Count -Starting Address = 7D
+	mov	si, offset NextXOR		   	    ; XOR with this address
+	xor	bx, bx			  
+	mov	es, bx			   
+	mov	ax, es:84h		   
+	mov	es:0Ch,	ax		   
+	mov	ax, es:86h		  
+	mov	es:0Eh,	ax		   
+
+SMC_XOR_loop:			  
+	pop	ax			       				; Get byte to XOR
+	xor	al, [si]		   				; XOR with contents of SI
+	push	ax			   				; Write byte back to	file
+	dec	sp			       				; Decrement top of stack to next encrypted byte
+	dec	si			       				; Decrement SI to next XOR-with address
+	cmp	si, offset SMC_XOR_loop			; if SI < 1EBh then SI= 1FAh
+	jnb	NextXOR			  
+	mov	si, offset NextXOR
+
+NextXOR:			   
+	loop	SMC_XOR_loop
+
+Encrypted_Section_1:		   
+	mov	cx, offset EOF + 1 				    ; Set Count = 1 more	than Last BYte in File
+	sub	cx, offset String_Compare_Routine	; Set Count = 52h
+	mov	di, offset EOF   				    ; First byte	to modify= last	byte in	file
+
+SMC2_XOR_loop:			   
+	mov	al, [di]		   				; Get byte to XOR
+	xor	al, bl			   				; XOR with bl (starting bl=0)
+	xor	al, 0FFh		   				; XOR with FF
+	xor	al, es:46Ch		   				; XOR with 0--do nothing
+	xor	al, es:46Ch		   				; XOR with 0--undo last line
+	mov	bl, [di]		   				; XOR next byte with	original encrypted present byte
+	xor	bl, es:0Ch		   				; XOR with 66
+	xor	bl, es:84h		   				; XOR with 66--Undo last line
+	mov	[di], al		   				; Write byte back to	code
+	dec	di			       				; Next code byte (preceding address)
+	loop	SMC2_XOR_loop
+		   
+String_Compare_Routine:
+	mov	sp, bp			   				; restore stack pointer to real stack
+	mov	ax, cs			   
+	mov	es, ax			   
+	xor	ch, ch			   
+	mov	cl, KeyboardInputLength 
+	mov	si, offset KeyboardInputBuffer		  
+	mov	di, offset Password		   
+
+Compare_Loop:			   
+	xor	  byte ptr [di], 0FFh	   		; XOR pwd byte with FF
+	cmpsb				  
+	jnz	 Incorrect_Guess		  
+	loop Compare_Loop		   
+	cmp	 KeyboardInputLength, 0  
+	jz   Incorrect_Guess		   
+	mov	 dx, offset aCongratulation		   
+	jmp	 short OutputString		   
+
+Incorrect_Guess:		  
+	mov	dx, offset aIncorrect		  
+
+Output_String:			  
+	mov	ah, 9
+	int	3								;Should be Int21h [FIX]			   
+	jmp	short Jmp_Over_Data	   
+
+Password	dd 0D2B1AAACh			   	; 53	55 4E 2D  SUN-
+			dd 0C6AAA5ABh			   	; 54	5A 55 39  TZU9
+			db 0CAh				       	; 35           5
+
+Jmp_Over_Data:			   
+	mov	cx, offset SMC3_XOR_loop		; Count = 26A
+	sub	cx, offset start  				; Count - 100h = 16A
+	mov	di, offset start   				; Set byte-to-encrypt to 100h (NOP)
+
+SMC3_XOR_loop:			   
+	mov	al, [di-1]
+	xor	[di], al		   
+	inc	di			   
+	loop	SMC3_XOR_loop		   		; This will encrypt file down to 26A
+	mov	ax, cs
+	mov	ds, ax	
+	mov	ah, 4Ch								
+	int	3								;Should be Int21h [FIX]
+EOF:
+seg000 ends
+
+end start
+</pre></code></font>
+Note that there are a few small problems with the code (for example, why the use of the correct
+password causes a loop in the program instead of displaying the desired string); the fixes for these
+are given in the code comments. The file should compile with tasm, though it will need to be
+encrypted twice after compilation.
+<P> 
+<HR> 
+
+</BODY> 
+</HTML> 
+ 
+ 
+ 
+ 

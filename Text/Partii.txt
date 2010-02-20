@@ -1,0 +1,163 @@
+Knowledge versus Information
+It seems that the definition of data/knowledge/information is a little obscure and off
+      course different for may of us, so let s try to compare our thinking on this subject.
+
+      Another question is do you think that information could be free ??
+
+      HARMA
+----------------------------------------------------------------------
+Re: Knowledge versus Information
+ Thursday, 29-Oct-98 11:11:04 
+
+      Isn't all information free?
+      no,yes?
+      When I buy a book, do I pay for the information,
+      or for the labor,materials,effort put into making
+      the book.Of course the authors work in gathering 
+      the information is included in that price.
+      yes,no?
+      If something is free does that implie value?
+      I belive you stated prior that my employer pays for my time ,and not for my knowledge.
+      If I work for the information I seek(search for it), this takes my time.Does it now cost
+      me,or is it still free??
+      no,yes?
+      Free is a funny word that holds various meanings for various persons.
+      "Freedoms just another word for nothing left to lose"
+      "Your always free to change your past,present,or
+      future"
+      I think that if your willing to apply yourself(work) you can find a source for most any
+      information you require for "free".
+      Information will always cost someone!!!!
+      There are a great many people who contribute information to this site(and they should be
+      commended)for free,in one way or another they 
+      paid the price for the information you are getting.
+      The saying "free for me" comes into play
+      but,there was still a cost for the information.
+      yes,no?
+      Hey, maybe i'm just full of it!!!!
+      If you want to see freedom of information check out this:
+      http://www.wired.com/news/news/email/tip/politics/story/15864.html 
+
+      Well we all see different things differently,and,I hope we always will.
+      Oh,by the way, was this a "free flow of information"?? ;~)
+
+
+
+      name_text 
+----------------------------------------------------------------------
+Re: Reality cracking: > Knowledge versus Information
+ Thursday, 29-Oct-98 14:26:45 
+
+      Hey, that's just what I asked myself some days ago: what's the difference between
+      knowledge and information?
+      Well, I haven't had very much time to think about it, but maybe the difference is as
+      follows: Maybe information is something you heard of/read and you can reproduce, and
+      maybe is knowledge is information you really understand and can work with. I'm sure, you
+      know guys having lots of information and are talking even more about it, but do they
+      really have knowledge???
+      Just my first thoughts, but an interesting topic!
+      Would like to hear more and other ideas!
+
+      blackbird
+----------------------------------------------------------------------
+Re: Reality cracking: Knowledge versus Information
+ Thursday, 29-Oct-98 15:47:06 
+
+
+      Greetings Crackers,+,
+
+      Forget the $ aspect of knowledge for a momment, that's just a miss-leading conception
+      created by a 'civilised' society to add some sort 'value' to information in general so
+      that it can be given a level of importance that people can identify with.
+
+      Information, IMHO, refers to raw knowledge, it can represent anything we wish and may, or
+      may not come in a complete form.
+
+      Knowledge can be thought of as information that has been processed, where we are then
+      able to use and build upon according to our personal needs and requirements.
+
+      Again, taking the $ value away from this equation, we can summerize that any 'value'
+      attributed to knowledge is based on our own personal idea of what it is worth to US.
+
+      Irrespective of 'how' we may come by information, it's how it effects us and we in turn,
+      how we then use this knowledge to effect our environment as well as ourselves.
+
+      The most powerful force in this universe is not our tools of destruction or supernova's
+      or black holes but the 'thought' of an intellegent specie to change it's environment. The
+      more refined the knoweldege, the clearer the whole picture will be.
+
+      To build a house someone has to have a had 'thought' and in order for that 'thought' to
+      become a reality requires knowledge of how to build that house, but even that requires
+      information first to realize that a house is needed and that it will help us to survive
+      against the environment we find ourselves in.
+
+      Hope this makes sense?.
+
+      The Sandman
+----------------------------------------------------------------------
+Re: Reality cracking: > Knowledge versus Information
+ Saturday, 07-Nov-98 10:43:09 
+
+
+      Wow! That's a "can of worms"-type philosophical question. Here are my thoughts..
+
+      Yes I believe that information could be free and I believe that quite a lot of
+      information is already free. +Fravia's site is full of free information, and so is Yellow
+      Pages. No I'm not being flippant - they really do both contain information. Different
+      sorts of information sure, but information nontheless. However I think there will always
+      be "interested parties" who don't want you to know certain pieces of information and who
+      will try and stop you. And I don't think that all information should be freely available
+      anyway. By that I don't mean we should have to pay for some pieces of information rather
+      than others. What I mean is that some information should be restricted because it'll get
+      really rather good people killed or hurt.
+
+      What about defining the concepts of data, information and knowledge then? Here's a stab
+      at doing data and information. I think that broadly speaking you could say that the
+      difference between data and information is that data is information without context or
+      meaning. Here's an example to clarify what I meab. The bit string: 0010001001100010 on
+      it's own it doesn't tell you anything. What does it mean? Nothing, unless you know what
+      it's supposed to represent. Without knowing some other things about the bit string (i.e.
+      without a context) it's just data. Now if I tell you that this bit string represents the
+      date 04/04/98 it becomes slightly more meaningful: you might have a go at finding out how
+      it represents a date. If I now tell you that from right to left the first 7 digits
+      represent the year, the next four represent the month and the next five represent the day
+      the picture is complete. The bit string is now a piece of information - it has a meaning
+      - and you can go away and use it. However that leaves several other concepts unexplored,
+      like "meaning" and "context", so perhaps it doesn't help at all?
+
+      As for knowledge and information, think about this question and you might get a clue as
+      to where the answer lies. How would you teach someone the meaning of the word
+      "knowledge", how would you teach someone the meaning of the word "information" and what
+      are the differences between the two.
+
+      Au revoir oh my brothers. Fight ignorance.
+
+
+      The Starling 
+----------------------------------------------------------------------
+Re: Re: Knowledge versus Information - an analogy?
+ Monday, 16-Nov-98 07:21:51 
+
+      hi guys, again.
+      I've wrote something about the analogy to fravia, and maybe he ignored it; ok, nevermind.
+      I can understand.
+      Here you are a possible analogy, between some analythical geometry and information-level.
+      It could be not very exact, but just a tip...
+
+      1.point exist/not exist (0 dimensions) == virtual info (like the string 001100011 without
+      usable desciption)
+      2. point exist/not exist (lying on some axe/curve) (1 dimensions, point on axe/curve) ==
+      raw information (the Curve/axe is the Description; yoy may have many curves through 1
+      point - many descriptions of a same fact)
+      2a.set of axes/curves == set of information
+      3.plane through axe/surface through curve == meaning, explanation (info about the info,
+      i.e. some knowledge); you may have many meanings/understandings for a same
+      fact/information
+      ......
+      if any one is interested, please go further. This could be a good PhD IF the above
+      analogy could be well established...
+
+      Bye
+
+
+      SvD 

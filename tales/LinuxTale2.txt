@@ -1,0 +1,2342 @@
+                      Mammon_'s Tales to Tux's Grandson
+               32-bit Task-Switching Synchronized Insurrection
+ 
+
+
+
+Linux allows for different levels of commitment. On the one hand, with a 
+distribution such as Corel or Caldera, one can have a no-fuss, well-configured
+system in under an hour; on the other hand, with a more serious distribution
+such as Slackware or Debian, one can spend weeks --even months-- modifying
+initialization scripts, adding command-line shortcuts, squeezing an extra 
+iota of performance out of the memory manager, and in general fine-tuning 
+the machine in the manner of a weekend mechanic.
+
+The previous paper represented a lower level of commitment; its contents
+could be considered mandatory for any install, the bare minimum one needs in 
+order to obtain a linux install worth having. What follows represents a 
+somewhat higher level of commitment to the OS; these topics can be considered
+unnecessary, fanatical, or the extra 'points for style' to polish off an 
+already quality linux install.
+
+
+
+Protecting Ports 
+----------------
+The way into a computer is through its ports; any remote attack on a host will 
+require a connection to an open port in oder to succeed. Thus, from a security
+standpoint, the ports on a host are the first area to safeguard. Many arguments
+stressing the superior security of Windows NT tend to ignore this; any given
+unix ships with servers listening on every standard port, while NT does not 
+even have a telnet server [that networking stuff costs extra]. As a result, the
+majority of systems broken into are unix systems as they have more doors 
+[requiring more guards or even some bricking-up]; using this to imply that NT
+is more secure than unix leads to the logical conclusion that DOS is therefore
+more secure than NT. Security is to be measured in how secure a system can be,
+not in how secure its manufacturer ships it -- and to get a system as secure as
+it can be, the ports must be dealt with.
+
+Nmap
+The first step one should take in securing the ports of a host is the same step
+that a potential intruder would take: run a port scanner to determine which
+ports on the host are open [and therefore, potentially vulnerable]. Nmap is 
+perhaps the best port scanner arouond for security purposes; unlike specialized
+'security tools' such as SATAN it scans for all open ports rather than a select
+few, and it has a number of features that most scanners are lacking.
+
+To begin with, run nmap on the target host:
+  root@localhost>nmap 123.45.67.89
+  Starting nmap V. 2.12 by Fyodor (fyodor@dhp.com, www.insecure.org/nmap/)
+		  Interesting ports on gaap.pandemonium.com (123.45.67.89):
+		  Port    State       Protocol  Service
+		  21      open        tcp        ftp
+		  22      open        tcp        ssh
+		  23      open        tcp        telnet
+		  25      open        tcp        smtp
+		  37      open        tcp        time
+		  80      open        tcp        http
+		  111     open        tcp        sunrpc
+		  113     open        tcp        auth
+		  515     open        tcp        printer
+		  731     open        tcp        netviewdm3
+		  2049    open        tcp        nfs
+  Nmap run completed -- 1 IP address (1 host up) scanned in 0 seconds
+
+Note that the above output was obtained before ip_chains were configured; the
+machine is protected only by tcp_wrappers. Once ip_chains have been started, 
+with the configuration suggested in Part 1 [default action is DENY, suitable 
+for a workstation], nmap returns no ports found.
+
+As mentioned earlier, nmap supports multiple scanning techniques in order to 
+circumvent portscan countermeasures on the target host. The different scannning
+methods are identified with variations of the -s flag:
+	-sP : Standard ping scan -- shouts "I am portscanning you!"
+	-sT : Standard TCP connect() scan -- still rather obvious
+	-sU : Standard UDP scan -- for UDP ports only
+	-sS : TCP SYN scan -- slightly more covert
+	-sF : TCP FIN scan -- packet has only FIN flag set
+	-sX : TCP 'Xmas Tree' scan -- packet has FIN, URG, PUSH set
+	-sN : TCP NULL scan -- packet has no flags set
+In addition, nmap has some 'special options' that make it the Aston Martin of
+port scanners:
+	-b user:pwd@server:port -- proxy the portscan from 'server:port'
+	-D server[,server2 ...] -- use "server"[s] as decoys :)
+	-S ipaddress -- specify the IP address the scans appear to come from
+	-g # -- specify the port number the packets appear to come from
+	-p #-# -- range of ports to scan [default is 1 - 1024]
+	-P0 : do not ping hosts before scanning [very nice]
+	-PT : use a TCP ack rather than ICMP echo for ping
+	-PI : use ICMP echo packet
+	-PB : use TCP and ICMP ping methods [default]
+	-O  : identify OS of target host
+	-I  : query identd on remote host for owner of each open port
+	-f  : fragment the S,F,X, or N packets to fool packet filters
+	-o filename -- output human-readable log to 'filename'
+	-m filename -- output machine-readable log to 'filename'
+    -v  : verbose [natch]
+
+Nmap has found a few ports open: now what? Just for fun, you can telnet to the
+ports, or use netcat. Depending on the port, you may wish to disable it 
+entirely in inetd.conf or in the rc scripts, or you may wish to protect it
+with an ipchain.
+	
+
+Port Sentry
+Port Sentry has got to be the coolest linux security program in existence, 
+vis-a-vis the win-nuke-em script punk situation. Port sentry is meant to 
+do one thing: detect and react to port scans. The detection part is simple; 
+the program allows Classic mode --where you specify the ports you want to 
+monitor-- and Stealth mode, in which you provide the top end of a range of 
+ports to scan [default is 1024, so 1-1024 are watched] and a list of ports to 
+exclude from monitoring. Both of these modes allow you to specify hosts to 
+ignore [e.g., your LAN] and the number of connections to allow before 
+triggering [default is 0].
+
+Now the fun really starts. Port Sentry allows you to set up the following 
+response actions:
+	KILL_ROUTE: use routed to route the packets from the suspect IP to a
+	            nonexistent machine or to reject them; or set up an 
+				ipchains rule for the suspect IP.
+	KILL_HOSTS_DENY: Add suspect IP to hosts.deny file
+	KILL_RUN_CMD: The best one yet. This runs an external command [and 
+	            will pass the suspect IP on the command line] of your 
+				choosing; one can page the sysadmin, email root, nmap 
+				the suspect IP, flood-ping the suspect IP, etc.
+Port Sentry also allows you to mock any potential attackers with the 
+PORT_BANNER variable, which will display a short message to the port
+being scanned.
+
+PortSentry will write to the /var/adm/messages file with the following 
+keywords:
+  adminalert: - Some message indicating the status of the PortSentry.
+  securityalert: - A message indicating a security relevant event occurred.
+  attackalert: - A host has tripped a sensor and an action was performed.
+It is configured via the portsentry.conf file in the the portsentry home
+directory. The configuration file is fairly straightforward:
+#------------------------------------------------------portsentry.conf
+#_________________________Ports_to_Monitor [Basic Mode]
+TCP_PORTS="21,23,25,80"
+UDP_PORTS=""
+#_________________________Ports_to_Monitor [Advanced Mode]
+#    Monitor ports up to & including the one listed
+ADVANCED_PORTS_TCP="1024"
+ADVANCED_PORTS_UDP="1024"
+#_________________________Ports_to_Exclude [Advanced Mode]
+#    Default TCP ident and NetBIOS service
+ADVANCED_EXCLUDE_TCP="113,139"
+#    Default UDP route (RIP), NetBIOS, bootp broadcasts.
+ADVANCED_EXCLUDE_UDP="520,138,137,67"
+#_________________________Config_Files
+IGNORE_FILE="/usr/local/psionic/portsentry/portsentry.ignore"
+HISTORY_FILE="/usr/local/psionic/portsentry/portsentry.history"
+BLOCKED_FILE="/usr/local/psionic/portsentry/portsentry.blocked"
+#__________________________Response_Methods
+#    0 = do not block  1 = block   2 = do KILL_RUN_CMD only
+BLOCK_UDP="1"
+BLOCK_TCP="1"
+#    Sensitivity [ # of connects allowed before alarm ]
+SCAN_TRIGGER="0"
+KILL_ROUTE="/sbin/ipchains -I input -s $TARGET$ -j DENY -l"
+KILL_HOSTS_DENY="ALL: $TARGET$ : DENY"
+KILL_RUN_CMD="echo  PortScan from $TARGET$:$PORT$ | wall"
+PORT_BANNER="** UNAUTHORIZED ACCESS PROHIBITED **"
+#-------------------------------------------------------------------EOF
+
+Once configured, port sentry can be started in either TCP or UDP mode using
+-tcp/-udp for basic mode, -stcp/sudp for stealth mode, and -atcp/-audp for
+advanced-stealth mode:
+  root@localhost>portsentry -atcp; portsentry -audp
+Running nmap flat-out will demonstrate the effects of PortSentry quite quickly:
+ * A message is sent to all users with the IP address of the scanner
+ * The scanner's IP is added to /etc/hosts.deny
+ * A rule is added to the 'input' ipchain denying all packets from the
+   scanner's IP address [check with 'ipchains -L input']
+Note, however, that nmap's stealth options [e.g. -sF and -sX] allow it to scan
+the host undetected -- for this reason one should secure all valuable ports 
+with ipchains, and use PortSentry only on 'script kid' ports such as the 
+Back Orifice and PC Anywhere ports --which should have no 'server' listening 
+on Unix machines-- in order to build a log of hostile IP addresses.
+
+
+
+Integrity Checks
+----------------
+An integrity checker is one of the tools that one hopes one will never need. It 
+is at its most useful after an attack, when the sysadmin knows of the security
+breach and is trying to ascertain the damage. At its most basic, an integrity
+checker maintains a database of file sizes, checksums, and create/modification
+times for a list of files specified by the admin. This database is kept in a 
+secure location such as a floppy, cd-rom, or other read-only filesystem, and on 
+dire occasions it is compared with existing files to determine what system files
+have been modified.
+
+The most widely-used integrity checker is Tripwire; however, it is usually not 
+included with linux distributions as it is not GPLed. Aide is a GPLed utility
+intended to replicate the functionality of Tripwire.
+
+Integrity checkers are very simple to use. First, create a config file in 
+./aide.conf or /etc/aide.conf; this config file must contain the location
+of the aide database, any program options, and the files or directories to 
+watch.
+   root@localhost>vi aide.conf
+       database=file:///var/adm/aide.db
+       database_out=file:///var/adm/aide.db.new
+       verbose=20
+       /boot R
+       /etc R
+       /sbin R
+       /usr/sbin R
+	   /var/logs R
+		 ~
+The 'R' flag is a composite aide command; it detects changes to permissions,
+inode number, number of links, user, group, size, modify time, and create time.
+Naturally there are more options within aide.conf, including the use of 
+variables and conditional expressions; man aide.conf for details.
+
+The command 'aide --init' will set up the database; when software has been 
+updated, aide --update will validate those changes in the database. It is 
+important to check the database before using the update feature, in order to
+avoid validating any changes made without your knowledge. Note when updating 
+one must explicitly rename the new database file to the original filename, 
+e.g. `mv /var/adm/aide.db.new /var/adm/aide.db`.
+
+The database is checked with the command `aide --check`; this will output a 
+report to STDOUT:
+  root@localhost> aide --check
+  Summary:
+  Total number of files=400,added files=0,removed files=0,changed files=2
+
+  Changed files:
+  changed:/etc
+  changed:/etc/passwd
+  Detailed information about changes:
+  file: /etc
+  Mtime: old = 954037287 , new = 954041324
+  Ctime: old = 954037287 , new = 954041324
+  file: /etc/passwd
+  Size: old = 683 , new = 714
+  Mtime: old = 953967763 , new = 954041324
+  Ctime: old = 953967763 , new = 954041324
+  MD5: old = Ai9GS5SS4hSxjLCxSJOnyg== , new = cbVLM2dF7hUNpfSE7eGx5g==
+Here you see aide reporting on a change to the /etc/passwd file; the modify 
+time has changed, and the MD5 checksum is different, indicating that the file
+has been modified since the database was last updated.
+
+Once the integrity checker has been set up, it is important to have it run
+frequently. It would be wise to add a cron job which will mail the output
+to the system administrator:
+   root@localhost>crontab -e
+	    0 1 * * * aide --check | mailx root 2>&1 >> /dev/null
+Since this will send a blank message each evening at 1 am when aide finds no
+changes, a shell script could be wrapped around the command to only mail the
+admin when aide reports changes.
+
+
+
+Packet Captures
+---------------
+A packet sniffer is arguably the most useful tool in the network or security
+analyst's toolbox; it can be viewed as a disassembler for the network stream.
+A packet sniffer can be applied to a specific interface; it will place the 
+interface in 'promiscuous mode' [meaning it will accept all packets, even 
+those not destined for it] and print to STDOUT or to a file a log of all
+network traffic. Needless to say, this is dependent on the physical network to
+which the interface is attached, and thus a packet capture can only be used on 
+local networks.
+
+TCPDump
+Every linux distribution comes with tcpdump, a command line packet sniffer. The
+syntax for tcpdump is, at one level, very simple:
+    tcpdump [-i interface] [-c count]
+This will capture 'count' packets [default is infinity] from 'interface'
+[default is eth0] and print them to STDOUT. Some of the more common options 
+to tcpdump are -x [dump the packet in hexadecimal], -a [resolve IP addresses 
+to names], -n [do not resolve IPs to names], -s [maximum packet size to 
+capture], -p [do not enter promiscuous mode], -q [less verbose], -v and -vv
+[verbose and very verbose]. In addition, the -d, -dd, and -ddd parameters will
+compile the packet-matching filter specified on the command line and print it
+in 'human readable' format, in C format, and in decimal format.
+
+The filtering itself can be quite complex; in general the filters will have the
+format
+    type direction protocol
+A 'type' is one of 'host', 'net', and 'port' -- e.g. 'host localhost', 'net 
+10.1', 'net 127.0.0.1', 'port 25'. 
+
+A 'direction' is one of 'src', 'dst', 'src or dst', and 'src and dst'. These 
+are combined with types to provide qualifiers such as 'src host frimost', 
+'dst net 127.0.0.2 port 25', and 'src or dst host localhost'.
+
+A 'protocol' is one of 'ether', 'fddi', 'ip', 'arp', 'rarp', 'decnet', 'lat',
+'sca', 'moprc', 'mopdl', 'tcp', 'udp'. In general, only ip, tcp, and udp will
+be needed.
+
+Each of the above qualifiers can be combined with the keywords 'gateway' and 
+'broadcast', as well as arithmetic and logical expressions.  The tcpdump man
+page provides a wealth of information regarding filters; in particular, the
+EXAMPLES section provides filters such as the following:
+       To print out all ICMP packets that are not echo 
+       requests/replies (i.e. not ping packets):
+              tcpdump 'icmp[0] !=8 and icmp[0] != 0'
+For small LANs and for introductory experimentation, however, filters need not
+be used.
+
+Due to the complexity of tcpdump and the data it captures, many front-ends are
+available. For X, one has the choice of Xipdump and Ethereal, as well as the 
+usual KDE and GNOME versions. So far, Ethereal seems to have the most features.
+
+
+Sniffit
+An alternative to tcpdump is the sniffit program; sniffit used libpcap and the
+BPF [BSD Packet Filter] to capture packets. The most basic use of sniffit is
+to dump packets to STDOUT:
+    root@localhost> sniffit -t 10.12.34.@ -x -a
+Note that -a dumps the packets in ASCII format [in case, for example, you are
+emulating a password hijack for an interested onlooker] while -d dumps the
+packets in hex [in case you are attempting a password hijack *despite* an
+interested onlooker]. The more interesting sniffit parameters are
+    -t [addr]  --destination IP
+    -s [addr]  --destination IP
+    -n         --disable IP checksum checking
+    -d         --dump packets in hex-mode bytes to STDOUT
+    -a         --dump packets in ASCII-mode bytes to STDOUT
+    -x         --prints extra info on TCP packets [SYN,ACK, etc]
+    -P [proto] --protocol: IP, TCP, ICMP, UDP
+    -p [port]  --port to log; 0 means 'all'
+Needless to say, a few examples will make things more clear:
+    #Watch ICMP traffic:
+    root@localhost> sniffit -t 10.12.34.@ -x -a -P ICMP
+    #Monitor telnet logins:
+    root@localhost> sniffit -t 10.12.34.@ -x -a -p 23
+    #Read outgoing email:
+    root@localhost> sniffit -s 10.12.34.@ -x -a -p 25
+Sniffit also has an interactive mode which can be entered with `sniffit -i`;
+this is an ncurses window with absolutely no helpful hints. When a connection
+is made, a line will appear in the window:
+     10.12.34.56     21  ->    10.12.34.57    1270  :  FTP: 220 
+     10.12.34.57   1270  ->    10.12.34.56      21  :  FTP: USER mammon
+Note that there are two connections shown, one for the server [port 21] and 
+one for the client [port 1270]. The client is of course the most interest 
+here; use the arrow keys to select that line and press ENTER. A small window
+will appear in which all subsequent network traffic will be logged:
+     PASS YeahRight!..SYST..PORT 10,12,34,57,4,247..LIST..
+...and thus is it possible to capture a username and password. A word to the
+wise: ssh.
+
+
+
+Login and Process Accounting
+----------------------------
+Process accounting is used to record the commands executed on the system; it can be used for monitoring user activity or for measuring system resource 
+usage. To enable process accounting, the kernel must be compiled with the 
+BSD process accounting support [CONFIG_BSD_PROCESS_ACCT] enabled. Once this 
+has been done, the accounting software [GNU's acct package] must be installed 
+and its log file set up:
+  root@localhost>mkdir /var/account
+  root@localhost>touch /var/account/pacct
+  root@localhost>chmod 644 /var/account/pacct
+
+Process accounting can be turned on and off with the accton command; the 
+default behavior of accton is to turn off accouting, however when supplied a 
+filename as a parameter, it will turn on accounting to that file. Thus, the
+rc.d scripts must be modified to run the following command upon entering the 
+default run level:
+     accton /var/account/pacct
+
+Once accounting has been turned on, testing that it is recording is fairly 
+straightforward as the file size grows with each command:
+  root@localhost>ls -l /var/account/pacct
+  -rw-r--r--   1 root     root           64 Nov 29 01:01 /var/account/pacct
+  root@localhost>ls -l /var/account/pacct
+  -rw-r--r--   1 root     root          128 Nov 29 01:01 /var/account/pacct
+
+The acct package contains utilities that check the pacct file as well as the 
+utmp log files. The pacct file contains the actual process accounting logs;
+it can be viewed with the 'lastcomm' [most recently run commands] utility, 
+or summarized with the sa [summarize accounting] utility:
+  root@localhost>lastcomm
+  bash               F     root     stderr     0.00 secs Mon Nov 29 01:06
+  sh                 S     root     ??         0.00 secs Mon Nov 29 01:05
+  flushpop.sh        S     root     ??         0.01 secs Mon Nov 29 01:05
+  ...
+  root@localhost>sa
+  126      25.56re       0.04cp         0avio       273k
+    5       0.01re       0.01cp         0avio       214k   dump-utmp
+    4       0.16re       0.00cp         0avio       544k   vim
+  ...
+
+User IDs associated with each process can be displayed in the 'sa' report 
+by using the -u option, although the output will be slighty different:
+  root@localhost>sa -u
+  root       0.00 cpu      207k mem      0 io accton
+  root       0.01 cpu      221k mem      0 io ls
+  root       0.04 cpu      547k mem      0 io vim
+  ...
+
+The pacct file is a binary file and thus cannot be viewed in a text editor; 
+for an ASCII version, the 'dump-acct' utility must be used:
+  root@localhost>dump-acct /var/account/pacct | vim -
+
+
+The utmp files are used for login accounting; like the pacct file, they are 
+binary files and must be dumped with dump-utmp:
+  root@localhost>dump-utmp /var/log/wtmp | vim -
+  root@localhost>dump-utmp /var/log/utmp | vim -
+The wtmp file maintains a log of all logins and logouts on the system; it 
+should be truncated regularly as it can get quite large. The utmp file contains
+information about who is currently logged into the system. The 'last' and 
+'who' commands make use of the wtmp and utmp files, respectively.
+
+The 'ac' utility can be used to summarize system logins; the -d option will 
+show the total connect time for all users for each day, while the -p option 
+will show the total for each user --note that these options can be combined 
+to give the total connect time for each user, by day. The connect time for 
+a specific user can be found by appending the username to the 'ac' command:
+  root@localhost>ac root 
+        total     1059.28
+  root@localhost>ac mammon
+        total        0.00
+
+
+In addition to the built-in accounting systems, there are many useful 
+monitoring tools available for linux. The most common, of course, is 
+'top', along with GUI equivalents such as 'qps', 'gps', and 'gtop'. Top
+allows realtime system monitoring; in addition, it allows the user to 
+kill ['k'] or renice ['r'] a process, to refresh the snapshot [spacebar], 
+to sort by various fields [ P for CPU usage, M for memory usage, T for 
+time], to display the command line of a process ['c'], and to hide or 
+display various fields ['f']. 
+
+A good addition to the native process accouting facilities is the 'exec' 
+kernel module, available as exec.c from linux software repositories. Once 
+compiled, exec can be loaded with 'insmod exec.o', whereupon it will log 
+exec() calls as kernel.info messages. When using this module, the syslog
+daemon should be configured to log these messages to a specific terminal 
+or logfile; the syslog.conf line would look as follows:
+   kernel.info      /usr/adm/execlog
+
+Restart the syslog daemon by doing a kill -HUP on syslogd, then tail -f
+/usr/adm/execlog:
+  Nov 22 09:06:01 gaap kernel: EXECVE(65534)[459]: /usr/sbin/in.identd
+  Nov 22 09:06:01 gaap kernel: EXECVE(0)[464]: /usr/sbin/tcpd
+  Nov 22 09:06:01 gaap kernel: EXECVE(0)[465]: /usr/sbin/tcpd
+  Nov 22 09:06:01 gaap kernel: EXECVE(0)[465]: /usr/sbin/wu.ftpd
+  Nov 22 09:06:27 gaap kernel: EXECVE(0)[470]: /usr/local/bin/nmap
+  Nov 22 09:07:41 gaap kernel: EXECVE(0)[471]: /bin/ping
+  Nov 22 09:08:18 gaap kernel: EXECVE(0)[472]: /bin/ls
+To avoid filling up the filesystem, either truncate this file regularly, or 
+configure syslogd to output to a terminal.
+
+A final important system monitoring tool is 'lsof', which is used to list 
+currently open files. By default, for the root user, lsof displays every 
+open file, including devices and pipes. The -u option will display files 
+open for a specified user, with ^ acting as the NOT operator; thus 'lsof -u
+root' will display all of the files open under the root UID, while 'lsof -u
+^root' will display all files open under UIDs other than root. Files 
+opened by a specific command can be displayed using the -c option followed 
+by the command:
+  root@localhost>lsof -c vi
+  COMMAND PID USER   FD   TYPE DEVICE   SIZE   NODE NAME
+  vim     457 root  cwd    DIR    3,1   2048 164161 /root
+  vim     457 root  rtd    DIR    3,1   1024      2 /
+  vim     457 root  txt    REG    3,3 919860   8488 /usr/bin/vim
+  vim     457 root  mem    REG    3,1  79508 172437 /lib/ld-linux.so.1.9.9
+
+Special files can be display as well; the -N option shows NFS files, the 
+-i files shows TCP/UDP ports, and -U shows sockets. Kernel-space files 
+can be ignored using the -b option, which will clear up the display 
+somewhat. And finally, the +D option can be used with a directory name to 
+display the open files within a specified directory tree:
+  root@localhost>lsof +D /var
+  COMMAND  PID USER   FD   TYPE     DEVICE   SIZE   NODE NAME
+  syslogd  108 root    1w   REG        3,1 692282  12319 /var/log/messages
+  syslogd  108 root    2w   REG        3,1  28182  12318 /var/log/debug
+  syslogd  108 root    3w   REG        3,1   5444  12347 /var/log/authlog
+
+Needless to say, lsof is a command that lends itself readily to aliases 
+such as 'opensockets' and 'opendevices'.
+
+
+
+File System Quotas
+------------------
+Linux allows disk usage quotas to be enabled for ext2 filesystems; these are 
+useful for preventing a filesystem from filling up due to user abuse, over-
+zealous log files, or runaway processes with disk output. The quota system 
+is enabled by compiling quota support [CONFIG_QUOTA] into the kernel and 
+modifying /etc/fstab; it is administered with quota.group and quota.user files,
+and with the commands quotaon, quotaoff, quotacheck, repquota, and edquota.
+
+Quota support is applied to filesystems; the filesystems to be administered 
+must be marked with the 'usrquota' option in /etc/fstab. A typcial fstab would
+then appear as follows:
+  /dev/hda2       swap     swap        defaults             0   0
+  /dev/hda1       /        ext2        defaults, usrquota   1   1
+  /dev/hda3       /usr     ext2        defaults, usrquota   1   1
+  none            /proc    proc        defaults             0   0
+  /dev/hdc        /cdrom   iso9660     ro,user,noauto       0   0
+  /dev/fd0        /floppy  vfat        defaults,user,noauto 0   0
+Note that 'usrquota' refers to quotas enforced by UID; the option 'grpquota' 
+can be used when enforcement by GID is necessary. The options are not mutually
+exclusive, and both may be specified in a single fstab line.
+
+At the mount point for each filesystem to be monitored [/ and /usr in the above
+example] there must be created the files quota.user and quota.root; these files 
+must be owned by the root user [chmod 600]. Once these files are created and 
+the fstab entries modified, the system should be rebooted to enable quota 
+support [alternatively, the filesystems could be remounted and the quotaon 
+command run]. Note that the rc scripts need to be modified to run quotacheck 
+and quotaon at boot; a script for this is
+  if [ ! -e /.noquotas ]
+  then
+	  echo "Checking disk quotas."
+     /sbin/quotacheck -avug
+     echo "Turning on disk quotas."
+     /sbin/quotaon -avug
+  fi
+This will enable quotas unless the file .noquotas is present in the root 
+directory.
+
+The quota limits can be modified using the 'edquota' utility; it can be used 
+with the -u option to modify quotas for a specific user, or with the -g 
+option to modify quotas for a particular group. The quota system allow one to 
+specify a 'soft limit' at which point the user will be warned, and a 'hard 
+limit' which will disallow further disk activity. To use these, the system 
+'grace period' must be set up using 'edquota -t'. 
+
+The edquota command will bring up the default editor [usually vi] with the 
+limits or grace period displayed at their current setting; these may be 
+modified directly, and the results will be enforced when the file in the 
+editor is saved.
+  root@localhost>edquota -u mammon
+  Quotas for user mammon:
+  /dev/hda1: blocks in use: 21, limits (soft = 0, hard = 0)
+  	          inodes in use: 5, limits (soft = 0, hard = 0)
+
+Once the quotas have been modified, they may be verified using the 'repquota'
+[report quotas] utility:
+  root@localhost>repquota -a
+                  Block limits               File limits
+  User            used    soft    hard  grace    used  soft  hard  grace
+  root      --  151419       0       0          12848     0     0
+  bin       --     109       0       0              1     0     0
+  daemon    --       2       0       0              3     0     0
+  mammon    --       4     500     600              4    50   100
+  nobody    --       1       0       0              1     0     0
+
+
+
+The Proc Filesystem
+-------------------
+The proc file system contains two types of files: kernel data structures 
+(read-only) and kernel variables (read-write).
+
+The bulk of /proc consists of files whch contain kernel data structures; these
+files may be read, but not written to. The general layout of /proc is as 
+follows:
+   1/             -- Info for PID 1
+      cmdline     -- Command Line Arguments
+      cwd@ -> //  -- Current Working Directory
+      environ     -- Environment
+      exe@ -> /sbin/init
+      fd/         -- Open file descriptors
+         10 -> /dev/initctl|
+      maps|       -- Memory Maps
+      mem         -- Memory in use by process
+      root@ -> //
+      stat        -- Status (unformatted)
+      statm       -- Memory Status (unformatted)
+                     Format: Size Res Share TRS DRS LRS DT
+                     [Total program size, size of in-mem portions, # shared 
+                      pages, # code pages, # data/stack pages, # library
+                      pages, # dirty pages ]
+      status      -- Status (formatted)
+   10/            -- Info for PID 10
+   103/           -- Info for PID 103
+   ...
+   99/            -- Info for PID 99
+   apm            -- APM [power mgt] stats
+   bus/           -- Misc BUS Info
+      pccard/        -- PCMCIA Bus Info
+         00/         -- Info for device 00
+            cardbus     -- Hex data
+            exca        -- Hex data
+            info        -- Card Information
+            pci         -- Hex data
+         ioport      -- I/O Ports used by PCMCIA
+         irq         -- Interrupts used by PCMCIA
+         memory      -- Memory used by PCMCIA
+      pci/           -- PCI Bus Info
+         00/         -- Info for device 00
+            00.0        -- Binary data
+            02.0        -- Binary data
+         devices        -- Available devices
+      pnp/           -- Plug n Pray Info
+         00          -- Info for device oo 
+         boot/       -- Boot ID info
+            00       -- Binary data 
+         devices     -- Detected devices
+   cmdline        -- Kernel command line
+   cpuinfo        -- Info about the CPU
+   devices        -- Available devices
+   dma            -- Used DMS channels
+   filesystems    -- Supported filesystems
+   ide/           -- IDE Bus Info
+      drivers        -- IDE Driver versions
+      ide0/          -- IDE controller 0
+         channel     -- IDE controller channel
+         config      -- Configuration parameters
+         hda/
+            cache             -- Device cache
+            capacity          -- Capacity of the medium
+            driver            -- Driver and version
+            geometry          -- Physical and logical geometry
+            identify          -- Device identify block
+            media             -- Media type
+            model             -- Device identifier
+            settings          -- Device setup
+            smart_thresholds  -- IDE disk management thresholds
+            smart_values      -- IDE disk management values
+         model       -- model info
+   interrupts     -- Interrupt usage
+   ioports        -- I/O port usage
+   kcore          -- Kernel core image
+   kmsg           -- Kernel messages
+   ksyms          -- Kernel symbol table
+   loadavg        -- Load average
+   locks          -- Kernel locks
+   meminfo        -- Memory info [Total, used, free, swap] 
+   misc           -- Miscellaneous
+   modules        -- List of loaded modules 
+   mounts         -- Mounted filesystems
+   mtrr           -- Pentium II mtrr configuration 
+   net/           -- Network Information
+      arp            -- Kernel ARP table
+      dev            -- network devices with statistics
+      dev_mcast      -- Layer2 multicast groups
+      dev_stat       -- network device status
+      igmp           -- IP multicast addresses
+      ip_fwchains    -- Firewall chain linkage
+      ip_fwnames     -- Firewall chains
+      ip_masq/       -- masquerading tables
+      ip_masquerade  -- Major masquerading table
+      netlink        -- List of PF_NETLINK sockets
+      netstat        -- Network statistics
+      psched         -- Global packet scheduler parameters
+      raw            -- Raw device statistics
+      route          -- Kernel routing table
+      rt_cache       -- Routing cache
+      snmp           -- SNMP data
+      sockstat       -- Socket statistics
+      tcp            -- TCP sockets
+      udp            -- UDP sockets
+      unix           -- UNIX domain sockets
+      wireless       -- Wireless interface data
+   parport/       -- Parallel Ports
+      0/          -- Device 0 [LPT1]
+         autoprobe   -- Autoprobe results of this port
+         devices     -- Connected device modules
+         hardware    -- Hardware info (io-port, DMA, IRQ, etc.)
+         irq         -- Interrupt Used
+   partitions     -- Table of partitions known to the system
+   pci            -- PCI Bus devices
+   rtc            -- Real time clock
+   scsi/          -- SCSI BUS Info
+   slabinfo       -- Slab pool [memory usage] info
+   sound          -- Sound device info
+   stat           -- Overall statistics
+   swaps          -- Swap space utilization
+   sys/           -- System Variables [see below]
+   tty/           -- Available and used tty's
+      driver/        -- Tty Device Drivers
+         serial         -- Usage statistic and status of single tty lines
+      drivers        -- List of drivers and their usage
+      ldisc/         -- Line disciplines
+      ldiscs         -- Registered line disciplines
+   uptime         -- System uptime
+   version        -- Kernel version 
+
+Note that the /proc file system will differ with devices and modules; the 
+above is taken from a Dell laptop and thus is missing the SCSI tree. These
+files are primarily used for gathering information about the system; their
+contents should be apparent from their names, though the data may be unfor-
+matted. Note that much of this information can be displayed with formatted 
+output using the procinfo command.
+
+The /proc files can be combined with cat in aliases to create a quick means
+of accessing kernel variables:
+  root@localhost>vi ~/.bashrc
+      alias powerleft='cat /proc/apm'
+      alias mem='cat /proc/meminfo'
+      alias mods='cat /proc/modules'
+      export PS1='$PWD[$TTY] `cat /proc/apm|cut -d " " -f 8`min>'
+The last line will display the battery life on the shell prompt, renewing
+each time the prompt displays.
+
+The kernel variables are located under the directory /proc/sys; this is, 
+in general, the only location of files in /proc/sys that can be modified.
+The /proc/sys tree usually has the following files: 
+   sys/dev     -- Device-specific [driver-supplied] vars
+   sys/fs      -- filesystem data
+      binfmt_misc/   -- Register misc binary formats for kernel auto-exec
+         register    -- Register binary format type. Syntax:
+                        :name:type:offset:magic:mask:interpreter:
+                        [name = unique identifier, type = method of file 
+                         recognition -- E=extension/M=Magic, offset = offset
+                         of Magic # into file, magic = byte sequence to 
+                         match at offset [hex = \x##] or extension to match, 
+                         mask = bitmask for match, interpreter = program used 
+                         to launch the matched file]
+         status      -- enabled/disabled
+      dentry-state   -- Directory Entry cache
+                        Contains NULL, # of used cache entries, Age [seconds]
+                        when entry is reclaimed, and want_pages + 2 dummy vals.
+      dquot-max      -- Max # of chached disk quota entries
+      dquot-nr       -- Currently allocated and free quota entries
+      file-max       -- Max # of file handles
+      file-nr        -- Currently allocated, used, and max# of handles
+      inode-max      -- Max # of inode handles
+      inode-nr       -- Currently allocated, free inodes
+      inode-state    -- Ditto, followed by "preshrink" [nr_inodes > inode-max]
+      super-max      -- Max # of superblocks
+      super-nr       -- Currently allocated superblocks
+   sys/kernel  -- kernel parameters
+      acct           -- Control BSD process accounting. Format:
+                           highwater lowwater frequency
+                        [ % at which to resume, % at which to suspend,
+                        how often to check ]
+      ctrl-alt-del   -- 0: send to init >0: reboot.
+      domainname     -- Get/set domain name
+      hostname       -- Get/set hostname
+      modprobe       -- Location of modprobe
+      osrelease      -- Kernel release #
+      ostype         -- Linux ;)
+      panic          -- # seconds to wait before rebooting on panic
+      printk         -- Control kernel printk output. Format:
+                           CL DML MCL DCL
+                        [ console_loglevel, default_message_loglevel,
+                          minimum_console_level, default_console_loglevel ]
+      rtsig-max      -- max # of POSIX realtime (queued) signals
+      rtsig-nr       -- # of current POSIX realtime (queued) signals
+      shmmax         -- Max shared memory segment size
+      version        -- # of times compiled from this source distr.
+   sys/net     -- Networking
+      802/           -- E802 protocol
+      core/          -- General parameters
+         message_burst        -- # of 1/10-seconds between repeat msgs
+         message_cost         -- Priority of message [ more = less msgs]
+         netdev_max_backlog   -- Max # of incoming packets to queue
+         optmem_max           -- max ancillary buffer size
+         rmem_default         -- default socket receive buffer size
+         rmem_max             -- max socket receive buffer size
+         wmem_default         -- default socket send buffer size
+         wmem_max             -- max socket send buffer size
+      ethernet/      -- Ethernet protocol
+      ipv4/          -- IP version 4
+         conf/       -- per-device configuration settings
+            accept_redirects              -- Boolean 0=router, 1=pc
+            accept_source_route           -- Boolean 1=router, 0=pc
+            bootp_relay                   -- Boolean act as BootP relay
+            forwarding                    -- Boolean IP forwarding
+            log_martians                  -- Boolean log unknown source addr
+            mc_forwarding                 -- Boolean multicast routing
+            proxy_arp                     -- Boolean proxy ARP
+            rp_proxy_arpfilter            -- Boolean validate source
+            secure_redirects              -- Boolean ICMP redir to gateway only
+            shared_media                  -- Boolean
+            send_redirects                -- Boolean send ICMP redirs
+         icmp_destunreach_rate            -- Max package rate 1/100-second
+         icmp_echo_ignore_all             -- Boolean on/off
+         icmp_echo_ignore_broadcasts      -- Boolean on/off
+         icmp_echoreply_rate              -- Max package rate 1/100-second
+         icmp_ignore_bogus_error_responses-- Boolean on/off
+         icmp_paramprob_rate              -- Max package rate 1/100-second
+         icmp_timeexceed_rate             -- Max package rate 1/100-second
+         ip_autoconfig                    -- Boolean: was IP auto-cfg'd?
+         ip_default_ttl                   -- Max # hops for outgoing packets
+         ip_dynaddr                       -- Boolean: dynamic address rewriting
+         ip_forward                       -- Boolean: enable IP forwarding
+         ip_local_port_range              -- Range, lowest-highest avail port#
+         ip_no_pmtu_disc                  -- Boolean: Path MTU Discovery
+         ipfrag_high_thresh               -- Max memory for IP reassembly
+         ipfrag_low_thresh                -- Lower threshold [stop dropping pkt]
+         ipfrag_time                      -- Time to keep IP fragment in memory
+         tcp_fin_timeout                  -- How long to wait for FIN
+         tcp_keepalive_probes             -- # of keepalive probes to send
+         tcp_keepalive_time               -- How often to send out keepalive
+         tcp_max_ka_probes                -- Max keepalive per timer run
+         tcp_max_syn_backlog              -- Size of socket backlog queue
+         tcp_retrans_collapse             -- Boolean: send larger pkt on retry
+         tcp_retries1                     -- # TCP retries [receive]
+         tcp_retries2                     -- # TCP retries [send]
+         tcp_sack                         -- Boolean: select ack [RFC2018]
+         tcp_stdurg                       -- Boolean: urgent ptr [RFC793]
+         tcp_syn_retries                  -- # of times to retry SYN pkts
+         tcp_syncookies                   -- Boolean: enable syncookies
+         tcp_timestamps                   -- Boolean: timestamps [RFC1323]
+         tcp_window_scaling               -- Boolean: Window scaling [RFC1323]
+      unix/          -- Unix domain sockets
+         delete_delay   -- Delay for socket delete
+         destroy_delay  -- Delay for socket destory
+         max_dgram_qlen -- Max queue length  
+   sys/sunrpc  -- Reset the debug flags for RPC subsystem
+         nfs_debug   -- Reset nfs_debug flag
+         nfsd_debug  -- Reset nfsd_debug flag
+         nlm_debug   -- Reset nlm_debug flag
+         rpc_debug   -- Reset rpc_debug flag
+   sys/vm      -- Virtual Memory Management
+         bdflush          -- bdflush kernel daemon
+                             nfract: % buffer cache dirty to activate bdflush
+                             ndirty: Max # dirty blocks writ per wakecycle
+                             nrefill: # clean buffers to obtain on refill
+                             nref_dirt: Dirty buffer threshold 
+                             dummy val
+                             age_buffer: Age od normal buffer before flush
+                             age_super: Age of superblock before flush
+                             2 more dummy vals
+         buffermem         -- How much memory to use for buffers
+                             min_percent: minimum % of memory to use
+                             borrow_percent: % to prune on memory shortage
+                             max_percent: maximum % to use for buffers
+         freepages         -- Regulate free-memory allocation
+                             min: Below this only kernel can alloc memory
+                             low: Below this kernel seriously swaps
+                             high: Below this point, kernel lightly swaps
+         kswapd            -- Kernel swap daemon
+                             tries_base: # of pages to swap out each round
+                             tries_min: Min # of times to try freeing a page
+                             swap_cluster: # of pages written in one turn
+         overcommit_memory -- Set to 1 to allow mallocs to always succeed
+         page-cluster      -- Read in 2^[#] pages at a time -- default is 4.
+         pagecache         -- Same as buffermem, only for memory-maps
+         pagetable_cache   -- Per-processor cache -- set to 0 for non-SMP
+Note that each of these parameters can be modified; the best way to do this is 
+to cat the /proc file to a temporary file, modify the file, then echo the temp
+file to the /proc file. The /proc files with a boolean [0/1] value can be reset
+simply by echoing 0 or 1 to the /proc file.
+
+In general, the /proc/sys tree mimics the linux kernel source layout; for 
+example, /proc/sys/net/core maps to /usr/src/linux/net/core. To track down
+the usage of variables in the kernel source, one could search the relevant
+directories under /usr/src/linux for occurences of the variable:
+  root@localhost>cd /usr/linux/src
+  root@localhost>grep -A 2 message_burst net/core/*.c
+    net/core/sysctl_net_core.c:     {NET_CORE_MSG_BURST, "message_burst", 
+    net/core/sysctl_net_core.c-       &net_msg_burst, sizeof(int), 0644, NULL,
+    net/core/sysctl_net_core.c-       &proc_dointvec_jiffies},
+  root@localhost>grep -n net_msg_burst net/core/*.c
+    net/core/utils.c:39:int net_msg_burst = 10*5*HZ;
+    net/core/utils.c:55:     if (toks > net_msg_burst)
+
+One of the tunable kernel parameters that is not located under /proc/sys is the
+interface to the MTRR support; this is available through the /proc/mtrr file. 
+MTRR stands for Memory Type Range Register; in a nutshell, it is a register for 
+transferring specific memory ranges in order to gain high-speed access to that 
+memory range. Sample uses of MTRR would be to increase performance to on-card 
+memory for video card and drive controller cards.
+
+X-windows takes advantage of MTRRs, so it is a good idea to set this up for 
+the local video card. The simplest way to do this is to capture the output 
+from X ['X -probeonly 2> out.txt'] and grep the output for the line buffer:
+  root@localhost>grep buffer out.txt
+		(--) SVGA: NM2160: Linear framebuffer at 0xF0000000
+A /proc/mtrr entry can be added by echoing the memory base address, size, and
+type to /proc/mtrr. The above videocard has 2MB of VRAM; thus the following
+command is used to modify the MTRR file:
+  echo "base=0xf0000000 size=0x200000 type=write-combining" >> /proc/mtrr
+The results will be added in the next available register [usually reg03]:
+  root@localhost>cat /proc/mtrr
+	 reg00: base=0x00000000 (   0MB), size= 128MB: write-back, count=1
+	 reg01: base=0x100a0000 ( 256MB), size=  16MB: write-back, count=1
+	 reg02: base=0xf0000000 (3840MB), size=   2MB: write-combining, count=1
+Additional PCI devices can be added by searching through /proc/pci for 
+prefetchable memory addresses; these should be added as write-combining to 
+enable burst memory writes.
+
+The binfmt_misc directory is also a good area to experiment in. The register
+file in this directory allows one to register file types with specific 
+executables, so that if a file of that type is given execute permissions 
+[chmod +x] it will be passed as a parameter to the executable it is associated
+with. This turns out to be a mechanism similar to file extension association 
+in Windows-9x or in various Window Managers, only more powerful -- files can 
+be associated by extension or by a binary signature in their file header [e.g.,
+DOS apps could be identified by the MZ string in the header]. The following 
+are a few suggested associations:
+  ':DOSWin:M::MZ::/usr/local/bin/wine:'
+  ':Java:M::\xca\xfe\xba\xbe::/usr/local/java/bin/javawrapper:'
+  ':Perl:E::pl::/usr/bin/perl:'
+  ':Tcl:E::tcl::/usr/bin/tclsh:'
+  ':HTML:E::html::/usr/local/bin/netscape:'
+  ':Applet:M::<!--applet::/usr/local/java/bin/appletviewer:'
+The files must still be made executable, of course, or the kernel will not 
+attempt to load them ... however once registered, files of any type may be
+made to open in a default application.
+
+
+
+Loadable Kernel Modules
+-----------------------
+The proc file system provides for generalized devices with which to communicate
+with the kernel and with loadable kernel modules -- more sophisticated devices
+can be created by kernel modules as files in the /dev directory. 
+
+Loadable kernel modules introduce a bit of complexity into the system from an 
+administration standpoint. For one, devices no longer need to be compiled into 
+the kernel in order to be supported -- a module can be compiled and added to 
+the system at any time, allowing users with sufficient access the ability to 
+add or remove devices and psuedo-devices to a running system.
+
+A compiled module [an unlinked object file, usually ending in '.o'] can be 
+loaded dynamically with the insmod utility:
+  root@localhost>insmod modname.o
+and unloaded with the rmmod utility:
+  root@localhost>rmmod modname
+Note that the .o extension is used only when loading the module.
+
+The modprobe utility is a more sophisticated tool which allows a module to 
+be loaded:
+  root@localhost>modprobe modname.o
+or unloaded:
+  root@localhost>modprobe -r modname.o
+It can also display a list of which modules are available for loading by 
+supplying the -l options along with the -t flag and the module type [e.g. 
+fs, net, block, scsi, misc, pcmcia]; thus one could list the available 
+file system modules with the command
+  root@localhost>modprobe -l -t fs
+The modprobe utility is oftne used with the depmod utility to load modules 
+at startup. The command 'depmod -a' will create a list of dependencies for 
+all compiled modules; modprobe will then consult this list to determine which
+modules are required in order to support the module currently being loaded. 
+Modprobe thus allows a collection of modules [e.g., the sound modules] to be 
+loaded when a single module is requested ['modprobe sound'], rather than 
+requiring each module in that collection to be requested separately, in order.
+
+A list of all loaded modules is kept in /proc/modules; a list of all exported 
+kernel symbols is kept in /proc/ksyms. These files may be cat'd as normal. In 
+order to be alerted when unapproved modules are loaded, it would be a good 
+idea to cat /proc/modules to a secure file and compare it to the current 
+/proc/modules on a regular basis:
+  root@localhost>cat /proc/modules > /var/adm/proc.table
+  root@localhost>diff /proc/modules  /var/adm/proc.table
+The diff statement can be included in a shell script that is run hourly, which 
+would mail the sysadmin when the files differ. The proc.table file should be 
+re-created at boot, or when a legitimate module is loaded.
+
+A more recent feature added to Linux's loadable kernel modules is kerneld, the 
+automatic kernel module loading facility. When the kernel requests a feature 
+that is not present in any currently loaded module, kerneld will use modprobe
+to load that module and then retry the request -- thus modules may be loaded 
+as-needed rather than at boot time.  Note that /sbin/kerneld and 'depmod -a' 
+needed to be at the very start of your rc scripts in order to fully take 
+advantage of kerneld.
+
+Kernel modules are surprisingly easy to create; the canonical 'hello' module
+can be built as follows:
+  root@localhost>vi heya.c
+   #define MODULE
+   #include <linux/module.h>
+   int init_module(void) { 
+		printk("<1>Heya linux!\n"); 
+		return 0; 
+	}
+   int cleanup_module(void) { 
+			  printk("<1>Later, linux!\n"); 
+			  return 0; 
+	}
+   ~
+  root@localhost>gcc -c heya.c
+  root@localhost>insmod heya.o
+  root@localhost>rmmod heya
+All kernel modules must have the init_module and cleanup_module routines, which 
+run on insmod and rmmod, respectively. Each of these calls printk, the kernel 
+version of printf [the list of functions available in the kernel can be found 
+in books such as "Linux Device Drivers", in manuals for writing modules and 
+hacking the kernel, in pragmatic's "LKM Hacking Guide", or by cat'ing 
+/proc/ksyms ].
+
+A read-only file in the proc file system is likewise not too complex:
+  root@localhost>vi evilproc.c
+   #define NULL 0
+   #define MODULE
+   #define __KERNEL__
+   #include <linux/module.h>
+   #include <linux/kernel.h>
+   #include <linux/proc_fs.h>
+   #include <linux/stat.h>
+   //----------------------------------Function for returning proc file contents
+   int ReadEvilProcFile( char *buf, char **start, off_t offset, int len, int jnk)
+   {
+   	len = sprintf(buf, "Muahahahaha!\n");
+	   return len;
+   }
+   //----------------------------------Structure defining file entry under /proc
+   struct proc_dir_entry EvilProcFile = {
+	   0,							//low_ino
+	   9, 						//name length
+	   "EvilLaugh", 			//name
+	   S_IFREG | S_IRUGO, 	//mode
+	   1, 0, 0,					// nlinks, owner, group
+	   0,							//size
+	   NULL,						//operations
+	   &ReadEvilProcFile, 	//read function
+   };
+   //----------------------------------Register proc file on module load
+   int init_module(void) 
+   { 
+	   proc_register(&proc_root, &EvilProcFile); 
+	   return 0; 
+   }
+   //----------------------------------Unregister proc file on module unload
+   int cleanup_module(void) { 
+	   proc_unregister(&proc_root, EvilProcFile.low_ino);
+	   return 0; 
+   }
+   ~
+  root@localhost>gcc -c evilproc.c
+  root@localhost>insmod evilproc.o
+  root@localhost>cat /proc/EvilLaugh
+Naturally this will require a bit more explanation than the previous example. 
+When the module is loaded, it calls proc_register to register the new proc 
+filesystem entry, using the address of the parent /proc dir entry [in this case,
+the root of the proc filesystem, or '/proc'] and the address of the /proc dir 
+entry being registered. This dir entry is simply a structure of type 
+proc_dir_entry and is defined --along with the various proc filesystem function 
+prototypes-- in /usr/src/linux/include/linux/proc_fs. The important entries in 
+this structure, for the example given, are the name of the file to be created 
+["EvilLaugh"] and the address of the function called when the file is read 
+["ReadEvilProcFile"]. Note that this function is passed a 1-page buffer which 
+is used to store the text for output, and it is expected to return the number 
+of bytes written to the buffer.
+
+The discussion of kernel modules so far may be perceived as merely academic; 
+however it is important to understand how modules work in order to recognize 
+them as a security threat. Take, for example, the following kernel module:
+  root@localhost>vi exploit.c
+   #define MODULE
+   #define __KERNEL__
+   #include <linux/module.h>
+   #include <linux/kernel.h>
+   #include <asm/unistd.h>
+
+   //-------------------------------
+   extern void* sys_call_table[];
+	//-------------------------------
+	int (* real_getdents) (uint, struct dirent *, uint);
+	//-------------------------------
+	int our_getdents(uint fd, struct dirent *dirp, uint count){
+		unsigned int bytes_read, tmp;
+		struct dirent *dirp2;
+		char hiddenfile = "HackerDir";
+		tmp = bytes_read = (*real_getdents) (fd, dirp, count);
+	   //----------------------------Devious Psuedocode
+		//  dirp2 = dirp;
+		//  while tmp > 0
+		//    if (dirp2->d_name == hiddenfile)
+		//       remove (dirent) dirp2 from buffer dirp
+		//       reduce bytes_read by dirp2->d_reclen
+		//    else
+		//       advance dirp2 to next dirent in buffer dirp
+		//       reduce tmp by dirp2->d_reclen
+		printk("<1>Warning! Getdents is hooked!\n"); 
+		return bytes_read;
+	 }
+	 int init_module(void) {
+		 real_getdents = sys_call_table[SYS_getdents];
+		 sys_call_table[SYS_getdents] = our_getdents;
+		 return 0;
+	 }
+	 void cleanup_module(void) {
+		 sys_call_table[SYS_getdents] = real_getdents;
+	 }
+	 ~
+  root@localhost>gcc -c exploit.c
+  root@localhost>insmod exploit.o
+  root@localhost>grep getdents /proc/ksyms
+Getdents is the syscall function used by ls, ps and other such utilities to 
+list the contents of a directory [GETDirectoryENTrieS]. The above code 
+demonstrates the linux equivalent of a DOS interrupt hook. The syscall table 
+is similar to the interrupt table in DOS; an int 80 instruction is used to 
+turn control over to the syscall handler, then the function number [passed 
+in eax] is used to reference an offset in the sys_call_table [function 
+numbers are defined in /usr/include/asm/unistd.h and sys/syscall.h ]. The 
+above code hijacks the getdents() syscall, and restores it upon exit. 
+
+Note that when you grep for getdents in /proc/ksyms, it is readily apparent 
+that the module has been loaded -- its two main functions have been exported. 
+To prevent this, use the EXPORT_NO_SYMBOLS macro [defined in module.h] and 
+recompile.
+
+So, it is remarkably easy to hijack syscall vectors using kernel modules. What
+can be done about it? The obvious answer is to monitor /proc/modules for 
+unauthorized modules. However, the module name can be hidden by setting it 
+to NULL and setting the reference count to 0 in the mod_routines structure 
+passed to init_module by reference in ebp.
+
+The most simple way is to provide a module which will display the addresses 
+of each syscall:
+//-----------------------------------------------------------SysCallProc.c
+#define MODULE
+#define __KERNEL__
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <asm/unistd.h>
+#include <linux/proc_fs.h>
+#include <sys/syscall.h>
+extern void* sys_call_table[];
+int ShowSysCalls( char *buf, char **start, off_t offset, int len, int naught){
+	int x;
+	len = 0;
+	for (x = 0; x <= SYS_chown; x++) {
+		len += sprintf( buf+len, "%x\n", sys_call_table[x] );
+	}
+	return len;
+}
+struct proc_dir_entry SysProcFile = {
+   0,							//low_ino
+   11,						    //name length
+   "SysCallAddr",			    //name
+   S_IFREG | S_IRUGO,	        //mode
+   1, 0, 0,					    // nlinks, owner, group
+   0,							//size
+   NULL,						//operations
+   &ShowSysCalls,			    //read function
+};
+
+int init_module(void)
+{
+	   proc_register(&proc_root, &SysProcFile);
+		   return 0;
+}
+int cleanup_module(void) {
+	   proc_unregister(&proc_root, SysProcFile.low_ino);
+		   return 0;
+}
+//----------------------------------------------------------------------EOF
+This module will create a file named /proc/SysCallAddr which will contain 
+183 lines [the current number of syscalls, from 0 to SYS_chown], with each 
+line containing the address of a system call -- the system call # will be 
+(line# - 1) as the syscalls are numbered starting at 0. If the contents of 
+this file are saved at boot, the saved file can be compared to the current 
+/proc/SysCallAddr to determine if any of the syscalls have been hooked.
+
+Another avenue would be to write a module to hook syscalls in advance in order 
+to watch for future module loading -- for example, by hooking init_module. 
+This type of preventative syscall hijacking can be used for other aspects of 
+system security -- to secure file system usage, or to prevent the execution 
+of files outside of valid directories [/usr/bin, /bin, etc] which will can be
+kept on a read-only filesystem [hook execve for this].
+
+
+That said, the reader who has found his interest piqued is directed towards
+pragmatic's excellent treatise on the subject, "LKM Hacking" -- available 
+from Packet Storm Securities and whereever fine security texts are 
+distributed. Additional kernel module techniques have been discussed in 
+Phrack magazine in issues 50 and 52.
+
+A read-through of the available material will inspire the truly paranoid to 
+disable kerneld/kmod entirely, forcing all device support to be compiled into 
+the kernel. In general, it should be enough to protect/rename modprobe and 
+insmod, to remove all treacherous .map and .obj files from the kernel source 
+directory with a 'make clean', and to protect kmem as best one can.
+
+One final note for the paranoiac/sysadmin, it is possible [as mentioned in the 
+pragmatic text] to search for byte signatures in the kernel in the same 
+manner one does while registering software. For example, one could compile the 
+same kernel verion as the target on one's own machine, then look up the entry 
+points for each of the syscall routines and save the first 10-20 bytes of each
+kernel function. In this way, one could scan through /dev/kmem or the kernel 
+binary on the target for those same 10-20 bytes and locate the syscall entry 
+points in this method; once a few signatures have been found, the syscall table
+location can be deduced by searching for a sequence of these entry point 
+addresses, and the syscall table entries can be modified by accessing /dev/kmem 
+directly and bypassing all modules/most system calls.
+
+Those well endowed with the luxury of time may find it within themselves to 
+fill various locations in memory with those very signatures --perhaps with the 
+liberal use of asm 'db' statments in their kernel modules-- in order to 
+guarantee a minimum of 3 matches per 32-byte signature ... about a 12K 
+investment.
+
+
+
+Tooling about in other people's binaries
+----------------------------------------
+There comes a time in every coder's life when source code cannot provide all 
+the answers. This could arise due to runtime system anomalies, or when the 
+source code for a binary is simply not available. With the commercialization
+of linux, the latter condition arises quite frequently; many software 
+companies neglect to post source code in their haste to release, and the end
+user is stuck using a product full of code left over from the development 
+cycle such as nag screens, time limits, passwords, and disabled features.
+Recognizing this common oversight, linux ships with a number of utilities
+to extract information from compiled binaries.
+
+Objdump
+The first and foremost utility for dealing with binaries is objdump. The man 
+page for objdump describes it as a tool to 'display information from object 
+files'; however in reality this is a very flexible disassembler. The command
+`objdump -x [filename]`  gives a good overview of the file, providing 
+information on its header, sections, and symbols; `objdump -D [filename]` 
+provides a 'dumb' disassembly of the entire file, while `objdump -d [filename]`
+will disassemble only the code sections. Of course objdump offers a number of
+additional options:
+
+  *To view the sections of a file and their headers:
+     objdump -h [filename]
+  *To view the contents of all sections in a hex/ascii dump:
+     objdump -s [filename]
+  *To view the relocations:
+     objdump -r [filename]
+  *To view the dynamic [shared-library] relocations:
+     objdump -R [filename]  
+  *To view the symbol table:
+     objdump -t [filename]
+  *To view the dynamic [shared-library] symbol table:
+     objdump -T [filename]
+  *To view debugging symbols:
+     objdump --debugging [filename]
+  *To view source code [if avail] with the disassembly:
+     objdump -S [filename]
+  *To disassemble part of the file:
+     objdump --start-address=[addr] --stop-address=[addr] [filename]
+     e.g. objdump --start-address=0x80484b4 --stop-address=0x80484c5 -d test.exe
+Using objdump can get quet tedious; as a testament to this, there are a slew of
+objdump wrappers, front ends, and beautifiers at Freshmeat and Packet Storm.
+
+Similar to objdump is the 'nm' utility, which is used to list the symbols in
+a binary file. Symbols are printed in either BSD [default] or SysV [in a 
+human-readable table, using the flag '-f sysv'] format. 
+
+
+Strace & Ltrace 
+Basic information about the operation of a program can be gained by using the
+program ltrace, or 'library trace'. Ltrace will run the target program under
+the control of the ptrace() system call; it will record library calls and
+system calls made by the target, as well as any signals the target receives.
+
+The basic usage for ltrace is `ltrace -iSC` to trace everything, `ltrace -iC`
+to trace only library calls, and `ltrace -iSL` to trace only system calls.
+A PID to attack to can be specified with the -p parameter; other useful 
+options include the -r option to print a timestamp at each library call, and 
+the -e option to dictate which functions to trace. 
+    root@localhost> ltrace -e 'printf,malloc'  ps aux
+    root@localhost> ltrace -e '!printf,malloc' ps aux
+As demonstated, the expression following -e can contain a comma-separated list
+of function calls to either report or [if preceded by an exclamation point] 
+ignore.
+
+Strace is more specialized than ltrace, monitoring only system calls and
+signals; however, it allows more precise control over the logging. The basic 
+usage of strace is:
+    strace [flags] target
+The more useful options are
+  -i  print IP [cs:ip] of system call
+  -tt, -r, -T : print timestamp [profile]
+  -T  time
+  -xx hex format
+  -e  expr
+  -e  trace=file,process,network,signal,ipc
+  -e  signal=sigio,sigterm
+  -e  read=fd,all
+  -e  write=fd,all
+  -p  PID attach to...
+Note that the expressions allowed are more detailed than those of ltrace. The
+"trace=" expressions take a list of function names to [or not to] trace; the
+keywords file, process, network, signal, and ipc refer to all system calls 
+which provide file access, process management, network facilties, and so on.
+The "signal=" expression states a list of signals to trace; the "read=" and 
+"write=" specify a list of file descriptors for which to provide a full hex
+dump on every read or write. Note that the output can get quite dense:
+    root@localhost> strace -e trace='!file,process,close' -e write=0,1,2 ps
+so it is good to get familiar with the ! expressions.
+
+
+Pstack
+This is a simple stack trace utility which is given a PID on the command line;
+it unwinds the stack and prints a sort of execution history for the current 
+call of the process. When symbols are stripped from the binary executable, the
+pstack output is somewhat cryptic, as this sample output will demonstrate:
+    root@localhost> pstack 21149
+     21149: /opt/wp/wpbin/xwp
+     (No symbols found)
+     0x401765e0: ???? (bfffe038, bfffdeb4, 4005224c, 2, 8818e90, 0) + 1e8
+     0x4002fca6: ???? (8818e90, 0, 0, 0, 0, 1) + 18
+     0x40030a6d: ???? (8818e90, bfffe0c0, 0, 1, bfffe124, 1d) + 5c
+     0x40028003: ???? (8818e90, 0, 400063a4, 8051370, d4, ac) + 1974
+     0x08122936: ???? (1, bffffad4, bffffadc)
+     0x080513cb: ???? (0, bffffbea, 0, bffffbfc, bffffc03, bffffc14) + 40000518
+
+
+Hex Editors
+For some reason --perhaps the lack of 0x74 -> 0x75 byte changes needed to run
+GNU software-- there has not been the flood of hex editors in linux as there
+has been in the DOS/WinXX world. Fortunately, the recent commercialization of
+linux --and the sudden influx of PC-bred coders-- has brought about the release
+of hex editors more useful than the venerable [but drab] hexedit.
+
+Both the KDE and the GNOME desktop suite have --to their credit-- shipped with
+adequate hex editors [ khexdit and ghex ]; however, there is something strange
+if not outright unholy about a GUI hex editor -- for one thing, the newbie
+shock people get reading over your shoulder at the office is significantly
+decreased. A taste test of the available console-mode hex editors turns up a
+few worthy of attention, all of which rely on ncurses for UI details.
+
+Unfortunately, there is still no perfect console hex editor. Of those available,
+BIEW offers the most features, including a file header parser and a dis-
+assembler; however, due to a lack of foresight, it captures the ALT-F# keys
+for its own purposes, thus effectively limiting the user to a single virtual
+terminal when in console mode. A good all-around runner-up is VCHE, an ncurses-
+style hex editor that works well in console or xterm; for viewing rather than
+editting files, 'hasci' works surprisingly well. The old hexedit program has
+been around for awhile and is a reliable hex editor shipped with many 
+distributions; however it is somewhat difficult to use and lacking in features.
+
+For the truly masochistic, vi can be used to edit binary files using the -b 
+command line switch; in command mode, 'ga' will display the value of the
+current position [byte] in ASCII, decimal, hexadecimal, and octal.
+
+
+
+Rolling Your Own
+----------------
+While many of the available tools are quite good; they were often designed with
+somewhat dubious goals ['security', 'integrity'] in mind ... and thus may be 
+burdened with rather arbitrary restrictions. Many tools will not attach to a 
+process that is missing debug information, ELF section headers, and other 
+niceties that tend to be missing from binary executables. As such, there may 
+come a time when one must write one's own programs; to do so, an understanding
+of the facilities linux provides is in order.
+
+
+Ptrace
+The ptrace system call is used for analyzing and debugging a running process;
+it provides the following functions:
+  PTRACE_ATTACH     -- attach to [stop] a process
+  PTRACE_DETACH     -- detach from a process
+  PTRACE_TRACEME    -- be traced by parent
+  PTRACE_CONT       -- Continue stopped process
+  PTRACE_KILL       -- Kill the process
+  PTRACE_SINGLESTEP -- Execute one instruction of the process
+  PTRACE_SYSCALL    -- Stop process at the next syscall
+  PTRACE_PEEKTEXT   -- get data from .text segment
+  PTRACE_PEEKDATA   -- get data from .data segment
+  PTRACE_PEEKUSER   -- get data from process user [ring 3] space
+  PTRACE_POKETEXT   -- write data to .text segment
+  PTRACE_POKEDATA   -- write data to .data segment
+  PTRACE_POKEUSER   -- write data to process user space
+  PTRACE_GETREGS    -- Get registers from stopped process
+  PTRACE_SETREGS    -- Set registers in stopped process
+  PTRACE_GETFPREGS  -- Get floating point registers
+  PTRACE_SETFPREGS  -- Set floating point registers
+The general approach to using ptrace is to start a process and PTRACE_ATTACH
+to it, then do whatever dirt deeds need be done [installing breakpoints with 
+PTRACE_POKETEXT, dumping text or data segments to a file, etc], and finally
+release the process back into the wild using PTRACE_DETACH. Most of the 
+'dirty deeds' done with ptrace() will take the form of stopping the process
+[with a BP or by hooking the next syscall or instruction using PTRACE_SYSCALL
+or PTRACE_SINGLESTEP], reading and writing the process memory and registers,
+and executing a PTRACE_CONT to allow the process to continue execution.
+
+The ptrace() facility is fully documented [`man ptrace`]; however the following
+program is provided to demonstrate a simple single-step debugger:
+//--------------------------------------------------------------DumpRegs.c
+#include <asm/errno.h>
+#include <asm/user.h>   //includes <system/ptrace.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main( int argc, char* argv[]) {
+{
+      int err;
+      extern int errno;
+      long thePID = strtol( argv[1], NULL, 10);
+      struct user_regs_struct regs;
+      printf("Tracing PID: %s\n", argv[1]);
+      err = ptrace( PTRACE_ATTACH, thePID, 0, 0);
+      while ( err >= 0 ) {
+        if ((ptrace( PTRACE_GETREGS, thePID, NULL, regs)) < 0) break;
+        printf("CS:IP %08X:%08X\t SS:SP %08X:%08X FLAGS %08X\n",
+                regs.cs, regs.eip, regs.ss, regs.esp, regs.eflags);
+        printf("EAX %08X \tEBX %08X \tECX %08X \tEDX %08X\n",
+                regs.eax, regs.ebx, regs.ecx, regs.edx );
+		printf("Press ENTER to step one instruction...\n");
+        getchar();
+        err = ptrace( PTRACE_SINGLESTEP, thePID, NULL, NULL);
+      }
+      printf("ERROR %d! Check /usr/include/asm/errno.h\n", errno);
+      ptrace( PTRACE_DETACH, thePID, 0, 0);
+        return;
+}
+//----------------------------------------------------------------------EOF
+
+This program will advance an instruction and print out the more useful 
+registers each time ENTER key is pressed.
+
+
+
+ELF.h
+The basic ELF file format can be parsed using the structures defined in
+/usr/include/elf.h . While a full treatment of the ELF file format is, as
+they say, beyond the scope of this work, the following code should serve 
+to demonstrate the general principle:
+
+//----------------------------------------------------------------Elf_hdr.c
+#include <stdio.h>
+#include <fcntl.h>
+#include <elf.h>
+
+int main( int argc, char* argv[]) {
+    int Target, x, diff, entry;
+    Elf32_Ehdr*  TargetHeader;
+    Elf32_Phdr*  ProgramHeader;
+    Elf32_Shdr*  SectionHeader;      //not used; included for posterity ;)
+
+    Target = open( argv[1], O_RDONLY);
+    printf("File name: %s\n", argv[1]);
+    (int) TargetHeader = malloc( sizeof( Elf32_Ehdr ));
+    read( Target, TargetHeader, sizeof( Elf32_Ehdr ));
+    (int) ProgramHeader = malloc( sizeof( Elf32_Phdr));
+    lseek( Target, TargetHeader->e_phoff, SEEK_SET);
+    for ( x = 0; x < TargetHeader->e_phnum; x++){
+        read( Target, ProgramHeader, sizeof(Elf32_Phdr));
+        if ( TargetHeader->e_entry >= ProgramHeader->p_vaddr &&
+                TargetHeader->e_entry <=
+                ( ProgramHeader->p_vaddr + ProgramHeader->p_filesz) ) {
+            diff = ProgramHeader->p_vaddr - ProgramHeader->p_offset;
+            entry = TargetHeader->e_entry - diff;
+            printf("\tEntry point at RVA %X offset %X\n", 
+                                     TargetHeader->e_entry, entry);
+        }
+        lseek( Target, TargetHeader->e_phentsize, SEEK_CUR);
+    }
+    free(ProgramHeader);
+    free(TargetHeader);
+    close( Target );
+    return 0;
+}
+//----------------------------------------------------------------------EOF
+
+The program Elf_hdr will print out the name of the target and both the RVA 
+and offset of its entry point; further information in the file can be obtained 
+by parsing the Section and Program headers.
+
+
+
+BFD
+Legend has it that Stallman and Wallace were discussing a portable binary file
+manipulation library. Stallman mentioned that the endeavour would be quite
+difficult; Wallace replied 'BFD'. That should provide some background on the 
+development of this library...
+
+BFD stands for Binary File Descriptor, and is an attempt to provide a portable
+library for manipulating [lit., linking and disassembling] object files. The 
+documentation is written from a maintainer's standpoint, and describes the BFD
+back end, front end, history, hash table facilities, and so on; what the user
+of the BFD library need to know is the following:
+    * #include <bfd.h>
+    * link to libbfd and libiberty  [-lbfd -liberty]
+    * call bfd_init() before doing *anything* with BFD
+    * use bfd_openr() and bfd_close() to manage files
+    * set the default target to NULL and call bfd_check_format_matches()
+    * rely on the bfd_ functions for everything
+That said, BFD provides a number of functions for reading and writing object
+file contents. In the interest of brevity, and due to a focus on disassembly
+rather than reassembly, only the 'read' functions will be mentioned:
+   General Routines
+     long bfd_get_mtime(bfd *abfd);
+     long bfd_get_size(bfd *abfd);
+     bfd_vma bfd_scan_vma(CONST char *string, CONST char **end, int base);
+   Machine Architectures
+     const char *bfd_printable_name(bfd *abfd);
+     const bfd_arch_info_type *bfd_scan_arch(const char *string);
+     const char **bfd_arch_list(void);
+     enum bfd_architecture bfd_get_arch(bfd *abfd);
+     unsigned long bfd_get_mach(bfd *abfd);
+     unsigned int bfd_arch_bits_per_byte(bfd *abfd);
+     unsigned int bfd_arch_bits_per_address(bfd *abfd);
+   Executable Types
+     bool bfd_set_default_target (const char *name);
+     const bfd_target *bfd_find_target(CONST char *target_name, bfd *abfd);
+     const char **bfd_target_list(void);
+   File Formats
+     bool bfd_check_format(bfd *abfd, bfd_format format);
+     bool bfd_check_format_matches(bfd *abfd, bfd_format format, char ***m);
+     bool bfd_set_format(bfd *abfd, bfd_format format);
+   File Sections
+     asection *bfd_get_section_by_name(bfd *abfd, CONST char *name);
+     void bfd_map_over_sections(bfd *abfd, void (*func), PTR obj);
+     boolean bfd_get_section_contents (bfd *abfd, asection *section, 
+                     PTR location, file_ptr offset, bfd_size_type count);
+   Relocations
+     reloc_howto_type * bfd_reloc_type_lookup (bfd *abfd, 
+                     bfd_reloc_code_real_type code);
+     const char *bfd_get_reloc_code_name (bfd_reloc_code_real_type code);
+   Symbols
+     #define bfd_canonicalize_symtab(abfd, location) BFD_SEND (abfd, 
+            _bfd_canonicalize_symtab, (abfd, location))
+     void bfd_print_symbol_vandf(PTR file, asymbol *symbol);
+   Core Files
+     CONST char *bfd_core_file_failing_command(bfd *abfd);
+     int bfd_core_file_failing_signal(bfd *abfd);
+     boolean core_file_matches_executable_p (bfd *core_bfd, bfd *exec_bfd);
+Needless to say, there are many more BFD routines, most of them documented
+in `info bfd`. The above have been chosen to demonstrate the capabilities of the
+BFD library.
+
+BFD works by creating a bfd structure describing a file or stream; the bfd
+strcuture can have read and/or write access to the original file. The BFD
+library assumes an object file will have a header, a number of sections, a
+set of relocations, and symbol information. To parse an object file using
+BFD, the file is opened using a function such as bfd_openr() to create a bfd
+structure; the structure contains a linked list of sections found in the file,
+and these may be searched with bfd_get_section_by_name or iterated over using 
+bfd_map_over_sections, and displayed using bfd_get_section_contents.
+
+The definition for a section structure is quite huge:
+typedef struct sec
+{
+   CONST char *name;
+   int index;
+   struct sec *next;
+   flagword flags;
+   unsigned int user_set_vma : 1;
+   unsigned int reloc_done : 1;
+   unsigned int linker_mark : 1;
+   unsigned int gc_mark : 1;
+   bfd_vma vma;
+   bfd_vma lma;
+   bfd_size_type _cooked_size;
+   bfd_size_type _raw_size;
+   bfd_vma output_offset;
+   struct sec *output_section;
+   unsigned int alignment_power;
+   struct reloc_cache_entry *relocation;
+   struct reloc_cache_entry **orelocation;
+   unsigned reloc_count;
+   file_ptr filepos;
+   file_ptr rel_filepos;
+   file_ptr line_filepos;
+   PTR userdata;
+   unsigned char *contents;
+   alent *lineno;
+   unsigned int lineno_count;
+   struct bfd_comdat_info *comdat;
+   file_ptr moving_line_filepos;
+   int target_index;
+   PTR used_by_bfd;
+   struct relent_chain *constructor_chain;
+   bfd *owner;
+   struct symbol_cache_entry *symbol;
+   struct symbol_cache_entry **symbol_ptr_ptr;
+   struct bfd_link_order *link_order_head;
+   struct bfd_link_order *link_order_tail;
+} asection ;
+
+...as is that for the bfd itself. Any use of the BFD library *requires* a
+reading of the info file and a trip through /usr/include/bfd.h. However, as
+a quick demonstration, the following program will iterate through the sections
+of an object file and print a list to stdout:
+//---------------------------------------------------------------BFD_test.c
+// compile with gcc -o BFD_test BFD_test.c  -lbfd -liberty
+#include <stdio.h>
+#include <bfd.h>
+
+//callback, ripped from objdump...
+static void hdr_summary(bfd *abfd, asection *section, PTR jnk)
+{
+    printf ("%3d %-13s %08lx  \n", section->index, 
+             bfd_get_section_name (abfd, section),
+             (unsigned long) bfd_section_size(abfd, section));
+}
+
+int main( int argc, char* argv[]) {
+    int x;
+    bfd *abfd;                               //BFD object
+    char **matching, *target = NULL;         //have BFD detect target
+    extern bfd_target *bfd_target_vector[];
+
+    if ( argc < 2) { printf("Usage: %s filename\n", argv[0]); return 1; }
+    bfd_init ();
+    abfd = bfd_openr(argv[1], target);
+    if ( abfd == NULL) { printf("Unable to open %s\n", argv[1]); return 1;}
+    else  printf("Acquired target: %s\n", argv[1]);
+    if (! bfd_check_format_matches(abfd, bfd_object, &matching)){
+      printf("Unrecognized File!\n Supported targets: ");
+      for ( x = 0; bfd_target_vector[x]; x++) {
+            bfd_target *p = bfd_target_vector[x];
+            printf("%s ", p->name);
+      }
+    } else {
+        printf("\nMapping %s sections...\n", abfd->filename);
+        //iterate through the sections, using hdr_summary as a callback
+        bfd_map_over_sections(abfd, hdr_summary, (PTR) NULL);
+    }
+    if (! bfd_close(abfd)) printf("Unable to close BFD!\n");
+    return 0;
+}
+//----------------------------------------------------------------------EOF
+
+
+
+LibOpcodes
+Ah, here it is at last: the Big One. The most enticingly-named library in the
+binutils arsenal, with zero documentation, a ton of header files, and only
+objdump and gdb for sample code. For those wishing to plumb the depths of the
+opcodes library, it is best to download the binutils source, and study quite
+carefully the file ./include/dis-asm.h [this should be moved somewhere into
+the /usr/include tree along with the other binutils include files, perhaps in
+/usr/include/binutils] and the disassemble_bytes() and disassemble_data() 
+routines in objdump.c .
+
+Libopcodes relies heavily on the disassemble_info structure; this structure
+actually duplicates information found in the bfd structure -- thus it is not
+necessary to use BFD in order to use libopcodes, however the BFD functions make
+the disassemble_info initialization much easier.
+
+The disassemble_info is huge, and has contains four callback functions which
+the user can replace:
+    read_memory_func()
+    memory_error_func()
+    print_address_func()
+    symbol_at_address_func()
+Of these the most useful to replace will be print_address_func(), as it is 
+responsible for the AT&T syntax. Also of import to note is the use of an
+fprintf-style function and an output stream to produce the final output; not
+only does this allow output to go to STDOUT or a file, it also allows a chance
+to review [and parse or translate] the disassembled line in a temporary file
+or buffer. The disassemble_info structure itself is well worth a look:
+
+typedef struct disassemble_info {
+  fprintf_ftype fprintf_func;
+  FILE *stream;
+  PTR application_data;
+  enum bfd_flavour flavour;
+  enum bfd_architecture arch;
+  unsigned long mach;
+  enum bfd_endian endian;
+  asymbol **symbols;
+  int num_symbols;
+  unsigned long flags;
+  PTR private_data;
+  int (*read_memory_func)
+         PARAMS ((bfd_vma memaddr, bfd_byte *myaddr, int length,
+         struct disassemble_info *info));
+  void (*memory_error_func)
+       PARAMS ((int status, bfd_vma memaddr, struct disassemble_info *info));
+  void (*print_address_func)
+       PARAMS ((bfd_vma addr, struct disassemble_info *info));
+  int (* symbol_at_address_func)
+       PARAMS ((bfd_vma addr, struct disassemble_info * info));
+  bfd_byte *buffer;
+  bfd_vma buffer_vma;
+  int buffer_length;
+  int bytes_per_line;
+  int bytes_per_chunk;
+  enum bfd_endian display_endian;
+  char insn_info_valid;         // Branch info has been set. 
+  char branch_delay_insns;      // How many sequential insn's will run before
+  char data_size;               // Size of data reference in insn, in bytes 
+  enum dis_insn_type insn_type; // Type of instruction 
+  bfd_vma target;               // Target address of branch or dref, if known
+  bfd_vma target2;              // Second target address for dref2 
+} disassemble_info;
+
+Naturally, the version in dis-asm.h is better-commented. Note the structure
+members towards the end; these contain information after a call to the 
+disassembler function [covered below] which can be used for higher-level
+disassembly or decompilation operations, e.g. cross-references.
+
+The usage of disassemble_info requires a bit of explanation. First of all, like
+the BFD library, it must be initialized with stream and an fprintf routine:
+    disassemble_info info;
+    INIT_DISASSEMBLE_INFO(info, stdout, fprintf);
+Next, the buffer member must point to data, of size buffer_length, which 
+contains the bytes to disassemble; usually an entire program section is read
+into this buffer. Finally, the buffer_vma member must be set to the virtual
+address of the code in the buffer -- again, usually the VMA of the section 
+itself. 
+
+At this point, one of the libopcodes disassembler functions can be called
+to disassemble the bytes in the buffer. The syntax for the disassembler
+functions is
+    count = (*disassembler_ftype) (bfd_vma, disassemble_info *);
+where bfd_vma is the VMA to disassemble at -- this will usually be incremented
+by 'count' after each (*disassembler_ftype) call, unless only a single 
+instruction is being decoded. When the disassembler function returns, the 
+disassemble_info will be updated, and any analysis of cross-references and such
+can take place ... though this will be after the instruction has been
+fprintf'ed.
+
+The disassembler functions are all prototyped in dis-asm.h; they can be 
+perused with a `grep "extern int print_insn" dis-asm.h`, but the only one of
+interest for Intel asm coders will be 
+    print_insn_i386
+or, due to some strange libopcodes bug,
+    print_insn_i386_intel
+
+Some sample code would of course do little harm. The following is an 
+expansion of the BFD example; it will disassemble the .text section of an
+ELF file in a very dumb, very linear manner; however, it should more than
+suffice to demonstrate the usage of libopcodes. 
+//----------------------------------------------------------------elf_dis.c
+// compile with gcc -o elf_dis elf_dis.c -lopcodes -lbfd -liberty
+#include <stdio.h>
+#include <bfd.h>
+#include <binutils/dis-asm.h>
+
+//the following is needed since ld cannot find print_insn_i386
+extern int print_insn_i386_intel      PARAMS ((bfd_vma, disassemble_info*));
+
+
+int main( int argc, char* argv[]) {
+    int x, bytes;
+    bfd *abfd;                          
+    asection *section;
+    char **matching, *target = NULL;
+    extern bfd_target *bfd_target_vector[];
+    //-----below are added from the BFD program
+    bfd_vma dis_addr;
+    bfd_byte *data = NULL;
+    bfd_size_type datasize = 0;
+    disassembler_ftype disassemble_fn;
+    disassemble_info info;
+
+    if ( argc < 2) {
+        printf("Usage: %s filename\n", argv[0]);
+        return 1;
+    }
+
+    bfd_init ();
+    abfd = bfd_openr(argv[1], target);
+    if ( abfd == NULL) { printf("Unable to open %s\n", argv[1]); return 1;}
+    else  printf("Acquired target: %s\n", argv[1]);
+    if (! bfd_check_format_matches(abfd, bfd_object, &matching)){
+      printf("Unrecognized File!\n Supported targets: ");
+      for ( x = 0; bfd_target_vector[x]; x++) {
+            bfd_target *p = bfd_target_vector[x];
+            printf("%s ", p->name);
+      }
+    } else {
+        //-------- The Disassembly of .text begins!
+        section = bfd_get_section_by_name(abfd, ".text");
+        if ( section ) {
+                // Set up the disassemble_info struct
+                INIT_DISASSEMBLE_INFO(info, stdout, fprintf);
+                info.flavour = bfd_get_flavour(abfd);
+                info.arch = bfd_get_arch(abfd);
+                info.mach = bfd_get_mach(abfd);
+                info.endian = BFD_ENDIAN_LITTLE;
+
+                // Prepare the disassemble_info buffers
+                datasize = bfd_get_section_size_before_reloc(section);
+                data = (bfd_byte *) malloc ((size_t) datasize);
+                if ( data == NULL ) return 1;
+                info.buffer = data;
+                info.buffer_vma = section->vma;
+                info.buffer_length = datasize;
+                bfd_get_section_contents (abfd, section, data, 0, datasize);
+
+                // Choose the disassembler function
+                disassemble_fn = print_insn_i386_intel;
+                bytes = 0;
+                printf("starting at %8X\n", section->vma + bytes);
+
+                // ------------------ iterate through .text section
+                while ( bytes < section->_raw_size ) {
+                      printf("%8X : ", section->vma + bytes);
+                      bytes += (*disassemble_fn) (section->vma + bytes, &info);
+                      //here is where you would put additional processing
+                      printf("\n");                 //default is no CR/LF ;(
+                }
+        }
+    }
+    if (! bfd_close(abfd)) printf("Unable to close BFD!\n");
+    return 0;
+}
+//----------------------------------------------------------------------EOF
+
+
+
+Dungeon Bashing 
+---------------
+It is important to have one's system set up correctly for kernel [and other]
+source code browsing. The most important tool for this is vim; not only should
+syntax highlighting be set up as described in the previous essay, but the 
+ctags facility should be made use of as well. For ever significant body of code
+in /usr/src --at least the kernel, and perhaps code kept for reference such as
+the binutils code-- the ctags utility should be run from the root directory 
+for the project. Each version of ctags seems to have different options; in 
+general, only the -R [recurse] option is needed:
+    root@localhost:/usr/src/linux> ctags -R *
+This will create a tags file in current directory; vim will use any tags file
+found in the current directory when it is run.
+
+When a tag file has been found, it is possible to use vim keyboard commands to
+jump between source code files:
+  [i          == jump to include file where tag under cursor is defined
+  [I          == display found tags
+  Ctrl-]      == jump forward [next tag occurrence]
+  Ctrl-[      == jump backward [previous tag occurrence]
+  Ctrl-W }    == display tag in the 'tag preview window'
+  Ctrl-W z    == close the 'tag preview window'
+  Ctrl-W ]    == open a new window and jump to next tag occurrence
+  Ctrl-W j    == switch to next [below] window
+  Ctrl-W k    == switch to next [above] window
+  Ctrl-W x    == exchange windows
+  Ctrl-W q    == close current window
+  Ctrl-W +    == increase height of current window
+  Ctrl-W -    == decrease height of current window
+  N Ctrl-T    == backtrack N jumps
+  :tags       == display tags
+Note that these are the same commands used for navigating the vim help files.
+Vim also can be started with the -t parameter, which will open the file in 
+which the specified tag is found. For example,
+    root@localhost> vim -t dma_chan
+will open the file $LINUX/drivers/ap1000/mac.h at line 55, where 'dma_chan' is
+defined. Ctags is intended for use with vi [as well as nedit, crisp, zeus, 
+and fte]; emacs users are recommended to use etags for their source navigation.
+
+Tracking down information involves sleuthing through source code directories,
+grepping include files, and healthy doses of man paging. As an illustration --
+both of the sleuthing technique, and of general editorial laziness -- here is
+an example posted in response to RalDnoR  on the hcu linux forum.
+
+Query: The target is referencing the MAC address of the network card as part
+of a licensing scheme. There are a ton of ioctl() calls in the code; how do
+you know which one is getting the MAC?
+
+Response:  First, `man ioctl`. This will give a listing of typical ioctl
+uses, though none of these covers network devices. However, at the end of 
+the man page comes the ever useful cross-references:
+       SEE ALSO
+              execve(2), fcntl(2), mt(4), sd(4), tty(4)
+The 'sd' seems familiar, it is probably '/dev/sd#', or the SCSI devices. This
+would imply that man4 contains device driver info. To verify this, one could
+`man 4 sd`
+       NAME 
+              sd - Driver for SCSI Disk Drives
+...or `man 4 intro`
+       NAME
+              intro - Introduction to special files
+       DESCRIPTION
+              This chapter describes special files.
+       FILES
+              /dev/* -- device files
+Right, man section 4 it is. Now a simple `ls /usr/man/man4` will display what
+devices are actually documented there: 
+       ...
+       netdevice.4.bz2
+       netlink.4.bz2
+       null.4.bz2
+       packet.4.bz2
+       ...
+There are no eth0 devices in linux [a sore point on many fronts], however the
+'netdevice' looks promising. The next step, naturally, is a `man 4 netdevice`:
+       NETDEVICE(4) Linux Programmer's Manual 
+       NAME 
+              netdevice - Low level access to Linux network devices.
+That would be it. The man page provides a wealth of info; searching for
+'hardware' ['hardware address', since 'MAC' fails] turns up
+                         Network device ioctls
+       Name                 ifreq member         Purpose
+       ----------------------------------------------------------
+       SIOCGIFHWADDR        ifr_hwaddr           Get the hardware
+                                                 address   of   a
+                                                 device.
+All that remains now is a trip through the includes to find out what constant
+SIOCGIFHWADDR is defined as. Since this is a kernel device driver, the include
+file will be with the kernel source:
+    root@localhost> grep -r SIOCGIFHWADDR /usr/src/linux/include/*
+        /usr/src/linux/include/linux/sockios.h
+        :#define SIOCGIFHWADDR 0x8927 /* Get hardware address
+Success on the first try: the call to ioctl() will be passed the value 0x8927
+as its second parameter.
+
+
+
+System Maintenance
+------------------
+For all of RedHat's publicity, Corel's applications, Caldera's install program,
+and Mandrake's hardware detection, linux is still a unix system -- and that 
+means that any owner of a linux system must become, at least in part, a unix
+sysadmin. The 'sysadmin manual', as it were, is of course the O'Reilly book on
+'Essential System Administration'; also, sites such as the Unix Guru Universe, 
+BOFH-net, and the annals of alt.sysadmin.recovery provide the essential mindset
+for the job. 
+
+Such reference material may be too heavy-handed -- or too volumnious -- for the
+casual user; this section should serve to introduce the elementary admin tools
+provided with linux.
+
+Device Management
+There is no System Control Panel in linux. Granted, KDE and GNOME have some 
+system configuration dialogues to make things easier, but these dialogues are
+simply graphical front-ends to console utilities and /proc files. To properly
+configure a linux system, one must become familiar with the command line tools.
+
+One of sore points for linux newcomers is the apparent lack of hardware detect-
+ion; while linux is not PnP, it does have utilities which will probe buses and
+controllers for connected devices. The ide_info and scsi_info commands will 
+report device information from their respective controllers; likewise lspci 
+and lspnp will display info on known pci and PnP devices [this information is
+also available from /proc/scsi/scsi, /proc/ide, /proc/pci,and /proc/bus/pnp], 
+and lsmod will list loaded kernel modules [usually device drivers].
+
+Various drivers can be configured from the command line, or by echoing values
+to /proc files to set kernel variables. The utility ifconfig will display or
+set addresses and netmasks for network devices; the route command will display
+or modify network routes and gateways; hdparm can be used to optimize hard 
+drive performance, and vidmode can be used to set the bootup video mode. For
+PnP devices, the pnpdump utility will dump default [and alternate] parameters
+for all PnP ISA devices; the resulting file can be editted and used as input
+to isapnp for configuring plug and play devices at boot. The setpci program 
+can be used to configure PnP devices on the PCI bus.
+
+Finally, as mentioned in the discussion of file systems, most of the system
+configuration information is stored as text files in /etc. In general, any
+/etc file with 'rc' or 'conf' in the filename will be useful; the following
+files are of the most interest for a standard system:
+    conf.modules  -- modules [device driver] configuration
+    fstab         -- filesystem [disk partition] setup
+    group         -- user goups
+    hosts         -- hard-coded IP/name translations
+    host.conf     -- general networking options
+    inetd.conf    -- TCP/IP service config file
+    inittab       -- system run level setup
+    ld.so.conf    -- library file path/search order
+    man.config    -- man page path/search order
+    passwd        -- user ids
+    printcap      -- printer setp
+    protocols     -- definition of network protocols
+    resolv.conf   -- DNS name server listing
+    services      -- TCP/IP service to port number mapping
+
+
+Runtime Monitoring
+When a new convert to linux is asked why they made The Change, they will
+usually say 'Performance'. As time goes on, and they learn the Unix way, their
+answer will invariably change to 'Control'. With a Unix system, it is possible
+to know anything about a running system with a few simple commands.
+
+The most basic, of course, is 'uptime' -- a report of how long the system has
+been running, and what the load average [average number of processes spawned 
+per second] is. The 'w' command provides this information, as well as a report
+on current user activity:
+    root@localhost> w
+     9:29pm  up 1 day,  9:23,  5 users,  load average: 0.00, 0.00, 0.03
+     USER     TTY      FROM              LOGIN@   IDLE   JCPU   PCPU  WHAT
+     root     tty1     -                Sat10am 30:44   1.89s  1.79s  -bash
+     root     tty2     -                Sat11am  3.00s 13.64s 13.48s  vi Linu
+     root     tty3     -                Sat12pm  1.00s  0.98s  0.02s  w
+     root     tty4     -                Sat 1pm 43:31   0.25s  0.22s  -bash
+     root     tty5     -                Sat 1pm  8:08m 28.54s  0.11s  -bash
+
+The 'top' command has long been a staple of sysadmins, providing a constantly
+refreshing list of the "most-wanted" processes and a system summary. Though
+top by default groups processes by CPU usage, the display can be modified using
+the follwing keys:
+  N       Sort by pid (Numerically)
+  A       Sort by age
+  P       Sort by CPU usage
+  M       Sort by resident memory usage
+  T       Sort by time / cumulative time
+  u       Show only a specific user
+  n or #  Set the number of process to show
+  S       Toggle cumulative mode
+  i       Toggle display of idle proceses
+  c       Toggle display of command name/line
+  l       Toggle display of load average
+  m       Toggle display of memory information
+  t       Toggle display of summary information
+Some basic admin commands can also be performed from within top:
+  k       Kill a task (with any signal)
+  r       Renice a task
+
+More process control can be obtained with the 'ps' [process stack] command; 
+its most common usage is `ps aux` on BSD and Linux systems, and `ps -ef` on 
+System V machines. The ps utility is often used to obtain PIDs prior to 
+killing a process, as can be shown with the common command [often an alias or 
+utility in its own right on modern linux systems] `ps aux | grep netscape`.
+
+Along with process concerns comes disk management; the 'df' command can be 
+used to display file system information:
+    root@localhost> df -k
+      Filesystem           1k-blocks      Used Available Use% Mounted on
+      /dev/hda1               809556    340932    427500  44% /
+      /dev/hda2              2016016   1147020    766584  60% /usr
+      /dev/hda5               124915     44225     74241  37% /var
+      /dev/hda6                42913        25     40672   0% /tmp
+The disk usage command 'du' provides more local information; by default it
+will recursively scan the contents of the current directory, printing the size
+of each file and a total for each directory. To skip the traversal, the -s flag
+can be used.
+
+More system information can be obtained using the free, vmstat, and netstat
+commands. Free will display 'used' and 'available' statistics for physical and 
+swap memory; in general, the swap usage should be fairly low, i.e. below 1%. 
+Vmstat displays process and virtual memory statistics; its output is fairly 
+cryptic:
+   procs                      memory    swap          io     system         cpu
+ r  b  w   swpd   free   buff  cache  si  so    bi    bo   in    cs  us  sy  id
+ 0  0  0     68  45580  22656  37060   0   0     0     0  108    27   1   0  99
+in order to save space. The fields are, from left to right: the # of processes
+waiting for run time, the # of processes sleeping, the # of processes swapped,
+the amount of virtual memory used, the amount of idle memory, the amount of 
+memory allocated to buffers, the amount of memory swapped in from disk, the 
+amount of memory swapped out to disk, the number of blocks read per second from
+block devices, the number of blocks written per second, the number of
+interrupts per second, the number of context switches per second, the % of CPU
+time spent in user mode, the % of CPU time spent in system mode, and the % of 
+CPU time spent in idle mode. 
+
+The netstat utility is used as a general-purpose network troubleshooting tool;
+by default, it prints put a list of active internet connections and sockets. 
+In actuality, netstat provides the following reports which correspond to 
+single-letter command line switches:
+    g IGMP multicast group info
+    i interface details
+    M Masqueraded sessions
+    N Netlink statistics
+    r routing tables
+    s summary
+Using the -n option with any of these will cause addresses to be printed
+rather than machine names; the -p option will print program names for socket
+connections, -c will provide continuous updates, and -v will provide more 
+verbose output. Common uses of netstat would include `netstat -nr` to check
+routing and gateway information, `netstat -s` to look for NIC errors, and 
+`netstat -c -i eth0` to troubleshoot network problems [often in conjunction 
+with ping or other ICMP packet generators]. The interface table from netstat
+is another rather complicated report:
+    root@localhost> netstat -i eth0
+Kernel Interface table
+Iface   MTU Met    RX-OK RX-ERR RX-DRP RX-OVR    TX-OK TX-ERR TX-DRP TX-OVR Flg
+eth0   1500   0    16572      0      0      0     9965      0      0      0 BRU
+lo     3924   0       14      0      0      0       14      0      0      0 LRU
+vmnet  1500   0        0      0      0      0        0      0      0      0 BRU
+
+The columns of this table, from left to right, are Interface, Max Transmission 
+Unit, Metric, Packets Received OK, Packets Received with Error, Received Packets
+Dropped, Received Packets lost from Overrun, Packets Transmitted OK, Packets 
+Transmitted with Error, Transmit Packets lost from Overrun, Packets Dropped, 
+Transmit Packets, Flags. The flags for network devices are
+    B Broadcast address has been set
+    L Loopback device
+    M Promiscuous mode
+    N No Trailers
+    O ARP is disabled
+    P Point-to-point connection [e.g. PPP]
+    R Device is Running
+    U Interface is up
+
+
+Finally, kernel boot messages can be examined using the 'dmesg' utility. This
+produces many pages of output, and is essentially a distillation of the 
+/var/log/messages or /var/adm/messages system log file.
+
+
+User Management
+Properly administered, a Unix system would never fail ... if there were no 
+users. That is the impression one is left with, at least, after configuring
+a few servers. The fact is that sysadmins do not trust users, and as a result
+there are quite a few utilities on linux systems made for watching users.
+
+The 'who' utility is first and foremost among these; it displays a list of 
+which users are logged in on which TTYs. The somewhat more existential 
+'whoami' program displays the username for the current effective UID -- thus,
+after multiple su's across a few machines, it is still possible to retain a
+grasp, however tenuous, on one's identity. The 'logname' command is similar,
+displaying the name of the user who logged in on the current terminal.
+
+In addition to 'live' reporting, recent user activity can be viewed with
+programs that read the /var/log/wtmp and /var/run/utmp files. The 'last'
+command will provide a list of recent login activity for all users, along
+with terminal number, login time, and source IP address. The 'ac' command can
+be used for more formal login reporting; by default it prints a somewhat 
+useless total of login time, but the commands `ac -d` and `ac -p` will print
+out total login time per day and per user, respectively.
+
+
+
+Disaster Recovery
+-----------------
+Let's face it, linux is not all that rosy at times. It *is* possible to crash
+the kernel, to hang the machine [especially with apps like Netscape/X], and to
+corrupt the file system. Most users know about fsck, top, and kill for general
+system problems, however linux has a few additional utilities which will be of
+use in traumatic situations.
+
+File Recovery
+There is an 'Ext2-fs Undeletion HowTo' which covers in great depth the issue
+of recovering deleted files; to follow it you will need the fsgrab and debugfs
+utilities, along with the will to reconstruct files from their component 
+inodes. A tool called recover has been built to automate the undeletion 
+process.
+
+Debugfs is an interesting utility in its own right. It opens the specified 
+device in an interactive shell which allows direct manipulation of inodes and 
+blocks. Some of the more useful commands are:
+  cat filename          : dump contents of filename to STDOUT
+  cd dirname            : change current directory to filename 
+  close                 : close specified device
+  dirty                 : mark FS as dirty
+  dump filename outfile : dump contents of filename to new file 'outfile'
+  freeb block           : mark block as no allocated
+  freei inode           : free inode
+  help                  : list debugfs commands
+  icheck                : find inode owning block
+  kill_file filename    : free inode and blocks associated with filename
+  ln filename newfile   : create link 'newfile' to filename
+  ls filename           : directory/file listing
+  lsdel                 : list deleted files
+  modify_inode filename : modify the inode structure for filename
+  ncheck                : find pathname for inode
+  open dev              : open device
+  pwd                   : print working directory
+  quit                  : exit 
+  stats                 : print the contents of the superblock
+  stat filename         : display inode structure for filename
+Commands that take filenames for arguments can accept an inode, provided it
+is enclosed in carets:
+   debugfs: stat <325633>
+Debugfs outputs to STDOUT; thus it can be scripted to capture output. For 
+example, to obtain a list of all deleted files, one could use
+   root@localhost> echo lsdel | debugfs
+and capture the output to a file. For more information, a shell script could
+be written to display the contents of each inode as well:
+  root@localhost> vi del_inodes.sh
+    #!/bin/sh
+    # assumes device is passed as the only parameter
+    for i in `echo lsdel | debugfs $1 2> /dev/null | awk '/^[0-9]/ {print $1}'`
+	 do
+	   echo $i Contents:
+		echo "cat <$i>" | debugfs $1 2> /dev/null  
+      # Use the below line to avoid generating a 100MB file...
+      #echo "cat <$i>" | debugfs $1 2> /dev/null | head   
+		echo "-----------------------------------EOF"
+    done
+    #------------------------------------------------------------------EOF
+This will output the contents of each deleted file to STDOUT -- note that 
+many of these will be binary files, so it is recommended that output be 
+redirected to a file. When recovering a specific file, rather than just 
+browsing for deletions, one could use the 'echo lsdel' trick and cut or awk
+the appropriate field for testing -- e.g., the file create date or size could
+be used to narrow down the range of files to cat or undelete.
+
+Finally, the Linux Disk Editor [lde] is a utility that can be used to browse
+ext2 partitions in hex/ascii mode. It offers a subset of the debugfs function-
+ality, however it has a somewhat more friendly user interface. Those who often
+delete files by accident may well want to invest the time needed to learn lde.
+
+
+Undeld
+There is available for linux an undelete daemon called 'undeld' which will 
+store deleted files in an special undelete directory -- much like the Trash
+on a Mac and the Recycle Bin on Windows. The undeld daemon is started from
+an rc script with a parameter stating what at what fraction of a day it 
+should clear the undelete directory -- .5 would clear twice a day, 1 would 
+clear once, .25 would clear four times, and so on. Running undeld without
+this parameter eats up a lot of CPU resources, and has a notable impact on
+system performance.
+
+Once undeld is in place, deleted files can be viewed with 'lsdel', then 
+undeleted with 'undelete'. The 'clrdel' command can be used to clear the
+undelete directory manually. Specific files can be flagged with chattr -u 
+to make them undeletable -- that is, their contents are not discarded or
+overwritten when deleted.
+
+
+SysRq Commands
+One of the more interesting linux kernel options is 'magic sysreq key'; when
+selected, this allows the use of ALT-SysRQ key combinations to use in times 
+of duress. Pressing Alt-SysRQ-ENTER or any other invalid combination [i.e., 
+not an exisiting SysRQ command] will print a list of valid SysRQ commands
+to the screen:
+   root@localhost>SysRq: unRaw saK Boot Off Sync Unmount showPc showTasks 
+   showMem loglevel0-8 tErm kIll killalL
+As usual, the capitalized letter of each command is used in combination with 
+the ALT-SysRQ combo, so that ALT-SysRQ-L will issue the killall command. The
+SysRQ commands are as follows:
+	 unRaw       : Changes keyboard mode from raw to XLATE
+	 saK         : Kill all programs on the current Virtual Console
+	 Boot        : Reboot the system ungracefully
+	 Off         : Power off the system [requires APM support]
+	 Sync        : Sync all mounted filesystems
+	 Unmount     : Remount all mounted filesystems as read-only
+	 showPc      : Show contents of all registers 
+	 showTasks   : Show detailed task list
+	 showMem     : Show detailed memory usage/status
+	 loglevel0-9 : Set the console log level to # [0 = panic msgs, 9 = all msgs]
+	 tErm        : Send a SIGTERM to all processes except init
+	 kIll        : Send a SIGKILL to all processes except init
+	 killalL     : Send a SIGKILL to all processes including init
+Note that ALT-SysRQ-S and ALT-SysRQ-U are very useful for hung systems, when 
+ALT-SysRQ-I doesn't help; doing a sync will print 'SysRq: Emergency Sync' to
+the screen, followed by 'OK Done'. The filesystems are not synced until the 
+'Done' message is displayed; on an operation system this can take quite a few 
+minutes -- it would be a good idea to try it out once to get a feel for how 
+long your system will take to sync. If the system has reached critical mass,
+the kernel may not respond to the SysRQ command, and you will never see the 
+'Done' message.
+
+
+
+Console Madness
+---------------
+The escape sequences in Unix consoles provide endless hours of entertainment; 
+various control codes exist for activities such as moving the cursor, sounding 
+the bell, and changing the fore/background colors. The capabilities available 
+are such that, were one not concerned about performance, one could write a video
+game entirely in shell script.
+
+The console control codes are documented in the console_codes man page; these 
+codes are escape sequences -- series of command strimgs preceded by an escape
+character-- which can be entered from a command prompt or shell script using
+'echo -e'. The -e parameter causes echo to evaluate backslashed character 
+sequences as special characters; in particular, it allows the octal [not hex or
+decimal] ASCII code for a character to be entered following the backslash. Thus,
+the escape character can be represented by '\033' [note: there is a linux 
+utility called 'ascii' available at freshmeat.net which will display the ASCII
+table in hex, dec, and octal].
+
+One of the immediate rewards is the dynamic modification of xterm title strings;
+the escape sequence "\033]0;TitleString\007" will change the title of an xterm
+window to "TitleString"; thus one could enter the following in an xterm window
+to change its title to "Logfile Output":
+  root@localhost>echo -e "\033]0;Logfile Output\007"
+To automate this, a shell function could be declared in one's login or .bashrc:
+  function xterm_exec () 
+  {
+    echo -e "\033]0;$1\007"
+    $*
+  }
+This can be called from the command line to execute a program as follows:
+  root@localhost>xterm_exec more README.TXT
+
+In addition to xterm titles, the text foreground and background colors of a 
+console can be set. The low-level way to do this is to use the "\033]P0" and 
+"\033]PF" sequences to set the background and foreground colors, respectively,
+where the sequence is followed by the rgb values [in hexadecimal] of the new 
+color. Some quick examples:
+  root@localhost>echo -e "\033]PF808080"
+  root@localhost>echo -e "\033]P0FFFFFF"
+  root@localhost>echo -e "\033]PF000000\033]P0FF0000"
+These will create a grey foreground, white background, and red background/black
+foreground.
+
+A somewhat higher level of control is provided by the ECMA-48 SGR commands, as 
+documented in the console_codes manpage. The usage of these commands --and 
+there are several-- is pretty straightforward; the command prefix is "\033[", 
+which is followed by the command parameters [multiple parameters may be separ-
+ated by a semicolon], and finally my the command itself. The 'm' command is the 
+set attributes command; its usage would therefore be "\033[#m", where # is the 
+numeric parameter. The following are some of the more interesting uses of "m":
+	 echo -e "\33[0m"     					-- reset attributes
+	 echo -e "\33[1m"     					-- set bold on
+	 echo -e "\33[2m"     					-- set dim on
+	 echo -e "\33[4m"     					-- set underscore on
+	 echo -e "\33[24m"    					-- set underscore off
+	 echo -e "\33[5m"     					-- set blink on
+	 echo -e "\33[25m"    					-- set blink off
+	 echo -e "\33[7m"     					-- set reverse on
+	 echo -e "\33[27m"    					-- set reverse off
+	 echo -e "\33[40;32m" 					-- set green fg, black bg
+	 echo -e "\33[40;36m" 					-- set cyan fg, black bg
+	 echo -e '\33[40;31mError!\33[0m'		-- print 'Error!' in red text
+
+One of the more useful applications of escape sequences is to mark error or 
+success conditions in the output of shell or rc [init] scripts. To this end, 
+a shell script can be declared to define text-coloring functions:
+#----------------------------------------------------------textcolors
+#!/bin/sh
+#/etc/textcolors : define functions for coloring output text
+#!/bin/sh
+
+	 function errortext ()   { echo -e "\33[31m" }   #red
+	 function msgtext ()     { echo -e "\33[36m" }   #cyan
+	 function goodtext ()    { echo -e "\33[32m" }   #green
+	 function dimtext ()     { echo -e "\33[2m"  }   #grey
+	 function remtext ()     { echo -e "\33[34m" }   #blue
+	 function defaulttext () { echo -e "\33[0m"  }   #reset
+	 export errortext msgtext goodtext dimtext remtext defaulttext
+#----------------------------------------------------------------EOF	 
+This script can be sourced by shell or rc scripts, and the color of subsequent
+text set depending on condition, e.g.
+      . /etc/textcolors
+		# ..... do something
+      if [$? -gt 0]; then
+		    errortext
+			 echo "Operation failed!"
+		else
+		    goodtext
+			 echo "Operation succeeded!"
+	 	fi
+		defaulttext
+The loading of modules and daemons on the system initialization [rc] scripts 
+is a particularly useful place to try this out.
+
+In addition to the escape sequences, linux also has available the 'tput' 
+command, which will manipulate console capabilities from the command line. 
+The usage is simply 'tput [capability]'; the capabilities ['capnames'] can 
+be found in the terminfo manpage. Examples:
+  root@localhost>tput bold
+  root@localhost>tput blink
+  root@localhost>tput reset
+  root@localhost>tput reverse
+  root@localhost>tput dim
+  root@localhost>tput setb 0
+  root@localhost>tput setf 7
+The 'setb' and 'setf' capabilities set the background and foreground color to 
+one of 8 [numbered 0-7] colors: black, red, green, yellow, blue, magenta, cyan,
+and white.
+
+
+Final Words
+-----------
+One item that cannot be stressed enough is the need for security precautions. 
+Many starting linux users feel that security is for the professionals, or that
+their machine is not important enough to attack ... as a result, there are 
+thousands of compromised RedHat boxes out there being used in distributed 
+DOS attacks on servers. Security is not a luxury for the unix box owner -- it
+is a responsibility.
+
+The key to a secure system is to have the 'security mindset' -- stay alert, 
+trust no one, and keep your laser handy. Unix security philosophies range
+from general paranoia to becoming as devious as a would-be attacker. It helps
+to encrypt everything, to modify banner and issue files so they give vague or
+inaccurate information about the OS and server daemons you running, and to 
+guard the root account with your life.
+
+A little paranoia never did a linux system any harm. The RC scripts should be 
+read and, if possible, renamed and rewritten so rootkits cannot parse them. 
+SUID files should be hunted down and systematically eliminated like the 
+treacherous dogs they are; the ext2 FS attributes should be applied to key 
+files using chattr -i to make files immutable, chattr -a to make them append
+only, chattr -c to store them in compressed form, and chattr -s to overwrite
+the file contents with zeroes upon deletion [for security, natch]. Integrity 
+information should be stored on a read-only partition, if they are stored in 
+the system at all. Passwords should meet the standard unix security passwords;
+it is not unheard of for root passwords to contain unprintable ASCII characters
+to discourage logging in as root from a terminal.
+
+In the end, the security of a linux system --like its performance and its user-
+friendliness-- is a function of how much time one puts into it.
