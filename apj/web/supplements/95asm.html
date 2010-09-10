@@ -1,0 +1,144 @@
+<HTML><HEAD><TITLE>Setting up Windows 95 for ASM Programming</TITLE>
+</HEAD>
+<BODY bgcolor=FFFFFF link="Green">
+
+
+<P>
+  <table width=100% bgcolor=000000 border=0 cellpadding=0 cellspacing=0 halign=left>
+    <tr width=250 halign=left><td>
+    <b><img src="../images/apjlogo.jpg" ></b>
+    </td><td halign=left><font face="Courier" color=FFFFFF size=5><pre>
+
+::::::.
+::/ \:::.
+:/___\::::.
+/|    \:::::.
+:|   _/\::::::.
+:| _|\  \:::::::.
+:::\_____\::::::::.
+::::::::::::::::::::.
+::::::::::::::::::::::.
+</pre></font>
+    </td></tr>
+  </table>
+<P><BR>
+
+<center><font size=+1><b>Setting up Windows 95 for ASM Programming</b></font></center>
+Awhile back I posted to one of the various assembly language or cracking forums
+a series of instructions for setting up Windows9x/NT4+ for assembly language programming;
+apparently the configuration of the explorer GUI is not given much treatment.<P>
+
+To this end I am including the set of instructions here as a supplement to the
+APJ issues; it covers the basics of setting up file associations, Send To...
+menu items, and New... menu items in the Explorer GUI.  <P><BR>
+
+<i>Note: Any code samples headed by "REGEDIT 4", for example </i>
+<code><pre>
+REGEDIT4
+[HKEY_CLASSES_ROOT\.asm\ShellNew]
+"NullFile"=""
+</pre></code>
+<i>are intended to be pasted into a reg file [e.g., a text file renamed to 1.reg] and
+imported into the Registry either by double-clicking the reg file or by using the
+Registry Editor [regedit.exe].</i><P>
+<HR>
+<P><BR>
+<u>Making Notepad a "Send To..." option</u><P>
+This is useful for quickly viewing files of any type in Notepad, simply by right-clicking
+on the file and choosing "Notepad" from the "Send To..." submenu. Additional
+programs [hex editors, disassemblers, compilers, debuggers] can be added in the
+same manner.<p>
+<OL>
+  <LI>Put a shortcut to notepad.exe in the <code>C:\Windows\SendTo</code> directory
+  <LI>Rename the shortcut to "Notepad"
+</OL>
+Simple enough. Further notes on the topic are that you can edit the command line
+parameters [e.g. for DOS programs] of the shortcut, and that creating folders
+withing <code>C:\Windows\SendTo</code> will create cascaded "Send To..." submenus.
+<P>
+<BR>
+<u>Associating .asm files with Notepad</u><P>
+This can be done through Explorer.exe, but you will learn more if you modify
+the registry directly. This will also serve as an introduction for later
+registry modification. <P>
+
+<code><pre>
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\.asm]
+"Content Type"="text/plain"
+@="txtfile"
+
+[HKEY_CLASSES_ROOT\.asm\ShellNew]
+"NullFile"=""
+</pre></code>
+Note that HKEY_CLASSES_ROOT contains all of the file extensions and file types
+recognized as important by the OS, and that "txtfile" is associated with Notepad
+[see HKEY_CLASSES_ROOT\txtfile]. "@" stands for "default", as in the default value
+for this registry key.
+<P>
+<BR>
+<u>Creating a "DOS Prompt Here" Menu Item</u><P>
+While writing or testing console-mode programs it is very useful to be able to
+right-click on a directory icon in Explorer and select "DOS Prompt Here" from
+the context menu, thus opening a DOS box with the selected directory as the current directory.
+This feature was originally part of the Win95 Power Toys kit; for some reason it
+has never made it into the standard OS options.
+<pre><code>
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\Folder\shell\DOS Prompt Here\command]
+@="c:\windows\command.com -K cd %1"
+</pre></code>
+Note that "Folder" is the object we are modifying [to encompass both "drive" and
+"directory"], "shell" refers to the context menu, "DOS Prompt Here" is the item
+we are adding to the context menu, and "command" is the command to be run when
+that menu item is selected.
+<P>
+<BR>
+<u>Creating a "New ASM File" MenuItem</u><P>
+This is very handy for creating .ASM file templates that you can open by right-clicking
+in a directory and selecting "ASM File" from the "New..." submenu.<P>
+
+First, put an asm template called asm.asm in the <code>c:\windows\ShellNew</code> directory.
+This is where all templates for the "New..." menu are stored.
+
+<pre><code>
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\asmfile]
+@="Assembly Program"
+
+[HKEY_CLASSES_ROOT\asmfile\DefaultIcon]
+@="C:\WINDOWS\SYSTEM\shell32.dll,-152"
+
+[HKEY_CLASSES_ROOT\asmfile\shell]
+
+[HKEY_CLASSES_ROOT\asmfile\shell\open]
+
+[HKEY_CLASSES_ROOT\asmfile\shell\open\command]
+@="C:\WINDOWS\NOTEPAD.EXE %1"
+
+[HKEY_CLASSES_ROOT\asmfile\shell\print]
+
+[HKEY_CLASSES_ROOT\asmfile\shell\print\command]
+
+@="C:\WINDOWS\NOTEPAD.EXE /p %1"
+</pre></code>
+What we have done here is to create a class similar to "txtfile" which contains
+all of the necessary associations for .ASM files [open with "notepad", print with
+"notepad /p"]. Now we must associate the .asm file extension with the "asmfile"
+class, and make "asm.asm" the "New..." file:
+<pre><code>
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\.asm]
+"Content Type"="text/plain"
+@="asmfile"
+
+[HKEY_CLASSES_ROOT\.asm\ShellNew]
+"NullFile"="asm.asm"
+</pre></code>
+<P><BR>
+  <HR>
+That's all for now ... happy reg editting!</BODY></HTML>

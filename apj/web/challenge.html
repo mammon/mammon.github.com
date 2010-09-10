@@ -1,0 +1,90 @@
+<HTML><HEAD><TITLE>APJ: Issue Challenges</TITLE></HEAD><BODY bgcolor=FFFFFF link="Green">
+
+<P>
+  <table width=100% bgcolor=000000 border=0 cellpadding=0 cellspacing=0 halign=left>
+    <tr width=250 halign=left><td>
+    <b><img src="images/apjlogo.jpg" ></b>
+    </td><td halign=left><font face="Courier" color=FFFFFF size=5><pre>
+
+::::::.
+::/ \:::.
+:/___\::::.
+/|    \:::::.
+:|   _/\::::::.
+:| _|\  \:::::::.
+:::\_____\::::::::.
+::::::::::::::::::::.
+::::::::::::::::::::::.
+</pre></font>
+    </td></tr>
+  </table>
+<P><BR>
+<center><b>Reader Responses to Issue Challenges</b></center>
+<P><BR>
+<P><BR>
+<HR>
+Issue 1 Challenge: Program that reads its own command line (11 bytes)
+<P>
+
+<PRE>
+        mov     esi,081h
+DoItAgain:
+        lodsb
+        int     029h    ;Fast char writing!
+        xor     al,0dh
+        jnz     DoItAgain
+        ret
+</PRE>
+...Sexus Sexy 
+<BR>
+<HR>
+Issue 2 Challenge: Smallest Possible PE program that reads its own command line
+<P>
+<PRE>
+include win32api.inc
+
+.386p
+.model flat,STDCALL
+
+extrn           GetCommandLineA                 :proc
+extrn           MessageBoxA                     :proc
+extrn            ExitProcess                    :proc
+
+.data
+        db      013h
+.code
+
+Main:                   
+                mov     eax,EndMain-Main-5              ;Real size of program!  
+                call    GetCommandLineA
+                push    MB_OK
+                call    @1
+                db      "GetCommandLine",0
+@1:
+                push    eax
+                push    NULL
+                call    MessageBoxA
+                call    ExitProcess
+EndMain:
+end             Main
+</PRE>
+...Sexus Sexy
+<HR>
+Issue 3 Challenge: Convert an ASCII representation of a hexadecimal digit to binary (6 bytes)
+<P>
+I'm not quite sure what is meant by that, I will guess that it
+ means convert an ASCII byte into its hex equivalent.  For
+ '0'-'9' and 'A'-'F' (but not 'a'-'f') the following works, 
+ assuming the ASCII byte is AL. This uses undocumented forms of AAM and AAD which may not
+ assemble or run everywhere:
+<PRE>
+     SUB AL, 30h
+     AAM 10h         ; db D4h, 10h
+     AAD 09h         ; db D5h, 09h
+</PRE>
+
+...tinara
+<P><BR>
+
+<HR><P><BR>
+</BODY></HTML>

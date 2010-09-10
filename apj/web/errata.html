@@ -1,0 +1,176 @@
+<HTML><HEAD><TITLE>APJ: Issue Errata</TITLE></HEAD><BODY bgcolor=FFFFFF link="Green">
+
+<P>
+  <table width=100% bgcolor=000000 border=0 cellpadding=0 cellspacing=0 halign=left>
+    <tr width=250 halign=left><td>
+    <b><img src="images/apjlogo.jpg" ></b>
+    </td><td halign=left><font face="Courier" color=FFFFFF size=5><pre>
+
+::::::.
+::/ \:::.
+:/___\::::.
+/|    \:::::.
+:|   _/\::::::.
+:| _|\  \:::::::.
+:::\_____\::::::::.
+::::::::::::::::::::.
+::::::::::::::::::::::.
+</pre></font>
+    </td></tr>
+  </table>
+<P><BR>
+<center><b>Issue 5</b></center>
+<P><BR><PRE>
+Assembly Language Snippets: Abs
+        mov     ecx, eax        ; Duplicate value
+        sar     ecx, 31         ; Fill ecx with its sign
+        xor     eax, ecx        ; Do 'not eax' if negative
+        sub     eax, ecx        ; Do 'inc eax' if negative
+</PRE><i>Thanks to Xiaodong Hu, X-Calibre</i><P>
+<P><BR>
+<HR>
+<center><b>Issue 3</b></center>
+<P><BR><PRE>
+Extending NASM
+;===========================================================-SWITCH-CASE Blocks
+%macro SWITCH 1
+%push switch
+%assign __curr 1
+    mov eax, %1
+    jmp %$loc(__curr)
+%endmacro
+
+%macro CASE 1
+%ifctx switch
+    %$loc(__curr):
+    %assign __curr __curr+1
+    mov ebx, %1
+    cmp eax, ebx
+    jne %$loc(__curr)
+%endif
+%endmacro
+
+%macro DEFAULT 0
+%ifctx switch
+    %$loc(__curr):
+%endif
+%endmacro
+
+%macro BREAK 0
+    jmp %$endswitch
+%endmacro
+
+%macro ENDSWITCH 0
+    %ifctx switch
+    %$endswitch:
+    %pop
+    %endif
+%endmacro
+;==========================================================================-END
+The problem here is the %$loc(__curr);  even with brackets replacing the
+parentheses, the code does not compile correctly in NASM 0.97.
+
+&lt anybody&gt fixed these as part of the visasm project; here is his replacement
+code:
+;===========================================================-SWITCH-CASE Blocks
+
+%macro SWITCH_MAC 1
+%push switch
+[section data]
+%$var1  dw      0
+%$var2  db      0
+
+[section code]
+%push case_clause
+
+%ifidni %1,ax
+        %define bit16
+        mov word [%$$var1],ax
+%elifidni %1,bx
+        %define bit16
+        mov word [%$$var1],bx
+%elifidni %1,cx
+        %define bit16
+        mov word [%$$var1],cx
+%elifidni %1,dx
+        %define bit16
+        mov word [%$$var1],dx
+%elifidni %1,al
+        %define bit8
+        mov byte [%$$var2],al
+%elifidni %1,bl
+        %define bit8
+        mov byte [%$$var2],bl
+%elifidni %1,cl
+        %define bit8
+        mov byte [%$$var2],cl
+%elifidni %1,dl
+        %define bit8
+        mov byte [%$$var2],dl
+%elifidni %1,ah
+        %define bit8
+        mov byte [%$$var2],ah
+%else
+        mov eax, %1
+%endif
+%endmacro
+
+%macro CASE_MAC 1
+    %$case_code:
+%pop
+%push case_clause
+
+%ifdef bit16
+    cmp word [%$$var1],%1
+%elifdef bit8
+    cmp byte [%$$var2],%1
+%else
+    cmp eax, %1
+%endif
+    je  %%code
+    jmp %$case_code
+%%code:
+%endmacro
+
+%imacro DEFAULT 0
+%define _default
+    %$case_code:
+%endmacro
+
+%imacro BREAK 0
+    jmp %$$endswitch
+%endmacro
+
+%imacro ENDSWITCH 0
+%ifndef _default
+    %$case_code:
+%else
+%undef _default
+%endif
+    %pop
+    %$endswitch:
+    %pop
+    %undef bit16
+    %undef bit8
+%endmacro
+
+%idefine SWITCH(var1) SWITCH_MAC var1
+%idefine CASE(var1) CASE_MAC var1
+;==========================================================================-END
+</PRE><i>Thanks to &lt anybody&gt</i><p>
+<P><BR>
+<HR>
+<center><b>Issue 1</b></center>
+<P><BR><PRE>
+Programming The VGA Graphics Mode with 13h
+In the code supplied, a pixel is put into CX
+from memory and the code which was meant to do so is this:
+
+     mov     cx,es:[ax]      ; now pixel x,y can be...
+This will not work (ax is not a legal index register for
+memory addressing); changing the code as follows works:
+     mov       si,ax             ; mov SI,AX for correct mem. addressing
+     mov     cx,es:[si]      ; now pixel x,y can be accessed as es:[si]
+</pre><i>Thanks to Seth Koster</i><P>
+<HR>
+</BODY></HTML>

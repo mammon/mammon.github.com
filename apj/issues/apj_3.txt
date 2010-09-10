@@ -1,0 +1,3194 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                               Feb/March 98
+:::\_____\::::::::::.                                              Issue      3
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"An Introduction to SPARC assembly"............................+Spath.
+
+"Extending NASM"...............................................mammon_
+
+Column: Win32 Assembly Programming
+    "NASM specific Win32 coding".......................Tamas Kaproncai
+    "More about Text".........................................Iczelion
+    "Keyboard Input"..........................................Iczelion
+
+Column: The C standard library in Assembly
+    "C string functions: introduction, _strlen".................Xbios2
+    "C string functions: _strcpy"...............................Xbios2
+
+Column: The Unix World
+    "X-Windows in Assembly Language: Part II"..................mammon_
+
+Column: Virtual Machines
+    "An Intro to the Java Virtual Machine"............Cynical Pinnacle
+
+Column: Assembly Language Snippets
+    "NumFactors"..........................................Troy Benoist
+
+Column: Issue Solution
+    "6-byte Solution"..........................................mammon_
+----------------------------------------------------------------------
+     ++++++++++++++++++++++++Issue  Challenge+++++++++++++++++++++
+     Write a routine for converting ASCII hex to binary in 6 bytes
+----------------------------------------------------------------------
+
+
+____________________________________________________________________________                                                                               
+    ___ .___     __) (__    _____  ______                                   ```   
+  ._____|   \____\  ___/__._)   /._) _  (_.                                  \\  
+  |     |   _\   |_ \     |   \/ |        |CE                                 ,
+.=|_____|___)\___|(_______|______|        |===============[ Introduction ]===.
+'================================|        :=================================='
+                                 :        .                          by mammon_
+
+                                                                    
+The first thing that you will notice about this issue --well, that it is late--
+will probably be the section headers designed by iCE. I had to add a top/upper
+left border to them [the horizontal and slanted lines] in order to make them 
+standout when scrolling though a 100K file such as this one, but other than 
+they are all his: comments, etc welcome.
+
+I don't have much to say about this issue: I went overboard with the NASM stuff 
+this month as I have been doing a lot of 'research' work in that area recently; 
+my articles have been supplemented with Tamas Kaproncai's Win32 NASM pointers. 
+
+Iczelion and XBios2 have both produced --as usual-- 2 quality articles this 
+month, Iczelion's based on his win32 asm tutorial 'the MASM way', and XBios2 
+once again continuing to replace C with assembler.
+
++Spath. has produced an excellent article on SPARC assembly language; I was 
+hoping to debut the 'other CPU' scene with a MIPS article I had planned but it 
+looks like +Spath has beat me to it. 
+
+On a similar note, I mentioned on the Message Board wanting to start a Virtual
+Machines column. Cynical Pinnacle has started the column off this month with an 
+article on programming the Java VM in its native 'assembly language'; in 
+subsequent issues I and perhaps others will be adding articles here as well.
+
+A final note, I have not come up with a challenge for the next issue; anyone 
+with good ideas is welcome to post one to the Message Board or to the APJ 
+email address.
+
+Enjoy the mag!
+
+_m
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                              An introduction to SPARC assembly
+                                              by +Spath.
+
+
+The goal of this article is to introduce SPARC v8 architecture and SPARC 
+assembly ; I hope it can also constitute a good introduction to RISC 
+philosophy.  
+
+
+What is SPARC ?
+-----------------
+The principles of RISC (Reduced Instructions Set Computer) are born in the 
+early 80's in two universities (Berkeley and Stanford) ; its philosophy is 
+the quest for simplicity and CPU speed. SPARC (Scalable Processor ARChitecture)
+is a 32 bits RISC architecture created by Sun in 1987. It's an open 
+architecture, so that any manufaturer can make SPARC processors (like Philips, 
+VLSI, T.I., Fujitsu... already did). Its key features are :
+
+- a load/store architecture : this means that only registers can be used
+  in data manipulation operations, and not memory locations. Memory is 
+  organised in a linear address space of 2^32 bits which use "big-endian" 
+  organisation (the MSB is stored first) ; a word is 32 bits wide (a 16 bits 
+  data is a halfword).
+
+- a large number of registers : from 2 to 32 sets of 24 general purpose 
+  registers are available ; these 24 registers are local registers %l[0-7], 
+  in registers %i[0-7] and out registers %o[0-7], all working in an 
+  overlapping windows mechanism that will be explained later. The SPARC 
+  architecture also provides 8 global registers %g[0-7], 32 registers for 
+  floating-point operations (%f[0-31]) and some specific registers (%pc, %sp, 
+  %psr, %y,...).
+
+- a small set of simple instructions : to avoid translation from machine code
+  to microcode, SPARC instructions are directly implemented in hardware, and  
+  therefore are very basic (mainly load/store, logical, arithmetic, branching).
+  All instructions are 4 bytes long, and most of them use 3 registers (source1,
+  source2, destination in that order). Assemblers also provide a set of 
+  synthetic instructions, which are more "coder friendly", but does not really 
+  exist for the processor (and therefore must be carefully used). These 
+  synthetic instructions have most of the time less operands, so that the 
+  corresponding real instructions often use %g0, a read-only register stuck 
+  at 0 ; here are some aliases :
+
+  synthetic instruction     |     real opcode      
+  nop                      <=>    sethi  0, %g0          
+  ret                      <=>    jmpl   %i7+8, %g0
+  mov  reg_or_imm, reg     <=>    or     %g0, reg_or_imm, reg 
+  cmp  reg, reg_or_imm     <=>    subcc  reg, reg_or_imm, %g0 
+
+Enough with theory, let's see some code.
+
+
+SPARC assembly basics
+-----------------------
+Let's start with an in-season "hello world" style program : '!' is used
+for single line comments, /* .. */ is used for multiple lines comments). 
+
+!8<------------------------------------------------------------------------
+/*   FILE : hello.s                                                      */
+
+.section        ".rodata"             ! read-only initialised datas 
+.MyText:                              ! define our string label
+        .asciz  "Happy new year %i \n"! define a null-terminated string
+.Year:
+        .word   1999                  ! define a word constant
+ 
+.section        ".text"               ! read-only object code (instructions)
+        .global main                  ! Make function name globally visible
+   
+main:
+        save   %sp, -112, %sp         ! allocate space for stack    
+        sethi  %hi(.MyText), %o1      ! load higher part of string offset
+        or     %o1, %lo(.MyText), %o0 ! add lower part of offset    
+        set    (.Year), %l1           ! get year address            
+        ld     [%l1], %o1             ! load year into %o1          
+        call   printf                 ! print the string
+        nop                           ! do nothing (BDS)                   
+          
+        ret                           ! Return to caller
+        restore                       ! Restore register windows (BDS)   
+Endmain:                              ! Tell the linker how big the
+        .size    main,(.-main)        ! procedure is ("." is current address).
+!8<-------------------------------------------------------------------------
+
+Every procedure must save some memory space for itself ; this stack space 
+will be used to store the out and local registers and all the datas needed by 
+the procedure (the minimal space is 64 bytes for %o and %l registers). The 
+stack grows from higher to lower addresses, so that allocating a stack space 
+is implemented by substracting a value from the current stack pointer ; the
+previous stack pointer is called the frame pointer (%fp).
+
+Registers %o0 - %o5 are used to pass the first six parameters to a procedure, 
+because the current stack pointer (%sp) is stored in %o6 and the calling 
+program counter (%pc, used to calculate the return address) is stored in %o7. 
+If a procedure has more than six parameters, the remaining parameters are 
+passed using the stack space (eg for a caller's stack space of 92 bytes, the 
+child procedure can get the seventh parameter at [%fp+92]). 
+
+As I said before, all instructions are 32 bits long, so that you must use 
+two steps (with sethi and or) to load a 32 bits data. Note that %hi refers 
+to the most significant 22 bits and %lo refers to the least significant 10 
+bits of a register.
+
+Like most RISC machines, a SPARC processor uses a branch delay slot (BDS) to 
+optimize pipeline efficiency : this means that by default, the instruction 
+following a branching is executed regardless of whether or not the branch is 
+taken. So the coder must move (when possible) an instruction from before the 
+branch to after the branch. Another possibility is to use the 'nop' instruction
+or to add the ',a' suffix to the branch instruction, which annul the next 
+operation. 
+
+
+Calling and branching
+-----------------------
+Let's take another example to better illustrate the calling process : this
+is a recursive implementation of the Fibonacci numbers, which are defined as :
+
+fib(N) = fib(N-1) + fib(N-2)
+fib(0) = fib(1) = 1 
+
+!8<--------------------------------------------------------------------------
+/*  FILE: fib.s                                                            */
+
+.section        ".rodata"           ! read-only initialised datas (constants)
+        .align 8                    ! datas must be double-words aligned 
+.MyText:                            ! define our string label
+        .asciz  "Fib(%i) = %i \n"   ! define a null-terminated string
+
+! ------- FIB : handles F(0) and F(1) --------
+.section        ".text"             ! read-only object code (instructions)
+        .align 4                    ! code must be word-aligned (4 bytes)
+        .global fib                 ! Make function name globally visible
+fib:
+        save  %sp, -112, %sp        ! save stack space
+        mov   %i0, %o0              ! 1st parameter may be needed for calling
+        cmp   %o0, 1                ! asked for F(0) of F(1) ? 
+        ble   F1orF0                ! yes : take the branch
+        mov   1, %i0                ! return value = 1 (BDS)
+        
+        call  fibcall               ! 
+        nop                         ! do nothing (BDS)
+        mov   %o0, %i0              ! return value = fibcall return value
+F1orF0:
+        ret                         ! Return to caller
+        restore                     ! Restore register windows (BDS)
+Endfib:
+        .size    fib,(.-fib)
+
+! ----- FIBCALL : calls F(N-1) and F(N-2) -----
+        .global fibcall             ! Make function name globally visible
+fibcall:
+        save  %sp,-112,%sp          ! save stack space
+        mov   %i0,%l0               ! save N in %l0
+        call  fib                   ! call F(N-1) 
+        sub   %l0,1,%o0             ! compute N-1 (BDS)
+        
+        mov   %o0,%i0               ! save result in %i0
+        call  fib                   ! call F(N-2)
+        sub   %l0,2,%o0             ! compute N-2 (BDS)
+        
+        ret                         ! Return to caller
+        restore %i0,%o0,%o0         ! return F(N-1) + F(N-2) (BDS)
+Endfibcall:
+        .size    fibcall,(.-fibcall)
+
+!-------- MAIN --------------------------------
+        .global main                ! Make function name globally visible
+main:               
+        save   %sp,-112,%sp         ! save stack space
+        call   fibcall              ! calculate fib number 7
+        mov    7,%o0                ! (BDS)
+        
+        mov    %o0,%o2              ! result is second parameter
+        sethi  %hi(.MyText),%o0     ! load higher part of string offset
+        or     %o0,%lo(.MyText),%o0 ! add lower part of offset
+        call   printf         
+        mov    7,%o1                ! number is the first parameter (BDS)
+        
+        ret                         ! Return to caller
+        restore                     ! Restore register windows (BDS)
+Endmain:
+        .size    main,(.-main)
+!8<--------------------------------------------------------------------------
+
+All procedures share the global registers (%g[0-7]), the remaining registers
+%l[0-7], %i[0-7], %o[0-7] constitute the register window. When a procedure 
+starts execution, it allocates 16 registers (input and local), the output 
+registers are overlapped with the subroutine's input registers. Here's what 
+happens if procedure A calls procedure B which calls procedure C :
+
+proc A     in  |  local  |   out  | 
+                         |        |
+proc B                   |   in   |  local  |  out  |
+                                            |       |
+proc C                                      |  in   |   local   |   out
+
+
+As you see, for each procedure, the parameters passed to and received from a
+subroutine are stored in %o registers. The same way, the parameters taken from 
+and passed to the calling procedure are stored in %i registers. The current 
+window pointer (CWP) identifies the current register window : it is stored in 
+the least significant 5 bits of %psr, and is modified by the 'save' and 
+'restore' commands.
+
+The condition code register (another part of %psr) contains four flags : Z 
+(zero), N (negative), C (carry), and V (overflow) ; contrary to x86 assembly, 
+these bits are not updated by standard arithmetic operations, but by special 
+instructions (with 'cc' suffix, like 'cmp' which is in fact a 'subcc').
+For instance, you have these equivalences :
+
+    SPARC                       x86          
+subcc  r1, r2, r1    <=>    sub  r1, r2   ; keep result and flags
+subcc  r1, r2, %g0   <=>    cmp  r1, r2   ; discard result, keep flags
+sub    r1, 0, r2     <=>    mov  r2, r1   ; keep result, discard flags
+
+
+As last example, here's a simple anti-cracking method : a checksum on
+our own code :
+
+!8<-----------------------------------------------------------------------
+/*  FILE: cksum.s                                                       */ 
+
+.section	".data"             ! read-only initialised datas (constants)
+	.align 8                    ! datas must be double-words aligned
+.CRCError:	 
+	.asciz  "Wrong CRC !! \n"   !
+			
+.section	".text"             ! read-only object code (instructions)
+        .align 4                    ! code must be word-aligned (4 bytes)
+cksum:  
+        save   %sp,-64,%sp          ! save minimal stack space
+        mov    %i0, %l0             ! %l0 is the base address
+        sub    %i1, %i0, %l1        ! %l1 is the decreasing index
+        mov    %g0, %l2             ! %l2 is the running sum	
+loop:
+	ld     [%l0+%l1], %o0       ! fetch the next element
+        add    %l2, %o0, %l2        ! add it to the running sum
+        subcc  %l1, 4, %l1          ! one fewer element
+	
+        bge,a  loop                 ! if %o0 >= 0 get next element
+                                    ! (delay slot result is annulled)
+        mov    %l2, %o0             ! store the result in sum (BDS)
+
+        ret	                    ! Return to caller
+        restore                     ! Restore register windows (BDS) 
+endcksum:                           ! Tell the linker how big the
+        .size  cksum,(.-cksum)      ! procedure is.
+
+!-------------------- MAIN -------------------------
+        .global main
+main:
+        save   %sp,-64,%sp               ! allocate space for stack
+        set    main, %o0                 ! start address for cksum
+        sethi  %hi(EndOfCRCZone),%o1     ! high part of end address
+        call   cksum                     ! calculate cksum
+        or     %o1,%lo(EndOfCRCZone),%o1 ! low part of end address (BDS)
+	
+EndOfCRCZone:
+	set    0x10954, %o1           ! load precalculated checksum     
+	cmp    %o0, %o1               ! is checksum correct ?
+        be     End                    ! yes : exit 
+	nop                           ! do nothing (BDS)
+	
+Error:                                ! no : display message
+	sethi  %hi(.CRCError ),%o0    ! load higher part of string offset
+        call   printf                 ! print the string
+        or     %o0,%lo(.CRCError),%o0 ! add lower part of string offset (BDS)
+
+End:
+        ret                           ! Return to caller
+        restore                       ! Restore register windows (BDS)
+	
+EndMain:                              ! Tell the linker how big the
+        .size    main,(.-main)	      ! procedure is.
+!8<-----------------------------------------------------------------------
+
+
+Tools and references
+----------------------
+Here are the tools I use when I play with SPARC assembly ; some are SunOS 
+specific tools, some are multi-platforms ones. The code you read here has 
+been tested on various Sun workstations (using SPARC and UltraSPARC 
+processors). With very little modifications, it also worked on ISEM, a SPARC 
+emulator for Linux (see below).
+
+- assembling : I use gcc for that job, which itself uses as and ld (assembler 
+  and linker) to create ELF executables. CC and cc also work well ; these 3 
+  compilers can also be used to generate ASM source code from C source code 
+  with the "-S" option, which is IMHO a great method to learn assembly on 
+  a new platform.
+
+- debugging : I use adb, which is very basic but also very powerful, but gdb 
+  and dbx may also work.
+
+- reversing : all the previous tools are useful ; I also use a disassembler
+  (SunOS dis), but some exist for other platforms (see Bruce Ediger's 
+  homepage).
+
+
+If you plan to give a try to SPARC assembly, here are some links : 
+
+http://www.cs.unm.edu/~maccabe/classes/341/labman/labman.html
+ISEM (Instructional Sparc EMulator) homepage.
+
+http://www.csn.net/~bediger/
+Bruce Ediger Homepage
+
+http://www.cs.earlham.edu/~mutioke/cs63/
+a good introduction to SPARC with plenty of links.
+
+http://www.sics.se/~psm/sparcstack.html
+a very good overview of SPARC stack and registers.
+
+
+Final Words
+------------
+If you use a SPARC based machine, give a try to assembly, it's quite fun. 
+If not, remember that the best you know your processor, the best you 
+can code ASM.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                                 Extending NASM
+                                                                 by mammon_
+
+
+Programmers transitioning to NASM from a commercial assembler such as MASM or 
+TASM immediately notice the lack of any high-level language structures -- the 
+assembly syntax accepted by NASM is only slightly more sophisticated than what 
+you would find in a debugger. While this has its good side --smaller code size, 
+nothing hidden from the programmer-- it does make coding a bit more tedious.
+
+For this reason NASM comes with a preprocessor that is both simple and powerful;
+by writing NASM macros, the high-level functionality of other assemblers can be 
+emulated rather easily. As thw following macros will demonstrate, most of the 
+high-level asm features in commercial assemblers really do not do anything very
+elaborate; they simply are more convenient for the programmer.
+
+The macros that I will detail below provide some basic C and ASM constructs for
+use in NASM. I have made the complete file available at
+  http://www.eccentrica.org/Mammon/macros.asm
+The macro file can be included in a .asm file with the NASM directive
+  %INCLUDE "macros.asm"
+Comments on the usage of each macro are included in the file.
+
+Macro Basics
+------------
+The fundamenal structure of a NASM macro is
+%macro {macroname} {# parameters}
+%endmacro
+The actual code resides on the line between the %macro and %endmacro tags; this 
+code will be inserted into your program wherever NASM finds {macroname}. Thus 
+you could create a macro to push the contents of each register such as:
+%macro SAVE_REGS 0
+    push eax
+    push ebx
+    push ecx
+    push edx
+%endmacro
+Once you have defined this macro, you can use it in your code like:
+    SAVE_REGS
+    call ReadFile
+...which the preprocessor will expand to
+    push eax
+    push ebx
+    push ecx
+    push edx
+    call ReadFile
+before assembling. It should be noted that all preprocessing takes place in a 
+single stage immediately  before compiling starts; to preview what the pre-
+processor will send to the assembler, you can invoke nasm with the -e option.
+
+The %macro tag requires that you declare the number of paramters that will be 
+passed to the macro. This can be a single number or a range, with a few quirks:
+    %macro LilMac 0             ; takes 0 arguments
+    %macro LilMac 5             ; takes 5 arguments
+    %macro LilMac 0-3           ; takes 0-3 arguments
+    %macro LilMac 1-*           ; takes 1 to unlimited arguments
+    %macro LilMac 1-2+          ; takes 1-2 arguments
+    %macro LilMac 1-3 0, "OK"   ; takes 1-3 arguments, 2-3 default to 0 & "OK"
+The last three examples bear some explanation. The "-*" operator in the %macro 
+tag specifies that the macro can handle any number of parameters; in other 
+words, there is no maximum number, and the minimum is whatever number is to the 
+left of the "-*" operator. The "+" operator means that any additional arguments 
+will be appended to the last argument instead of causing an error, so that:
+    LilMac 0, OK, This argument is one too many
+will result in argument 1 being 0 and argument 2 being "OK, This argument is 
+one too many." Note that this is a good way to pass commas as part of an argu-
+ment (normally they are only separators). Providing defualt arguments after the 
+number of arguments allows a macro to be called with fewer arguments than it 
+expects.
+    %macro SAVE_VARS 1-4 ecx, ebx, eax
+will fill a missing 4th argument with eax, 3rd with ebx, and 2nd with ecx. Note 
+that you have to provide defaults starting with the last argument and working 
+backwards.
+
+The parameters to the macro are available as %1 for the first argument, %2 for 
+the second, and so on, with %0 containing a count of all the arguments. There 
+is an equivalent to the DOS "SHIFT" command called %rotate which will rotate 
+the parameters to either the left or to the right depending on whether a 
+positive or negative value was supplied:
+   Before: %1 %2 %3 %4      Before: %1 %2 %3 %4     Before: %1 %2 %3 %4 
+   %rotate 1                %rotate -1              %rotate 2
+   After:  %4 %1 %2 %3      After:  %2 %3 %4 %1     After:  %3 %4 %1 %2
+So that rotating by 1 will put the value at %1 into %4, and rotating by -1 will
+put the value of %1 into %2.
+
+
+High-Level Calls
+----------------
+Perhaps the buggest complaint about NASM is its primitive call syntax. In MASM 
+and TASM, the parameters to a call may be appended to the call itself:
+    call MessageBox, hOwner, lpszText, lpszTitle, fuStyle
+where in NASM the parameters must be pushed onto the stack prior to the call:
+    push fuStyle
+    push lpszTitle
+    push lpszText
+    push hOwner
+    call MessageBox
+Using NASM's "-*" macro feature along with the %rep directive make a high-level 
+call easy to replicate:
+ %macro call 2-*
+ %define _func %1
+ %rep &0-1
+   %rotate 1
+   push %1
+ %endrep
+   call _func
+ %endmacro
+The %define directive simply defines the variable _func [underscores should 
+prefix variable names in macros so you do not mistakenly use the same name 
+later in the program] as %1, the name of the function to call. The %rep and 
+%endrep directives enclose the instructions to be repeated, and %rep takes as a 
+parameter the number of repetitions [in this case set to the number of macro 
+parameters minus 1]. Thus, the above macro cycles through the arguments to call 
+and pushes them last-argument first [C syntax] before making the call.
+
+Overloading an existing instruction such as call will cause warnings at compile 
+time [remember, the preprocessor thinks you are doing a recursive macro invoke] 
+so usually you will want to name the macro "c_call" or something similar. The 
+following macros provide facilities for C, Pascal, fastcall, and stdcall call
+syntaxes.
+;==============================================================-High-Level Call
+;   ccall    FuncName, param1, param2, param 3... ;Pascal: 1st-1st, no clean
+;   pcall    FuncName, param1, param2, param 3... ;C: Last-1st, stack cleanup
+;   stdcall  FuncName, param1, param2, param 3... ;StdCall: last-1st, no clean
+;   fastcall FuncName, param1, param2, param 3... ;FastCall: registers/stack
+%macro pcall 2-*               
+%define _j %1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+%endmacro
+
+%macro ccall 2-*                        
+%define _j %1
+%assign __params %0-1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+    %assign __params __params * 4
+    add esp, __params
+%endmacro
+
+%macro stdcall 2-*          
+%define _j %1
+%rep %0-1
+    %rotate -1
+    push %1
+%endrep
+    call _j
+%endmacro
+
+%macro fastcall 2-*                
+%define _j %1
+%assign __pnum 1
+%rep %0-4
+    %rotate -1
+    %if __pnum = 1
+     mov eax, %1
+    %elif __pnum = 2
+     mov edx, %1
+    %elif __pnum = 3
+     mov ebx, %1
+    %else
+     push %1
+    %endif
+    %assign __pnum __pnum+1
+%endrep
+    call _j
+%endmacro
+;==========================================================================-END
+
+
+Switch-Case Blocks
+------------------
+One of the most awkward C constructs to code in assembly is the SWITCH-CASE 
+block. It is also rather difficult to re-create as a macro due to variable 
+number and length of CASE statements.
+
+NASM's preprocessor has a context stack which allows you to create a set of 
+local variables and addresses which is specific to a particular invocation of a
+macro. Thus it becomes possible to refer to labels which will be created in a 
+future macro by giving them context-dependent names:
+ %macro MacPart1 0
+  %push mac             ;create a context called "mac"
+    jmp %$loc           ;jump to context-specific label "loc"
+ %endmacro
+
+ %macro MacPart2 0
+  %ifctx mac            ;if we are in context 'mac'
+%$loc:                  ;define label 'loc'
+    xor eax, eax        ;code at this label...
+    ret
+  %endif                ;end the if block
+  %pop                  ;destroy the 'mac' context
+ %endmacro
+As you can see, the context is created and named with a %push directive, and 
+destroyed with a $pop directive. NASM has a number of preprocessor conditional 
+IF/ELSE statements; in the above example, the %ifctx [if current context equals]
+directive is used to determine if a 'mac' context has been created [Note that 
+the 'base' NASM conditionals include %if, %elif, %else, and %endif; these carry
+over to the %ifctx directive, such that there is available %ifctx, %ifnctx, 
+%elifctx, %elifnctx, %else, and %endif; all %if directives must be closed with 
+an %endif directive]. Finally, %$ is used to prefix the name of a context-
+specific variable or label. Non-context-specific local labels use the %% prefix:
+%macro LOOP_XOR
+%%loop:
+    pop eax
+    xor eax, ebx
+    test eax, eax
+    jnz %%loop
+%endmacro
+
+The SWITCH-CASE macro that follows uses the syntax:
+   SWITCH Variable
+   CASE Int
+        BREAK
+   CASE Int
+        BREAK
+   DEFAULT
+   ENDSWITCH 
+Which could be implemented as follows:
+card    db  0   ;card_variable
+Jack    EQU 11
+Queen   EQU 12
+King    EQU 13
+...   
+    SWITCH card
+    CASE Jack
+        add edx, Jack
+        BREAK
+    CASE Queen
+        add edx, Queen
+        BREAK
+    CASE King
+        add edx, King
+        BREAK
+    DEFAULT
+        add d, [card]
+    ENDSWITCH
+Note that SWITCH moves the variable into eax and CASE moves the value into ebx.
+;===========================================================-SWITCH-CASE Blocks
+%macro SWITCH 1
+%push switch            
+%assign __curr 1
+    mov eax, %1
+    jmp %$loc(__curr)
+%endmacro
+
+%macro CASE 1
+%ifctx switch
+    %$loc(__curr):
+    %assign __curr __curr+1
+    mov ebx, %1
+    cmp eax, ebx
+    jne %$loc(__curr)
+%endif
+%endmacro
+
+%macro DEFAULT 0
+%ifctx switch
+    %$loc(__curr):
+%endif
+%endmacro
+
+%macro BREAK 0
+    jmp %$endswitch
+%endmacro
+
+%macro ENDSWITCH 0
+    %ifctx switch
+    %$endswitch:
+    %pop
+    %endif
+%endmacro
+;==========================================================================-END
+
+
+If-Then Blocks
+--------------
+While the preprocessor provides support for if-then directives, it is a slight 
+bit of work to cause that to generate the equivalent assembly language 'if' 
+code [ the preprocessor 'if' is resolved before compile time, not at run time].
+Using macros, you can create if-then blocks with the following structure:
+   IF Value, Cond, Value
+        ;if code here
+   ELSIF Value, Cond, Value
+        ;else-if code here
+   ELSE
+        ;else code here
+   ENDIF
+An example being:
+    IF [Passwd], e, [GoodVal]       ;e == equals or je
+        jmp Registered
+    ELSE
+        jmp FormatHardDrive
+    ENDIF
+The trickiest part about this macro sequence is the 'Cond' parameter. NASM 
+allows condition codes [the 'cc' in 'jcc' that you findin opcode refs] to be 
+passed to macros; these condition codes are simply the 'jcc' with the 'j' cut 
+off --  'jnz' becomes 'nz', 'jne' becomes 'ne', 'je' becomes 'e', and so on. 
+The reason for this is that the condition code is appended to a 'j' later in 
+the macro:
+ %macro Jumper %1 %2 %3    ;JUMPER Reg1, cc, Reg2
+    cmp %1, %3
+    j%+2 Gotcha
+    jmp error
+ %endmacro
+The above code appends %2 to the 'j' with the directive j%+2. Note that if you 
+use j%- instead of j%+, NASM will insert the *inverse* condition code, so that
+jz becomes jnz, etc. For example, calling the macro
+ %macro Jumper2 %1
+    j%-1 JmpHandler
+ %endmacro
+with the invocation 'Jumper2 nz' would assemble the code 'jz JmpHandler'.
+
+The condition codes can be a bit tricky to work with; it is advisable to add a 
+sequence such as the following to the macro file:
+%define EQUAL       e
+%define NOTEQUAL    ne
+%define G-THAN      g
+%define L-THAN      l
+%define G-THAN-EQ   ge
+%define L-THAN-EQ   le
+%define ZERO        z
+%DEFINE NOTZERO     nz
+so that you could call the IF macro as follows:
+    IF PassWd, EQUAL, GoodVal
+        ;if code here
+...etc etc. Note also that the IF-THEN-ELSE macros put the passed values into 
+eax and ebx for compatison, so these registers will need to be preserved.
+
+;===========================================================-IF-THEN-ELSE Loops
+%macro IF 3
+ %push if
+ %assign __curr 1
+    mov eax, %1
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%if_code
+    jmp %$loc(__curr)
+%%if_code:
+%endmacro
+
+%macro ELSIF 3
+  %ifctx if
+    jmp %$end_if
+%$loc(__curr):
+  %assign __curr __curr+1
+    mov eax, %1
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%elsif_code
+    jmp %$loc(__curr)
+%%elsif_code:
+ %else
+   %error "'ELSIF' can only be used following 'IF'"
+ %endif
+%endmacro
+
+%macro ELSE 0
+ %ifctx if
+    jmp %$end_if
+%$loc(__curr):
+%assign __curr __curr+1
+ %else
+  %error "'ELSE' can only be used following an 'IF'"
+ %endif
+%endmacro
+
+%macro ENDIF 0
+%$loc(__curr):
+%$end_if:
+%pop
+%endmacro
+;==========================================================================-END
+
+For/While Loops
+---------------
+The DO...FOR and DO...WHILE do nothing differnet from the previous macros, but 
+are simply a different application of the same principles. The syntax for 
+calling these macros is:
+   DO
+    ;code to do here
+   FOR min, Cond, max, step
+
+   DO
+    ;code to do here
+   WHILE variable, Cond, value
+It is perhaps easiest to illustrate this by comparing the macros with C code.
+    for( x = 0; x <= 100; x++) { SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  FOR 0, l, 100, 1
+Likewise, 
+    for( x = 0; x != 100; x--) { SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  FOR 0, e, 100, -1
+The WHILE macro is similar:
+    while( CurrByte != BadAddr) {SomeFunc() }
+Equates to:
+  DO
+    call SomeFunc
+  WHILE CurrByte, ne, BadAddr
+Once again, eax and ebx are used in the FOR and WHILE macros.
+
+;====================================================-DO-FOR and DO-WHILE Loops
+%macro DO 0
+ %push do
+    jmp %$init_loop
+%$start_loop:
+    push eax
+%endmacro
+
+%macro FOR 4
+ %ifctx do
+    pop eax
+    add eax, %4
+    cmp eax, %3
+    j%-2 %%end_loop
+    jmp %$start_loop
+%$init_loop:
+    mov eax, %1
+    jmp %$start_loop
+%%end_loop:
+ %pop
+ %endif
+%endmacro
+
+%macro WHILE 3
+ %ifctx do
+    pop eax
+    mov ebx, %3
+    cmp eax, ebx
+    j%+2 %%end_loop
+    jmp %$start_loop
+%$init_loop:
+    mov eax, %1
+    jmp %$start_loop
+%%end_loop:
+ %pop
+ %endif
+%endmacro
+;==========================================================================-END
+
+
+Data Declarations
+-----------------
+Declaring data is relatively simple in assembly, but sometimes it helps to make 
+code more clear if you create macros that assign meaningful data types to 
+variables, even if those macros simply resolve to a DB or a DD. The following 
+macros demonstrate this concept. They are invoked as follows:
+ CHAR   Name, String            ;e.g. CHAR  UserName, "Joe User"
+ INT    Name, Byte              ;e.g. INT   Timeout,  30
+ WORD   Name, Word              ;e.g. WORD Logins
+ DWORD  Name, Dword             ;e.g. DWORD Password
+Note that when invoked with a name but not a value, these macros create empty 
+[DB 0] variables.
+;============================================================-Data Declarations
+%macro CHAR 1-2 0
+%1: DB   %2,0
+%endmacro
+
+%macro INT 1-2 0
+%1: DB   %2
+%endmacro
+
+%macro WORD 1-2 0
+%1: DW   %2
+%endmacro
+
+%macro DWORD 1-2 0
+%1: DD   %2
+%endmacro
+;==========================================================================-END
+
+Procedure Declarations
+----------------------
+Procedure declarations are another matter of convenience. It is often useful in 
+your code to clearly delineate the start and end of a procedure; each of the 
+PROC macros below does that, as well as creating a stack fram for the procedure.
+The ENTRYPROC macro creates a procedure named 'main' and declares main as a 
+global symbol; the standard PROC declares the provided name as global. These 
+macros can be used as follows: 
+PROC ProcName Parameter1, Parameter2, Parameter3
+   ;procedure code here
+ENDP
+
+ENTRYPROC
+    ;entry-procedure code here
+ENDP
+Note that the Parameters to PROC are set up to EQU to offsets from ebp, e.g. 
+ebp-4, ebp-8, etc. I have also included support for local variables, which 
+will EQU to positive offsets from ebp' these may be used as follows:
+PROC ProcName Parameter1, Parameter2, Parameter3...
+    LOCALDD Dword_Variable
+    LOCALDW Word_Variable 
+    LOCALDB Byte_Variable 
+        ;procedure code here
+ENDP 
+
+;=======================================================-Procedure Declarations
+%macro PROC 1-9
+GLOBAL %1
+%1:
+ %assign _i 4
+ %rep %0-1
+    %2 equ [ebp-_i]
+ %assign _i _i+4
+ %rotate 1
+ %endrep
+    push ebp
+    mov ebp, esp
+ %push local
+ %assign __ll 0
+%endmacro
+
+%macro ENDP 0
+ %ifctx local
+  %pop
+ %endif
+    pop ebp
+%endmacro
+
+%macro ENTRYPROC 0
+PROC main
+%endmacro
+
+%macro LOCALVAR 1
+    sub esp, 4
+    %1 equ [ebp + __ll]
+%endmacro
+
+%macro LOCALDB 1
+  %assign __ll __ll+1
+  LOCALVAR %1
+%endmacro
+
+%macro LOCALDW 1
+  %assign __ll __ll+2
+  LOCALVAR %1
+%endmacro
+
+%macro LOCALDD 1
+  %assign __ll __ll+4
+  LOCALVAR %1
+%endmacro
+;==========================================================================-END
+
+Further Extension
+-----------------
+Continued experimentation will of course prove fruitful. It is recommended that 
+you read/print out chapter 4 of the NASM manual for reference. In addition, it 
+is very helpful to test your macros by cpmpiling the source with "nasm -e", 
+which will output the preprocessed source code to stdout and will not compile
+the program.
+
+
+____________________________________________________________________________
+                  ______               _____.  ____                         ```
+  ._____/\______.________._________. ._\___ |__\_ /.                         \\
+  |             |        |   _     | |   (_ |  __/ |CE                        ,
+.=|_____/\______|        |----)____| |______|______|======[   Win 32 ASM ]===.
+'===============|        :==================================================='
+                                                     NASM specific Win32 coding
+                                                     by Tamas Kaproncai
+
+
+Contents
+========
+0. Preface
+1. Compiling
+2. Include files
+3. Library files
+4. Importing API functions
+5. Calling API functions
+6. WinMain
+7. Window procedure
+8. Sections
+9. Self modification
+
+
+0. Preface
+==========
+I will introduce the win32 coding and I will focus on the NASM specific part.
+
+Downloadable working examples:
+ftp://ftp.szif.hu/pub/demos/tool/w32nasm.zip
+http://rs1.szif.hu/~tomcat/win32
+
+There is another tutorial on this topic, called:
+"The Win32 NASM Coding Toolkit v0.02 by Gij"
+that uses the LCC linker and the resource compiler which comes with LCC.
+
+
+1. Compiling
+============
+I'm working with the following free programs in connection with NASM:
+- linker: ALINK v1.5 by Anthony A.J. Williams.
+- resource compiler: GoRC v0.50b by Jeremy Gordon.
+
+The process of compiling a win32 program involves a number of steps which can 
+be divided into three main processes: preparing the include files, preparing 
+the library files, and writing the actual program.
+
+The compiling flow chart
+------------------------
+.h -> ? -> .inc
+              \
+       .asm -> NASM -> .obj
+                          \
+    .rc -> GORC -> .res -> ALINK -> .exe
+                          /
+    .dll -> IMPLIB -> .lib                            (? means handwork)
+
+
+2. Include files
+================
+The include files (*.inc) must be generated from existing header files (*.h) 
+that come with win32-compatible C or Pascal compilers. Files needed:
+    WIN32N.INC (Thanks for the inital MASM version to S.L.Hutchesson).
+The compiler will be NASM version 0.97
+    http://www.cryogen.com/nasm
+Usage: nasmw -fobj -w+orphan-labels -pwin32n.inc %1.asm
+
+
+3. Library files
+================
+Files Needed:
+WIN32.LIB
+The linker will be ALINK
+  http://www.geocities.com/SiliconValley/Network/4311/#alink    
+Usage: alink -oPE %1 win32.lib %1.res %2 %3
+
+More lib files can be created with IMPLIB.
+Example: IMPLIB DDRAW.DLL
+
+
+4. Importing API functions
+==========================
+EXTERN MessageBoxA
+IMPORT MessageBoxA use32.dll
+
+
+5. Calling API functions
+========================
+PUSH UINT MB_OK
+PUSH LPCTSTR title1
+PUSH LPCTSTR string1
+PUSH HWND NULL
+CALL [MessageBoxA]
+
+
+6. WinMain
+==========
+You don't need to use the name, WinMain:
+You must start the program with the label, ..start:
+
+At the begening there is nothing special in the stack, so you should call
+GetModuleHandleA for hInstance and GetCommandLineA for the command line.
+(Command line consists the full path, the file name and the parameters).
+
+You can exit the program with: RETN
+or you should call the ExitProcess function:
+PUSH UINT 0 ; the error code
+CALL [ExitProcess]
+
+
+7. Window procedure
+===================
+There are four parameters on the top of the stack:
+PUSH EBP
+MOV EBP,ESP
+%DEFINE hwnd    EBP+8  ;handle of window
+%DEFINE message EBP+12 ;message
+%DEFINE wParam  EBP+16 ;first message parameter
+%DEFINE lParam  EBP+20 ;second message parameter
+
+You can handle the messages depends on WPARAM [wParam]
+and the rest you can pass to DefWindowProcA:
+PUSH LPARAM [lParam]
+PUSH WPARAM [wParam]
+PUSH UINT [message]
+PUSH HWND [hwnd]
+CALL [DefWindowProcA]
+POP EBP
+RETN 16
+
+
+8. Sections
+===========
+You need a code section:
+SECTION CODE USE32 CLASS=CODE
+and a data section:
+SECTION DATA USE32 CLASS=DATA
+
+You don't need bss section, instead of you should append
+every RESB, RESW, RESD, RESQ to the end of the source code.
+This zero data not will be included to the exe file.
+
+
+9. Self modification
+====================
+You can include your code and data together in one section:
+SECTION CODE USE32 CLASS=CODE
+
+In that case you need another object file, with only one line source:
+SECTION CODE USE32 CLASS=DATA
+
+ALINK will combine the properties of these two sections.
+
+EXTERN MessageBoxA
+EXTERN ExitProcess
+
+SECTION CODE USE32 CLASS=CODE
+..start:
+
+PUSH UINT MB_OK
+PUSH LPCTSTR title1
+PUSH LPCTSTR string1
+PUSH HWND NULL
+CALL MessageBoxA
+
+PUSH UINT NULL
+CALL ExitProcess
+
+SECTION DATA USE32 CLASS=DATA
+string1: db 'Hello world!',13,10,0
+title1: db 'Hello',0
+
+
+
+____________________________________________________________________________
+                  ______               _____.  ____                         ```
+  ._____/\______.________._________. ._\___ |__\_ /.                         \\
+  |             |        |   _     | |   (_ |  __/ |CE                        ,
+.=|_____/\______|        |----)____| |______|______|======[   Win 32 ASM ]===.
+'===============|        :==================================================='
+                                                                More about Text
+                                                                by Iczelion
+
+
+We will experiment more with text attributes, ie. font and color.
+
+Preliminary:
+------------
+
+Windows color system is based on RGB values, R=red, G=Green, B=Blue. If you
+want to specify a color in Windows, you must state your desired color in
+terms of these three major colors. Each color value has a range from 0 to
+255 (a byte value). For example, if you want pure red color, you should use
+255,0,0. Or if you want pure white color, you must use 255,255,255. You can
+see from the examples that getting the color you need is very difficult
+with this system since you have to have a good grasp of how to mix and
+match colors.
+
+For text color and background, you use SetTextColor and SetBkColor, both of
+them require a handle to device context and a 32-bit RGB value. The 32-bit
+RGB value's structure is defined as:
+
+RGB_value struct
+    unused   db 0
+    blue       db ?
+    green     db ?
+    red        db ?
+RGB_value ends
+
+Note that the first byte is not used and should be zero. The order of the
+remaining three bytes is reversed,ie. blue, green, red. However, we will
+not use this structure since it's cumbersome to initialize and use. We will
+create a macro instead. The macro will receive three parameters: red, green
+and blue values. It'll produce the desired 32-bit RGB value and store it in
+eax. The macro is as follows:
+
+RGB macro red,green,blue
+    xor    eax,eax
+    mov  ah,blue
+    shl     eax,8
+    mov  ah,green
+    mov  al,red
+endm
+
+You can put this macro in the include file for future use.
+
+You can "create" a font by calling CreateFont or CreateFontIndirect. The
+difference between the two functions is that CreateFontIndirect receives
+only one parameter: a pointer to a logical font structure, LOGFONT.
+CreateFontIndirect is the more flexible of the two especially if your
+programs need to change fonts frequently. However, in our example, we will
+"create" only one font for demonstration, we can get away with CreateFont.
+After the call to CreateFont, it will return a handle to a font which you
+must select into the device context. After that, every text API function
+will use the font we have selected into the device context.
+
+
+Content:
+--------
+
+Below is our source code:
+;======================================================================TEXT.ASM
+include windows.inc
+includelib user32.lib
+includelib kernel32.lib
+includelib gdi32.lib
+
+RGB macro red,green,blue
+        xor eax,eax
+        mov ah,blue
+        shl eax,8
+        mov ah,green
+        mov al,red
+endm
+
+.data
+ClassName   db "SimpleWinClass",0
+AppName     db "Our First Window",0
+TestString  db "Win32 assembly is great and easy!",0
+FontName    db "script",0
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+
+.code
+ start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,NULL
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+           hInst,NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,SW_SHOWNORMAL
+    invoke UpdateWindow, hwnd
+        .WHILE TRUE
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke TranslateMessage, ADDR msg
+                invoke DispatchMessage, ADDR msg
+        .ENDW
+        mov     eax,msg.wParam
+        ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    LOCAL hdc:HDC
+    LOCAL ps:PAINTSTRUCT
+    LOCAL hfont:HFONT
+
+    mov   eax,uMsg
+    .IF eax==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF eax==WM_PAINT
+        invoke BeginPaint,hWnd, ADDR ps
+        mov    hdc,eax
+        invoke CreateFont,24,16,0,0,400,0,0,0,OEM_CHARSET,\
+
+OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,\
+                                       DEFAULT_QUALITY,DEFAULT_PITCH or
+FF_SCRIPT,\
+                                       ADDR FontName
+        invoke SelectObject, hdc, eax
+        mov    hfont,eax
+        RGB    200,200,50
+        invoke SetTextColor,hdc,eax
+        RGB    0,0,255
+        invoke SetBkColor,hdc,eax
+        invoke TextOut,hdc,0,0,ADDR TestString,SIZEOF TestString
+        invoke SelectObject,hdc, hfont
+        invoke EndPaint,hWnd, ADDR ps
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+    xor    eax,eax
+    ret
+WndProc endp
+
+end start
+;===========================================================================EOF
+
+Let's begin our analysis : )
+
+        invoke CreateFont,24,16,0,0,400,0,0,0,OEM_CHARSET,\
+                    OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,\
+                    DEFAULT_QUALITY,DEFAULT_PITCH or FF_SCRIPT,\
+                    ADDR FontName
+
+CreateFont creates a logical font that is the closest match to the given
+parameters and the font data available. This function has more parameters
+than any other function in Windows. It returns a handle to logical font to
+be used by SelectObject function. We will examine its parameters in detail.
+
+HFONT CreateFont(int nHeight, int nWidth, int nEscapement, int
+	nOrientation, int nWeight, BYTE cItalic, BYTE cUnderline, BYTE cStrikeOut,
+	BYTE cCharSet, BYTE cOutputPrecision, BYTE cClipPrecision, BYTE cQuality,
+	BYTE cPitchAndFamily, LPSTR lpFacename);
+
+nHeight -->  The desired height of the characters . 0 means use default size.
+nWidth  --> The desired width of the characters. Normally this value should be
+	0 which allows Windows to match the width to the height. However, in our
+	example, the default width makes the characters hard to read, so I use the
+	width of 16 instead.
+nEscapement -->  Specifies the orientation of the next character output
+	relative to the previous one in tenths of a degree. Normally, set to 0. Set
+	to 900 to have all the characters go upward from the first character, 1800
+	to write backwards, or 2700 to write each character from the top down.
+nOrientation -->  Specifies how much the character should be rotated when
+	output in tenths of a degree. Set to 900 to have all the characters lying
+	on their backs, 1800 for upside-down writing, etc.
+nWeight -->  Sets the line thickness of each character. Windows defines the
+	following sizes:
+
+     FW_DONTCARE        equ 0
+     FW_THIN            equ 100
+     FW_EXTRALIGHT      equ 200
+     FW_ULTRALIGHT      equ 200
+     FW_LIGHT           equ 300
+     FW_NORMAL          equ 400
+     FW_REGULAR         equ 400
+     FW_MEDIUM          equ 500
+     FW_SEMIBOLD        equ 600
+     FW_DEMIBOLD        equ 600
+     FW_BOLD            equ 700
+     FW_EXTRABOLD       equ 800
+     FW_ULTRABOLD       equ 800
+     FW_HEAVY           equ 900
+     FW_BLACK           equ 900
+
+cItalic  --> 0 for normal, any other value for italic characters.
+cUnderline -->  0 for normal, any other value for underlined characters.
+cStrikeOut  --> 0 for normal, any other value for characters with a line
+	through the center.
+cCharSet --> The character set of the font. Normally should be OEM_CHARSET
+	which allows Windows to select font which is operating system-dependent.
+cOutputPrecision --> Specifies how much the selected font must be closely
+	matched to the characteristics we want. Normally should be
+	OUT_DEFAULT_PRECIS which defines default font mapping behavior.
+cClipPrecision --> Specifies the clipping precision. The clipping precision
+	defines how to clip characters that are partially outside the clipping
+	region. You should be able to get by with CLIP_DEFAULT_PRECIS which defines
+	the default clipping behavior.
+cQuality  -->Specifies the output quality. The output quality defines how
+	carefully GDI must attempt to match the logical-font attributes to those of
+	an actual physical font. There are three choices: DEFAULT_QUALITY,
+	PROOF_QUALITY and  DRAFT_QUALITY.
+cPitchAndFamily --> Specifies pitch and family of the font. You must combine
+	the pitch value and the family value with "or" operator.
+	lpFacename  A pointer to a null-terminated string that specifies the
+	typeface of the font.
+
+The description above is by no means comprehensive. You should refer to
+your Win32 API reference for more details.
+
+        invoke SelectObject, hdc, eax
+        mov    hfont,eax
+
+After we get the handle to the logical font, we must use it to select the
+font into the device context by calling SelectObject. SelectObject puts the
+new GDI objects such as pens, brushs, and fonts into the device context to
+be used by GDI functions. It returns the handle to the replaced object
+which we should save for future SelectObject call. After SelectObject call,
+any text output function will use the font we just selected into the device
+context.
+
+        RGB    200,200,50
+        invoke SetTextColor,hdc,eax
+        RGB    0,0,255
+        invoke SetBkColor,hdc,eax
+
+Use RGB macro to create a 32-bit RGB value to be used by SetColorText and
+SetBkColor.
+
+        invoke TextOut,hdc,0,0,ADDR TestString,SIZEOF TestString
+
+Call TextOut function to draw the text on the client area. The text will be
+in the font and color we specified previously. The syntax of TextOut is as
+follows:
+
+BOOL TextOut(
+
+    HDC  hdc,                  // handle of device context
+    int  nXStart,               // x-coordinate of starting position
+    int  nYStart,               // y-coordinate of starting position
+    LPCTSTR  lpString, // address of string
+    int  cbString               // number of characters in string
+   );
+
+        invoke SelectObject,hdc, hfont
+
+When we are through with the font, we should restore the old font back into
+the device context. You should always restore the object that you replaced
+in the device context.
+
+
+____________________________________________________________________________
+                  ______               _____.  ____                         ```
+  ._____/\______.________._________. ._\___ |__\_ /.                         \\
+  |             |        |   _     | |   (_ |  __/ |CE                        ,
+.=|_____/\______|        |----)____| |______|______|======[   Win 32 ASM ]===.
+'===============|        :==================================================='
+                                                                 Keyboard Input
+                                                                 by Iczelion
+
+
+We will learn how a Windows program receives keyboard input.
+
+Preliminiary:
+------------
+
+Since there's only one keyboard in each PC, all running Windows programs
+must share it between them. Windows is responsible for sending the key
+strokes to the window which has the input focus.
+
+Although there may be several windows on the screen, only one of them has
+the input focus. The window which has input focus is the only one which can
+receive key strokes. You can differentiate the window which has input focus
+from other windows by looking at the title bar which is highlighted.
+Actually, there are two main types of keyboard message. You can view a
+keyboard as a group of keys. For example, if you press the "a" key, Windows
+sends a WM_KEYDOWN message to the window which has input focus, notifying
+that a key is pressed. When you release the key, Windows sends a WM_KEYUP
+message. In this case, you treat a key as a button. Another way to look at
+the keyboard is that it's a character input device. When you press "a" key,
+Windows sends a WM_CHAR message to the window which has input focus,
+telling it that the user sends "a" character to it. In fact, Windows sends
+WM_KEYDOWN, WM_CHAR, and WM_KEYUP messages to the window which has input
+focus. The window procedure may decide to process all three messages or
+only the messages it's interested in. Most of the time, you can ignore
+WM_KEYDOWN and WM_KEYUP since TranslateMessage function call in the message
+loop translate WM_KEYDOWN and WM_KEYUP messages to a WM_CHAR message. We
+will focus on WM_CHAR in this tutorial.
+
+
+Content:
+-------
+;=======================================================================KEY.ASM
+include windows.inc
+includelib user32.lib
+includelib kernel32.lib
+includelib gdi32.lib
+
+.data
+ClassName   db "SimpleWinClass",0
+AppName     db "Our First Window",0
+char WPARAM 20h              ; the character the program receives from keyboard
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,NULL
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+           hInst,NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,SW_SHOWNORMAL
+    invoke UpdateWindow, hwnd
+    .WHILE TRUE
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke TranslateMessage, ADDR msg
+                invoke DispatchMessage, ADDR msg
+        .ENDW
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    LOCAL hdc:HDC
+    LOCAL ps:PAINTSTRUCT
+
+    mov   eax,uMsg
+    .IF eax==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF eax==WM_CHAR
+        push wParam
+        pop  char
+        invoke InvalidateRect, hWnd,NULL,TRUE
+    .ELSEIF eax==WM_PAINT
+        invoke BeginPaint,hWnd, ADDR ps
+        mov    hdc,eax
+        invoke TextOut,hdc,0,0,ADDR char,1
+        invoke EndPaint,hWnd, ADDR ps
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+    xor    eax,eax
+    ret
+WndProc endp
+end start
+;===========================================================================EOF
+
+Let's analyze it:
+
+char WPARAM 20h                         ; the character the program
+receives from keyboard
+
+This is the variable that stores the character received from the keyboard.
+Since the character is sent in WPARAM of the window procedure, we define
+the variable as type WPARAM for simplicity. The initial value is 20h or the
+space since when our window refreshes its client area the first time, there
+is no character input. So we want to display space instead.
+
+    .ELSEIF eax==WM_CHAR
+        push wParam
+        pop  char
+        invoke InvalidateRect, hWnd,NULL,TRUE
+
+This is added in the window procedure to handle the WM_CHAR message. It
+just puts the character into the variable named "char" and then calls
+InvalidateRect. InvalidateRect makes a specified rectangle in the client
+area invalid which forces Windows to send WM_PAINT message to the window
+procedure. Its syntax is as follows:
+
+BOOL InvalidateRect(
+    HWND  hWnd,              // handle of window with changed update region
+    CONST RECT  * lpRect,     // address of rectangle coordinates
+    BOOL  bErase                       // erase-background flag
+   );
+
+lpRect is a pointer to the rectagle in the client area that we want to
+declare invalid. If this parameter is null, the entire client area will be
+marked as invalid.
+bErase is a flag telling Windows if it needs to erase the background. If
+this flag is TRUE, then Windows will erase the backgroud of the invalid
+rectangle when BeginPaint is called.
+
+So the strategy we used here is that: we store all necessary information
+about how to paint the client area and generate WM_PAINT message to paint
+the client area. Of course, the codes in WM_PAINT section must know
+beforehand what's expected of them. This seems a roundabout way of doing
+things but it's the way of Windows.
+
+Actually we can paint the client area during processing WM_CHAR message by
+calling GetDC and ReleaseDC pair. There is no problem there. But the fun
+begins when our window needs to repaint its client area. Since the codes
+that paint the character are in WM_CHAR section, the window procedure will
+not be able to repaint our character in the client area. So the bottom line
+is: put all necessary data and codes that do painting in WM_PAINT. You can
+send WM_PAINT message from anywhere in your code anytime you want to
+repaint the client area.
+
+        invoke TextOut,hdc,0,0,ADDR char,1
+
+When InvalidateRect is called, it sends a WM_PAINT message back to the
+window procedure. So the codes in WM_PAINT section is called. It calls
+BeginPaint as usual to get the handle to device context and then call
+TextOut which draws our character in the client area at x=0, y=0. When you
+run the program and press any key, you will see that character echo in the
+upper left corner of the client window. And when the window is minimized
+and maximized again, the character is still there since all the codes and
+data essential to repaint are all gathered in WM_PAINT section.
+
+
+____________________________________________________________________________
+  ::::::::::.___    .                                                       ```
+  ::::::::::| _/__. |__   ____    .      __.  ____  ____   __.               \\
+  ::::::    |____ | __/_ _\_ (.___|  .___) |__\_ (._)  /___) |                ,
+  ::::::::::/   / | \   |  -  |   \  |  -  |   -  |  \/|  -  |
+.=:::::::::/______|_____|_____|  (___|_____|______|____|_____|===============.
+'=::::::::::==================|   . ____ | (____====[ The C Standard lib ]==='
+  ::::::::::                  |   |------|  -   |                       
+  ::::::::::                  |   |______|______|CE                     
+                              .   :
+                                      C string functions: introduction, _strlen
+                                      by Xbios2
+
+
+I. INTRODUCTION
+---------------
+Beware: this is going to be long...
+
+String handling in assembly is - anyway - a difficult subject. There are few 
+string-oriented x86 opcodes, and most of them are slow. There is not a standard 
+library providing even basic functions. There is no string specific syntax in 
+assembly, like C's printf('hello world') or, even worse, BASIC's a$=b$+'hello'. 
+In a few words, if easy string-related programming is your goal, maybe you 
+should consider PERL, or another text-manipulation language.
+
+Yet, string functions are really needed, since almost any program in assembly 
+uses text for I/O. (An alternative to this would be using animated paper-clips 
+to communicate with the user :)).
+
+Furthermore, coding those functions in assembly allows for smaller and faster 
+functions. Actually many of the string functions in C _were_ written in 
+assembly (e.g. strlen, strcat, strcpy, etc). Those can be divided in two 
+categories:
+
+-'Traditional' functions, using the x86 string instructions
+-'Modern' functions, which run faster by being Pentium-optimized
+
+Borland C++ 4.02 and KERNEL32.DLL only have traditional functions. Borland's 
+C++ Builder v1.0 (once given free as a demo) includes both types. MSVCRT.DLL 
+(version 5) contains 'modern' versions.
+
+The three main aspects considered in these articles (and generally when compar-
+ing different versions of the same function) are speed, size and common sense. 
+
+'Common sense' indicates how easy it is to understand the way a function 
+operates by reading the source code, how 'elegant' the code is. In a library 
+module distributed as a binary (in a 'static' reuse of code), common sense is 
+not important. It becomes important when the source code is distributed too, 
+because it allows 'dynamic' reuse. 'Elegant' code can be easily optimized for 
+specific needs or expanded to become a more general function.
+
+'Size' is, obviously, the size of the resulting code. Besides creating smaller 
+files, small size has two interesting 'side-effects'. It (usually) creates more 
+elegant code and faster code (it decreases k, but it usually increases l (for 
+an explanation of k and l see 'speed'). For very small functions like strlen it 
+has the added advantage of allowing the code to be inlined without wasting too 
+much space, thus decreasing k even more.
+
+'Speed' indicates the number of cycles needed to execute the function. For 
+simple string functions the number of cycles needed can be expressed as
+
+ c=k+l*n
+
+where c is the total number of cycles, k is the number of cycles needed to 
+'prepare' the function, l is the number of cycles needed to process each chara-
+cter and n is the number of characters in the string. It is obvious that small 
+values of c mean faster execution. In order to compare two versions of a 
+function that run at speeds of
+
+ c1=k1+l1*n    and   c2=k2+l2*n
+
+the ratio of c1/c2 is calculated:
+
+    c1   k1+l1*n
+ r=----=---------
+    c2   k2+l2*n
+
+if r=1 then both versions run at the same speed.
+if r>1 then version 2 is faster. if r<1 then version 1 is faster.
+Simple maths prove that:
+
+1. When n becomes infinite, r becomes equal to l1/l2. Especially if l1=l2,
+   then r=1
+
+2. If k1<k2 but l1>l2, c1<c2 (version 1 is faster) if n<(k2-k1)/(l1-l2).
+
+Point 1 means that for long strings speed is (almost) independent of the value 
+of k. Especially if l1=l2 both versions will run at (almost) the same speed.
+Point 2 means that for small strings k strongly affects the value of c.
+
+For those of you that are fed up with maths, here is a simple example that 
+demonstrates what I've been trying to say all this time :)
+
+If version 1 runs at c1=10+3*n and version 2 at c2=30+1*n then:
+
+-For strings up to 9 chars version 1 is faster
+-For strings of 10 chars both versions run at the same speed
+-For strings of 11 or more version 2 is faster
+-For strings of 50 chars, version 2 is 2x faster than version 1
+-For strings of 770 chars version 2 is 2.9x faster than version 1
+
+The problem is that none of the above versions can be classified as better than 
+the other. Think of the parser of a compiler. It receives as input lines from a 
+text file, which are strings longer than 10 characters, but also has to deal 
+with tokens, which are short strings (in an assembler, three-char tokens are 
+very common).
+
+Keep in mind that, while l depends only on the method used to implement the 
+function, k also depends on the 'push arg/call/prepare stack/resore stack/ 
+ret/get arg' times. So if n is low, overall speed can be increased by inlining 
+the code, thus subtracting from k the time needed to call the function.
+
+Well, I think you've had enough. Let's see all this stuff in practice.
+
+
+II. THE _STRLEN FUNCTION
+------------------------
+Attention: especially for _strlen, ALL versions I have either written or found 
+in libraries will be explained. This means you'll get source code for 8 
+functions...
+
+size_t strlen(const char *s);
+
+Calculates the length of a string. strlen returns the number of characters in 
+s, not counting the null-terminating character.
+
+_strlen is the simplest of the string functions. The 'traditional' way to 
+implement it is through 'repne scasb'. BC 4.02 implements it as:
+
+; ------------ version 1 ------------
+; Borland C++ 4.02
+; 25 bytes
+; c=27+4*n
+
+_strlen	proc near
+	push	ebp
+	mov	ebp, esp
+	push	edi
+	mov	edi, [ebp+8]
+	mov	ecx, -1
+	xor	al, al
+	cld	
+	repne scasb
+	not	ecx
+	lea	eax, [ecx-1]
+	pop	edi
+	pop	ebp
+	retn
+_strlen	endp
+; -----------------------------------
+
+A shorter, and a bit faster version of this would be:
+
+; ------------ version 2 ------------
+; Improved 'repne scasb'
+; 18 bytes
+; c=21+4*n
+
+_strlen	proc near
+	xor	eax, eax
+	push	edi
+	mov	edi, [esp+8]
+	or	ecx, -1
+	repne scasb
+	sub	eax, 2
+	pop	edi
+	sub	eax, ecx
+	retn	
+_strlen	endp
+; -----------------------------------
+
+The win32 API also includes a strlen function, called lstrlenA. It is based on 
+'repne scasb' as well, but you are _strongly_ advised to avoid it. It runs at 
+c=56+4*n cycles.
+
+The most 'common sense' function (IMHO) is also the smallest:
+
+; ------------ version 3 ------------
+; Elegant and very small
+; 15 bytes
+; c=27+4*n
+; k is so big because we have a retn immediately after a jump
+; if a nop is added between those two, k drops to 13
+
+_strlen	proc near
+	or	eax, -1
+	mov	ecx, [esp+4]
+loop1:	inc	eax
+	cmp	byte ptr [ecx+eax], 0
+	jnz	short loop1
+	; nop
+	retn
+_strlen	endp
+; -----------------------------------
+
+Which gets a little less elegant but faster if tweaked a little:
+(The trick is that the carry flag is set by the 'cmp' instruction if the byte 
+read is 0, else it is cleared. The 'inc' instruction doesn't affect the carry 
+flag).
+
+; ------------ version 4 ------------
+; Very small and faster than repne scasb
+; 15 bytes
+; c=12+3*n
+
+_strlen	proc near
+	mov	ecx, [esp+4]
+	xor	eax, eax
+loop1:	cmp	byte ptr [ecx+eax], 1
+	inc	eax
+	jnc	short loop1
+	dec	eax
+	retn
+_strlen	endp
+; -----------------------------------
+
+But it gets even better as inlined code, as a macro:
+
+; ------------ version 4.5 ------------
+; Very small, extremely elegant macro
+; 10 bytes
+; c=8+3*n
+
+strlen	macro srcreg, cntreg
+	xor	cntreg, cntreg
+	cmp	byte ptr [srcreg+cntreg], 1
+	inc	cntreg
+	jnc	$-5
+	dec	eax
+	endm
+; -----------------------------------
+
+This macro returns in cntreg the length of the string at srcreg.
+It uses no other registers, srcreg is unchanged, it is only 10 bytes long and 
+it runs at a speed of only 8+3*n cycles. It also returns its value in any 
+register, without altering the other registers.
+
+Suppose we need in ecx the length of the string at esi. The following code:
+
+	push	esi
+	call	_strlen
+	pop	ecx	; restore stack
+	mov	ecx, eax
+
+takes 9 bytes, only one less than the macro version. Plus, of course, the at 
+least 15 bytes of code in _strlen.
+
+Another 'elegant' version, which is also small and much faster is the following:
+
+; ------------ version 5 ------------
+; Elegant, small and fast
+; 16 bytes
+; c=12+2*n
+
+_strlen	proc near
+	mov	ecx, [esp+4]
+	xor	eax, eax
+loop1:	mov	dl, [ecx+eax]
+	inc	eax
+	or	dl, dl
+	jnz	short loop1
+	dec	eax
+	retn
+_strlen	endp
+; -----------------------------------
+
+I believe that version 5 is the best version that could have elegance, speed 
+and small size together. It can also be converted to a macro and inlined to 
+drop to a speed of c=8+2*n (it will use one register more, but this register 
+would anyway be lost if a call to the function was made).
+
+It also has what I believe is the smallest value of k. However, it doesn't have 
+the smallest value of l. To reduce the cycles needed, data can be read not byte 
+after byte but dword after dword. Here is a routine given by Agner Fog in his 
+document on Pentium optimization (which you are _strongly_ advised to read):
+
+; ------------ version 6 ------------
+; [by Agner Fog] Very fast
+; 61 bytes
+; c=18+1*n (not exactly, as data is read in 4 byte blocks)
+
+_strlen	proc
+	mov	eax, [esp+4]		; get pointer
+	mov	edx, 7
+	add	edx, eax		; pointer+7 used in the end
+	push	ebx
+	mov	ebx, [eax]		; read first 4 bytes
+	add	eax, 4			; increment pointer
+l1:	lea	ecx, [ebx-01010101h]	; subtract 1 from each byte
+	xor	ebx, -1			; invert all bytes
+	and	ecx, ebx		; and these two
+	mov	ebx, [eax]		; read next 4 bytes
+	add	eax, 4			; increment pointer
+	and	ecx, 80808080h		; test all sign bits
+	jz	l1			; no zero bytes, continue loop
+	test	ecx, 00008080h		; test first two bytes
+	jnz	short l2
+	shr	ecx, 16			; not in the first 2 bytes
+	add	eax, 2
+l2:	shl	cl, 1			; use carry flag to avoid a branch
+	pop	ebx
+	sbb	eax, edx		; compute length
+	ret
+_strlen endp
+; -----------------------------------
+
+The only problem with this routine is that it expects the string to be aligned 
+on a 4 byte boundary. If the string is misaligned, the speed drops to 
+c=24+1.75*n. In the extreme case that the string is misalinged AND it ends on a 
+page boundary, the function will cause an access violation error.
+
+The fastest version (I have found) is the one in the Borland C++ builder 
+library:
+
+; ------------ version 7 ------------
+; [C++ Builder, slightly modified] Fastest
+; 88 bytes
+; c=20+0.75*n (not exactly, see notes)
+
+_strlen	proc near
+	mov	eax, [esp+4]
+	test	al, 3
+	jnz	short unalgn
+
+loop1:	mov	edx, [eax]
+	add	eax, 4
+	mov	ecx, edx
+	sub	edx, 1010101h
+	and	edx, 80808080h
+	jz	short loop1
+	not	ecx
+	and	edx, ecx
+	jz	short loop1
+	test	dl, dl
+	jnz	short minus4
+	test	dh, dh
+	jnz	short minus3
+	test	edx, 0FF0000h
+	jnz	short minus2
+	jmp	short minus1
+
+unalgn:	add	eax, 3
+	xor	cl, cl
+	cmp	byte ptr [eax-3], cl
+	jz	short minus3
+	cmp	byte ptr [eax-2], cl
+	jz	short minus2
+	cmp	byte ptr [eax-1], cl
+	jz	short minus1
+	and	al, 0FCh
+	jmp	short loop1
+
+minus4:	dec	eax
+minus3:	dec	eax
+minus2:	dec	eax
+minus1:	mov	ecx, [esp+4]
+	dec	eax
+	sub	eax, ecx
+	retn	
+_strlen	endp
+; -----------------------------------
+
+Actually, the original version is 90 bytes long. I have only changed the 
+'unalgn:' block, to reduce k if the string is unaligned.
+
+This function works well even on unaligned strings, as it first check the unali-
+gned bytes, and the proceeds in the main loop with aligned data (for unaligned 
+strings it runs at c=31+0.75*n cycles). Since all dwords read are aligned, 
+unaligned strings that end on page boundaries don't cause problems.
+
+This function is not always the fastest. If the string contains characters in 
+the range 128 to 255 (i.e. signed bytes) the speed drops. If all the characters 
+are signed (actually if at least one byte in every dword read), the speed 
+becomes c=1.25*n. Of course most of the time (especially for english text) this 
+is not the case, but if you have to process strings in another language that 
+has characters in the range 128 to 255, it is a bit slower.
+
+Another fast version of strlen can be found in MSVCRT.DLL (the one I checked is 
+version 5.00.7303). It runs at c=20+1*n, and handles unaligned strings almost 
+like the Builder version. Misaligned strings give a value of k ranging from a 
+minimum of 25 to a maximum of 52.
+
+What the MSVCRT function lacks completely is common sense and small size. In 
+fact it is 144 bytes long and it is divided in two different pieces of the dll's 
+code, causing most jumps to be in the long form.
+
+The main loop MSVCRT uses is good, but the rest of the function isn't. Based on 
+that function, I came up with the following one:
+
+; ------------ version 8 ------------
+; My fast version
+; 92 bytes
+; c=17+1*n
+
+_strlen	proc
+	mov	eax, [esp+4]
+	xor	ecx, ecx
+loop2:	test	al, 3
+	jz	loop1
+	cmp	byte ptr [eax], cl
+	jz	short ret0
+	cmp	byte ptr [eax+1], cl
+	jz	short ret1
+	cmp	byte ptr [eax+2], cl
+	jnz	short adjust
+	inc	eax
+ret1:	inc	eax
+ret0:	sub	eax, [esp+4]
+	ret
+
+adjust:	add	eax, 3
+	and	eax, 0FFFFFFFCh
+
+loop1:	mov	edx, [eax]
+	mov	ecx, 81010100h
+	sub	ecx, edx
+	add	eax, 4
+	xor	ecx, edx
+	and	ecx, 81010100h
+	jz	loop1
+	sub	eax, [esp+4]
+	shr	ecx, 9
+	jc	minus4
+	shr	ecx, 8
+	jc	minus3
+	shr	ecx, 8
+	jc	minus2
+minus1:	dec	eax
+	ret	
+minus4:	sub	eax, 4
+	ret	
+minus3:	sub	eax, 3
+	ret	
+minus2:	sub	eax, 2
+	ret	
+_strlen	endp
+; -----------------------------------
+
+This one has the advantage of having k=17 for aligned strings and k=24 to 25 
+for misaligned ones.
+
+The only question left to be answered is: 'Which version should we prefer?'.
+
+If your program does not include string handling in it's time-critical parts, 
+I higly recommend either versions 5 or 4.5 (the inlined macro). As said before, 
+the size overhead of the inlined version is very small (if any), and it has 
+another advantage: it keeps the source code more readable, as it only involves 
+the needed registers (input and output) in one single line.
+
+If string handling IS time-critical, I recommend version 8 (of course, it's 
+mine... :)). Even then, the average size of the handled strings is to be consi-
+dered, as well as the percentage of unaligned strings. For unaligned strings of 
+16 or less characters, the fastest version would be an inlined version 5, 
+running at c=8+2*n.
+
+The choice is yours....
+
+
+____________________________________________________________________________
+  ::::::::::.___    .                                                       ```
+  ::::::::::| _/__. |__   ____    .      __.  ____  ____   __.               \\
+  ::::::    |____ | __/_ _\_ (.___|  .___) |__\_ (._)  /___) |                ,
+  ::::::::::/   / | \   |  -  |   \  |  -  |   -  |  \/|  -  |
+.=:::::::::/______|_____|_____|  (___|_____|______|____|_____|===============.
+'=::::::::::==================|   . ____ | (____====[ The C Standard lib ]==='
+  ::::::::::                  |   |------|  -   |                       
+  ::::::::::                  |   |______|______|CE                     
+                              .   :
+                                                    C string functions: _strcpy
+                                                    by Xbios2
+
+
+I. INTRODUCTION
+---------------
+C syntax: char *strcpy(char *dest, const char *src);
+
+_strcpy copies string src to dest, stopping after the terminating null character 
+has been moved, and returns dest.
+
+The 'traditional' way to do this is with the 'rep movs' instruction. BC 4.02 
+and kernel32 use it. The problem is that it is rather slow (BC _strlen takes 
+53+5.5*n cycles, lstrlenA takes 74+5.5*n cycles, and optimizing their code 
+leads to 46+5.5*n cycles wher n the number of chars, see part I of these 
+articles). This is because even though the 'rep movs' instruction is fast it 
+needs to know the number of bytes to copy in advance. So, _strcpy includes a 
+_strlen function before the actual copying, which is implemented through 'repne 
+scasb', a slow instruction.
+
+In this article we will examine two 'modern' _strcpy functions, found in 
+MSVCRT.DLL and Borland C++ Builder library. Those functions are (supposed to be) 
+optimized for Pentium processors. If you're not familiar with optimization for 
+Pentium processors,  I suggest you read the document on Pentium optimization by 
+Agner Fog (http://announce.com/agner/assem).
+
+
+II. STRCPY IN MSVCRT
+--------------------
+; c=39+1.75*n / 146 bytes
+
+strcpy	proc
+	push	edi
+	mov	edi, [esp+8]	; dest
+	mov	ecx, [esp+0Ch]	; src
+	test	ecx, 3
+	jz	short loop1
+
+algn:	mov	dl, [ecx]
+	inc	ecx
+	test	dl, dl
+	jz	short one
+	mov	[edi], dl
+	inc	edi
+	test	ecx, 3
+	jnz	short algn
+
+loop1:	mov	edx, -81010101h
+	mov	eax, [ecx]
+	add	edx, eax
+	xor	eax, -1
+	xor	eax, edx
+	mov	edx, [ecx]
+	add	ecx, 4
+	test	eax, 81010100h
+	jz	short nozero
+	test	dl, dl
+	jz	short one
+	test	dh, dh
+	jz	short two
+	test	edx, 0FF0000h
+	jz	short three
+	test	edx, 0FF000000h
+	jz	short four
+
+nozero:	mov	[edi], edx
+	add	edi, 4
+	jmp	short loop1
+	;... in the DLL, there is code here, not used by strcpy
+
+one:	mov	[edi], dl
+	mov     eax, [esp+8]
+	pop     edi
+	retn
+
+two:	mov	[edi], dx
+	mov	eax, [esp+8]
+	pop	edi
+	retn
+
+three:	mov	[edi], dx
+	mov	eax, [esp+8]
+	mov	byte ptr [edi+2], 0
+	pop	edi
+	retn
+
+four:	mov	[edi], edx
+	mov	eax, [esp+8]
+	pop	edi
+	retn
+strcpy	endp
+
+This procedure does the following:
+1. Read arguments (src, dest) from stack
+2. Check if src is aligned on a 4 byte boundary
+   If not, copy byte after byte until src gets aligned
+3. Loop
+   Read one dword from src
+   Test if there is a zero byte in the dword
+   If no zero, copy dword to dest, loop back
+4. Copy the remaining bytes
+5. Return with dest in eax
+
+Actually the code above compiles to 130 bytes. The extra 16 bytes are added 
+because between the loop and the 'one:' label there is the strcat function. So 
+4 conditional jumps take the 6-byte form, not the 2-byte one.
+
+This function takes 39+1.75*n. This means that the loop takes 7 cycles to 
+execute (since each time the loop runs, it copies 4 bytes). Here is the explan-
+ation of the loop (U and V refer to the pipe the commands run in).
+
+loop1:	mov	edx, -81010101h	; U   1st
+	mov	eax, [ecx]	;  V
+	add	edx, eax	; U   2nd
+	xor	eax, -1		;  V
+	xor	eax, edx	; U   3rd
+	mov	edx, [ecx]	;  V
+	add	ecx, 4		; U   4th
+	test	eax, 81010100h	;  V
+	jz	short nozero	; U   5th
+	...
+nozero:	mov	[edi], edx	; U   6th
+	add	edi, 4		;  V
+	jmp	short loop1	; U   7th
+
+The problem here is that both jumps run in the U pipe so they will not pair. 
+Generally it's better to have an even number of instructions in each block of 
+code. Just by moving one instruction this code will run in 6 cycles (i.e. 
+39+1.5*n cycles):
+
+loop1:	mov	edx, -81010101h	; U   1st
+	mov	eax, [ecx]	;  V
+	add	edx, eax	; U   2nd
+	xor	eax, -1		;  V
+	xor	eax, edx	; U   3rd
+	mov	edx, [ecx]	;  V
+	test	eax, 81010100h	; U
+	jz	short nozero	;  V  4th
+	...
+nozero:	mov	[edi], edx	; U   5th
+	add	ecx, 4		;  V  <<< moved instruction
+	add	edi, 4		; U
+	jmp	short loop1	;  V  6th
+
+Everything pairs perfectly, and so 12 instructions only take 6 cycles. Pay 
+attention to one thing: if 'add ecx, 4' and 'add edi, 4' are swapped, we get 
+back to 7 cycles per loop, even though the pairing is the same. This is because 
+the 'mov eax, [ecx]' instruction uses ecx to access memory, but ecx was changed 
+in the previous clock cycle (add ecx, 4 / jmp short loop1). This causes an AGI 
+stall (Address Generation Interlock), which wastes one cycle.
+
+As you 've noticed, _strcpy makes sure that the data read from src is aligned, 
+because reading aligned dwords is faster. If src is aligned, the test only takes 
+one cycle more, so it shouldn't trouble us. Yet, aligning src is not always a 
+good idea. Suppose that you have an unaligned string and want to copy it in a 
+buffer that is aligned. So what happens is that by aligning src we misalign 
+dest. The problem is that misaligned writes are more expensive in cycles than 
+misaligned reads. So _strcpy should either align dest or leave everything 
+untouched. (not aligning src introduces an extremely small possibility of an 
+access violation error, read section V below for details).
+
+
+III. STRCPY IN C++ BUILDER
+--------------------------
+
+; c=66+1.75*n / 146 bytes
+
+_strcpy proc
+	push	ebp
+	mov	ebp, esp
+	mov	ecx, [ebp+0Ch]	; src
+	mov	edx, [ebp+8]	; dest
+	mov	eax, ecx
+	and	eax, 3
+	jmp	algn[eax*4]
+; ------------------------------------
+algn	dd offset loop1
+	dd offset algn3
+	dd offset algn2
+	dd offset algn1
+; ------------------------------------
+
+algn3:	mov	al, [ecx]
+	or	al, al
+	jz	short one
+	mov	[edx], al
+	add	ecx, 1
+	add	edx, 1
+
+algn2:	mov	al, [ecx]
+	or	al, al
+	jz	short one
+	mov	[edx], al
+	add	ecx, 1
+	add	edx, 1
+
+algn1:	mov	al, [ecx]
+	or	al, al
+	jz	short one
+	mov	[edx], al
+	add	ecx, 1
+	add	edx, 1
+
+loop1:	mov	eax, [ecx]
+	or	al, al
+	jz	short one
+	or	ah, ah
+	jz	short two
+	test	eax, 0FF0000h
+	jz	short three
+	test	eax, 0FF000000h
+	jz	short four
+	mov	[edx], eax
+	add	ecx, 4
+	add	edx, 4
+	jmp	short loop1
+
+four:	mov	[edx], eax
+	mov	eax, [ebp+arg_0]
+	pop	ebp
+	retn	
+
+three:	mov	[edx], ax
+	mov	byte ptr [edx+2], 0
+	mov	eax, [ebp+arg_0]
+	pop	ebp
+	retn	
+
+two:	mov	[edx], ax
+	mov	eax, [ebp+arg_0]
+	pop	ebp
+	retn	
+
+one:	mov	[edx], al
+	mov	eax, [ebp+arg_0]
+	pop	ebp
+	retn	
+_strcpy	endp
+
+This function runs at 66+1.75*n cycles. The aligning is done in an awful way. 
+If the aligning code is removed, we gain 39 cycles. By not using ebp, we save 
+4 more cycles. The loop takes 7 cycles, as shown below:
+
+loop1:	mov	eax, [ecx]	; U   1st
+	or	al, al		; U   2nd
+	jz	short one	;  V
+	or	ah, ah		; U   3dr
+	jz	short two	;  V
+	test	eax, 0FF0000h	; U   4th
+	jz	short three	;  V
+	test	eax, 0FF000000h	; U   5th
+	jz	short four	;  V
+	mov	[edx], eax	; U   6th
+	add	ecx, 4		;  V
+	add	edx, 4		; U   7th
+	jmp	short loop1	;  V
+
+The first two instructions don't pair because 'or al,al' accesses a register 
+changed by the previous instruction. Anyway, there are 13 instructions, not 12 
+as in the MSVCRT function. So, one instruction has to be removed. This instruct-
+ion is the unconditional jump (generally unconditional jumps can be avoided). 
+Notice that if we get through to 'jz short four', the 'mov [edx], eax' instruct-
+ion will be executed anyway. So we rewrite the code as:
+
+loop1:	mov	eax, [ecx]	; U   1st
+	inc	ecx		;  V
+	or	al, al		; U   2nd
+	jz	short one	;  V
+	or	ah, ah		; U   3dr
+	jz	short two	;  V
+	test	eax, 0FF0000h	; U   4th
+	jz	short three	;  V
+	mov	[edx], eax	; U   5th
+	add	edx, 4		;  V
+	shr	eax, 24		; U   6th
+	jnz	short loop1	;  V
+
+Notice that we use 'shr eax, 24' instead of 'test eax, 0FF000000h', because we 
+no longer need the value in eax, and the 'shr' form is two bytes shorter.
+
+A modified version of this strcpy is the best I could come up with:
+
+
+IV. A FAST STRCPY
+-----------------
+
+; c=25+1.5*n / 80 bytes
+
+_strcpy proc
+	mov	ecx, [esp+8]	; src
+	mov	edx, [esp+4]	; dest
+	push	edx		; save return value
+	test	edx, 3		; check if dest is aligned
+	jz	short loop1
+
+algn:	mov	al, [ecx]
+	inc	ecx
+	mov	[edx], al
+	inc	edx
+	test	al, al
+	jz	short return
+	test	edx, 3
+	jnz	short algn
+
+loop1:	mov	eax, [ecx]
+	add	ecx, 4
+	or	al, al
+	jz	short one
+	or	ah, ah
+	jz	short two
+	test	eax, 0FF0000h
+	jz	short three
+	mov	[edx], eax
+	add	edx, 4
+	shr	eax, 24
+	jnz	short loop1
+	pop	eax
+	retn
+
+three:	mov	byte ptr [edx+2], 0
+two:	mov	[edx], ax
+return:	pop	eax		; restore return value
+	retn
+
+one:	mov	[edx], al
+	pop	eax		; restore return value
+	retn
+_strcpy	endp
+
+This function aligns dest instead of src, which, as discussed above, is faster. 
+It can run at one cycle less, by reading the return value directly from the stack 
+and not push/popping it, but it would take 8 bytes of code more.
+
+Slight modifications to this routine give us three other functions:
+- _stpcpy is exactly the same as _strcpy, only that it returns a pointer to the
+  ending null char copied in dest
+- _strdup is a combination of _strlen, _malloc and _strcpy
+- _strcat is a combination of _strlen and _strcpy
+
+The MSVCRT _strcat actually counts the chars in src and then jumps into the code 
+of _strcpy to perform the actual copying. Strangely, _strdup is implemented 
+through 'repne scas' and 'rep movs'. It even has two 'repne scasb' instructions, 
+one to calculate the length of the string to pass to the malloc function, and 
+one to calculate the length of the string to copy, even though these two values 
+are the same. So, even if coding in MS C++, using _strlen/_malloc/_strcpy is 
+faster than using _strdup.
+
+
+V. IS IT FOOLPROOF?
+-------------------
+
+To be honest, no. But programming is hardly ever so... First of all, any version 
+of strcpy (of any function, generally) will fail if it tries to read or write 
+data in a page it doesn't have access. This is hardly the case, but it can 
+happen:
+
+-If there is no NULL character between the address of src and the last byte in
+ the valid page.
+-If src is longer than the distance between dest and the last valid byte.
+
+The first case is extremely unlikely, because even if src was corrupt and had no 
+terminating NULL, one is very likely to be encountered somewhere. The second 
+case is also unlikely, and it means that the programmer didn't allocate enough 
+space for dest. Anyway, corrupt data or not enough allocated space even if they 
+don't cause an access violation, they cause problems. But the problem was 
+created by the programmer, not the function. Yet there are also two cases where 
+the strings ARE ok but an access violation occurs. These cases appear only on 
+'optimized' versions of strcpy, not on the 'rep movsb' version.
+
+The first case would appear in a strcpy function that doesn't align src (it 
+either aligns dest or leaves both unchanged), if src is not aligned and it ends 
+on a page boundary. Then the last read operation would try to read one to three 
+bytes on a page it doesn't have access. This doesn't happen on the Builder and 
+MSVCRT functions and happen on the one I give. Yet, it is really unlikely to 
+happen, and aligning dest is faster.
+
+The second case would appear if dest points to a character in src (including 
+the terminating NULL). What happens is that the NULL of src (and any other 
+found) are overwritten, so no NULL is found and we finally get an access 
+violation. This doesn't happen in the 'traditional' versions, because we only 
+copy strlen(src) bytes. But even in those versions the last character copied 
+wouldn't be a NULL, so dest wouldn't be a proper string.
+
+
+____________________________________________________________________________                                                                       
+    ____             .                                        :   .         ```
+   |    |___    :    | ---- _____                  ______ _____   |          \\
+   |    |   |___|_   |______\    |---/ ._____/\____) -- (_)   /   |____) |    ,
+   |    '   |    /   |       \___ __/  |                 |  \/|   |   -  |CE
+.==|________| (______|_______/      \==|_____/\__________|____|   |______|===.
+'=========|     |===========/----|___\==================[ The Unix World ]==='
+          :                                                            
+                                        X-Windows in Assembly Language: Part II
+                                        by mammon_
+
+
+
+OK, let's face it: you've seen the tedium of XLib, one *has* to use widgets in 
+order to get any programming done in XWindows. 'But this is assembly langauge', 
+the masochist might point out. 'Aren't widgets a little Visual-Basicy?'
+
+Not in the slightest. A widget is simply a C++ class exported for use --much 
+like the windows API functions, only a little more object oriented...maybe a 
+good comparison would be MFC or VCL. Xt, or 'X toolkit Intrinsics', is the 
+interface that widget sets [such as Athena, Qt or GTK] use to interface with 
+XLib. The Xt include files are in /usr/X11R6/include/X11, its libraries are in 
+/usr/X11R6/lib, and its exported functions are all prefixed with "Xt".
+
+For the following examples I will be using the Atehna widget set, which is 
+supplied with XFree86. The include files for Athena are in /usr/X11R6/include/Xaw
+and the libraries are in /usr/X11R6/lib.
+
+A barebones Xt/Athena app in C would run as follows:
+//====================================================================-xthell.c
+
+#include <X11/Intrinsic.h>
+#include <X11/StringDefs.h>
+#include <X11/Xaw/Command.h>
+
+void Quit(w, client_data, call_data)        //CallBack function
+Widget w;
+XtPointer client_data, call_data;
+{
+	exit(0);
+}
+
+main(argc,argv)
+int argc;
+char **argv;
+{
+	XtAppContext app_context;
+    Widget ShellWidge, ButtnWidge;
+    ShellWidge = XtVaAppInitialize( &app_context, "toplevel", NULL, 0, &argc, \
+                argv, NULL, NULL);
+    ButtnWidge = XtVaCreateManagedWidget("hellbutton", commandWidgetClass, \
+                 ShellWidge, NULL);
+    XtAddCallback(ButtnWidge, XtNcallback, Quit, 0);
+    XtRealizeWidget(ShellWidge);
+	XtAppMainLoop(app_context);
+}
+// compile with cc -o xthell xthello.c -lXmu -lXaw -lXt -lX11 -L/usr/X11R6/lib
+//=========================================================================-EOF
+
+Pretty ugly, eh?  This boils down to the following steps:
+ 1) Create the top-level 'Canvas' widget [the window]
+    ShellWidge = XtVaAppInitialize( &app_context, "toplevel", ..... )
+ 2) Create the button widget
+    ButtnWidge = XtVaCreateManagedWidget("hellbutton", ..... )
+ 3) Register a callback for the button
+    XtAddCallback(ButtnWidge, XtNcallback, Quit, 0);
+ 4) Show the top-level widget
+    XtRealizeWidget(ShellWidge);
+ 5) Transfer control to the Xt message loop
+    XtAppMainLoop(app_context);
+The most interesting thing about Xt programming is in fact the callbacks. 
+Instead of writing a message processing loop, you register a callback function 
+for each widget and then pass control to Xt, which processes the messages for  
+you and dispatches each message to the appropriate callback function. The call- 
+back receives a pointer to the widget that sent the message [the same argument  
+as passed to XtAddCallback], a client_data pointer [the last argument passed to 
+XtAddCallback, used to pass data from the main routine to the callback], and a
+call_data pointer, which contains information from the message [such as cursor 
+or scrollbar position].
+
+The calls themselves are pretty straightforward:
+XtVaAppInitialize initializes [sic] the X app and takes as its arguments a 
+pointer to an XtAppContext structure, the class name of the application, 
+application-specific command line options {args 3 and 4], argc, argv, a default 
+resource-settings file, and a NULL to terminate the arguments list [the 
+XtVaAppInitialize function actually takes a number of different parameters]; it 
+returns a handle to the 'canvas' or 'top-level' widget, on which all other 
+widgets will be painted.
+
+XtVaCreateManagedWidget is used to create any of the Xt widgets [Athena, GTK, 
+etc], and takes as its parameters the instance name, the widget class, the 
+parent widget, and a NULL to terminate the arguments list; it returns a pointer 
+to the created widget.
+ 
+XtAddCallback is used to register a callback function with a specific widget; 
+it takes as its parameters a pointer to the Widget, the callback type, the 
+function being registered, and a pointer to client_data which will be passed to
+the callback.
+
+XtRealizeWidget is simply used like ShowWindow in Windows; it takes a single 
+parameter which is the widget to 'show'; it displays that widget and its 
+children.
+
+XtAppMainLoop takes the current application context [which was filled with the 
+XtVaAppInitialize call] and turns control over to the Xt message processing 
+loop. Note that the program does not have to return; in this example, the exit 
+call is placed in the callback function.      
+
+Here is the same application written for NASM:
+;===================================================================-xthell.asm
+BITS    32
+GLOBAL 	main
+GLOBAL 	bail
+EXTERN	XtVaAppInitialize
+EXTERN	XtVaCreateManagedWidget
+EXTERN	XtAddCallback
+EXTERN	XtRealizeWidget
+EXTERN	XtAppMainLoop
+EXTERN commandWidgetClass
+EXTERN exit
+
+SECTION .data
+AppContext	DD	0
+ShellWidge	DD	0
+ButtnWidge	DD	0
+ARGC	times 128	DB	0
+ClassName   DB  "toplevel",0
+ButtnName	DB	"hellbutton",0
+XtNcallback    DB  "callback",0    ;XtNcallback
+
+SECTION .text                   
+bail:
+	pop eax      ; Xt_Pointer call_data
+	pop ebx      ; Xt_Pointer client_data
+	pop ecx      ; Xt_Pointer widget
+	push dword 0
+	call exit
+;--------------------------  main
+main:
+	 mov eax, esp
+     push dword 0               ;Number of Args
+     push dword 0               ;Args
+     push dword 0               ;Fallback Resources
+     push dword 0               ;argv
+     push dword ARGC            ;&argc
+     push dword 0               ;Number of Options
+     push dword 0               ;Options Array
+	 push dword ClassName		;Class Name (String)		
+	 push dword AppContext		;Application Context (Ptr)
+	 call XtVaAppInitialize
+	 add  esp, 36
+	mov  [ShellWidge], eax
+	push dword 0
+    push eax                        ;Button parent (ShellWidge)
+	push dword [commandWidgetClass]	;Button widget type
+    push dword ButtnName            ;Button class name
+	call XtVaCreateManagedWidget
+	add  esp, 16
+	mov  [ButtnWidge], eax
+    push dword 0                    ; client_data
+    push dword bail                 ;CallBack function
+    push dword XtNcallback          ; callback type
+    push eax                        ;CallBack widget (ButtonWidge)
+	call XtAddCallback
+	add  esp, 16
+    push dword [ShellWidge]         ;Widget Handle
+	call XtRealizeWidget
+	add  esp, 4
+	push dword [AppContext]
+	call XtAppMainLoop
+	add esp, 4
+	ret
+;==========================================================================-EOF
+This can be compiled with the following commands:    
+    nasm -f elf xthell.asm
+    gcc -o xthell xthell.o -lXaw -lXt -lX11 -L/usr/X11R6/lib
+
+Most of the operation is the same as the C file; naturally you must push dword 
+0's instead of NULLs...and do not forget to push the arguments in reverse 
+order and to clean up the stack afterwards; this is C after all and not stdcall 
+is used in Windows.
+
+You will have to study up on Athena to learn what the names of the various 
+widgets are ... I found it helpful to use
+    grep extern /usr/X11R6/include/Xaw/*
+for a general overview. Note that the class names are strings in assembly; also
+each of the various 'handles' [widgets, contexts, etc] is simply defined with a
+DD 0 -- your generic 32-bit variable. The Callback type turned out to be a 
+string defined in the Xt header files; I simply recreated it above. 
+
+Another interesting gemis the need to call 'exit' rather than simply using a 
+'ret' as you would in console mode; the latter causes segmentation faults, most 
+likely due to the XtAppMainLoop call. In addition you *must* provide a pointer 
+to ARGC whether you check the command line or not; hence the 'ARGC: DB 128'.
+
+In case you didn't notice, the Xt asm example is huge and clunky, with a lot of 
+not-so-obvious variable definitions. Having included a lengthy introduction to 
+NASM macros in this issue, I took the opportunity to create an xt.mac file 
+which will take some of the burden off of experimenting with small Xt apps. The 
+InitXt and RegisterCallback macros probably are not ready for prime-time just 
+yet, but they will do for testing purposes.  
+
+;=======================================================================-xt.mac
+%macro CLASS 2
+%1:	DB	%2,0
+%endmacro
+%macro WDGTPTR 1
+%1:	DD	0
+%endmacro
+%macro CONTEXT 1
+%1:	DD	0
+%endmacro
+%macro CHARSTR 2
+%1:	DB	%2,0
+%endmacro
+%define WIDGET EXTERN
+%define XLibAPI EXTERN
+%define XtAPI	EXTERN
+%define PUBLIC GLOBAL
+%define NULL dword 0
+%define TERM_VARARGS dword 0
+%macro InitXt 2
+SECTION .data
+CONTEXT AppContext
+CLASS XtShell, "XtShell"
+SECTION .text
+EXTERN	 XtVaAppInitialize
+	 push dword 0		;Number of Args
+	 push dword 0		;Args
+	 push dword 0		;Fallback Resources
+	 push dword 0		;argv
+	 push dword %2		;&argc
+	 push dword 0		;Number of Options
+	 push dword 0		;Options Array
+	 push dword XtShell		;Class Name (String)		
+	 push dword AppContext		;Application Context (Ptr)
+	 call XtVaAppInitialize
+	 add  esp, 36
+	 mov  [%1], eax
+%endmacro
+%macro XtMsgLoop 0
+EXTERN	XtAppMainLoop
+	push dword [AppContext]
+	call XtAppMainLoop
+	add esp, 4
+%endmacro
+%macro RegisterCallback 1
+SECTION .data
+CBType:	DB	"callback",0
+SECTION .code	
+	push NULL			;
+	push dword %1			;CallBack function
+	push dword CBType		;
+	push eax			;CallBack parent (ButtonWidge)
+	call XtAddCallback
+	add  esp, 16
+%endmacro	
+%macro CALLBACK 1
+SECTION .data
+Call_Data_%1:	DD	0
+Client_Data_%1:	DD	0
+Widget_%1:	DD	0
+GLOBAL %1
+SECTION .text
+%1:
+	pop eax
+	mov [Call_Data_%1], eax
+	pop ebx
+	mov [Client_Data_%1], ebx
+	pop ecx
+	mov [Widget_%1], ecx
+%endmacro
+%define ENDCALLBACK nop
+%macro ENTRYPOINT 1
+GLOBAL %1
+%1:
+%endmacro
+;==========================================================================-EOF
+Most of the macro file should be readily apparent if you are familiar with the 
+NASM macro facility. I did take the opportunity to clean up the callback 
+function, so that the parameters to the callback are saved in variables, but for 
+the most part it does the same as the equivalent code in the preceding asm 
+example.
+
+Now the xthell.asm sample will look as follows:
+
+;===================================================================-xthell.asm
+BITS 32
+%INCLUDE "xt.mac"
+;========================================================XTRN=====
+XtAPI	XtVaCreateManagedWidget
+XtAPI	XtAddCallback
+XtAPI	XtRealizeWidget
+WIDGET  commandWidgetClass
+EXTERN  exit
+
+;========================================================DATA=====
+SECTION .data
+;------------
+WDGTPTR ptrShell
+WDGTPTR ptrButton
+CLASS XHELL, "XHell"
+CLASS HellButton, "HellButton"
+CallbackType	DB "callback",0	;XtNcallback
+ARGC		times 128	DB	0
+;========================================================CODE=====
+SECTION .text
+;------------
+CALLBACK bail
+	push dword 0
+	call exit
+ENDCALLBACK
+
+
+ENTRYPOINT main
+	InitXt ptrShell, ARGC
+	
+	push TERM_VARARGS
+	push eax			;Button parent (ShellWidge)
+	push dword [commandWidgetClass]	;Button widget type
+	push dword HellButton		;Button class name
+	call XtVaCreateManagedWidget
+	add  esp, 16
+	mov  [ptrButton], eax
+	
+	RegisterCallback bail
+	
+	push dword [ptrShell]		;Widget Handle
+	call XtRealizeWidget
+	add  esp, 4
+	
+	XtMsgLoop
+	ret
+;==========================================================================-EOF    
+Much prettier and hey, only twice as long as the C version! ;)
+
+Next issue I will dwell on Xt/Athena a little longer and come up with some more 
+practical methods of automating the coding process.
+
+
+____________________________________________________________________________                                                                       
+      ____     ___   _____ _| |_             ____     .                     ```
+   .__\  /__ ______ _)   /.\  _/__ ___ ______\_ (_.   |                      \\
+   |   \/   |      |   \/ |   \   |   |   |   -   |   |CE                     ,
+.==|________|______|______|_______|_______|_______|   |======================.
+'=================================================|   :=[ Virtual Machines ]='
+                                           An Intro to the Java Virtual Machine
+                                           by Cynical Pinnacle
+
+
+    For awhile C/C++ reigned supreme and nothing challenged it but then along 
+comes Java, creating a splash, and causing outright corporate warfare to claim 
+right of ownership. Strangely enough the result of this war has not been dead
+bodies but buckets and buckets of API's all given away for free.  Just stop by 
+and take a look at Java's Official Website (http://java.sun.com) and what do 
+you find a good development kit with compiler, symbolic debugger, disassembler, 
+complete toolkit for creating GUI's, built in support for compression, encrypt-
+ion, http, ftp, SMTP, POP3, IHMP, and more.  Wow!  But how can we take advantage 
+of all this?
+
+    First we have to step back a look at what Java really is.  Because one of 
+the main goals of Java is platform independence (both from the chip and the OS).  
+The JVM, which supports Java, has to be both a chip and an OS.  If any of us 
+(well lets say us programmers) were to design a chip and a OS in one, we would 
+fill it with features like built in security, automatic dependency resolution 
+and linking, network support, video and audio acceleration, along with more 
+common things such as built in data types (ints, floats, arrays, and objects ), 
+support for local variables, exception handling, support for debugging, and on 
+and on.  This is really what Java is because it does all the things I mentioned 
+above and more.  This is what Sun has  tried to do - design an "Ideal" environ-
+ment for writing and executing code, or write once run anywhere.  But this 
+wealth of features comes at the price of speed of execution and further distance 
+further from the native code of your machine (unless you are running on a real 
+Java machine). And if you are like me the latter hurts as much as the former.
+
+    Still there are a alot of really appealing things about Java.  And so the 
+challenge is to use these appealing features on our own terms.  We can do this 
+by programming at a lower level to at least touch the native language of the 
+Java Virtual Machine (Java Assembly language!!)
+
+The JVM:
+
+    I am going to take a programmers view of the JVM and say it is simple 
+because from our perspective it is.  But for the sake of completeness I will 
+list the other components of the JVM:
+
+    Memory Manager: This is the unit responsible for the famous garbage collect-
+ion and heap management.  I say clean up your own garbage.
+
+    Error/Exception Manager: Handles unforseen conditions.
+
+    Native Method Support: This is to allow you to call WaitForSingleObject 
+from within Java.  It is responsible for loading DLLs, resolving entry points 
+and executing them. Note Java only supports dynamic linking.
+
+    Threads: Java doesn't have to worry so much about memory because it is all 
+allocated on the stack.  Each thread gets its own stack frame (chunk of stack 
+for its personal use). Switching threads in a stack based machine is easy.  You 
+just make the threads stack top the machine's stack top and go.
+
+    Class Loader:  This is just like the loaders in NT and 95.  It brings up 
+class files from the disk initializes them (headers memory etc) and passes 
+execution to the classes entry point.
+
+     Security Manager:  Want to find out whether or not you can do something.  
+Ask him.
+
+    Execution Engine: This is where the JVM opcodes are translated into native 
+opcodes.  This is the part of the JVM which a low level Java programmer will 
+interact with most. The Execution engine has a much simpler structure than a 
+Pentium.  At its heart is a stack where instuctions are executed.  Note that 
+the JVM has no registers, which is more a trait of Virtual machines than Java.  
+Basically opcodes and operands are popped off of the stack and executed by the 
+VM bases upon a mapping between Java opcodes and Native opcodes.  In addition, 
+there is built in support for local variables (more later).  And as mentioned 
+before the stack is symbollically divided up by the JVM.  Each method (read 
+method to mean function) gets it own stack frame which is allocated when the 
+method starts and deallocated when the method exits (sound familiar eg x86 push 
+bp -- mov bp, sp ..  leave instructions).  The Execution engine understands the 
+int, long, float, double, byte, char, short, reference (eg pointer) and the 
+instructions it understands are strongly typed (for example: there is an 
+instruction called iload which loads an integer from a local variable onto the 
+stack (like mov eax, myLocalVariable) but there is also a dload, lload, and 
+fload for doubles, longs, and floats).
+
+    Now with a little background it is time to learn or burn but first we need 
+some tools.  First you will need to download the JDK from http://java.sun.com 
+(I recommend 1.1.x and the current I think is 7) you will also need a Java 
+assembler which is called Jasmin also free at 
+    http://www.cat.nyu.edu/meyer/jasmin/ 
+and you will need a good editor (I heartily recommend Visual SlickEdit 3.0 or 
+4.0 at http://www.slickedit.com ).  You can get docs about the JVM from 
+    http://www.javasoft.com/  
+And the best book I have found on the JVM (and Jasmin) is "Java Virtual Machine" 
+by Jon Meyer and Troy Denning.  There are several useful tools with the JDK 
+comes a program called javap which is a Java .class file disassembler!  
+With the -c switch it will produce JASM code from any .class file.  Note that 
+reversing Java programs is not nearly as hard as x86.  Try it.  Take some Java 
+.class file you have laying around ( Keep it small so you don't get confused ) 
+and disassemble it then you will see what I mean.  I can see a very difficult 
+future for Java Shareware programmers.  There are also many other 3rd party 
+tools out there for mainpulating .class files.
+
+     With all of those tools installed we are ready to write the mandatory 
+"Hello from JASM!" program.  First comes the Java Assembler code followed by 
+its Java equivilant.
+
+
+;***************************************************************
+;Export the class name so Java can find it
+class public Hello
+
+;Simplest class to derive from
+super java/lang/Object
+
+; General facts
+; .method - means this is a function
+;
+;  public - means you are it is visible externally (low
+;     level Object Orientedness)
+;
+; Java always uses explicit paths in Unix notation hence you
+; end up with a lot of notation like java/lan/Object.
+; java/lang/Object is the path to the superclass.  In a lot
+; of the functions there is a V, this means it returns void
+; the syntax for specifying arguments is strange.  I
+; recommend reading Jonathan Meyer's Jasmin documentation
+; http://www.cat.nyu.edu/meyer/jasmin/
+
+
+; This method is called init and is in every class
+; all that is done here is to push the contents of local
+; variable 0 onto the stack and call the superclass's
+; (Object) init method. Local variable 0 is always
+; the reference (pointer) to the equivalent of C++'s this
+
+ .method public <init>()V
+
+   aload_0
+
+; This just calls the superclasses init method
+   invokenonvirtual java/lang/Object/<init>()V
+
+; Get out
+   return
+end method
+
+
+; Here is the main function which is publically visible
+; is static and thus shared by all instances of the class,
+; it takes one argument of type [ljava/lang/String, which
+; is an array of strings eg: argv**, and returns void hence
+; the V.
+
+ .method public static main([Ljava/lang/String;)V
+
+   ; Delcare your stack memory usage
+  .limit stack 2
+  .limit locals 1
+
+; Push 5 onto the stack and store it in local variable 1
+   bipush 5
+   istore_1
+
+LoopTop:
+
+; These next two lines put the parameters for the println
+; function onto the stack in the right order.  Java uses
+; the pascal calling convention (push left to right and
+; the callee cleans up).  First a reference to the stream
+; object doing the work is pushed onto the stack.  Next a
+; reference to the string to be printed is pushed.
+
+   ;get the pointer to the stream object and push it
+   getstatic java/lang/System/out Ljava/io/PrintStream;
+   ;get the pointer to the string and push it
+   ldc "Hello from JASM!"
+   ;call println
+   invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V
+
+; These next three lines are the loop condition
+; iinc adds -1 to local variable 1.  iload_1 pushes
+; local variable 1 onto the stack and ifne compares it to
+; zero (just like jnz in x86).  If it is not equal to zero
+; we jump to LoopTop
+   iinc 1 -1
+   iload_1
+   ifne LoopTop
+
+; Go home
+   return
+;Declare the end of the function
+end method
+
+;
+; Java equivalent:
+;
+;    public class Hello
+;    {
+;       public static void main ( String args[] )
+;      {
+;         int i;
+;         for( i = 0;i < 5; i++ )
+;         {
+;            System.out.println( "Hello from JASM!" );
+;         }
+;
+;      }
+;
+;    }
+;***************************************************************
+
+    To run this JASM sample cut out the stuff between the *'s and save it to a 
+file called Hello.j.  Next type jasmin Hello.j.  This should generate a 
+Hello.class file.  Now type java Hello and you should see the string "Hello 
+from JASM!" printed out 5 times.  This is enough to get you started poking 
+around in the JVM and looking a little closer at the .class files you find 
+lying around ;) .  More to come?
+
+
+____________________________________________________________________________                                                                               
+     ____              .                                __                  ```
+  ._| __/___     :     |  ___                  _____  __) |_     _____       \\
+  | |_____  |____|__   |_______ ______ ______ _) _  |_\_  __)___|  __/_____   ,
+  |         |      (   |       | __   | __   |  ----' |   |     |_______   |CE
+.=|_________|  /_______|_______| _____| _____|________|____________________|=.
+'===========|      |===========|___|==|___|===================[ snippets ]==='
+
+                                                                NumFactors
+                                                                by Troy Benoist
+
+
+;Summary: Routine to determine the number of factors for a 16-bit value
+;Compatibility: All DOS versions/8088+ instructions
+;Notes: 22 BYTES               Input: AX = Value to check for number of factors
+;       * If CX is 2, check value in AX is prime.
+    mov bx,1        ;Test=1 (Test is the testing value of each theoretical 
+                    ;factor of AX, from 1-AX).
+    xor cx,cx       ;Count=0 (Count is running total with # of factors for AX).
+ChkFctr:
+    xor dx,dx <---  ;Need to divide DX:AX by BX, but DX is not used-- clear it.
+    push ax       | ;Dividing by BX puts quotient in AX, but quotient is not 
+                  | ;needed, and we need to keep the value to check, so save it.
+    div bx        | ;Divide DX:AX by BX.  Remainder is in DX.
+    pop ax        | ;Restore value to check into AX.
+    cmp dx,0      | ;Is remainder=0? (Did Test divide evenly into check value?)
+    jnz NC -----| | ;If not, Count remains unchanged.
+    inc cx      | | ;If so, factor found, so Count=Count+1.
+NC: inc bx  <---| | ;Test=Test+1.
+    cmp bx,ax     | ;Is Test greater than check value?
+    jbe ChkFctr___| ;If not, go back and check next Test factor.
+
+
+______________________________________________.   __________________________                             ```
+                                              |     .                       ```
+   ._____   ___      ____ ___ ___    ____     :     |          ______        \\
+   |  __/__|  |______\_ (_)  |  (____\_ ( ______    |________ _) __  |___.    ,
+   |       |      |   -  |   |   |    -  |  _  /    |     __ |   ----'   |CE
+.==|_______|--)___|______|___|___|_______|--(_______|_______ |___________|===.
+'=============================================[ issue | _____| challange ]==='
+                                                      |___\                 
+                                         Convert ASCII hex to binary in 6 bytes
+                                         by mammon_  [and help]
+
+
+The Challenge
+-------------
+Write a routine for converting ASCII hex to binary in 6 bytes.
+
+
+The Solution
+------------
+Well, actually, I cheated: I found the following text on the internet a few 
+months ago and decided to see if I could beat it:
+===================================================================-Asc2hex.txt
+An efficient algorithm for converting ASCII hex to binary
+Ken Sykes (72177,141)
+David Ogle (75676,2612)
+
+    There is a well-known algorithm for converting a binary number between
+one and fifteen to its equivalent hex form in ASCII that only requires
+four assembly language instructions.  Assuming that the number to convert is 
+in AL, the following sequence performs the conversion:
+
+		add	al,90h
+		daa
+		adc	al,40h
+		daa
+
+    This instruction sequence is, as far as we know, the shortest (16 cycles)
+self-contained routine to convert a binary number to hex.  Inspired by
+this code and the fact that a similar routine to convert ASCII hex to
+binary would be useful, we came up with two algorithms that convert an
+ASCII hex digit to binary in five assembly instructions or less.
+
+    The first algorithm takes advantage of an undocumented feature of the
+8088.  The AAM instruction (Ascii Adjust for Multiply) divides AL by 10,
+placing the remainder in AL and the quotient in AH.  The opcode for
+AAM is:	0D4h,0Ah.  It's no coincidence that the second byte is 10 - the 
+8088 uses the second byte of the opcode as the divisor!  The same rule
+applies to the AAD (Ascii Adjust for Division) instruction.  With this in 
+mind, a conversion routine goes as follows (assuming the ASCII digit is in 
+AL and in the range '0..9,A..F'):
+
+		sub	al,'0'
+		aam	16
+		aad	9
+
+    The only problem is the Microsoft Assembler does not accept this form.
+By placing the opcodes in data statements, however, the following code 
+will assemble properly:
+
+		sub	al,'0'
+		db	0D4h,10h
+		db	0D5h,09h
+
+    At three instructions and six bytes of code space, We are reasonably
+sure this is the shortest self-contained sequence to perform the conversion.
+The only drawbacks are the use of non-standard opcodes and the execution
+time (147 cycles!).  The second algorithm, loosely-based on this one, 
+relieves these restrictions.
+
+    The second algorithm makes exclusive use of fast instructions to
+perform the conversion (again, AL holds the digit to convert):
+
+		add	al,40h
+		cbw
+		and	ah,09h
+		add	al,ah
+		and	al,0Fh
+
+    While two additional instructions are required, the routine executes 
+in 17 cycles.  We are reasonably sure this is the fastest-executing self-
+contained code to perform the conversion. It has the added benefit of 
+handling the ASCII values 'a'..'f'.
+
+    These algorithms will hopefully trim down the execution times of your
+programs, and we welcome any suggestions or improvements on our code.
+
+Happy Hacking!
+===========================================================================-EOF
+
+Sadly, I was unable to come up with a smaller version, or a faster one. Tinara 
+posted a similar solution to the APJ Message Board: 
+      SUB AL, 30h
+      AAM 10h         ; db D4h, 10h
+      AAD 09h         ; db D5h, 09h
+...so he gets kudos for uncovering by work what I managed by stealth. As for 
+next issue, I haven't had time to prepare a challenge, but I'm sure one will 
+crop up in the next month or so.
+
+Next Issue Challenge
+--------------------
+None so far... submissions welcome.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN
