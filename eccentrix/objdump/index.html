@@ -1,0 +1,38 @@
+<html>
+<head>
+<title>Objdump Made Useful</title>
+</head>
+<body>
+
+<center><b>Objdump Wrappers</b></center>
+<p><br>
+
+<i>A series of perl scripts which convert x86 objdump output to an
+intermediate format and perform analysis upon it. Useful as a basis
+for creating an objdump-based disassembly toolchain.
+<p>
+Usage:</i>
+<p>
+<code>
+echo "%08_ax: " 8/1 "%02x " " - " 8/1  "%02x " "  |" &gt; ~/.hexdump_fmt
+<p>
+echo "%_p" &gt;&gt; ~/.hexdump_fmt
+<p>
+echo "\n" &gt;&gt; ~/.hexdump_fmt
+<p>
+alias hd='hexdump -f ~/.hexdump_fmt'
+<p>
+(objdump -hw -Ttd a.out; hd a.out) | int_code.pl | insn_xref.pl | insn_output.pl</code>
+<p><br>
+
+<i>Files:</i>
+<p><br>
+<li><a href="int_code.txt">int_code.pl</a>
+<li><a href="insn_xref.txt">insn_xref.pl</a>
+<li><a href="insn_list.txt">insn_list.pl</a>
+<li><a href="insn_output.txt">insn_output.pl</a>
+<p>
+<br>
+
+<body>
+</html>

@@ -1,0 +1,66 @@
+
+toolbar:				Sunken Diagonal   Gradient Bevel2
+toolbar.label:				Sunken Vertical   Gradient Bevel2
+toolbar.clock:				Sunken Vertical   Gradient Bevel2
+toolbar.button:				Raised Diagonal   Gradient Bevel2
+toolbar.button.pressed:			Sunken Diagonal   Gradient Bevel1
+
+toolbar*color:				rgb:00/80/80
+toolbar*colorTo:			rgb:0/0/0
+toolbar.label.color:			rgb:0/0/0
+toolbar.label.colorTo:			rgb:60/80/80
+toolbar.button.color:			rgb:00/60/60
+toolbar.button.colorTo:			rgb:00/10/10
+toolbar.button.pressed.color:		black
+toolbar.button.pressed.colorTo:		rgb:40/40/40
+toolbar.clock.color:			rgb:0/0/0
+toolbar.clock.colorTo:			rgb:60/80/80
+toolbar.textColor:			rgb:C0/C0/C0
+
+window.focus:				Raised  Horizontal  Gradient Bevel2
+window.unfocus:				Raised  Horizontal  Gradient Bevel2
+window.focus.button:			Sunken  Diagonal  Gradient Bevel1
+window.unfocus.button:			Sunken  Diagonal  Gradient Bevel1
+window.button.pressed:			Flat    Diagonal   Gradient Bevel1
+window.frame:				Flat    Solid               Bevel2
+
+window.frame.color:			rgb:40/40/40
+window.focus.color:			rgb:00/60/60
+window.focus.colorTo:			rgb:00/00/00
+window.focus.button.color:		rgb:0/0/0
+window.focus.button.colorTo:		rgb:0/A0/A0
+window.focus.textColor:			rgb:FF/FF/FF
+#rgb:00/FF/40
+window.unfocus.color:			rgb:00/80/80
+window.unfocus.colorTo:			rgb:00/20/20
+window.unfocus.button.color:		rgb:00/20/20
+window.unfocus.button.colorTo:		rgb:00/80/80
+window.unfocus.textColor:		rgb:C0/C0/C0
+window.button.pressed.color:		black
+window.button.pressed.colorTo:		rgb:00/A0/20
+
+menu.title:				Raised Horizontal Gradient Bevel2
+menu.frame:				Sunken Vertical Gradient Bevel2
+
+menu.title.color:			rgb:00/60/60
+menu.title.colorTo:			rgb:0/10/10
+menu.frame.color:			rgb:20/40/40
+menu.frame.colorTo:			rgb:00/00/00
+menu.frame.highlightColor:		rgb:10/20/20
+menu.title.textColor:			rgb:F0/F0/F0
+menu.frame.textColor:			rgb:F0/FF/F0
+menu.frame.hiTextColor:			rgb:00/FF/00
+
+borderColor:				rgb:40/40/40
+handleWidth:				6
+bevelWidth:				2
+
+titleJustify:				RightJustify
+menuJustify:				CenterJustify
+moveStyle:				Transparent
+
+titleFont:     -*-times-bold-r-*-*-*-120-*-*-*-*-*-*
+menuFont:      -*-courier-medium-r-*-*-*-110-*-*-*-*-*-*
+
+rootCommand:  Esetroot -s ~/.blackbox/Backgrounds/ghost_film.jpg
+

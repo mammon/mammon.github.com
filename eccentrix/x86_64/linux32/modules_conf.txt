@@ -1,0 +1,117 @@
+alias autofs autofs4
+probeall scsi_hostadapter usb-storage ide-scsi
+probeall usb-interface uhci-hcd ehci-hcd
+alias ieee1394-controller ohci1394
+alias eth0 via-rhine
+above snd-via8233 snd-pcm-oss
+alias sound-slot-0 snd-via8233
+
+alias scsi_hostadapter off
+
+alias iso9660 isofs
+
+#alias char-major-10 off
+#alias char-major-161 ircomm-tty
+#alias tty-ldisc-11 irtty
+
+alias char-major-188 usbserial
+alias char-major-108      ppp_generic
+alias char-major-144      pppoe
+alias net-pf-24           pppoe
+
+#alias iso9660 isofs
+#alias tty-ldisc-1 slip
+#alias tty-ldisc-2 serio
+#alias tty-ldisc-5 mkiss
+
+alias parport_lowlevel parport_pc
+
+options snd-via82xx snd_ac97_clock=48000 snd_enable=1 snd_index=0
+alias sound-slot-0 snd-card-0
+alias sound-service-0-0 snd-mixer-oss
+alias sound-slot-1 off
+alias sound-service-1-0 off
+alias sound-slot-2 off
+alias sound-service-2-0 off
+alias sound-slot-3 off
+alias sound-service-3-0 off
+options snd snd_cards_limit=1 snd_major=116
+# Ssy1.ocsTUCUfeK9:VT8233/A/8235 AC97 Audio Controller
+alias snd-card-0 snd-via82xx
+alias sound-service-0-1 snd-seq-oss
+alias sound-service-0-3 snd-pcm-oss
+alias sound-service-0-8 snd-seq-oss
+alias sound-service-0-11 snd-mixer-oss
+alias sound-service-0-12 snd-pcm-oss
+
+alias sp0 off
+alias slip0 slip
+alias sl0 slip
+alias slip1 slip
+alias sl1 slip
+
+alias ppp0                ppp_generic
+alias ppp1                ppp_generic
+alias tty-ldisc-3         ppp_async
+
+alias plip0 plip
+alias plip1 plip
+
+# Tunnel interfaces
+alias sit0 ipv6
+alias gre0 ip_gre
+alias ipip0 ipip
+
+alias ppp-compress-18 ppp_mppe
+alias ppp-compress-21 bsd_comp
+alias ppp-compress-24 ppp_deflate
+alias ppp-compress-26 ppp_deflate
+
+alias net-pf-1 unix
+alias net-pf-3 ax25
+# alias net-pf-3            off
+alias net-pf-4 ipx
+# alias net-pf-4            off
+alias net-pf-5 appletalk
+# alias net-pf-5            off
+alias net-pf-6 netrom
+# alias net-pf-6            off
+alias net-pf-10 ipv6
+# alias net-pf-10           off
+alias net-pf-11 rose
+# alias net-pf-11           off
+alias net-pf-17 af_packet
+alias net-pf-31 bluez
+
+alias bt-proto-0 l2cap
+alias bt-proto-2 sco
+alias bt-proto-3 rfcomm
+alias bt-proto-4 bnep
+
+alias tap0 ethertap
+alias tap1 ethertap
+alias tap2 ethertap
+alias tap3 ethertap
+alias tap4 ethertap
+alias tap5 ethertap
+alias tap6 ethertap
+alias tap7 ethertap
+alias tap8 ethertap
+alias tap9 ethertap
+alias tap10 ethertap
+alias tap11 ethertap
+alias tap12 ethertap
+alias tap13 ethertap
+alias tap14 ethertap
+alias tap15 ethertap
+
+# don't try to reset isa-pnp cards on startup
+options isa-pnp isapnp_reset=0
+
+alias char-major-4 serial
+alias char-major-5 serial
+
+
+keep
+alias char-major-212 slamr
+alias char-major-213 slusb

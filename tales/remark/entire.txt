@@ -1,0 +1,103 @@
+<html><head><title>Meetings with Remarkable Crackers</title></head><body>
+
+
+dos days
+<!-- cyborg, BuckarooBanzai -->
+The cyborg cracking manual
+This started it all for me. I stumbled across the cyborg's stuff on Silicon 
+Toad's page; in these days most of the cracking stuff was still on BBS boards
+and uuencoded in newsgroup postings. At the time I was stuck with an old 8086, 
+sans periperhals, and my access to web pages was all through work [Delrina and
+CServer].
+
+I knew asm from Ludwig's books, and it was through pursuing virii that I came 
+across cracking texts. 
+Cyborg Cracking Manual
+
+
+in time, more cohesive tutorials appeared: 
+Unclde Joe's Crackbook.txt
+
+<P><BR>
+
+the windows beastie
+<!-- edison, etc -->
+<P><BR>
+
+the art of cracking
+<!-- orc-->
+<P><BR>
+
+to reverse engineer
+<!-- fravia, schulman -->
+
+the old hcu days
+<!-- razzia, rcg, HR, rez -->
+razziacripp
+Razzia's tutorial for crippled programs
+razzia
+How to crack all Visual Basic programs
+razziak2
+Razzia/s Tutorial on Key Generators
+
+rcg_cmsp
+Compspy98: A tool of our trade
+rcg_vxd2
+How to protect software better pt II
+rcgcd 
+CD-ROM from thwe top down
+rcgcut1
+Software History and cracking
+rcgeudo
+How to crack Eudora -- nope
+rcglotus
+How to reverse Louts SmartSuite -- nope
+rcgreve1
+Reverse Engineering Windows 95 Itself
+
+rezist2
+DLL-based schemes are *dead*
+rezide7Z
+Reverse Engineering a Compressed Target
+Reverse Engineering UltraEdit
+
+siul
+siuL Hacky
+<P><BR>
+
+the specialists
+<!-- owl, stone, quine, iceman -->
+civetta [no more annoying siftice tricks] -- OWL
+iceman2 - Extending Numega's Soft-Ice for Windows 95
+iceman - Tweaking with memory in Windows 95
+iceman1 - Inside the Debug API
+quine1  - Cracking THE tool of the trade
+quine21 - "" part II
+quine_51 - Extending the IDA Scripting Language
+quine_h1 - Pushing the Envelope with HASP
+
+<P><BR>
+
+post-hcu days
+<!-- Ghiri, CrackZ, sandman -->
+<P><BR>
+
+and the resurgence of assembler
+<!--  iczelion, hutch -->
+hutch1
+The suppression and Resurrection of Assembler Programming
+hutch28 == hutch4
+Software Warriors Through the Warp
+hutch61
+The Bridge
+hutch65 == hutch 5
+The Eye of the Warrior
+hutchif1 == hutch 6
+The Iron Fist
+hutquest.htm
+The Quest: Building the launch pad
+hutsting == hutch 7
+Applying the Sting
+<P><BR>
+
+</body></html>

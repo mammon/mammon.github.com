@@ -1,0 +1,1069 @@
+<HTML>
+<FONT SIZE=+1><TT>Hi +orc,</TT></FONT>
+<BR><FONT SIZE=+1><TT>I'm really happy you're back ( ya era hora tio ).
+Reading the letter you sent +fravia, it was like you being out of "+our"
+world soon. I hope you'll not ( por la gloria de tu madre ). I miss at
++hcu-world a little bit of philosophy and a little bit of humor, something
+I always find inside your lessons.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>This lack is very usual (IMHO) in the Science-world.
+Sadly that cannot be taught in a lesson. I would like to try-to-solve this
+problem (mi granito de arena, vamos) writing different things ( I love
+to write things ), but is very hard for me to write good stuff in English
+(though i am improving ).</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Well, the strainer. I've done it, though I had not
+enough time to do it as brilliantly as I would want. You know, I do everything
+the last day (casi me pilla el toro). I have hermitian operators pressing
+me :-).</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Hope to see you (figuradamente claro) again. bye.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>SiuL+Hacky ( Under your permission )</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>(Best view with fixed width fonts )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>BUST OPENING MICROSOFT MONEYS (HOPE)</TT></FONT>
+<BR><FONT SIZE=+1><TT>=============================</TT></FONT>
+<BR><FONT SIZE=+1><TT>Well, here we are with two little stupid programs
+from microsoft. History is really important in cracking, and after this
+experience I am more convinced, as you will be after reading this. About
+the searching, well, to find money 97 was easy, just some days before the
+strainer was published. But money 94 is really hard to find in the web,
+very hard (at least for me). Yeah, Yeah, I learnt in the process, but probably
+my call provider is happier than me with this searching :-). I found all
+ms money versions in the history but 3.0, very sad.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>So I cracked first money 97. I know that this is not
+chronological, but as if you were in a good film you can imagine this first
+crack as a flashback of the whole story. One advise, the first tut is written
+in a way all newbies can understand it, so I decided to take very few things
+for granted. Like I didn't want to repeat practically the same, the second
+essay is shorter and I'm giving the solution and the way to follow ( but
+I don't go step by step ). I could say this essay is more of a teaching
+exercise than a cracking one, specially 'cause an experienced cracker is
+not learning any STATE-OF-THE-ART protection scheme with this couple of
+programs.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>money 97</TT></FONT>
+<BR><FONT SIZE=+1><TT>========</TT></FONT>
+<BR><FONT SIZE=+1><TT>The first thing you do after installing it is looking
+the big monster of money.exe, almost 5 Mb, What would do these programers
+with the old spectrum ? They would be selling sand in some deserted island
+probably. I ran it 'cause I wanted to fire the protection mechanism, but
+it was not easy to be aware of it. You are advised to be over the 90 days
+limit, but you can use the problem, so yo must get your fingers inside
+this rubbish for finding some disabled part. Ok, the date in the database
+must be inside the allowed limit (though it happen even if you are using
+it in the first 90 days ). I decided to remove the sample sample.mny, and
+the limit was restarted ( que chapuza tan impresentable ). So I knew the
+current database has a lot to do with the (supposed) installation date.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>+orc's clues about the GetLocalTime, leads us to the
+frequently-called function :46a308. Just have a look at it, we are not
+going to get further details (by now), 'cause I cracked it without understanding
+it perfectly, so I think if you can crack it without "deciphering" the
+encoding, it is somehow imperfect. Well, look at it, feel it, can you smell
+the coding routine ? Later I'll go through it:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A300 83EC14&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub esp, 00000014</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A303 8D442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+lea eax, [esp + 04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A307 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Reference To: KERNEL32.GetLocalTime, Ord:00E2h</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A308 FF15B0006300&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Call dword ptr [006300B0]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A30E 668B442406&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 06]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A313 6648&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A315 66C1E005&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl eax, 05</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A319 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A31E 6625E001&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 01E0</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A322 6631442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [esp + 02], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A327 668B44240A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 0A]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A32C 6648&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A32E 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A333 66251F00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 001F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A337 6631442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [esp + 02], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A33C 8B442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [esp + 04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A340 25FFFF0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and eax, 0000FFFF</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A345 2D9C070000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub eax, 0000079C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34A 83F87F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp eax, 0000007F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34D 7E1F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jle 0046A36E</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34F B89CFFFFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, FFFFFF9C</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Referenced by a (U)nconditional or (C)onditional
+Jump at Address:</TT></FONT>
+<BR><FONT SIZE=+1><TT>|:0046A36C(C)</TT></FONT>
+<BR><FONT SIZE=+1><TT>|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A354 6601442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add [esp + 04], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A359 8B4C2404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ecx, [esp + 04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A35D 81E1FFFF0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ecx, 0000FFFF</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A363 81E99C070000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ecx, 0000079C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A369 83F97F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ecx, 0000007F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A36C 7FE6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jg 0046A354</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Referenced by a (U)nconditional or (C)onditional
+Jump at Address:</TT></FONT>
+<BR><FONT SIZE=+1><TT>|:0046A34D(C)</TT></FONT>
+<BR><FONT SIZE=+1><TT>|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A36E 668B442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A373 66C1E009&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl eax, 09</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A377 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A37C 6625FF01&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 01FF</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A380 668B4C2404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cx, [esp + 04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A385 6683E91C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub cx, 001C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A389 66C1E109&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl ecx, 09</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A38D 6633C1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, cx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A390 6689442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [esp + 02], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A395 83C414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add esp, 00000014</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A398 C3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ret</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Ok, I agree, dead listing is more "sane", but I (
+do you? )cannot crack it without softice. Who calls this function, and,
+as a result of it, fires the messageboxes ? What now I'm going to do is
+very easy, to follow the conection between the execution of this MesBox
+(stop now bad guy !) and the reason (some kind of comparison install-date
+and current date). This is really obvious, so good programers try to "hide"
+this conection. Nothing new, just the old back tracing. Many times it is
+not possible to do a dead back trace, so we must use Softice. Let's see
+what happen here ( you can trace also the identifier of the nag, as it's
+done in money 94 crack):</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpx MessageBoxA</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Nothing happen, this is not our function. The nag
+window is fired with some other function. Take the dead list and inspect
+the imported funcions for some suspicious name:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpx DialogBoxParamA</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>ok, it is our function. Write down the address and
+this is what we find in the dead list. Before showing it to you. What do
+I look for ? something like what we may call "bridge over the nag":</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>...</TT></FONT>
+<BR><FONT SIZE=+1><TT>the famous cmp</TT></FONT>
+<BR><FONT SIZE=+1><TT>jne GOOD_GUY</TT></FONT>
+<BR><FONT SIZE=+1><TT>...</TT></FONT>
+<BR><FONT SIZE=+1><TT>preparing nag window</TT></FONT>
+<BR><FONT SIZE=+1><TT>...</TT></FONT>
+<BR><FONT SIZE=+1><TT>call USER32.DialogBoxParamA</TT></FONT>
+<BR><FONT SIZE=+1><TT>...</TT></FONT>
+<BR><FONT SIZE=+1><TT>some lines (not a lot)</TT></FONT>
+<BR><FONT SIZE=+1><TT>...</TT></FONT>
+<BR><FONT SIZE=+1><TT>GOOD_GUY</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>and what i get in money 97 is:</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>( ... function called from one million places )</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D910 64A100000000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, fs:[00000000]; first line</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>... lines and lines with no near "cmp"</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046D9B3 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9B4 8B4510&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [ebp+10]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9B7 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9B8 56&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push esi</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9B9 A1C8BD6200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [0062BDC8]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9BE 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Reference To: USER32.DialogBoxParamA, Ord:008Ah</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9BF FF15140B6300&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Call dword ptr [00630B14]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9C5 668945EE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [ebp-12], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046D9C9 8B45E8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [ebp-18]</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>( ... lines and lines )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Ok, we don't have what i told you,&nbsp; **** don't
+try to find something that do not exist **** , so look for variations from
+the basic scheme. Use softice to get the real caller and its neighborhood:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:00472817 668B442414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 14]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047281C 6639842478010000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [esp + 00000178], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472824 721C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 00472842; &lt;- CAN YOU FEEL IT !!</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472826 6A00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 00000000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472828 A1D0306200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [006230D0]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047282D 6A00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 00000000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047282F 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472830 68003F4D00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 004D3F00</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472835 685F2F0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 00002F5F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047283A E8D1B0FFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 0046D910;&nbsp; &lt;&lt;&lt; CALLING nag!!!</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047283F 83C414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add esp, 00000014</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Referenced by a (U)nconditional or (C)onditional
+Jump at Address:</TT></FONT>
+<BR><FONT SIZE=+1><TT>|:00472824(C)</TT></FONT>
+<BR><FONT SIZE=+1><TT>|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472842 668B5506&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov dx, [ebp+06]</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Now you understand Softice is a must. We want to jump
+for ever. If we look the registers window bx is zero at :47281c, so change
+it:</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>old ----</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047281C 6639842478010000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [esp + 00000178], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>new ----</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047281C 663b9c2478010000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [esp + 00000178], bx</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>I know it is comparing limit-date and today-date,
+but I don't know yet the details ( that is what I was telling before ).
+Now pull from the string. It is important to know how the program gets
+the installation date. There are two possibilities:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>1) Get it once and store it (even with copies in memory).</TT></FONT>
+<BR><FONT SIZE=+1><TT>2) Get it whenever you need it (even checking it
+with some copies).</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>The second one is safer, but less common. Try the
+first one, which i am going to explain thoroughtly. Remember the code:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:00472817 668B442414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 14]; &lt;-- get limit day</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0047281C 6639842478010000&nbsp;&nbsp;&nbsp; cmp
+[esp + 00000178], ax;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472824 721C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 00472842;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>When placed at cmp (for example) in Softice do:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpm [esp+178] w; &lt;-----> suppose ss:(esp+178) ==
+ADDR1</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>disable it, restart money and enable it. Probably
+it is a copy of a previous variable with the right value, then breakpoint
+it and so on. If the variable</TT></FONT>
+<BR><FONT SIZE=+1><TT>is located inside stack, softice will break one million
+times, so use in this case:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpm [esp+178] w if bplog</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Then instead of breaking, the hit will be logged.
+But, think, we must stop the loggin when the var remains assigned to the
+right value, so USE ALSO:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpx Last line known where the var has the right value
+(limit date)</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>for example bpx on any of the 3 lines of code above,
+then when it stops, look at the last match ( each one is logged by bplog
+). More or less you'll find:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>(... one million loggins)</TT></FONT>
+<BR><FONT SIZE=+1><TT>loggin bp 1 bpm ADDR1 w dr3 if bplog (#137:472608)</TT></FONT>
+<BR><FONT SIZE=+1><TT>Break due to 137:47281c</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Ok, let's have a look to 472608:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:004725FC 668B8528020000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [ebp+00000228]; &lt;&lt;&lt; GET</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472603 6689442414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [esp + 14], ax; &lt;&lt;&lt; COPY</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472608 E8F37CFFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 0046A300</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>You can realize that softice logs the next instruction
+executed after the breakpoint. Continue our "searching-job". Edit our bpm
+and change it to:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>bpm ebp+228 w if bplog</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Restart Money 97 and ... what happen ? Softice crashes
+while loggin: WHY ? PLEASE WRITE THIS IN YOUR FACE, OR WHEREVER. I use
+to forget it and lose time wondering what's going on. Some actions should
+not be interrupted, one of them is DISK TRANSFER, so when your bpm crashes
+THINK THAT THIS MEMORY LOCATION IS WRITTEN DIRECTLY FROM A READ FILE OPERATION
+( _hread _lread and so on). What does it mean ? the limit day is got from
+a file: yes, yes sample.mny. I told you.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Solution: bpx _lread ( look at imported functions
+)</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>enable it and land in the right _lread. Just after
+it is read, bpm (now for read-write operations ) the same location that
+crashes the program, and all the new copies the program may do afterwards
+(with the right value; actually, in money 97 it is copied once, and the
+original location is removed). If you trace them, they are gonna be compared
+before the nag (we know where) and before the second nag (when filling
+the database). Trace this location: ds:[628664] (the copy I told you),
+and try to enter an operation on 1/1/99. It'll break here:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:005C2C77 837D3000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp+30], 00000000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C7B 7421&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+je 005C2C9E</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C7D 8B4D3C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ecx, [ebp+3C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C80 668B81B5010000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [ecx+000001B5]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C87 663DFFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ax, FFFF</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C8B 0F842F0D0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+je 005C39C0</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C91 66390564866200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [00628664], ax; &lt;&lt;&lt; HERE !!</TT></FONT>
+<BR><FONT SIZE=+1><TT>:005C2C98 0F863B0D0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jbe 005C39D9; &lt;&lt; jump bad guy</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>We don't want to jump. Look again at the reg. window
+and change it to:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:005C2C91 66391d64866200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [00628664], bx;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Is it possible to jump always in 5c2c7b ?. Good question,
+Try it !</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>Just one more thing, not very important. You cannot
+use the program if the installation date is older than today (for example
+you start the program on 2050, and want to use it forever back to the present,
+just another approach). You just have to trace some calls to GetLocalTime,
+and very soon there's a comparison with installation-date. Exactly here:</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>; in this moment ax == today</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472882 6639442414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [esp + 14], ax;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472887 768E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jbe 00472817;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>So, jump always again. Change it to:</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472882 663dffff&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ax, ffff;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472886 90&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+nop</TT></FONT>
+<BR><FONT SIZE=+1><TT>:00472887 768E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jbe 00472817;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>And use it like a tribute to our beloved (but lately
+hated) nop.</TT></FONT>
+<BR><FONT SIZE=+1><TT>Now we have it cracked. What happen with date encryption
+? ok, let's see.</TT></FONT>
+<BR><FONT SIZE=+1><TT>I'm gonna show what's going on ax and the memory
+location, but first I have to tell you: I think it is absolutly stupid,
+why they don't just take the days since 1970 ? Perharps, the programmer
+wanted to tell us his/her born-date. this is ax:</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ah&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+al</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp; =============&nbsp;&nbsp; =============</TT></FONT>
+<BR><FONT SIZE=+1><TT>| , , , | , , , | , , , | , , , |&nbsp;&nbsp; ----
+> ax register</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Now the routine step by step:</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>* Reference To: KERNEL32.GetLocalTime, Ord:00E2h</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A308 FF15B0006300&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+Call dword ptr [006300B0]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A30E 668B442406&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 06]; &lt;&lt; get month</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,0,0,0|0,0,0,0|m,m,m,m|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; month</TT></FONT>
+<BR><FONT SIZE=+1><TT>( ... a month takes in the worst case 4 bits )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A313 6648&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec ax</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>( it adjusted month info, because January is mounth
+1 instead of 0 )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A315 66C1E005&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl eax, 05</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,0,0,m|m,m,m,0|0,0,0,0|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>We can know how many days are left in a year by:
+month*30 + days, taking care that January is month number 0. Now in ax
+we got the first part of the sum. Nota that in this case a month is gonna
+have 31 days always.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A319 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]; &lt;&lt; [esp+02]=ffff;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|1,1,1,1|1,1,1,M|M,M,M,1|1,1,1,1|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>I mean M as month xor f, or other way MMMM=(15 -
+month)</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A31E 6625E001&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 01E0</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,0,0,M|M,M,M,0|0,0,0,0|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A322 6631442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [esp + 02], ax</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|1,1,1,1|1,1,1,m|m,m,m,1|1,1,1,1|&nbsp;&nbsp; ----
+> [esp + 2 ] location</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A327 668B44240A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 0A]; &lt;&lt; get days</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,0,0,0|0,0,0,d|d,d,d,d|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( days info takes as much as 5 bits )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A32C 6648&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A32E 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|1,1,1,1|1,1,1,1|1,1,1,D|D,D,D,D|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A333 66251F00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 001F</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,0,0,0|0,0,0,D|D,D,D,D|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A337 6631442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [esp + 02], ax</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|1,1,1,1|1,1,1,m|m,m,m,d|d,d,d,d|&nbsp;&nbsp; ----
+> [esp + 02]</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( so we have how many days left this year, with months
+of 31 days )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A33C 8B442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, [esp + 04]; &lt;&lt; get year</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,y,y,y|y,y,y,y|y,y,y,y|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( I can't think of anybody using money needing more
+than 11 bits )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A340 25FFFF0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and eax, 0000FFFF</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A345 2D9C070000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub eax, 0000079C;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34A 83F87F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp eax, 0000007F; &lt;&lt; year 2075 ?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34D 7E1F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jle 0046A36E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ---|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A34F B89CFFFFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov eax, FFFFFF9C&nbsp;&nbsp;&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A354 6601442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add [esp + 04], ax&nbsp;&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A359 8B4C2404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ecx, [esp + 04]&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A35D 81E1FFFF0000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ecx, 0000FFFF&nbsp;&nbsp;&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A363 81E99C070000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ecx, 0000079C&nbsp;&nbsp;&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A369 83F97F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ecx, 0000007F&nbsp;&nbsp;&nbsp;&nbsp; |</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A36C 7FE6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jg 0046A354&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A36E 668B442404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [esp + 04] &lt;--|</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>( loading year again )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A373 66C1E009&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl eax, 09</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|y,y,y,y|y,y,y,0|0,0,0,0|0,0,0,0|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A377 6633442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [esp + 02]</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|Y,Y,Y,Y|Y,Y,Y,m|m,m,m,d|d,d,d,d|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( coding the year ? not yet )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A37C 6625FF01&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 01FF</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><TT><FONT SIZE=+1>|0,0,0,0|0,0,0,m|m,m,m,d|d,d,d,d|&nbsp;&nbsp; ----
+> ax register</FONT></TT><FONT SIZE=+1></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( more of stupid software )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A380 668B4C2404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cx, [esp + 04]; &lt;&lt; load year again</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,y,y,y|y,y,y,y|y,y,y,y|&nbsp;&nbsp; ----
+> cx register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A385 6683E91C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub cx, 001C</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|0,0,0,0|0,Y,Y,Y|Y,Y,Y,Y|Y,Y,Y,Y|&nbsp;&nbsp; ----
+> cx register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>( now YYYYYYYYYYY= year - 28 = 1969, more absurd
+)</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A389 66C1E109&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl ecx, 09</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|Y,Y,Y,Y|Y,Y,Y,0|0,0,0,0|0,0,0,0|&nbsp;&nbsp; ----
+> cx register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>now the year has been stripped, now we have something
+like</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>&nbsp;&nbsp; ( year - 28 ) % 128</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>What the hell is it ? They are coding somehow the
+year information, the same way they did with "month" and "days", but now
+it's not so perferct. For relating our "year", with "money97-year", first
+think of a year with 512 days/year and second no Gregorian Callendar, year
+0 is no more Jesus' born-date, Oh ! Sinners ! . Like the modified year
+is divided by 128, this callendar is stable during 128 years before it
+is reset, but for money 97 is enough. Now year 0 is 1948.</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A38D 6633C1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, cx</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>|Y,Y,Y,Y|Y,Y,Y,m|m,m,m,d|d,d,d,d|&nbsp;&nbsp; ----
+> ax register</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>now we got the final compose. Call it STUPID_DATE</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0046A390 6689442402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [esp + 02], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A395 83C414&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add esp, 00000014</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0046A398 C3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ret</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>Now you'll agree is stupid. Well if you want to translate
+from DATE of this stupid programmer born in 1948 to OUR DATE:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>year = 1948 + (INT) STUPID_DATE/512</TT></FONT>
+<BR><FONT SIZE=+1><TT>month = (int) (STUPID_DATE % 512 ) /31</TT></FONT>
+<BR><FONT SIZE=+1><TT>year =&nbsp; (STUPID_DATE % 512 ) % 31</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>You may see there's a lot of 16 bits code. Is the
+protection taken from old 16 bits money 94 ? Very close, very close, not
+exactly, but they are very similar. I'm not gonna explain the other one
+like this, because there's nothing new. Here I'm giving you the code of
+money 94 coding (now that money97's is recorded in your mind ). It's up
+to you to delve inside it and realize it's practically the same I explained
+before.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0081.0563 9AC008FFFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 0010.08C0</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0568 83C402&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add sp, 0002</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.056B 8A46F7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov al , [bp-09]; &lt;&lt; get month</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.056E 2AE4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ah, ah</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0570 48&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0571 C1E005&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl ax, 05&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt; shift month</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0574 3346FC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor ax, [bp-04]&nbsp; &lt;&lt; xor against 00 !!</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0577 25E001&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 01E0&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt; filter it</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.057A 3146FC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [bp-04], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.057D 8A46FC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov al , [bp-04]&nbsp; &lt;&lt; month coded</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0580 8A4EF6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cl , [bp-0A]&nbsp; &lt;&lt; get days</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0583 2AED&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ch, ch</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0585 49&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec cx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0586 32C1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor al , cl</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0588 251F00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ax, 001F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.058B 3146FC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor [bp-04], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.058E 8B46F8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-08]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0591 2D9C07&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ax, 079C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0594 3D7F00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ax, 007F&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt; year 2047 ?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.0597 760F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jbe 05A8</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0081.0599 836EF864&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub word ptr [bp-08], 0064</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.059D 8B46F8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-08]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05A0 2D9C07&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ax, 079C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05A3 3D7F00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ax, 007F</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05A6 77F1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ja 0599</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0081.05A8 8B46F8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-08]&nbsp; &lt;&lt; get year</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05AB 2D1C00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub ax, 001C&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt; substract again</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05AE C1E009&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl ax, 09&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &lt;&lt; shifting</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05B1 8B4EF8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cx, [bp-08]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05B4 C1E109&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+shl cx, 09</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05B7 334EFC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor cx, [bp-04]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05BA 80E501&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and ch, 01</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05BD 33C8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+xor cx, ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05BF 894EFC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [bp-04], cx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05C2 8BC1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, cx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05C4 8B5E06&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov bx, [bp+06]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05C7 368907&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ss:[bx], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05CA 8BC3&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, bx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05CC 8CD2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov dx, ss</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05CE 8D66FE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+lea sp, [bp-02]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05D1 1F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+pop ds</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05D2 5D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+pop bp</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05D3 4D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+dec bp</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0081.05D4 CA0200&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+retf 0002</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>MONEY 94</TT></FONT>
+<BR><FONT SIZE=+1><TT>=========</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Three years before. First of all THANX A LOT FRAVIA
+for the link, I was desperate. Do you think the protection is very different
+? Of course not.</TT></FONT>
+<BR><FONT SIZE=+1><TT>+orc gave some clues, but they were a little bit
+tricky</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>1) In the version I cracked the addresses were slightly
+sled, for example:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>&nbsp; * lesson 4.2 *</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17CA 8B46F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-0C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17CD 3946F0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [bp-10], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D0 7246&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 1818</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp; * money 94 frech version *</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E2 8B46F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-0C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E5 3946F0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [bp-10], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E8 7246&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 1830</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>So, be careful and don't Bp without thinking ! Second
+and more suspicious, is the supposed crack ( taken from lesson 4.2 ):</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>********************* the hot code ********************</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0008.17CA 8B46F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-0C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17CD 3946F0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [bp-10], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D0 7246&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 1818</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>* Possible Reference to Dialog: DialogID_0494</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+|</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D2 689404&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 0494 ;HERE! NOTICE OF EXPIRATION</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D5 685505&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push SEG ADDR of Segment 0028</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D8 684C15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 154C</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17DB FF362C0A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push word ptr [0A2C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17DF 6A00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 0000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E1 6A00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 0000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E3 6A00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push 0000</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E5 9A34019911&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 0005.0134 ;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>********************* SUPPOSED +ORC CRACK ******************</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>instead of</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D0 7246&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 1818</TT></FONT>
+<BR><FONT SIZE=+1><TT>let's have</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D0 55&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push bp</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17D0 5D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+pop bp</TT></FONT>
+<BR><FONT SIZE=+1><TT>(nooping it)</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+************************************************************</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Is it a joke or I don't understand anything ? Well
+it's a joke ( the addresses, the crack ...&nbsp; ). If you change it that
+way, the nag snaps always, so you must jump always, IT IS EXACTLY the scheme
+I told you ( bridge over the nag ) at the begining. So the cmp:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>cmp limitday, today;</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>You just need to trace limitday and you have the crack.
+But what about today ? It is 16 bits, so no GetLocalTime, ... , or yes,
+they use the old-styled GetLocalTime, a service of Int 21h. In that moment
+I remembered a 1996 program: Secure Shell or something, that used a rather
+interesting function kernel!dos3call for getting the current date. Then
+I tried it and it was the one used in money 94 fv. Very funny, look at
+microsoft docs, now they recommend NOT TO USE this function. BTW, they
+use it a lot.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>I'm not gonna explain the "tracing" process the way
+I did with money 97, it is just the same thing. Ok, we are in front of
++orc's routine, but let's look some instructions before:</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0008.180D 9AD8053418&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 0081.05D8</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.1812 8BD8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov bx, ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.1814 368B07&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, ss:[bx]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.1817 8946FE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [bp-02], ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.181A 8B46F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-0C]; &lt;&lt;&lt; get today</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.181D 3946FE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [bp-02], ax; &lt;&lt;&lt; some checking</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.1820 73C0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jnb 17E2</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>... if this secret checking is right jump</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0008.17E2 8B46F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [bp-0C] ; &lt;&lt;&lt; get today</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E5 3946F0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [bp-10], ax; &lt;&lt;&nbsp; limitday ?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0008.17E8 7246&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 1830; &lt;&lt;&lt; the code given by +orc</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Play a little bit with the carry flag, and you'll
+realize that the first one checks limit-date with today+63. It is a way
+of checking today and installation date, of course today should be later
+or you'll be nagged as usual. Modify BOTH jumpings and jump always. These
+are the MODIFIED instructions:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0008.181D 663bc0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp eax, eax; &lt;&lt; new cmp</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>(... improve old money 94 with the powerful 32 bits
+technology )</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0008.17E5 3b7ef0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp di, [bp-10]; &lt;&lt; second cmp</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>What else ? Ah, the database. So easy ( este crack
+ya lo podria terminar cualquier politico ), so easy that I cannot repeat
+it. Follow my instructions in money 97 (tracing back a value with the famous
+limitdate, taken from :0008.17E5, for instance). You'll discover that it
+is copied again in a fixed location, just like money 97 scheme, and you
+will land in the middle of this incredibly tough piece of code:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0014.2B63 A1D664&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov ax, [64D6]; &lt;&lt; get limit-date</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0014.2B66 3906D870&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [70D8], ax; &lt;&lt; date entered ?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0014.2B6A 7203&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 2B6F; &lt;&lt; below, jump good girl</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0014.2B6C E9970A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jmp 3606; &lt;&lt; nobody fools microsft !</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>This way you just can have fun wondering a new way
+of changing the code. There are one million ways, here there's one:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:0014.2B66 3906d664&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [64d6], ax;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0014.2B6A 7403&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+je 2B6F;</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1><TT>I would like you to enjoy these two programs, but
+it's practically imposible to enjoy esta BOBERIA.</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>... JUST ONE MOMENT ... OHH, THE QUESTION</TT></FONT>
+<BR><FONT SIZE=+1><TT>===========================================</TT></FONT>
+<BR><FONT SIZE=+1><TT>A little bit more of Microsoft Crapping. Microsoft
+Project 4.1, the last trap of our good old slick +orc. I'm giving you the
+last part of the code given by +him (even his comms). I'll comment it beautifully:</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:05167F6A E808CFEBFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 05024E77 ;CALL GetLocalTime</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F6F 66817DF4C007&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-0C], 07C0&nbsp; ;is 1984?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F75 722F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jb 05167FA6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;go badflag</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F77 66817DF40108&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-0C], 0801&nbsp; ;is 2049?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F7D 7727&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+ja 05167FA6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;go badflag</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F7F FF75F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push [ebp-0C]&nbsp;&nbsp;&nbsp; ;save validyear</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F82 660FB645F7&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+movzx byte ptr ax, [ebp-09] ;pushday</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F87 660FB64DF6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+movzx byte ptr cx, [ebp-0A] ;pushmonth</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F8C 50&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push eax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F8D 51&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push ecx</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>============</TT></FONT>
+<BR><FONT SIZE=+1><TT>Not a great thing. A flag is used for pointing the
+naughty guys. It will be set at :5167fa6. Let's suppose we pass this first
+test over. What else ?</TT></FONT>
+<BR><FONT SIZE=+1><TT>============</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:05167F8E E84EC10B00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+call 052240E1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;call here</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F93 663B45E4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp ax, [ebp-1C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F97 7D0D&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jge 05167FA6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;go badflag</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F99 668B4DE4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cx, [ebp-1C]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F9D 662BC8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub cx, ax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FA0 66894DF2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [ebp-0E], cx</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FA4 EB06&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jmp 05167FAC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;do not badflag</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FA6 66C745FE0100&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [ebp-02], 0001 ;BAD FLAG !!!***</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp;&nbsp; :no_bad_flag</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FAC FF75DC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+push [ebp-24]</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FAF FF151C5C3C05&nbsp;&nbsp;&nbsp;&nbsp; Call
+dword ptr[053C5C1C];RegCloseKey</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FB5 EB25&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jmp 05167FDC ;jump 2nd getlocaltime</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>======================================================</TT></FONT>
+<BR><FONT SIZE=+1><TT>A mistirious call not commented by +orc. Je, Je.
+Softice a little bit, and chan tata chan, TODAY-DATE ( coded in a way i
+don't really care ) IS RETURNED IN AX REGISTER. And it is compared with...
+LIMIT-DATE, of course. If you read lesson 4.2, the supposed holly "cmp"
+was place later ... pretty suspicious. The flag will be set if you passed
+over the time limit, but look, if you are a GOOD GUY you'll enjoy some
+bonus-instructions:</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>; firstly it is important for you to know that at
+this point</TT></FONT>
+<BR><FONT SIZE=+1><TT>; [ebp-e]=0x5e and ax=today_date</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>:05167F99 668B4DE4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov cx, [ebp-1C]; &lt;&lt; load limit-date</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167F9D 662BC8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sub cx, ax; &lt;&lt; days to end</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FA0 66894DF2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+mov [ebp-0E], cx; &lt;&lt; save days to end</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>Thus, if you are a bad guy, [ebp-e] will remain with
+0x5e, it is, YOU WILL BE IN YOUR FIRST DAY OF USING THE PROGRAM. Obviously
+[bp-e] will not keep information about the timeout, so we just have the
+flag.</TT></FONT>
+<BR><FONT SIZE=+1><TT>==========================================================</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>... in the last snippet everybody jumped here</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>&nbsp;&nbsp; :valid_year_almost_everybody_calls_here</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FDC 66837DFE00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-02], 0000&nbsp;&nbsp; ;valid_flag?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FE1 755F&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jne 05168042&nbsp; ;beggar off:unvalid something</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FE3 66837DF000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-10], 0000&nbsp;&nbsp; ;valid ebp-10?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FE8 750E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jne 05167FF8&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;jmp unvalid_e10</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FEA 66837DEC00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-14], 0000&nbsp;&nbsp; ;valid ebp-14?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FEF 7451&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+je 05168042&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;beggar
+off,unvalid</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FF1 66837DF000&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-10], 0000&nbsp;&nbsp; ;sure thatebp-10=0?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FF6 7407&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+je 05167FFF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;continue
+ifso</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp; :unvalid_e10</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FF8 66837DEC00&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-14], 0000&nbsp;&nbsp; ;check if e14valid</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FFD 7543&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jne 05168042&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;no? be damned!</TT></FONT>
+<BR><FONT SIZE=+1><TT>&nbsp; :valid_e10_and_e14</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05167FFF 0FBF4DF2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+movsx word ptr ecx, [ebp-0E] ;</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05168003 66833D58192C0501 cmp dword ptr [052C1958],
+0001</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0516800B 1BC0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+sbb eax, eax</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0516800D 83E05A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+and eax, 0000005A&nbsp; ;pretty obvious</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05168010 83C05A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+add eax, 0000005A&nbsp; ;isnt it?</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05168013 3BC1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp eax, ecx&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;HERE********</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05168015 7C2B&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jl 05168042&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;beggar off</TT></FONT>
+<BR><FONT SIZE=+1><TT>:05168017 66837DF21E&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+cmp [ebp-0E], 001E ;0x1E = 30</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0516801C 7F4A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+jg 05168068&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ;good guy jump</TT></FONT>
+<BR><FONT SIZE=+1><TT>:0516801E 8D45F4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+lea eax, [ebp-0C]</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>===============================</TT></FONT>
+<BR><FONT SIZE=+1><TT>At :5168015 we had the suppossed holly "cmp", but
+we got one before, which set bad-flag to 1, and if it's set, we'll jump
+at :05167FE1 to the ugly world of nagg windows, and no further execution
+of this second holly "cmp". But if we do not jump (setting bad-flat to
+0, as +he tells), this second "cmp" will be good always, 'cause remember
+that we shall be ALWAYS in our first day.</TT></FONT><FONT SIZE=+1></FONT>
+
+<P><FONT SIZE=+1><TT>If we want to use anyway the failed crack, you should
+change also the first cmp/jge located at :05167F93.</TT></FONT>
+<BR><FONT SIZE=+1><TT>================================</TT></FONT>
+<BR><FONT SIZE=+1>&nbsp;</FONT><FONT SIZE=+1></FONT>
+
+<P><TT><FONT SIZE=+1>I don't know. Were they trying a NEW protection scheme
+? Something BIG ?. Sorry the only BIG, HUGE, thing around is Msproject
+itself.</FONT></TT><FONT SIZE=+1></FONT></HTML>

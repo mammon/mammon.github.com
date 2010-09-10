@@ -1,0 +1,134 @@
+<html>
+<head>
+<title>siul</title>
+</head>
+
+<body BGCOLOR="#C0C0C0" TEXT="#001010" VLINK="#405040">
+<a NAME="anchortop"></a>
+<!-- HTML code by Fravia, Yeah, go ahead, steal my code, sucker -->
+
+<h2><center>
+CRACK FOR PRO PINBALL (The Web)</h2><br>
+   by siuL Hacky, April 1997<br>
+<hr>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">
+<i>Courtesy of fravia's page of reverse engineering</i>
+</center>
+<hr size="3">
+<pre>
+
+I like specially pinball games, they are also a good chance to find good software
+(what?). In pinball fantasies there was a good assembler work, and an old 286
+seemed to be right with that program. But it was before my slavery life, and now 
+that I am free again I have discovered new good pinballs. The best of all is my 
+cracking target: Pro Pinball The Web. A really cool game by Empire. They offer to the 
+poor world a demo of 60 seconds and one ball, and I am gonna show you we can enjoy 
+the usual 3 balls and endless time (si tienes un poco de habilidad con los palicos).
+The exe-file cracked is 342.555 bytes, pro-pinball v1.40x and I've lost the 
+original date.
+	I have used a mixed method (dead listing and Softice 3.0) coz both of them are
+necessary (es mas yo diria imprescindibles). If you don't know the game 
+(download it right now in <a href="tppmsgs/msgs8.htm#841" tppabs="http://ftp.fravia.org/tppmsgs/msgs2.htm#205">http://www.empire.co.uk</a>) 
+it shows a counter with the seconds (que error mas pardillo) in a state-of-the-art dot 
+matrix. We can  also be aware that the actual ball has been manipulated and we are in 
+the third and last ball.
+	The easiest job of the crack is to disable the time protection. If we run the 
+game under SIce, we break it when the countdown is active, and it's easy to search 
+for some of the strings such as CREDITS, BALLS and so on. Very close to them we find 
+the ASCII values of the seconds count. We breakpoint them, so we find something like 
+this routine (is taken from Wdasm7  listing . All the listings are taken from dasm):
+	(the memory locations are gonna be different, of course)
+
+:0001750C A1B06C0000              mov eax, [00006CB0];load counter
+:00017511 85C0                    test eax, eax         ;jump if 0
+:00017513 7457                    je 0001756C
+:00017515 89C2                    mov edx, eax          ; edx=counter
+:00017517 C1FA1F                  sar edx, 1F           ; edx=0
+:0001751A C1E20F                  shl edx, 0F           ; edx=0
+:0001751D 1BC2                    sbb eax, edx
+:0001751F C1F80F                  sar eax, 0F           ; eax/=32k
+:00017522 89C2                    mov edx, eax          ; edx=seconds
+:00017524 B90A000000              mov ecx, 0000000A
+:00017529 C1FA1F                  sar edx, 1F           ; edx=0
+:0001752C 89C3                    mov ebx, eax          ; ebx=seconds
+:0001752E F7F9                    idiv ecx              ; eax=tenths
+:00017530 89C2                    mov edx, eax          ; edx=tenths
+:00017532 C1FA1F                  sar edx, 1F           ; edx=0
+:00017535 F7F9                    idiv ecx              ; edx=tenths
+:00017537 A148270000            mov eax, [00002748]; eax=offset_asci_ten
+:0001753C 83C230                  add edx, 00000030     ; tenths is ascii
+:0001753F 8810                    mov [eax], dl ; write tenths
+:00017541 89DA                    mov edx, ebx          ; edx=seconds
+:00017543 89D8                    mov eax, ebx          ; eax=seconds
+:00017545 C1FA1F                  sar edx, 1F           ; edx=0
+:00017548 F7F9                    idiv ecx              ; edx=units
+:0001754A A148270000            mov eax, [00002748]; eax=offset_asci_ten
+:0001754F 83C230                  add edx, 00000030     ; units in ascii
+:00017552 885001                  mov [eax+01], dl      ; write units
+
+Don't worry about the useless SARs, they are not important  in this phase of the 
+game (they are useful when the program doesn't want the counter to be seen anylonger). 
+In our case, the counter is located in [6cb0]. IN YOUR CASE IT'S GONNA BE DIFFERENT 
+(ya se que lo sabes, pero otra gente no lo sabra). We just have to breakpoint the 
+tick counter and we get:
+
+:0000DE7F A1C07F0000              mov eax, [00007FC0]
+:0000DE84 8B1DB06C0000            mov ebx, [00006CB0] ;<<<<< :0000DE8A 29C3 sub ebx, eax :0000DE8C BAB06C0000 mov edx, 00006CB0 :0000DE91 891DB06C0000 mov [00006CB0], ebx :0000DE97 85DB test ebx, ebx :0000DE99 7D08 jge 0000DEA3 :0000DE9B 31FF xor edi, edi We use the old good noopping: let's change 29C3 to 9090 and we have: :0000DE7F A1C07F0000 mov eax, [00007FC0] :0000DE84 8B1DB06C0000 mov ebx, [00006CB0] :0000DE8A 90 nop :0000DE8B 90 nop :0000DE8C BAB06C0000 mov edx, 00006CB0 :0000DE91 891DB06C0000 mov [00006CB0], ebx :0000DE97 85DB test ebx, ebx :0000DE99 7D08 jge 0000DEA3 :0000DE9B 31FF xor edi, edi You just have to use an hex-editor, search for A1C07F00008B1DB06C0000, change the following two bytes and you CAN PLAY HUNDREDS OF OURS, if you save the only ball. But I realize that's not a great improvement for many people. We want to play the whole game with 3 balls (and even use the extraballs). First I thought: these good pinball programmers are not that good protection programmers. Let's try to correct the initial value of the ball counter to start at 1, and everything will be ok. That was not exactly accurate (though they are bad protectionists anyway). We look for the character (the number after BALLS) and ta,ta,ta,ta. Procede the same way we did with the countdown. Get a memory location. Breakpoint it and get something like what we had before... and ALWAYS remember that what the newbyes always forget: /* THE VALUE OF THE OFFSETS ARE ONLY USEFUL AS A THEORETICAL POSSIBILITY... YOU SHOULD ALWAYS LOOK FOR THE BYTES OF THE INSTRUCTIONS WITH YOUR HEXEDITOR (OR EXAMINING THE DEAD LISTING MADE THROUGH DASM. THE OFFSET VALUES ARE NEVER ABSOLUTE VALUES */ :00000F54 B801000000 mov eax, 00000001 :00000F59 89BAF8760000 mov [edx+000076F8], edi :00000F5F BB03000000 mov ebx, 00000003 ;<<< HERE! :00000F64 89823C770000 mov [edx+0000773C], eax :00000F6A 89D0 mov eax, edx :00000F6C 899AF0760000 mov [edx+000076F0], ebx ;SAVED! ; edx="0" IRL Change bb03000000 and write bb01000000 (bytes of target's code "you.class" tppabs="http://ftp.fravia.org/you.class" should change through hexediting see the line above). Now we have mov ebx, 00000001 instead of mov ebx, 00000003 and this should be the right preset... i.e. we should now start with ball 1, not with ball 3. Yet if we run the program, nothing new happens. What's wrong? Nothing, we simply need to finish this (master)piece of cracking (ole la modestia). Till now everything was so easy, and we could master it with Softice and an Hexeditor (coser y cantar que se dice). The hard job is coming. I checked the modifications to the ball counter when the game ends, and found that it was set to 0 (with other vars as the credits) in the following routine. ;------------function that zeroes a lot of locations :0000157C 53 push ebx :0000157D 51 push ecx :0000157E 52 push edx :0000157F 56 push esi :00001580 55 push ebp ... some boring lines .... :000015EC 31ED xor ebp, ebp :000015EE 8935A8220000 mov [000022A8], esi :000015F4 892DC0860000 mov [000086C0], ebp :000015FA 892D1C800000 mov [0000801C], ebp :00001600 892DF87D0000 mov [00007DF8], ebp :00001606 892D20800000 mov [00008020], ebp :0000160C 892D28800000 mov [00008028], ebp :00001612 892DF0760000 mov [000076F0], ebp :00001618 891D50220000 mov [00002250], ebx :0000161E 89154C220000 mov [0000224C], edx :00001624 5D pop ebp :00001625 5E pop esi :00001626 5A pop edx :00001627 59 pop ecx :00001628 5B pop ebx :00001629 C3 ret This "obsession" resetting of variables makes us think it's an evil routine. Let's have a look at the dead listing (xref) of the caller: this function: ; function :0000E617 BB02000000 mov ebx, 00000002 :0000E61C 31C9 xor ecx, ecx :0000E61E 891DF0BB0000 mov [0000BBF0], ebx :0000E624 890DECBB0000 mov [0000BBEC], ecx :0000E62A E8E1A20000 call 00018910 :0000E62F E8482FFFFF call 0000157C ;<<<<<< here calls zeroing! there's no evidence of conditional jmp here, or something else suspicious, so if we try to extend it, the dasm reports us no entry point; so we've got probably an indexed jumping. WHO CALLS THIS CALLER? A bit of Zen cracking and I could save time... else let's winice!(thank you Numega, God will pay our licenses) we do some backtracing and the real caller of the evil routine is: :DBF0 2EFF2485DCDA0000 jmp dword ptr cs:[4*eax + 0000DADC] and in this case eax="7." Keep in mind this instruction. ****IF THIS EAX="7" THEN BEGGAR OFF!**** With the backtracing done we realize that we have lots of conditional jumping before the evil routine is called. I lost much time checking some suspicious ones. Now try another approach. The program has been manipulated and some part of the code are not executed. E.g. INCreasing or DECreasing the number of balls. Well, we should get something searching in the listing for [000076f0]. There are several matches, but this one seems right: : our holy routine :0000DEE8 31ED xor ebp, ebp ...... :0000E368 8BB8F0760000 mov edi, [eax+000076F0] ;fetch location :0000E36E 8D2C19 lea ebp, [ecx + ebx] :0000E371 01DF add edi, ebx :0000E373 892D20800000 mov [00008020], ebp :0000E379 89B8F0760000 mov [eax+000076F0], edi ;change location Using Winice we see this function starting at :0000dee8 is never executed, and in the listing there's no entry point. It's not the first time; again these annoying indexed jumpings. Let's go deeper in our old indexed jump and in its previous instructions : :DBE2 A1F87D0000 mov eax, [00007DF8] :DBE7 83F807 cmp eax, 00000007 ;is it seven? :DBEA 0F87720A0000 ja 0000E662 :DBF0 2EFF2485DCDA0000 jmp dword ptr cs:[4*eax + 0000DADC] ;IF EAX="7" BEGGAR OFF! If we bkpoint [7df8] it has different values during the game (they are consecutive): 0 : start of the demo. No game yet. 1 : pressed the key to start playing, but we cannot play yet 2 : cannot play yet 3 : can play 5 : game over 7 : game over (this value calls the evil routine!) 0 : game over and no restart. Somehow this var shows the "state" of the game (ya le tenemos pillado por los huevos :-) There're two missing values, specially "state 4" could be interesting coz this value lays at the border between playing (3) and not playing (5). Two possibilities (rational one and intuitive one): (1st) Rational if [7df8]="4" our indexed jumping is jmp cs:[daec] looking in the listing, it is jmp dee8 (our holy routine) we got it (2nd) Emotional directly change [7df8] to 4 when it is assigned 5. we have the real game. Searching in the listing for [7df8] we find a setting to 5 twice: :0000DDF3 7D53 jge 0000DE48 :0000DDF5 C705F87D000005000000 mov dword ptr [00007DF8], 5 and :0000E3A6 C705F87D000005000000 mov dword ptr [00007DF8], 5 the first is executed by the demo, and the second is never executed. So the trick of the demo it's to assign 5 to [7df8] prematurely, when it should get assigned instead a value of 4. The 2nd assignment is the true one (the game calls it when you loose your three balls). You have the previous instruction written for locating easily (and change) the instruction with the Hexeditor. Search 7D53C705F87D000005000000 (jge thattaway and mov [7DF8],5) and change these values to 7D53C705F87D000004000000 (jge thattaway and mov [7DF8],4) There i still a "naggy" problem that we should try to solve. You can play three balls, and so on, but you can start the game just once each session. I mean when the game is over, you must exit and run again. A problem for amauter players. Let's solve it. If you try to trace after the reading_keyboard routine, you'll get crazy. Now let's use a completely different technic, it's like dead listing but live at the same time; call it "zombi listing": launch Game Wizard 32 Pro and use the advanced search. (It's like the snap compare we used with DOS-softice in +ORC's lesson 1... a search for values that change/not change when the target runs). We know that when we launch the demo the game starts pressing "S", but when we finish the first run and press "S" again nothing happens... the target does not start. In this case, even a stupid censor would be aware that a flag is used for disabling any further start. I supposed (and I was right) that the flag was changed just after begining to play. The flag has two states: flag off--------*------------------flag on---------->launch-&gt;presenting...-&gt;press &quot;S&quot;-&gt;play&amp;lose-&gt;presenting...-&gt;escape
+
+	So when we know that the flag is off, we search for values that don't change. 
+Press &quot;s&quot; and start, search (JUST ONCE) for a memory change, then search again for
+no-change values (the flag remains on).Escape, and search once for a change (the 
+flag is off now). You have to run the game several times (I needed six or seven) 
+until you get a table (about 70)of memory location that behaves the way you said.
+Following your zen-cracking feelings get only the group that toggles between 1 
+and 0 (about 6 locations) and try to freeze it when the flag is off. I was very 
+lucky 'cause the first value of the list was the flag.
+
+flag off =0
+flag on  =1
+
+The only problem is to translate that memory location to the identifier number 
+inside the dead listing. Get with Game Wizard the location of our [76f0] (number of 
+balls) using search and use the offset to translate the equivalent memory 
+number in the dead listing . Just find when is set to 1 and we got our job done. Aja, 
+the number acording to our wdasm listing is [225c], and look: it is changed here:
+
+:0000DE68 7515                    jne 0000DE7F
+:0000DE6A BD01000000              mov ebp, 00000001 ;bad flag
+:0000DE6F B800001E00              mov eax, 001E0000
+:0000DE74 892D5C220000            mov [0000225C], ebp ;<<<<<<<< :0000DE7A A3B06C0000 mov [00006CB0], eax :0000DE7F A1C07F0000 mov eax, [00007FC0] :0000DE84 8B1DB06C0000 mov ebx, [00006CB0] :0000DE8A 90 nop ; look, the time protection :0000DE8B 90 nop ; that we have disabled :0000DE8C BAB06C0000 mov edx, 00006CB0 :0000DE91 891DB06C0000 mov [00006CB0], ebx These memory locations are a real "hot area". Search for 7515BD01000000 and change it to 7515BD00000000 (that naughty bit again). Come on try, it's easier to do than to explain. It took me just 25 minutes. Well it's time to enjoy the game, by far the most realistic pinball game I know (let me know if I'm wrong). DAMAGE MICRO$OFT AND ITS PLUG&PRAY FATWARE. AND REMEMBER: "Long is the way and hard, that out of Hell leads up to the light." (c) April 1997 siuL Hacky </pre>
+
+<hr><center>
+<i>a small addition by fravia+...<br>
+usually this kind of games have &quot;hidden&quot; switches, that allow the programmers 
+to play undisturbed with infinite balls and times in order to test them. I just
+tried here to substitute to</center></i><pre>
+:00000F5F BB03000000              mov ebx, 00000003 ;<<< HERE! not :00000F5F BB01000000 mov ebx, 00000001 as out good friend siuL (vale amigo!) reccomends, but :00000F5F BBFFFF0000 mov ebx, 0000FFFF </pre><center><i> 
+and I got infinite balls (which may be less &quot;respectful&quot; of the original 
+settings of this game than siuL's crack, but may be funny for people  
+interested in extra functions THAT ONLY CRACKED VERSIONS CAN GIVE, that 
+you would not find in the original programs :-)
+<br></center></i>
+<center><hr ALIGN="CENTER" WIDTH="100%" SIZE="3">
+<center><i>You are deep inside fravia's page of reverse engineering,  
+choose your way out:</i></center>
+<br>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="tppmsgs/msgs2.htm#255" tppabs="http://ftp.fravia.org/tppmsgs/msgs0.htm#84"> homepage</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"> 
+<a HREF="tppmsgs/msgs2.htm#255" tppabs="http://ftp.fravia.org/tppmsgs/msgs0.htm#73"> links</a> 
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALT="red" ALIGN="BOTTOM" WIDTH="13" HEIGHT="13" BORDER="0" VSPACE="0" HSPACE="0">
+<a HREF="noanon.htm" tppabs="http://ftp.fravia.org/noanon.htm"> anonymity</a> 
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="orc.htm" tppabs="http://ftp.fravia.org/orc.htm"> +ORC</a>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="tppmsgs/msgs8.htm#846" tppabs="http://ftp.fravia.org/students.htm"> student</a>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">
+<a HREF="tools.htm" tppabs="http://ftp.fravia.org/tools.htm"> tools</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">
+<a HREF="cocktail.htm" tppabs="http://ftp.fravia.org/cocktail.htm"> cocktails</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">
+<a HREF="searengi.htm" tppabs="http://ftp.fravia.org/searengi.htm"> search_forms</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">
+<a HREF="info.htm" tppabs="http://ftp.fravia.org/info.htm"> mailFraVia</a></center>
+<center><hr ALIGN="CENTER" WIDTH="100%" SIZE="2"></center>
+<i>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13">Fravia 26 Apr 1997
+</i>
+</body>
+</html>
+
+

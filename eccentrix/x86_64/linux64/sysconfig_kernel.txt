@@ -1,0 +1,75 @@
+## Path:	System/Kernel
+## Description:	Modules to load from initrd
+## Type:	string
+#
+# This variable contains the list of modules to be added to the initial
+# ramdisk by calling the script "mk_initrd"
+# (like drivers for scsi-controllers, for lvm or reiserfs)
+#
+INITRD_MODULES="jbd ext3"
+
+## Path:		System/Kernel
+## Description:		Modules to load after initial boot
+## Type:		string
+## ServiceRestart:	boot.loadmodules
+#
+# This variable contains the list of modules to be loaded
+# once the main filesystem is active
+#
+MODULES_LOADED_ON_BOOT=" cdrom ide-cd ide-scsi sg sr_mod soundcore snd_via82xx snd_pcm_oss snd_mixer_oss snd_ioctl32 snd_seq snd_timer powernow-k8 proc_intf freq_table cpufreq_userspace ppp_generic ppp_async"
+
+## Description: ACPI DSDT (Differentiated System Description Table)
+## Type:        string
+## Default:     ""
+#
+# The file name of a binary ACPI Differentiated System Description Table
+# (DSDT). This table is appended to the initial ram disk (initrd) that
+# the mkinitrd script creates. If the kernel finds that its initrd
+# contains a DSDT, this table replaces the DSDT of the bios. If the file
+# specified in ACPI_DSDT is not found or ACPI_DSDT is empty/not specified,
+# no DSDT will be appended to the initrd.
+# Example path /etc/acpi/dsdt
+#
+ACPI_DSDT=""
+
+## Description:	tmpfs/shmfs memory limit
+## Type:	integer
+#
+# Size parameter for mounting the tmpfs/shmfs filesystem. The kernel defaults
+# to 50% of the available RAM size, but this might not be enough for
+# some special setups.
+#
+SHMFS_SIZE=""
+
+## Description: Minimum timeslice for CPU scheduling
+## Type:	integer(1000:50000)
+## Default:	1000
+#
+# Length of the shortest timeslice a process (with lowest priority / maximum 
+# niceness) will be running on a CPU. Time is given in microseconds (us).
+# This time should be much shorter than SCHED_MAXTIMESLICE to keep the
+# nice values meaningful. The values can only be specified up to a accuracy
+# of 1/HZ s, i.e. 10000us on a HZ=100 system, 1000us if HZ=1000.
+# Note that the boot script (boot.sched) does scale the values if the 
+# MINTIMESLICE is below the minimum for the timer interrupt frequency (HZ 
+# value) of the booted kernel.
+# For interactive desktop use, SCHED_MINTIMESLICE/SCHED_MAXTIMESLICE values
+# of 1000 and 30000 are recommended. For non-interactive use, multiply both
+# values by 10 or 20.
+# 
+SCHED_MINTIMESLICE=""
+
+## Description: Maximum timeslice for CPU scheduling
+## Type:	integer(20000:1000000)
+## Default:	40000
+#
+# Length of the longest timeslice a process (with highest priority / minimum
+# niceness) will be running on a CPU. Time is given in microseconds (us).
+# This time should be much longer than SCHED_MINTIMESLICE to keep the
+# nice values meaningful. (The boot.sched script will not accept the value
+# if there's less than a factor of three in between them, default is 30.)
+# For interactive desktop use, SCHED_MINTIMESLICE/SCHED_MAXTIMESLICE values
+# of 1000 and 30000 are recommended. For non-interactive use, multiply both
+# values by 10 or 20.
+# 
+SCHED_MAXTIMESLICE=""

@@ -1,0 +1,103 @@
+! based on TDF shipping with BB .61
+
+toolbar:			raised gradient bevel1
+toolbar.color:			rgb:80/80/40
+toolbar.colorTo:		black
+toolbar.label:			Raised Gradient pipecross Bevel2
+toolbar.label.color:		rgb:40/40/20
+toolbar.label.colorTo:		rgb:c0/c0/40
+toolbar.label.textColor:	black
+toolbar.windowLabel:            Raised Gradient pyramid Bevel2
+toolbar.windowLabel.color:      rgb:black
+toolbar.windowLabel.colorTo:    rgb:80/80/40
+toolbar.windowLabel.textColor:  black
+toolbar.clock:			Raised Gradient pipecross bevel2
+toolbar.clock.color:		rgb:40/40/20
+toolbar.clock.colorTo:		rgb:c0/c0/40
+toolbar.clock.textColor:	black
+toolbar.button:			Raised gradient pipecross bevel1
+toolbar.button.color:		rgb:40/40/20
+toolbar.button.colorTo:		rgb:c0/c0/40
+toolbar.button.picColor:	black
+toolbar.button.pressed:		Flat Gradient Diagonal Bevel1
+toolbar.button.pressed.color:	rgb:20/20/10
+toolbar.button.pressed.colorTo:	rgb:60/60/20
+toolbar.justify:		center
+
+menu.title:			Raised Gradient pipecross Bevel1
+menu.title.color:		rgb:40/40/20
+menu.title.colorTo:		rgb:c0/c0/40
+menu.title.textColor:		black
+menu.title.justify:		center
+menu.frame:			raised Gradient elliptic Interlaced Bevel2
+menu.frame.color:		black
+menu.frame.colorTo:		rgb:80/80/40
+menu.frame.textColor:	rgb:c0/c0/80
+menu.frame.justify:		left
+menu.hilite:			raised gradient crossdiagonal bevel1
+menu.hilite.color:		rgb:40/40/20
+menu.hilite.colorTo:		rgb:a0/a0/40
+menu.hilite.textColor:		rgb:black
+menu.bullet:			triangle
+menu.bullet.position:		right
+
+window.title.focus:		raised bevel1
+window.title.focus.color:	rgb:80/80/40
+window.title.focus.colorTo:	rgb:black
+window.title.unfocus:		Raised Gradient Diagonal bevel1
+window.title.unfocus.color:	rgb:30/30/10
+window.title.unfocus.colorTo:	rgb:10/10/00
+
+window.label.focus:		raised Gradient pyramid Bevel1
+window.label.focus.color:	black
+window.label.focus.colorTo:	rgb:C0/C0/40
+window.label.focus.textColor:	black
+
+window.label.unfocus:		raised Gradient pyramid Bevel1
+window.label.unfocus.color:	black
+window.label.unfocus.colorTo:	rgb:80/80/40
+window.label.unfocus.textColor:	black
+
+window.button.focus:		sunken Gradient crossdiagonal Bevel2
+window.button.focus.color:	rgb:40/40/20
+window.button.focus.colorTo:	rgb:a0/a0/40
+window.button.focus.picColor:	black
+window.button.unfocus:		sunken gradient diagonal bevel2
+window.button.unfocus.color:	rgb:20/20/10
+window.button.unfocus.colorTo:	rgb:60/60/20
+window.button.unfocus.picColor:	black
+window.button.pressed:		Flat Gradient Diagonal Bevel1
+window.button.pressed.color:	rgb:20/20/10
+window.button.pressed.colorTo:	rgb:60/60/20
+
+window.frame.focusColor:	rgb:60/60/40
+window.frame.unfocusColor:	rgb:40/40/20
+
+window.handle.focus:		raised Gradient pyramid Bevel2
+window.handle.focus.color:	black
+window.handle.focus.colorTo:	rgb:a0/a0/40
+window.handle.unfocus:		raised Gradient pyramid Bevel2
+window.handle.unfocus.color:	black
+window.handle.unfocus.colorTo:	rgb:60/60/30
+
+window.grip.focus:		raised gradient pipecross bevel1
+window.grip.focus.color:	rgb:40/40/20
+window.grip.focus.colorTo:	rgb:a0/a0/40
+window.grip.unfocus:		raised gradient pyramid bevel1
+window.grip.unfocus.color:	20/20/10
+window.grip.unfocus.colorTo:	rgb:60/60/20
+
+borderWidth:			1
+bevelWidth:			1
+handleWidth:			5
+window.justify:			CenterJustify
+
+toolbar.font:                   lucidasans-10
+menu.title.Font:		lucidasans-10
+menu.frame.font:                lucidasans-10
+window.font:                    lucidasans-10
+menuFont:                       lucidasans-10
+titleFont:                      lucidasans-10
+
+borderColor:			rgb:00/00/00
+rootCommand:			bsetroot -gradient raisedellipticgradientinterlaced -from black -to rgb:80/80/40

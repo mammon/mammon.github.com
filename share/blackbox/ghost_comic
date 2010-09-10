@@ -1,0 +1,65 @@
+
+toolbar:				Flat Diagonal     Gradient Bevel1
+toolbar.label:				Sunken Horizontal Gradient Bevel1
+toolbar.clock:				Sunken Horizontal Gradient Bevel1
+toolbar.button:				Raised Diagonal   Gradient Bevel2
+toolbar.button.pressed:			Sunken Diagonal   Gradient Bevel2
+
+toolbar*color:				rgb:F0/F0/F0
+toolbar*colorTo:			rgb:80/80/80
+toolbar.label.color:			rgb:10/10/10
+toolbar.label.colorTo:			rgb:FF/40/0
+toolbar.button.color:			rgb:A0/A0/A0
+toolbar.button.colorTo:			rgb:40/40/40
+toolbar.button.pressed.color:		rgb:40/40/40
+toolbar.button.pressed.colorTo:		rgb:80/80/80
+toolbar.clock.color:			rgb:30/20/10
+toolbar.clock.colorTo:			rgb:FF/40/00
+toolbar.textColor:			rgb:F0/F0/F0
+
+window.focus:				Raised  Diagonal Gradient Bevel1
+window.unfocus:				Sunken  Diagonal  Gradient Bevel1
+window.focus.button:			Sunken  Diagonal  Gradient Bevel2
+window.unfocus.button:			Raised  Diagonal  Gradient Bevel2
+window.button.pressed:			Sunken Diagonal   Gradient Bevel2
+window.frame:				Sunken Solid               Bevel2
+
+window.frame.color:			rgb:80/80/80
+window.focus.color:			rgb:F0/F0/F0
+window.focus.colorTo:			rgb:80/80/80
+window.focus.button.color:		rgb:F0/F0/F0
+window.focus.button.colorTo:		rgb:80/80/80
+window.focus.textColor:			rgb:FF/40/00
+window.unfocus.color:			rgb:A0/A0/A0
+window.unfocus.colorTo:			rgb:20/20/20
+window.unfocus.button.color:		rgb:60/60/60
+window.unfocus.button.colorTo:		rgb:00/00/00
+window.unfocus.textColor:		rgb:00/00/00
+window.button.pressed.color:		rgb:40/40/40
+window.button.pressed.colorTo:		rgb:F0/F0/F0
+
+menu.title:				Raised Diagonal Gradient Bevel1
+menu.frame:				Sunken Diagonal Gradient Bevel1
+
+menu.title.color:			rgb:F0/F0/F0
+menu.title.colorTo:			rgb:80/80/80
+menu.frame.color:			rgb:F0/F0/F0
+menu.frame.colorTo:			rgb:60/60/60
+menu.frame.highlightColor:		rgb:C0/C0/C0
+menu.title.textColor:			rgb:20/20/20
+menu.frame.textColor:			rgb:40/40/40
+menu.frame.hiTextColor:			rgb:FF/40/00
+
+borderColor:				rgb:40/40/40
+handleWidth:				6
+bevelWidth:				2
+
+titleJustify:				Center
+menuJustify:				LeftJustify
+moveStyle:				Transparent
+
+titleFont:     -*-courier-bold-r-*-*-*-110-*-*-*-*-*-*
+menuFont:      -*-courier-medium-r-*-*-*-120-*-*-*-*-*-*
+
+rootCommand:  Esetroot -s ~/.blackbox/Backgrounds/ghost_comic.jpg
+

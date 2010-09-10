@@ -1,0 +1,102 @@
+
+ Introducing Windows 95 by Quantum / VLAD
+ 컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+  When VLAD started working on the Win95 problem (back when WinSurfer was
+  released), all we had to work with was the win32s update to win3.1 that
+  allowed win3.1 users to run (not very successfully) 32 bit win95/NT
+  applications.  Tracing through the code one day we noticed that every
+  exe started with loading the PE header with eax pointing to it and
+  jumping to the entrypoint (jmp [eax + 28h]).  So we changed the
+  entrypoint RVA to point to our code, pushed eax, did our code, popped
+  eax, and jumped to [eax + 28].  It worked, we had a win32s infector,
+  then we noticed we didn't actually have any way to infect.  There were
+  no ints and we really felt out of our depth and then to top it all off
+  we came across the ultimate way to go resident without infecting the
+  win3.1 shell and so PH33R was born.  About this time I left the scene
+  in an unexplainable burst of insane "oh my god I'm going to fail uni"
+  panic and that was about the end of the win32s/95/NT project.
+
+  Just recently, uni ended.  I was on holidays, bored out of my skull,
+  and running win95, so I decided I'd give it another go.  To my surprise
+  the jmp [eax + 28] was gone, it was just a byproduct of win32s.  Instead
+  I just calculated the distance between the end of the exe and the
+  entrypoint, calculated the start of the virus code and subtracted the
+  two.  It worked, I had a win95/NT infector.  That is, 'cept for a little
+  matter of calling API...
+
+
+  The Day the World Changed
+  컴컴컴컴컴컴컴컴컴컴컴컴�
+
+  In the beginning there were memory locations and we manipulated what
+  our computer did by peeking and poking.  And it was good.  But this
+  was not to last, for on the horizon was the "port" and slowly we
+  learnt to communicate with attached devices by puting values in, and
+  pulling values out, of specific ports.
+
+  After a while the computer was no longer young and we needed
+  something to keep things in check.  We needed a way to communicate
+  indirectly with the hardware and thus the interrupt was born.  Not
+  everyone liked the interrupt system but soon we all learnt to live
+  with it, to manipulate it, and use it to our advantage.
+
+  Everyone that is, except one group at Microsoft - the guys who were
+  writing a "revolutionary" GUI called "Windows".  These guys were
+  looking for a way to split all the functions that were once provided
+  by interrupts into seperate, shared files called Dynamic Link
+  Librarys (Dll's).  And so the Application Program Interface (API) was
+  born.  API's made calling functions just that little bit harder and
+  admittedly sometimes completely impossible.  But the guys at Microsoft
+  had not yet taken away our interrupts and we still had (some) control
+  over the system with DPMI.
+
+  Then the guys at Microsoft did it again.  Their latest concoction
+  eliminated interrupts and ports and yes, even memory locations.  For
+  "Windows 95/NT" is a true non-preemptive multitasking system or in
+  other words - a bully.  This ogre pushes programs around, squeezes
+  them into confined spaces, locks them out of restricted areas and,
+  worst of all, forces them into using a new, impossibly complex, method
+  of calling API.
+
+  Which brings us to...
+
+
+  One drunk night at Microsoft
+  컴컴컴컴컴컴컴컴컴컴컴컴컴컴
+
+  When the guys at Microsoft get drunk, they truly get drunk.  But rather
+  than running around with a cop's panties on their collective head and
+  stealing traffic cones, they designed a new call construct.
+
+  In the spirit of Windows 3.1, the guys at Microsoft chose against using
+  interrupts.  In some ways this was good - programmers dont need to check
+  to see if dll's are in memory (although they could), and they can state
+  what dll's they need.  The way that Microsoft achieved this is through
+  the Import and Export Tables.  The Import table lets the programmer state
+  what functions they need from which dll's.  The Export table lets the
+  provider of the dll specify what functions it provides.
+
+  The problem is, once the import table has been written it is set in stone.
+  There is no space to add any new entries and you cant move anything around.
+  Why ?  Well, mainly because of a certain jump table that can be ANYWHERE
+  in the exe.  To call an API the code calls a hardcoded address.  This
+  address points to an indirect jump which points to an entry in the import
+  table that is filled in (when the executable is loaded) with an address to
+  a similar jump table in the dll that pushes a value and jumps to the
+  function dispatcher which uses the values that are inserted in the dll's
+  export table.  To add an entry to the import table you would have to
+  move the current entries around so that you could fit it in.  This means
+  you have to change the jump table to point to the relocated entries, which
+  is impossible as the jump table can be ANYWHERE in the file and cannot be
+  located.
+
+  The New Frontier
+  ----------------
+
+  Windows 95 is a whole new platform.  It's a new challenge and although
+  a lot of things have been stacked against you - it IS possible.  So
+  get in there and start researching.  Research will be the end-all of
+  the VX/AV war, one way or the other.
+
+

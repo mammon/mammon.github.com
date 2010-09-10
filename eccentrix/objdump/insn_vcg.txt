@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+# insn_vcg.pl -- generate a .vcg file for the disassembly
+
+my $file = shift;
+my %insn, $i, $prev;
+my %vertices, my %edges;
+
+if (! $file ) {
+        $file = "-";
+}
+open( A, $file ) || die "unable to open $file\n";
+
+foreach (<A>) {
+	if ( /^INSN|/ ) {
+		chomp;
+		$i = new_insn( $_ );
+
+		$vertices{$$i{addr}} = $i;
+
+		# create edge leading to call/branch target
+		if ( $$i{mtype} eq "INSN_BRANCH" ) {
+			if ( $$i{stype} eq "OP_ADDR" ) {
+				push @edges, 
+					new_edge($$i{addr}, $$i{src}, "jmp");
+			}
+		} elsif ( $$i{mtype} eq "INSN_BRANCHCC" ) {
+			if ( $$i{stype} eq "OP_ADDR" ) {
+				push @edges, 
+					new_edge($$i{addr}, $$i{src}, "jcc");
+			}
+		} elsif ( $$i{mtype} eq "INSN_CALL" ) {
+			if ( $$i{stype} eq "OP_ADDR" ) {
+				push @edges, 
+					new_edge($$i{addr}, $$i{src}, "call");
+			}
+		}
+
+		# create edge leading to next insn
+		if ( $prev and
+		     $$prev{mtype} ne "INSN_BRANCH"  and
+		     $$prev{mtype} ne "INSN_RET" ) {
+			# edge{ from = $prev_insn, to = $i, type = "" }
+			push @edges, new_edge($$prev{addr}, $$i{addr}, "next");
+		}
+
+		$prev = $i;
+	} 
+}
+close (A);
+
+
+# VERTEX { insn => $insn }
+# EDGE { from => $vertex, to => $vertex, type => "call" | "jcc" | "jmp"
+
+foreach ( @edges ) {
+	$f = $vertices{$$_{from}};
+	$t = $vertices{$$_{to}};
+	$type = $$_{type};
+	print "EDGE ($type)From $$f{addr} to $$t{addr}\n";
+
+}
+#foreach ( sort keys %vertices ) {
+#	$i = $vertices{$_};
+#	print "VERTEX $$i{addr}";
+#	if ( 
+#}
+
+# generate new instruction struct from line
+sub new_insn {
+	local($line) = @_;
+	local(%i, $jnk);
+	# change this when input file format changes!
+	( $jnk, $i{addr}, $i{name}, $i{size}, $i{bytes},
+	  $i{mnem}, $i{mtype}, $i{src}, $i{stype},
+	  $i{dest}, $i{dtype}, $i{arg}, $i{atype}, $i{xrefs} ) = 
+		split '\|', $line;
+	return \%i;
+}
+
+sub new_edge {
+	local ($from, $to, $type) = @_;
+	local (%e);
+
+	$from =~ s/^0[xX]//;
+	$to =~ s/^0[xX]//;
+	$e{from} = $from;
+	$e{to} = $to;
+	$e{type} = $type;
+	
+	return \%e;
+}

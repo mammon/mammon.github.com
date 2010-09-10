@@ -1,0 +1,112 @@
+<html>
+<head>
+  <meta NAME="GENERATOR" CONTENT="The very stupid software protection of techfacts95 v1.3">
+  <title>siuldre2.htm</title>
+</head>
+<body BGCOLOR="#C0C0C0" TEXT="#001010" VLINK="#405040">
+<p><center><font SIZE="+3">&quot;Mental&quot; cracking: techfacts95 v1.3<br>
+</font><font SIZE="+2">Am I dreaming?</font>
+</center>
+
+<h4><center><i>by SiuL+Hacky</i><br><img SRC="stupid.gif" tppabs="http://ftp.fravia.org/stupid.gif" ALT="stupid" ALIGN="BOTTOM" WIDTH="114" HEIGHT="43" BORDER="0" VSPACE="0" HSPACE="0"><br><br>
+(04 September 1997, slightly edited by fravia+)</center></h4>
+
+<center><hr><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"> Courtesy of fravia's page of reverse engineering<br>
+<hr><i>Well... there is not much to add... an &quot;immaterial&quot; crack... I have 
+never seen something like this</i></center><hr size="6"><pre>
+
+AM I DREAMING ?
+I was really surprised with this program. It is useful, one of +our tools: 
+techfacts95 v1.3 (get it at fravia's). This nice program may be used one 
+zillion years without registering, and now I know why. 
+The only annoying feature is a nasty nag window at start, so I decided to 
+award it with some workshopping.
+
+If you do it, you'll realize there are no &quot;typical-dialog&quot; resources. 
+The nag is cleary identified as TMYSPLASH, but the dialogs are not 
+available in the usual way. I don't know if it is on purpose. 
+For one moment I hoped it could be a tough protection scheme...
+
+When filling the registration (wrongly of course) you receive a short 
+&quot;Registration Key Failed!&quot;. Ok, wdasm it and you'll see firstly that 
+there are no imported dialog-resources and secondly this incredibly 
+stupid code snippet:
+
+:0047B934 E89B73F8FF              call 00402CD4; << c'mon PATCH ME! :0047B939 0F8528010000 jne 0047BA67 ... some lines, calls and still no jumping... (how mysterious :-) :0047BA39 5A pop edx :0047BA3A 59 pop ecx :0047BA3B 59 pop ecx :0047BA3C 648910 mov dword ptr fs:[eax], edx :0047BA3F 6854BA4700 push 0047BA54; &gt;- pushing address! * Referenced by a Jump at Address:0047BA52(U) | :0047BA44 8B45F4 mov eax, dword ptr [ebp-0C] :0047BA47 E8B075F8FF call 00402FFC :0047BA4C C3 ret; <<< return to :47BA54 ; DO THEY THINK WE ARE STUPID? ; LOOK AT THESE SILLY JUMPS! :0047BA4D E9B67AF8FF jmp 00403508 :0047BA52 EBF0 jmp 0047BA44 * Possible StringData Ref from Code "Obj.class" tppabs="http://ftp.fravia.org/Obj.class">&quot;Registration Key accepted!&quot;
+                                  |
+:0047BA54 B898BB4700              mov eax, 0047BB98	  &gt;-pushed address!
+:0047BA59 E83EBEFBFF              call 0043789C
+:0047BA5E C6051AF34C0000          mov byte ptr [004CF31A], 00
+:0047BA65 EB11                    jmp 0047BA78
+
+* Referenced by a Jump at Address:0047B939(C)
+|
+:0047BA67 6A30                    push 00000030
+
+* Reference To: user32.MessageBeep, Ord:0000h
+                                  |
+:0047BA69 E822A7F8FF              Call 00406190
+
+* Possible StringData Ref from Code Obj -&gt;&quot;Registration Key Failed!&quot;
+                                  |
+:0047BA6E B8BCBB4700              mov eax, 0047BBBC
+:0047BA73 E824BEFBFF              call 0043789C
+
+I can't believe, an old one. I thought I could only find this kind of 
+protections at our +HCA (Historical Cracking Archive :-) 
+At times I feel lazy about restarting a session with softice, so I 
+recommend you to use sometimes Wdasm <u>as a debugger</u>, yeah. 
+It carries some advantages:
+
+* You have always in front of you your wdasmed dead-list (references...)
+* There's a nice API analyzer (for checking parameters)
+* The GUI is a little bit friendlier :-)
+* You may switch among tasks while your babe is stopped.
+
+Of course it is less powerful (a lot less), and more buggy. 
+Also single stepping presents some problems when modifying things 
+on-the-fly... but try it out in some cases, just to learn how to use 
+an alternative debugger. 
+
+Well, I placed on the conditional jump, and changed on-the-fly zero-flag, 
+and so I became a good guy. 
+I was awaiting the famous &quot;thank you for your support&quot; and so on, you know,
+kind of boring; it did (and crashed a little bit :-) but BELIEVE IT OR NOT 
+changing this flag on the fly, registered me for ever and ever, from ages 
+to ages, until the futurer golden aera when nobody will be aware of what 
+was Micro$oft. I repeat: I did not have to PATCH THE REAL CODE with an 
+hexeditor!
+It is close to mental cracking (the top of zen cracking), you crack this 
+without &quot;touching&quot; a single bit of the code. You may be able to fight against the 
+toughest forces of evil, yet you'll not be able to unregister it, unless 
+you reinstall it from scratch.   
+
+May be I was right introducing a random code :-D
+
+Come on &quot;Dean Software Design&quot; guys, give it out for free.
+
+SiuL+Hacky
+
+</pre><font color="green">
+(c) SiuL+Hacky, 1997. All rights reversed.</font>
+		<hr size="2">
+<center><i>You are deep inside fravia's page of reverse
+engineering, choose your way out:</i></center>
+
+
+<p><center>
+
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="project7.htm" tppabs="http://ftp.fravia.org/project7.htm">Back to project 7 </a>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="tppmsgs/msgs2.htm#255" tppabs="http://ftp.fravia.org/tppmsgs/msgs0.htm#84">homepage </a>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"> <a HREF="tppmsgs/msgs2.htm#255" tppabs="http://ftp.fravia.org/tppmsgs/msgs0.htm#73">links
+</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALT="red" ALIGN="BOTTOM" WIDTH="13" HEIGHT="13" BORDER="0" VSPACE="0" HSPACE="0" NATURALSIZEFLAG="0"> <a HREF="noanon.htm" tppabs="http://ftp.fravia.org/noanon.htm">anonymity
+</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="orc.htm" tppabs="http://ftp.fravia.org/orc.htm">+ORC </a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="tppmsgs/msgs2.htm#255" tppabs="http://ftp.fravia.org/tppmsgs/msgs0.htm#82">students' essays </a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="tools.htm" tppabs="http://ftp.fravia.org/tools.htm">tools
+</a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="cocktail.htm" tppabs="http://ftp.fravia.org/cocktail.htm">cocktails </a><br>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="academy.htm" tppabs="http://ftp.fravia.org/academy.htm">academy database </a>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="ideale.htm" tppabs="http://ftp.fravia.org/ideale.htm">antismut </a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="searengi.htm" tppabs="http://ftp.fravia.org/searengi.htm">search_forms </a><img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="info.htm" tppabs="http://ftp.fravia.org/info.htm">mail_fravia
+</a><br>
+<img SRC="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" ALIGN="BOTTOM" BORDER="0" VSPACE="0" HSPACE="0" WIDTH="13" HEIGHT="13"><a HREF="legal.htm" tppabs="http://ftp.fravia.org/legal.htm">is reverse engineering legal? </a></font></center></p>
+
+<p><center><font SIZE="-1"><hr></font></center>
+</body>
+</html>

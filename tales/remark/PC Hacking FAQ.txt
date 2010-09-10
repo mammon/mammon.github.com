@@ -1,0 +1,706 @@
+
+                     ==------------------==
+                       The PC Hacking FAQ
+                     ==------------------==
+
+                      Version 1.5 3/17/96
+
+----------------------------------------------------------------
+           Written By Olcay Cirit, <olcay@libtech.com>
+----------------------------------------------------------------
+DISCLAIMER: The author of  this  text  disclaims  all  liability 
+whatsoever  regarding  the use and/or misuse of  the  techniques
+outlined  here  or any damages incurred directly  or  indirectly
+thereof. 
+
+
+                       Table of Contents
+                     -=-=-=-=-=-=-=-=-=-=-
+                  X. Introduction
+                  1. Hardware and Firmware
+                      a. The BIOS
+                           Passwords
+                           Resetting the CMOS
+                      b. Floppy Locks
+                           Picking Them
+                           Buying them
+                      c. Last Resorts
+                           Hard Disk Extraction
+                  2. DOS, Windows, and Netware
+                      a. Getting access to DOS
+                           Boot from a floppy disk
+                           Bypass startup files
+                           Bypass DriveSpace
+                           Break out of Autoexec.bat
+                      b. Getting Past Windows
+                           Screen Savers
+                           Password Protection
+                           DOS Using Write 
+                           DOS Using Word
+			   DOS through MODE
+                      c. Getting Past Netware
+                           Common Account Names
+                           Resetting Netware
+                  3. Building a SECURE system
+                      a. Understanding the Issues
+                           Potential "Hackers"
+                           Physical Security
+                           Software Security
+                           Passwords
+
+----------------------------------------------------------------
+
+X. Introduction
+
+This FAQ describes how to break-in to a PC (IBM-Compatible) 
+from the outside in, and how to bypass most software-based
+security measures. The last section details how to secure your
+PC against such attacks.
+
+Hi's and Ho's go out to: KORO the Great, Neil Chou, John 
+Lundgren and those really cool Netware Hackers! [Part 2c (Getting 
+past Netware) is based on parts of the Netware Hacking FAQ!]
+
+Why did I write this? Because there were just so many 
+questions on alt.2600 concerning 'How do I get past XXXXX 
+security?' that I got tired of answering each one 
+individually. Expect to see this FAQ expand as I find more 
+bugs and holes in security software.
+
+Many of these solutions assume you have physical access to
+the PC. For example, you can't extract the hard disk or
+reset the CMOS over a network, but you can do it if you
+have access to the computer.
+
+This FAQ is *NOT* written to help computer thiefs, but rather
+it is intended to increase awareness of backdoors and
+inefficiencies in security programs. I DO NOT CONDONE 
+SCREWING UP OTHER PEOPLES' COMPUTERS AT ALL!!!!!! 
+
+Maybe after reading this you won't trust the non-existent 
+security offered by Windows 95 as much.
+
+I would like to note that few of these tricks are new. I
+simply rounded up everything that I could find and 
+what I could glean from personal experience into an
+organized file.
+
+If you have any questions or comments, feel free to contact me.
+
+Also, expect to see a version of this for the Macintosh,
+sometime... :)
+
+	Have Phun,
+
+	Olcay Cirit, <olcay@libtech.com> 
+	a.k.a, Deep Thought
+
+----------------------------------------------------------------
+
+1. Hardware and Firmware
+
+1a. The BIOS
+
+Passwords
+=========
+The BIOS, short for Basic Input/Output Services, is the control 
+program of the PC. It is responsible for starting up your computer, 
+transferring control of the system to your operating system, and 
+for handling other low-level functions, such as disk access.
+
+NOTE that the BIOS is not a software program, insofar as it is
+not purged from memory when you turn off the computer. It's 
+firmware, only it is permanently and unchangeably stored in
+the machine.
+
+A convenient little feature that most BIOS manufacturers include
+is a startup password. This prevents access to the system until
+you enter the correct password. 
+
+If you can get access to the system after the password has been
+entered, then there are numerous software-based BIOS password 
+extractors available from:
+
+ftp://oak.oakland.edu/simtel/msdos/sysutil/amis2990.zip
+
+
+Resetting the CMOS
+==================
+There is only one other way to get past the BIOS password. 
+It involves discharging the static memory (CMOS) used to store the 
+password and other system information. Once it is discharged, 
+however, you have to reset all the system settings by hand.
+
+****Follow these steps:
+
+	 1. Start up the computer
+		a. If the system allows it, enter the Setup Screen
+			(Usually by pressing F1, DEL or INS during 
+			the memory check)
+		b. Record all the Setup Information. Double Check.
+	 4. Turn off the computer
+	 5. Remove the casing, and put the computer on the ground in
+		such a way that you can see and access the side of 
+		the motherboard with the processor on it.
+	 6. Look at the motherboard. 
+		a. If you can see a round, disc-like battery, then
+			remove it, and let the computer sit without 
+			the battery for 15-30 minutes. Put the battery 
+			back in.
+		b. If you have access to the circuit diagrams for the
+			motherboard, look in them for the password or
+			CMOS jumper. Flip it on and off.
+		c. Look for a blue, soldered-in battery with a jumper
+			running off of it. This jumper is for connecting
+			an external battery. Pull it out to reset the
+			CMOS.
+	 9. Replace the computer casing.
+	10. Enter the Setup Screen, and set the Setup Information
+		back to the original values that you (hopefully)
+		recorded. If you were unable to record this info,
+		then you'll just have to set it up manually.
+		[NOTE: Some newer Plug & Play BIOSes have an 
+		autodetect feature that automatically sets-up the
+		hard disk. Look around in the menu items in the
+		BIOS setup.]
+
+Again, I would like to mention that there are numerous password
+extractors available for free off the internet and on BBSes. Try those
+first. They are much cleaner and easier-to-use.
+
+----------------------------------------------------------------
+
+1b. Floppy Locks
+
+Floppy Locks are generally cheap plastic inserts that hook on 
+to the inside of the drive and lock it, thereby preventing you from
+using the floppy drive. The locks used are usually those little
+swivel locks used in computer casings to lock the keyboard.
+
+If the lock is the swivel type, you can either pick it, or
+buy a key (they're all the same).
+
+To pick it, you'll need a *thin* flathead screwdriver
+or a paperclip. To pick the lock, take the paperclip and insert it 
+into the little notch on the inside of the swivel lock. Now, pull to 
+the opposite side of the lock until the swivel is in the unlocked 
+position.
+
+If you choose to buy a key, you can:
+
+	A. Go to your local computer service center, and buy
+		one of these keys. (Very cheap. Often less than
+		$0.75)
+	B. Buy the same brand of floppy lock, and use the key
+		that comes with it.
+
+----------------------------------------------------------------
+
+1c. Last Resorts
+
+If you are *REALLY* desperate to break-in to this PC, then 
+the following *might* work:
+
+	1. Remove the PC Casing
+	2. Extract the hard disk (By unscrewing and disconnecting)
+	3. Transfer it to another computer. (Make sure that it is
+		NOT set as the boot drive.)
+	4. Start up this computer, and access the
+		hard disk from there.
+
+This will probably not work if an encrypted file system is in
+use. The only way to access such disks is to enter the password, 
+or figure out a way to decrypt it, so if you forget your password,
+you're hosed. :(
+
+----------------------------------------------------------------
+
+2. DOS, Windows, and Netware
+
+2a. Getting access to DOS
+
+With some systems, they are set up to boot directly to some sort 
+of shell/security program, like Windows, or Windows 95. If you
+want to get access to a DOS prompt, you have some choices:
+
+	A. Boot from a floppy disk
+	B. Bypass startup files
+        C. Bypassing DriveSpace
+	D. Break out of Autoexec.bat
+
+***Booting from a floppy requires you to create a system disk. 
+You can do this using the DOS command FORMAT /S which will 
+format a disk and place system files on it. Also, the Windows 
+format has an option allowing you to create a system floppy.
+
+Before you create a system disk, you must determine which
+floppy drive is used to boot. If the system has both a
+1.2MB (5.25") Floppy Drive and a 1.44MB (3.5") Drive, it is likely
+that the boot drive is the 1.2 MB floppy drive. If the computer
+has only one floppy drive, it is quite safe to assume that it is
+the boot drive.
+
+However, if you are unsure as to which drive is the boot drive,
+you can either find out by entering System Setup (as described
+in section 1) or by observing which floppy drive is read right
+before the operating system loads.
+
+If the system is set to boot only from the hard disk, then you
+can refer to Section 1 on how to reset the CMOS.
+
+Once you have a system disk, you place it in the floppy drive,
+and turn on or reset the computer. If you have done everything
+right, the computer will boot from the floppy drive and you will
+have access to a DOS prompt.
+
+***Bypassing startup files is quite simple, but only works on 
+versions of DOS 6.0 or better and Windows 95. When you turn on 
+the computer and you see the text:
+
+	Starting MS-DOS ...
+
+or
+	Starting PC-DOS ...
+
+or 
+	Starting Windows 95 ...
+
+Press and hold the SHIFT or F5 key IMMEDIATELY. This will bypass 
+the startup files (CONFIG.SYS and AUTOEXEC.BAT) as long as the 
+system administrator has not disabled this feature.
+
+Additionally, you can press and hold F8 when the startup 
+text shows to enter the Boot menu. This lets you selectively
+disable certain commands, or bypass the startup files totally,
+among other things.
+
+***Bypassing DriveSpace works if compression software such as
+DriveSpace or DoubleSpace has been installed. If so, when
+the startup text displays, press and hold Ctrl+F5 or Ctrl+F8.
+This will load the system without loading the compression
+driver, which means you can't access the files on disk. 
+
+HOWEVER, you can decompress the disk (DriveSpace only), or,
+if all else fails, format it.
+
+***Breaking out of AUTOEXEC.BAT is rather simple also. When the 
+computer starts up and the operating system starts loading, press 
+Ctrl+Break (Or Ctrl+C) repeatedly. When the AUTOEXEC.BAT executes, 
+this will terminate it and drop you to DOS. This will work unless
+the System administrator temporarily disabled the keyboard.
+
+----------------------------------------------------------------
+
+2b. Getting to DOS from Windows
+
+If the above tactics fail, and the machine automatically loads
+Windows, then you still have a chance of getting to DOS. Windows
+by default gives you free access to DOS. There are special security
+programs to prevent the user from accessing DOS. Most of these
+can be bypassed.
+
+Screen Savers
+=============
+The password protection built-in to Windows 3.1 is extremely weak.
+You can bypass it by simply editing CONTROL.INI and searching for 
+the Password field. Delete the junk that appears after the equal
+sign.
+
+The password protection in Windows 95 is much stronger, but you can
+still bypass it by *carefully* moving or renaming all .PWL files 
+in the C:\Windows directory.
+
+Password Protection
+===================
+
+Q: Windows starts up, and you are presented with yet another 
+	password dialog box. What do I do?
+
+A:
+**If this is the Primary Windows Logon or a Network logon, then you 
+can usually get past it by pressing the Cancel button (No Joke!).
+This is because the Logon information is used primarily for desktop
+preferences and remote file sharing.
+
+**If this is a third-party security program, such as the one built-in
+to After Dark, try pressing Ctrl+Alt+Del when the dialog is
+presented to you. Most security programs go out of their way to
+be secure, and Windows 3.1 interprets this as not responding to 
+the system, and thus will allow you close it. Windows 95 pops up
+a neat little dialog box that lets you terminate any running 
+application. How convenient. :) Once you subvert this, you can
+prevent it from bothering you again by editing the LOAD= and 
+RUN= sections in C:\WINDOWS\WIN.INI.
+
+Q: Windows starts up, and program manager loads, but the File menu
+	is disabled, and so is DOS and File Manager. How can I access
+	DOS???
+
+A: There are many Security programs for Windows (3.1 *AND* 95) that 
+	do this, and other things. There are a few ways around them:
+
+**Try this first: 
+
+DOS through Write
+=================
+	1. Go into Accessories, and start up Write (or Wordpad)
+		NOT, I REPEAT NOT, NOTEPAD!!
+	2. Open C:\COMMAND.COM
+	3. A little dialog box will pop up. Select NO CONVERSION
+	4. Select Save As...
+	5. Save it as C:\WINDOWS\WINHELP.EXE
+	6. If it asks if you want to overwrite WINHELP.EXE, choose
+		YES
+	7. Press F1. Normally, this loads Windows Help, but now it
+		will create a DOS prompt window.
+
+**Try this next:
+
+DOS through Word
+================
+	1. If they have Microsoft Word installed, start it up.
+	2. From the Tools Menu, select Macro.
+	3. Type in a Macro name, and click "Create"
+	4. When the Macro window comes up, type in one of the
+		following depending on which Windows you are using:
+
+		  For Windows 3.1: Shell Environ$("COMSPEC") 
+		  For Windows  95: Shell Environ$("COMMAND") 
+		  For Windows  NT: Shell Environ$("CMD")
+
+		If all else fails: Shell "C:\COMMAND.COM"
+
+	5. Run the macro by pressing the little play button on the
+		macro toolbar. This will launch a DOS prompt.
+
+**If you're using Windows 95, try this:
+
+DOS through MODE
+================
+When Windows 95 Shuts Down and shows that dumb graphic, it's
+really just sitting on top of DOS. You can actually issue DOS
+commands (although the graphic will cover them) on the system 
+after shutdown!!
+
+A simple way to do this is to type:
+
+CLS
+
+After the graphic shows. However, the text will be in 40-column
+mode, which is hard to read, and incompatible with some programs.
+
+If you want to get a nice, clean DOS prompt, you can type:
+
+	MODE CO80
+
+This will reset the screen display to normal (80-column, 
+16 color) mode.
+
+Since *MOST* Windows Security programs are based on a VxD, they 
+will be unloaded (along with Windows) after shutdown, leaving 
+you free to explore using DOS.
+
+----------------------------------------------------------------
+
+2c. Getting past NetWare
+
+This section is based on excerpts from the Netware Hacking FAQ.
+
+Common Account Names
+====================
+Novell Netware has the following default accounts: SUPERVISOR, GUEST, 
+and Netware 4.x has ADMIN and USER_TEMPLATE as well. All of these have 
+no password set. Only a dummy would leave the SUPERVISOR and ADMIN 
+accounts unprotected, so you might as well not try. However, many 
+administrators will create special-purpose accounts that have 
+easy-to-guess names, some with no password at all. Here are a few of 
+the common ones and their typical purposes:
+
+Account         Purpose
+-------         ---------------------------------------------------
+POST            Attaching to a second server for email
+MAIL
+
+PRINT           Attaching to a second server for printing
+LASER
+HPLASER
+PRINTER
+LASERWRITER
+
+ROUTER          Attaching an email router to the server
+
+BACKUP          May have password/station restrictions (see below), 
+WANGTEK		used for backing up the server to a tape unit
+		attached to the workstation. For complete backups, 
+		Supervisor equivalence is required.
+
+TEST            A test user account for temp use
+
+ARCHIVIST       Palindrome default account for backup
+
+CHEY_ARCHSVR    An account for Arcserve to login to the server from    
+		from the console for tape backup. Version 5.01g's
+		password was WONDERLAND.
+
+GATEWAY         Attaching a gateway machine to the server
+GATE
+
+FAX             Attaching a dedicated fax modem unit to the network
+FAXUSER         
+FAXWORKS        
+
+WINDOWS_PASSTHRU Although not required, per the Microsoft Win95
+		Resource Kit, Ch. 9 pg. 292 and Ch. 11 pg. 401 you
+		need this for resource sharing without a password.
+
+
+
+Resetting Netware
+=================
+When NetWare is first installed, the account SUPERVISOR and GUEST
+are left unprotected, that is, with no password. SUPERVISOR has
+free run of the system. You can do anything you want.
+
+But how can you make the server think it has just been installed 
+without actually reinstalling the server and losing all data on 
+the disk? Simple. You just delete the files that contain the 
+security system! 
+
+In Netware 2.x, all security information is stored in two files 
+(NET$BIND.SYS and NET$BVAL.SYS). Netware 3.x stores that information 
+in three files (NET$OBJ.SYS, NET$VAL.SYS and NET$PROP.SYS). The all 
+new Netware 4.x system stores all login names and passwords in five 
+different files (PARTITIO.NDS, BLOCK.NDS, ENTRY.NDS, VALUE.NDS 
+and UNINSTAL.NDS [This last file may not be there, don't worry]).
+
+Although Novell did a very good job encrypting passwords, they let all 
+directory information easy to find and change if you can access the 
+server's disk directly, using common utilities like Norton's Disk Edit. 
+
+Using this utility as an example, I'll give a step-by-step procedure 
+to make these files vanish. All you need is a bootable DOS disk,  
+Norton Utilities' Emergency Disk containing the DiskEdit program and 
+some time near the server.
+
+1. Boot the server and go to the DOS prompt. To do this, just let the 
+   network boot normally and then use the DOWN and EXIT commands. This 
+   procedure does not work on old Netware 2.x servers and in some 
+   installations where DOS has been removed from memory. In those cases, 
+   you'll have to use a DOS bootable disk.
+
+2. Run Norton's DiskEdit utility from drive A:
+
+3. Select "Tools" in the main menu and then select "Configuration". 
+   At the configuration window, uncheck the "Read-Only" checkbox. And 
+   be very careful with everything you type after this point.
+
+4. Select "Object" and then "Drive". At the window, select the C: drive 
+   and make sure you check the button "physical drive". After that, 
+   you'll be looking at your physical disk and you be able to see 
+   (and change) everything on it.
+
+5. Select "Tools" and then "Find". Here, you'll enter the name of the 
+   file you are trying to find. Use "NET$BIND" for Netware 2, 
+   "NET$PROP.SYS" for Netware 3 and "PARTITIO.NDS" for Netware 4. It is 
+   possible that you find these strings in a place that is not the 
+   Netware directory. If the file names are not all near each other and 
+   proportionaly separated by some unreadable codes (at least 32 bytes
+   between them), then you it's not the place we are looking for. In 
+   that case, you'll have to keep searching by selecting "Tools" and 
+   then "Find again". [In Netware 3.x, you can change all occurences of 
+   the bindery files and it should still work okay])
+
+6. You found the directory and you are ready to change it. Instead of 
+   deleting the files, you'll be renaming them. This will avoid problems 
+   with the directory structure (like lost FAT chains). Just type "OLD" 
+   over the existing "SYS" or "NDS" extension. Be extremely careful and 
+   don't change anything else.
+
+7. Select "Tools" and then "Find again". Since Netware store the 
+   directory information in two different places, you have to find the 
+   other copy and change it the same way. This will again prevent 
+   directory structure problems.
+
+8. Exit Norton Disk Edit and boot the server again. If you're running 
+   Netware 2 or 3, your server would be already accessible. Just go to
+   any station and log in  as user Supervisor. No password will be asked. 
+   If you're running Netware 4, there is one last step.
+
+9. Load Netware 4 install utility (just type LOAD INSTALL at the console 
+   prompt) and select the options to install the Directory Services. You 
+   be prompted for the Admin password while doing this. After that, you 
+   may go to any station and log in as user Admin, using the password 
+   that you have selected.
+
+**NOTE: If Disk Edit is unavailable, any Disk Editing utility with 
+ searching capabilities will suffice.
+
+----------------------------------------------------------------
+
+
+3. Building a SECURE System
+
+3a. Understanding the Issues
+
+Potential "Hackers"
+===================
+After reading this FAQ, you've probably revised your idea of a
+secure PC quite a bit. Truth be told, IBM didn't design the Personal 
+Computer with security in mind. Back in 1980, their main objective was 
+to get _something_ to market before Apple gobbled up all the market 
+share.
+
+After awhile, security programs started to emerge that attempted
+to bridge this gap. These were quite popular, and were put into use
+by many companies to prevent 'curious' employees from messing with
+the computers.
+
+However, ways to bypass these security programs were quickly found.
+As long as computers are designed for convenience, and with humans
+in mind, this will almost always happen.
+
+So, who are potential "Hackers"? The answer is: Anyone. Experienced
+users especially, but even newbies sometimes find weak spots. This
+is not to say that everyone *is* a hacker.
+
+As always, prevention is the best medicine. The following sections
+deal with how to secure your system, both through physical and
+software-based means.
+
+
+
+Physical Security
+=================
+In the old days, back when computers filled multiple rooms, the 
+security of a system was basically all physical: Locks, security
+guards, etc. Now the emphasis has shifted away from physical security,
+and is leaning more towards software-based methods. However, 
+in some cases, a certain degree of physical security is in order.
+
+**If you want to prevent people from resetting your CMOS and 
+accessing the floppy drives, etc. you have to secure the system 
+itself. This can be done by having the computer in a locked room, 
+leaving only the screen and keyboard accessible. There are many 
+products which let you extend the reach of screen and keyboard cables. 
+Even some that let you control many different computers using one 
+screen. 
+
+***To protect your hard disk data, I would suggest investing in a
+removable media system that lets you "hot-swap" and lock hard disks. 
+The hard disk could then be easily removed (with the *unique* key)
+and stored in a safe to prevent theft of data.
+
+***Computer locks which bind your computer to a desk are good for
+discouraging theft.
+
+***There are also security devices available made by companies such as
+Anchor Pad, Lucasey, and others that completely enclose the PC.  
+These are devices such as lockdown pads, cables for monitors, and 
+metal boxes. There are also devices that cover and lock the floppy 
+and CD-ROM slots.  
+
+Make sure that you test the computer immediately after these
+lockdown devices are installed. In some instances the stress induced
+on the casing can cause certain parts to malfunction.
+
+***You can buy devices that prevent the PC electrical cord from 
+being unplugged or turned on without a key.
+
+***As one last measure of security, it's always nice to invest in
+some insurance for your computer. It won't get your data back,
+but it *will* give you some peace of mind.
+
+
+Software-Based Security
+=======================
+Below is a list of measures you can take to secure your system using
+software/firmware based methods. They are listed in order of 
+increasing security, so minimum security would be only implementing
+option #1, maximum security would be implementing #1-8. Keep in
+mind that implementing any of these without implementing every item 
+below it leaves possible entry points open.
+
+	1. Set up a BIOS password for both the Setup screen *and*
+	   access to the system.
+		a. Make sure the password is not easily guessable
+			(i.e., birthdate, name backwards, etc. are
+			 easily guessed) See next section.
+		b. Make sure that the password is the maximum possible
+			number of characters supported by the BIOS.
+	2. Disable floppy booting from within the BIOS
+	3. Disable Bypass of startup files
+		a. This is done by adding the line:
+			SWITCHES=/F /N
+		   to the CONFIG.SYS file.
+		b. Additionally, you might want to precede
+			all statements in the Autoexec.bat
+			with CTTY NUL, and then have CTTY CON
+			as the last line. This prevents breaking
+			out of autoexec.bat
+		c. If you use DriveSpace compression, add the
+			following line to your DRVSPACE.INI file:
+			SWITCHES=/F /N
+		d. Add the line:
+			BREAK OFF
+		   This reduces the number of chances you have to
+		   break out of AUTOEXEC.BAT, all though it doesn't
+		   switch it off entirely
+	4. Set up a DOS-based Security TSR
+		a. Make sure you cannot access the floppy drive
+			without a password, and that it allows
+			for write-protection.
+		b. Make sure it allows for password protection.
+	5. Set up a Windows-Based Security program
+		a. Make sure you can control which features of
+			Windows you can limit or disable.
+		b. Make sure it allows for password protection.
+	6. Install an encrypted filesystem program. (i.e., CryptDisk)
+		a. This will prevent access to the computer and
+			files on the hard disk unless the password
+			is entered. It will render your data 
+			unaccessible even if the hard disk is 
+			extracted from the system.
+	7. Delete the following files:
+		FORMAT
+		DELTREE
+		SUBST
+		JOIN
+		BACKUP
+		RESTORE
+		ATTRIB
+
+
+Passwords
+=========
+Passwords are generally the weakest link in the security chain.
+When choosing a password, remember these tips:
+
+Do NOT choose something obvious. Swear words, your birthdate,
+topics pertaining to what you do and/or your interests are are
+examples of BAD passwords.
+
+A Good Password is one that is totally random. To pick a password,
+try this: Grab a dictionary. Close your eyes, and flip to a 
+random page. With your eyes still closed, put your finger on a 
+random spot on this page. Remember the word, and do this again. 
+Combine the two words, and append a three-digit number to the end. 
+You also might want to intersperse non-alphanumeric characters 
+into the password in random ways, such as an odd dash or 
+apostrophe here and there.
+
+Also, NEVER write your password down. Always keep it in your head.
+A simple Post-It note on your monitor can bring down all the
+security that you so meticulously set up!
+
+A good password system hides the passwords from everyone, 
+including the system administrators. This means that the sys 
+admins cannot tell if the users are putting in weak passwords.
+
+One final note: When designing a security system, be sure to take
+the user into account. If a system is of such high-grade security
+that it is a nuisance to use, people will always find the lazy 
+way to do it. (Post-it Notes...)
+
+----------------------------------------------------------------
+
+

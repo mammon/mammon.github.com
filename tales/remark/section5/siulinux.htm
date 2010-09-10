@@ -1,0 +1,852 @@
+<html>
+
+<head>
+<title>SiuL+Hacky: linuxthechances.htm: LINUX GUIs. The Chances</title>
+</head>
+
+<body bgcolor="#C0C0C0" text="#001010" vlink="#405040">
+
+<table cellpadding="1" cellspacing="2" border="1" height="22" width="100%">
+  <tr>
+    <td>&nbsp;</td>
+    <td><p align="center"><!-- Choose  a TITLE probably wont be changed --> <font size="+2">Linux GUIs. The Chances.</font><br>
+    WordPerfect 7.0</td>
+    <td><p align="center"><!-- Choose  a PROJECT GIF may be changed --> <a href="ourtools.htm" tppabs="http://ftp.fravia.org/ourtools.htm" target><img src="ourtools.gif" tppabs="http://ftp.fravia.org/ourtools.gif"
+    alt="our tools" align="CENTER" width="114" height="43" border="0" vspace="0" hspace="0"></a>
+    <br>
+    <font color="gray">Our tools</font> </td>
+  </tr>
+  <tr>
+    <td bgcolor="#FFFFEA"><p align="center"><font color="890000">01 March 1998 </font></td>
+    <td bgcolor="#FFFFEA"><font size = +2><p align="center">by SiuL+Hacky</fonT></td>
+    <td valign="center" bgcolor="#FFFFEA">
+<center>
+<a href="hcu98_3.htm" tppabs="http://ftp.fravia.org/hcu98_3.htm"><img SRC="hcu1.gif" tppabs="http://ftp.fravia.org/hcu1.gif" ALT="+cracker" ALIGN="BOTTOM" WIDTH="114"
+
+HEIGHT="43" BORDER="0" VSPACE="0" HSPACE="0"></a></center></td>
+  </tr>
+  <tr>
+    <td><p align="center"><a href="index.html" tppabs="http://ftp.fravia.org/index.html" target><img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" align="BOTTOM"
+    border="0" vspace="0" hspace="0" width="13" height="13"></a></td>
+    <td bgcolor="898030"><p align="center">Courtesy of Fravia's page of reverse engineering </td>
+    <td bgcolor="898030">&nbsp;</td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td><p align="center">Well, an amazing essay by SiuL+Hacky, who seems to be the 
+mightiest Linux wizard reverser of this planet (if others are there, I have never noticed  
+their signs of life on the Web)<bR>Enjoy this great essay, that carries FUNDAMENTAL 
+teachings for linux reversers (of course) but also for anyone of +us!</td>
+    <td><center><a href="advanced.htm" tppabs="http://ftp.fravia.org/advanced.htm"><IMG SRC="xtranio.gif" tppabs="http://ftp.fravia.org/xtranio.gif" ALT="advanced" ALIGN=BOTTOM WIDTH=114 
+HEIGHT=43 BORDER=0 VSPACE=0 HSPACE=0></a>
+<br><font color=gray>Advanced</fonT></center></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td bgcolor="898030"><p align="center"><b>There is a crack, a crack in everything That's
+    how the light gets in</b> </td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td valign="MIDDLE" bgcolor="#C6E7C6"><p align="center"><font color="blue">Rating</font> </td>
+    <td valign="MIDDLE" bgcolor="#C6E7C6"><p align="center"><font color="blue"><!-- CHOOSE A RATING (may be changed) --> ()<b>Beginner</b>
+    ()<b>Intermediate</b> (x)<b>Advanced</b> ( )<b>Expert</font></b> </td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<!-- CORPUS  -->
+
+<p><br>
+<!-- CHOOSE A COMMENT (may be changed)  --></p>
+
+<hr>
+<font size="+2"><!-- CHOOSE A TITLE (wont proabbly be changed) -->
+
+
+<p align="center"><big>Linux GUIs. The Chances.</font><br>
+WordPerfect 7.0</big><font size="+2"> </font><br>
+<font color="0B7FC1"><!-- REPEAT YOUR CHOSEN HANDLE HERE --> Written by SiuL+Hacky </font><!-- INTRODUCTION STARTS HERE --> <br>
+</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Introduction</font><br>
+    </td>
+  </tr>
+</table>
+
+<p>Here is the investigation of Wordperfect 7.0 for linux, an important tool if you have to write
+some document but you don't want to get involved in LateX or some other scary unix text
+processor. Also it could be quite useful if you have old Word 6.0/7.0 documents that must
+be modified, or utilized some way. I realize there's a lack of a good WYSIWYG editor in
+linux, WordPerfect is not a perfect program, is overbloated $loware&nbsp; ( its marketing
+is even worse ) but, except StarOffice, is the only chance available.</p>
+
+<p>This "Wordperfect" snippet of mine is just a small part of this essay, devoted to give a more detailed
+description of X Applications, especially comercial X Applications using Motif, and this
+background information will help explainig some techniques for reversing these
+applications.</p>
+
+<p>Finally the usual review of useful tools of the trade, included an updated version of
+dasm.</p>
+
+<p>&nbsp;</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Tools required</font><br>
+    </td>
+  </tr>
+</table>
+<!-- PASTE HERE YOUR REQUIRED TOOLS -->
+
+<p><font color="#0000FF">Editres</font> ( available with any linux distribution )<br>
+<font color="#0000FF">Gdb</font> (apply the same)<br>
+<font color="#0000FF">Perl 5.00x </font>(apply the same)<br>
+<font color="#0000FF">Dasm</font> ( available in this essay for instance)<br>
+<font color="#0000FF">DDD </font>(optional) <a href="tppmsgs/msgs4.htm#463" tppabs="http://www.cs.tu-bs.de/softech/ddd">http://www.cs.tu-bs.de/softech/ddd</a>
+<br>
+</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Target's URL/FTP</font><br>
+    </td>
+  </tr>
+</table>
+<!-- DON'T FORGET TO PASTE HERE ALSO THE URL/FTP OF YOUR TARGET -->
+
+<p>Wordperfect not main site<br>
+<a href="tppmsgs/msgs4.htm#464" tppabs="http://www.sdcorp.com/demos/linux.htm">http://www.sdcorp.com/demos/linux.htm</a> </p>
+
+<p>&nbsp;</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Essay</font><br>
+    </td>
+  </tr>
+</table>
+<!-- PASTE HERE THE TEXT OF YOUR ESSAY     THIS IS OF COURSE THE MOST IMPORTANT PART
+
+    PLEASE CHECK THE MARGINS! SHOULD NOT BLAST     NETSCAPE MARGINS OUT! HAVE A LOOK
+
+INSIDE     YOUR OWN BROWSER WHEN YOU HAVE FINISHED!  -->
+
+<p><font face="Fixedsys"><br>
+</font><u><strong><font face="Times New Roman">1. GUI, THE CHANCES.</font></strong></u></p>
+
+<p>In the previous linux essays I tried to cover some basic concepts about Reverse
+Engineering linux apps. The first one was a presentation showing the basic tools that
+enable you to crack some basic programs, even without making a careful study of linux
+intrinsics. The second one was an example of how to crack XWindows programs, just using
+the information available and some common knowledge. </p>
+
+<p>What else ? Well, most commercial overbloated linux applications will not carry a
+complete symbol table ( as Acrobat Reader does ), therefore you'll need more than
+&quot;looking for suspicious&quot; names if you want to RE your favourite $loware. AFAIK,
+registration codes are not very popular in linux, but crippled/time limited programs are,
+so you need some MessageBox or something for lightning the dark deep sea of instructions.
+In the second essay we met some important words as &quot;widget&quot;, or functions as
+Xsomething or Xtsomething. I hope at the end of this essay everything will make sense
+properly.</p>
+
+<p><br>
+<br>
+</p>
+
+<p>The GUI in XWindows is rather different from the Windoze thing. XWindows lets you more
+freedom for using your own GUI, though the Object Oriented Scheme is mostly utilized. The
+basic frame for building applications is given by Xlib library, which is used by EVERY
+Xapplication. All these Xsomething functions are inside Xlib library. You can build your
+GUI with Xlib functions, but like they are low level functions, it seems really hard for
+programmers to use them and nothing but them. The next obvious step is to introduce the
+ubiquitous OOP stuff somehow, especially if you can introduce it without introducing
+anything at all :-D. It seems funny, but it is true, and that's what X Toolkit Intrinsics
+does. Its goal is to make it easier for programmers, though it just defines the
+&quot;theory&quot;, the skeleton of the object scheme made up of graphic objects named as
+WIDGETS. So, a widget is the basic frame for a graphic object, may be a button, a
+scrollist or whatever ( the Windoze concept of window may be useful as a comparison ) that
+must be build by the application. X Toolkit also start the joint between graphic objects
+and events ( it sounds better eh ? ). With the OOP behind, you may imagine that widget are
+classes, inheritance and bla, bla, bla ... The Xtsomething functions come from the X
+Toolkit Intrinsics. </p>
+
+<p>Each class has its own resources. Resources, another magic word and a wide-dangerous
+concept if you know Windoze resources ... is not the same. If you don't want to get
+confused, think of resources as variables of the graphic interface ( that may be
+initialized by the user ). One kind of resource, very important are callback lists, that
+joins events with functions. </p>
+
+<p>A third layer is necessary for making up the interface, you know, for drawing the
+buttons, repainting and so on. At this point of the way, you are not worried by speed, so
+better use some pre-cooked code; but firstly decide if you want to dig into your pocket
+for some money or you don't want. In the first group everybody uses Motif libraries and in
+the second Athenea Widget is very popular. Most commercial $loware uses motif for building
+their GUIs, but that doesn't mean you must buy motif for running those programs, instead
+you are punished with fat applications that got motif functions statically-linked. But
+what is that motif thing ? It turns your scaring-Xwindows application in a
+Windoze-look-like application, yes, motif apps look like Windoze programs ( more or less
+), and then everybody is happy.</p>
+
+<p><br>
+<br>
+Motif is copyrighted by OSF ( Open Software Fundation ), it is a standard. There's a
+project for developing free motif ( called lesstif ), but it's not been finished. Anyway
+it is worth a visit, even just to get function definition ( include files ):<br>
+<br>
+<a href="tppmsgs/msgs4.htm#465" tppabs="http://www.lesstif.org/">http://www.lesstif.org</a><br>
+<br>
+</p>
+
+<p>Nowadays outside $loware, there are a growing number of alternative (almost) free GUIs
+( another religion ) like GTK and Qt libraries. If we talk about these new graphic
+libraries, we must talk about Window Managers. They add some look and feel to the windows
+(borders more or less spartan)&nbsp; and some management capabilities (buttons and
+functions to handle windows, and some interface to run programs directly ). There are a
+lot ( some imitate w95 :-), and we'll not get into further details. </p>
+
+<p>What I wanted to remark, is that now there are two projects for building window
+managers based on GTK and Qt respectively. The philosophy is to extend the capabilities
+and give the manager with some packed-tools (mail, editor, file manager ... ) that use the
+same graphic lib, therefore everything looks the same way. This could be a
+&quot;restricting&quot; approach, but surely will make it easier to linux newbies. Well,
+the projects are kde (Qt) and gnome (GTK). Now you may realise there are several free
+alternatives to Motif in the future. </p>
+
+<p><br>
+<br>
+<font face="Times New Roman"><u><strong>2. SOME SPYING.</strong></u></font><br>
+<br>
+-- Ok, I'm the master of MessageBox breakpoints, what do I need in linux ?<br>
+-- Wait, wait, you'll see.<br>
+<br>
+</p>
+
+<p>First we must learn something about real world, how these programs act, the functions
+they call. Let's start with Xt details, it is important because motif libraries use them. </p>
+
+<p>Xt must be initialized, so the function XtAppInitialize must be called. The root widget
+is created, then the rest of the widgets are created mostly with the function
+XtCreateManagedWidget, and the resources of each widgets are updated by the application or
+by the resource database. The next step is defining the different callbacks, by means of
+the XtAddCallback function. Now the widgets are data in memory but need to be shown as a
+real thing with XtRealizeWidget. At last the app waits for events with XtAppMainLoop, or
+some XtAppPeekEvent loop. </p>
+
+<p>Yeah, yeah I know there are a lot of dirty details I'm not talking about them, &nbsp;
+... I can give you two links with information and tutorials about Xwindows and Motif. In
+the first one you may get tutorials in practically all the languages you fancy:</p>
+
+<p><a href="tppmsgs/msgs4.htm#466" tppabs="http://www.rahul.net/kenton/xsites.framed.html">http://www.rahul.net/kenton/xsites.framed.html<br>
+http://www.cen.com/mw3/code.html</a><br>
+<br>
+Motif is supposed more high-level functions, and that's true, here you have some motif
+functions that may be useful:<br>
+<br>
+XmCreateBulletinBoardDialog<br>
+XmCreateDialogShell<br>
+XmCreateFileSelectionDialog<br>
+XmCreateMessageDialog<br>
+XmCreateErrorDialog<br>
+XmCreateInformationDialog<br>
+XmCreateQuestionDialog<br>
+XmCreateWarningDialog<br>
+XmCreateMessageBox<br>
+<br>
+</p>
+
+<p>Using these functions Motif offers the possibility to run precooked widgets, despite
+you may create compound objects. Predefined dialog boxes are subclasses of the
+BulletinBoard class, while customized dialogs just inherit DialogShell class. </p>
+
+<p>The main motif class is called Primitive, and the rest ( labels, pushbuttons and so on
+) are derived from it. In the acrobat reader essay you discovered that the function
+XtSetSensitive was disabling the buttons, but what about a disabled menu. We must know how
+a menu is built. </p>
+
+<p>A class called MenuShell is the base, then you get a RowColumn widget for putting the
+elements in a particular position ( do you remember Java Panels ? ). The main options
+(File, Edit, and so forth) of the pulldown menus are CascadeButtons and the final options
+( Open, Save, ... ) are PushButtons ( or ToggleButtons ). So, disabling a menu is the same
+of disabling a button, and the XtSetSensitive function is used again. </p>
+
+<p>Some comment about the functions above, the name XmCreateMessageBox may be tricky for
+you, this class has always 3 buttons Ok, Cancel and Help, so perhaps you should think
+about the basic class DialogShell ... </p>
+
+<p>There's a VERY valuable tool for getting information about widgets hierarchy from an
+application. That will solve if you don't know if the nagging box you are looking is
+Bulletin, Dialog, Box or whatever :-). It is editres, that comes with usual distributions.
+Editres uses the &quot;editres-protocol&quot; to communicate with Xt applications and show
+a lot of information about the widget tree and its resources. The main idea of the program
+is to provide a nice editor to change resources on the fly; that will not be the case for
+us, but we may get a lot of interesting information of the target. Sadly not all apps
+support &quot;editres-protocol&quot;. </p>
+
+<p>If you are lucky after clicking with your mouse over the application ( Get tree option
+); over a menu for example you get this tree ( taken from a dubious attempt to get a linux
+ultraedit: crisp ):</p>
+
+<p><br>
+</p>
+
+<pre><small>Crisp  mcr
+	XmBulletinBoard  draw
+		XmRowColumn  menu_bar
+			XmCascadeButton  File
+			XmCascadeButton  View
+			XmCascadeButton  Edit
+			XmCascadeButton  Find
+			XmCascadeButton  Options
+			XmCascadeButton  Tools
+			XmCascadeButton  Windows
+			XmCascadeButton  Help
+		XmDrawingArea  container
+			XmDrawingArea  toolbar
+		XmDrawingArea  ruler
+		XmDrawingArea  screen
+			XmScrollBar  vscrollbar
+			XmScrollBar  hscrollbar
+		XmDrawingArea  status_bar</small></pre>
+
+<p><br>
+</p>
+
+<p>If it is confusing for you it shows pairs of (class,identifier), firstly the parent
+class called Crisp ( not quite original ), the whole visible window derived from it, and
+then a menubar, a toolbar, a ruler, the &quot;edit&quot; area and the status bar; therefore
+the whole graphic interface. The tree may expand even more, but in this tree don't appear
+widgets not created, I mean, if I open FILE main pulldown menu, menu options are created
+and widgets are reported to editres, but not before. Of course in the program everything
+is shown with graphics and so on. You may see the tree labelled with not only classes or
+identifiers, but with WIDGET IDs and WINDOW ids ( the last one could be got with some tools I
+described in my second essay ). </p>
+
+<p>What else ? You may as well select one of the widgets and list its resources,
+especially Callback resources that could be useful ( more below ).</p>
+
+<p><br>
+<u><strong><font face="Times New Roman">3. EVENTS</font></strong></u><br>
+<br>
+</p>
+
+<p>The main goal of this part is to give clues for joining events with code, in order to
+get some starting point for the art of Reverse Engineer. The first idea is to exploit
+Windoze exploits :-). MessageBox turned to be one of the most important functions in the
+art of RE, why not carry on in linux ? You've got a good list of functions above, but I
+want you asking now what happen if the motif library is statically linked. Well, I fear no
+magic solution. Some programs create on-the-fly a &quot;calling table&quot;, where you may
+identify clearly pairs XmFunction-&gt;address; some others just declare the functions in
+the symbol table , but in some rare cases is not easy. </p>
+
+<p>Many times that's not enough and you must try to deal somehow with events. The whole
+system bares resemblance with Windows, asynchronous messages are generated by the server
+as a result of actions like moving the mouse, using the keyboard ... Masking events may be
+applied in different ways, but through Xt layer and through Xm ( motif ) layer messages
+may travel in mysterious ways. Anyway, tracing the program's event loop is really a nightmare
+journey. </p>
+
+<p>Widgets use to manage events by means of translation tables ( previously registered and
+bla, bla ), more or less a table where you pair events ( keys pressed and mouse buttons up
+and down ) with functions. If you grep some binary with the pattern &quot;&lt;Key&quot;
+you may get a good bunch of translation tables, but like you don't get the source code,
+that use to be a useless effort regarded the events you are interested in, are not that
+different of absolutely trivial events. </p>
+
+<p>The last chance is callbacks, the name is enough self-explaining. They are function
+pointers that are associated to some widget for taking care of one or more of its events.
+Sometimes when you create a widget, the callback is supplied along with the creation
+function (XmVaCreateSimplePulldownMenu), or may be it is added with function
+XtAddCallback. Here is a pseudo definition of this function:<br>
+<br>
+XtAddCallback ( Widget, CallbackResource_name, func_pointer, NULL)<br>
+<br>
+The first var ( that you may get with editres ) is the widget identifier, the second one
+is a string to identify the resource ( and the name should be consistent with the action
+it takes ) and the third in the function ( the last one is data passed to the function,
+but let's put it apart ). Here is a &quot;smart&quot; breakpoint that will supply the
+whole XtAddCallback activity without getting the window manager in trouble (consult
+previous linux essays for details):<br>
+<br>
+<small><font face="Courier New">(gdb) br *XtAddCallback<br>
+...<br>
+(gdb) commands<br>
+&gt;silent<br>
+&gt;x /s *(int*)($esp+8)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ...
+this show the callbackR name<br>
+&gt;x /x ($esp+4)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+... this shows the widget id<br>
+&gt;x /x ($esp+0xc)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+... this shows the function<br>
+&gt;cont<br>
+&gt;end</font></small><font face="Fixedsys">&nbsp; </font><br>
+<br>
+Now you may realize if your favourite widgets have got some interesting callback. A
+conditional breakpoint will do for a concrete widget ( though it's hard to guess its
+identifier before it's created :-). The callback resource name must match with some of the
+resources showed in editres. Some common resource callbacks that apply to practically all
+buttons:<br>
+<br>
+* armCallback: the function that draws the button &quot;pushed&quot;<br>
+* activateCallback: the function called after a button push-release.<br>
+* disarmCallback: the function that restores the graphic of the button once it <br>
+&nbsp; is released<br>
+<br>
+Obviously you should be interested in the second one ;-).<br>
+<br>
+The last and strange possibility if to use an event handler. Despite it would not follow
+motif &quot;Style guide&quot;, could be possible. These handlers are set with the function
+pseudodeclared here: </p>
+
+<p>XtAddEventHandler (Widget, Mask, More_mask_stuff, Event_h, NULL) </p>
+
+<p>The function Event_h is called if there's an event that matches mask conditions,
+obviously events that apply to widget Widget.</p>
+
+<p><br>
+<br>
+<u><strong><font face="Times New Roman">4. MORE TOOLS</font></strong></u><br>
+<br>
+Though you should already know the basic tools, you must keep an eye on other<br>
+tools. <br>
+<br>
+<strong>DDD : <u>Data Display Debugger</strong></u><br>
+<br>
+This is not a new tool, I knew it months ago. Suppossedly it is used by software companies
+( Adobe claims to use it :-), but the last version I checked ( 2.2 ) was still buggy, and
+believe me, it's annoying to be cracking a program and a debugger at the same time. It is
+really not a debugger, but a nice frontend for gdb. Just a few days ago I would tell you
+not to use, it but I have just installed version 2.2.3 and, though it keeps old problems,
+seems to fix most of the problems that made it crash. Assembler support is one of them
+:-). <br>
+If you finally try it, you may enjoy a beautiful assembler window, and what they call a
+data window ( but is really a watch window :-(. Some other features will make your life
+easier. For programs that carry a symbol table is a must.<br>
+<a href="tppmsgs/msgs4.htm#463" tppabs="http://www.cs.tu-bs.de/softech/ddd">http://www.cs.tu-bs.de/softech/ddd</a><br>
+</p>
+
+<p><strong>NDASM: <u>Network Disassembler</strong></u></p>
+
+<p>It is more a dumper than a disassembler. You must give it the starting offset of the
+binary data inside the exe file. Anyway is a kind of universal assembler with which you
+can build binaries for almost all operative systems using intel processors ( included ELF
+binaries ). </p>
+
+<p>I'm giving here a new version of dasm with a little fix and some new features (
+call/jmp different xref, Function titles when symbol table available ). Again bugs, fixes
+or suggestions at lluisote@hotmail.com.</p>
+
+<p><font face="Fixedsys"><br>
+</font><small><font face="Courier New"><small>#!/usr/bin/perl<br>
+;############ MODIFY THIS LINE WITH YOUR PERL LOCATION ############<br>
+push(@INC,&quot;/usr/lib/perl5&quot;);<br>
+require(&quot;flush.pl&quot;);<br>
+<br>
+<br>
+;##################################################################<br>
+;######## LINUX DISASSEMBLER 2<br>
+;######## (C) SiuL+Hacky Feb 1998<br>
+;######## You may copy, modify, distribute this program and<br>
+;######## is up you to keep this header here<br>
+;######## Usage: dasm exe_file dasm_file<br>
+;##################################################################<br>
+<br>
+<br>
+$f_input=$ARGV[0];<br>
+$f_output=$ARGV[1];<br>
+&amp;printflush(STDOUT, &quot;\nCreating disassembled file ...&quot;);<br>
+$return=system(&quot;objdump -d -T -x --prefix-addresses
+&quot;.$f_input.&quot;&gt;&quot;.$f_output.&quot;2&quot;);<br>
+if ($return!=0){<br>
+&nbsp; print &quot;\nERROR OPENING OBJDUMP $return&quot;;<br>
+&nbsp; print &quot;\nUsage: dasm exe_file dasm_file&quot;;<br>
+&nbsp; print &quot;\nBe sure to get objdump in your path. Check also file
+permissions\n&quot;;<br>
+&nbsp; exit(1);<br>
+}<br>
+<br>
+open(INPUT, &quot;&lt;&quot;.$f_output.&quot;2&quot;);<br>
+<br>
+&amp;printflush(STDOUT, &quot;\nReading strings ...&quot;);<br>
+$_=&lt;INPUT&gt;;<br>
+while (!/.rodata/){<br>
+&nbsp; $_=&lt;INPUT&gt;;<br>
+}<br>
+($rubbish, $rest)=split(/.rodata/,$_,2);<br>
+($rubbish, $rest)=split(/0/,$rest,2);<br>
+@numbers=split(/&nbsp; /,$rest,5);<br>
+$size=hex($numbers[0]);<br>
+$starting_address=hex($numbers[1]);<br>
+$end_address=$starting_address+$size;<br>
+$offset=hex($numbers[3]);<br>
+open(CODIGO, &quot;&lt;&quot;.$f_input);<br>
+seek(CODIGO,$offset,0);<br>
+read(CODIGO,$cadena,$size);<br>
+close(CODIGO);<br>
+<br>
+<br>
+$_=&lt;INPUT&gt;;<br>
+while (!/SYMBOL TABLE/){<br>
+&nbsp; $_=&lt;INPUT&gt;;<br>
+}<br>
+&amp;printflush(STDOUT, &quot;\nProcessing symbol table ...&quot;);<br>
+$_=&lt;INPUT&gt;;<br>
+while (!/^\n/){<br>
+@st_element=split(/ /, $_);<br>
+$_=$st_element[$#st_element];<br>
+chop;<br>
+$symbol_table{$st_element[0]}=$_;<br>
+$_=&lt;INPUT&gt;;<br>
+}<br>
+<br>
+<br>
+while (!/\.text/){<br>
+&nbsp; $_=&lt;INPUT&gt;;<br>
+}<br>
+&amp;printflush(STDOUT,&nbsp; &quot;\nProcessing jmps and calls ...&quot;);<br>
+<br>
+######### the regex gets rid of possible line information #############<br>
+<br>
+<br>
+while (&lt;INPUT&gt;){<br>
+&nbsp; $_=~ s/&lt;[+_0-9a-zA-Z]&gt;//ge;<br>
+&nbsp; $_=~s/&nbsp; / /g;<br>
+&nbsp; if (/j/){<br>
+&nbsp;&nbsp;&nbsp; ($direccion,$inst,$destino)=split(/ /,$_,3);<br>
+&nbsp;&nbsp;&nbsp; $destino=~s/ //g;<br>
+&nbsp;&nbsp;&nbsp; chomp($destino);<br>
+&nbsp;&nbsp;&nbsp; $salto{$destino}.=($direccion.&quot; \; &quot;);<br>
+&nbsp; }<br>
+&nbsp; elsif (/call/){<br>
+&nbsp;&nbsp;&nbsp; ($direccion,$inst,$destino)=split(/ /,$_,3);<br>
+&nbsp;&nbsp;&nbsp; $destino=~s/ //g;<br>
+&nbsp;&nbsp;&nbsp; chomp($destino);<br>
+&nbsp;&nbsp;&nbsp; $call{$destino}.=($direccion.&quot; \; &quot;);<br>
+&nbsp; }<br>
+}<br>
+<br>
+seek(INPUT,0,0);<br>
+&amp;printflush(STDOUT, &quot;\nWritting references ...\n&quot;);<br>
+open(OUTPUT, &quot;&gt;&quot;.$f_output) || die print &quot;\nError opening write
+file\n&quot;;<br>
+print OUTPUT &quot;FILE REFERENCED\n\n&quot;;<br>
+<br>
+while (!/Disassembly of section .text:/){<br>
+$_=&lt;INPUT&gt;;<br>
+print OUTPUT;<br>
+}<br>
+$char=&quot;.&quot;;<br>
+$counter=0;<br>
+while(&lt;INPUT&gt;){<br>
+$counter++;<br>
+if ( ($counter % 400)==0){<br>
+&nbsp;&nbsp; printflush(STDOUT,$char);<br>
+&nbsp;&nbsp; if ( ($counter % 4000)==0){<br>
+&nbsp;&nbsp;&nbsp;&nbsp; printflush(STDOUT,&quot;\r&quot;);<br>
+&nbsp;&nbsp;&nbsp;&nbsp; if ($char eq &quot;.&quot;){ $char=&quot; &quot;;}<br>
+&nbsp;&nbsp;&nbsp;&nbsp; else { $char=&quot;.&quot;;}<br>
+&nbsp;&nbsp; }&nbsp; <br>
+}<br>
+$copia=$_;<br>
+$_=~s/&lt;[+_0-9a-zA-Z]+&gt;//ge;<br>
+$_=~s/&nbsp; / /g;<br>
+($direccion, $inst, $destino)=split(/ /,$_,3);<br>
+if ( defined( $symbol_table{$direccion} )){<br>
+&nbsp;&nbsp; print OUTPUT &quot;\n&quot;;<br>
+&nbsp;&nbsp; print OUTPUT &quot;---- Function : &quot;.$symbol_table{$direccion}.&quot;
+----\n&quot;;<br>
+}<br>
+if (/call/){<br>
+&nbsp;&nbsp; $destino=~s/ //g;<br>
+&nbsp;&nbsp; chomp($destino);<br>
+&nbsp;&nbsp; if ( defined( $symbol_table{$destino} )){<br>
+&nbsp;&nbsp;&nbsp;&nbsp; print OUTPUT &quot;\n&quot;;<br>
+&nbsp;&nbsp;&nbsp;&nbsp; print OUTPUT &quot;Reference to function :
+&quot;.$symbol_table{$destino}.&quot;\n\n&quot;;<br>
+&nbsp;&nbsp; }<br>
+}&nbsp; <br>
+if ( defined( $salto{$direccion} )){<br>
+&nbsp;&nbsp; print OUTPUT &quot;\n&quot;;<br>
+&nbsp;&nbsp; print OUTPUT &quot;Referenced from jump at
+&quot;.$salto{$direccion}.&quot;\n\n&quot;;<br>
+}<br>
+if ( defined( $call{$direccion} )){<br>
+&nbsp;&nbsp; print OUTPUT &quot;\n&quot;;<br>
+&nbsp;&nbsp; print OUTPUT &quot;Referenced from call at
+&quot;.$call{$direccion}.&quot;\n\n&quot;;<br>
+}<br>
+if (/\$/){<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ($instruccion, $operand)=split(/\$/,$_,2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if (!/push/){<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ($operand,
+$rest)=split(/\,/,$operand,2);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; chomp($operand);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $offset=hex($operand);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if ( ($offset &lt;= $end_address) &amp;&amp;
+($offset &gt;= $starting_address ) ){<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $auxiliar=substr($cadena,
+$offset-$starting_address);<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $length=index($auxiliar,
+pack(&quot;x&quot;) );<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $auxiliar=substr($auxiliar, 0,
+$length);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $auxiliar=~s/\n//g;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; print OUTPUT &quot;\n&quot;;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; print OUTPUT &quot;Possible
+reference to string:&quot;;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; print OUTPUT
+&quot;\n\&quot;$auxiliar\&quot;\n\n&quot;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; }&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <br>
+&nbsp; }<br>
+print OUTPUT $copia;<br>
+}<br>
+close(INPUT);<br>
+close(OUTPUT);<br>
+print &quot;\n&quot;;<br>
+system(&quot;rm &quot;.$f_output.&quot;2&quot;);</small></font></small><font
+face="Fixedsys"><br>
+</font></p>
+
+<p><big><u><strong>5. Cracking WordPerfect for Linux</strong></u></big><br>
+<br>
+In the case of Corel we find the same stupid attitude of Adobe ( or even worse ), trying
+to make good moneys and succeding in getting their products unused. If WordPefect would
+give for free its product in the linux/unix version, everybody would be using its program.
+But instead of that, people prefer to buy StarOffice ( kind of a $uite ), to buy some
+Windoze emulator ( as Wabi) and run some Win 3.1 word processor. One of the things is
+missed in linux/unix is a good WYSIWYG processor. Then Corel makes a fairly good program (
+if overbloated, as usual ) with many of the features of Word 97, but the concurrece
+doesn't use it. </p>
+
+<p>I hope this crack will make this program more popular, so I'm gonna give a &quot;ready
+to use&quot; crack. It's hard to push Micro$osf competitors this way, but if the are
+stupid ... </p>
+
+<p>You all know the fairly hard ( bought ) protection of Corel Win32 applications. The
+unix version is apparently developed by SDC ( come on stalk them :-), and the protection
+is really weak ( may run for 1998 Most Stupid Award ). You'll not learn a great deal, but
+IT IS (IMHO) AN IMPORTANT TOOL FOR BEING CRACKED. </p>
+
+<p>I'm cracking version 7.0.132. Download it at Corel site, it's a hard download ( more
+than 30Mb + 10 Mb for language package ). Run the install script, and the executable
+called &quot;xwp&quot; is a hideous monster of 7277808 bytes. Ok, seat down because after
+dissasembling it you'll get an alien of 65 Mb ( you better get good RAM ). </p>
+
+<p>When you run the program, a message is shown with &quot;The evaluation period will
+expire in n days&quot;. I don't understand quite well the motif-system used with this
+program, but don't care, we'll crack it with just the tools we know. First the message is
+not in the executable, so after some grepping you'll find it inside the file
+wp/shlib10/wpcerr.us. Let run the program through strace tool ( strace -o output_file xwp
+), then look for the name of the file (in the output_file ) and you'll get something like
+this:</p>
+
+<p align="left" style="text-align: justify; line-height: 0px"><font face="Fixedsys"><br>
+</font><small><font face="Courier New">[4010ec0c]
+open(&quot;/usr/local/flexlm/licenses/license.dat&quot;, O_RDONLY) = -1<br>
+&nbsp;&nbsp;&nbsp; ENOENT (No such file or directory)<br>
+&nbsp;&nbsp;&nbsp; <br>
+&gt;&gt;&gt; He is heavily seeking this file, what a useless effort&nbsp;&nbsp;&nbsp; <br>
+&nbsp;&nbsp;&nbsp; <br>
+[4010ec0c] open(&quot;/usr/local/wp/shlib10/wpcerr.us&quot;, O_RDONLY) = 13<br>
+[4010eaf4] lseek(13, 3124, SEEK_SET)&nbsp;&nbsp;&nbsp; = 3124<br>
+[4010f220] read(13, &quot;^r\0\0&quot;, 4)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = 4<br>
+[4010eaf4] lseek(13, 29278, SEEK_SET)&nbsp;&nbsp; = 29278<br>
+[4010f220] read(13, &quot;The evaluation period for this d&quot;..., 2048) = 2048<br>
+[4010df0a] close(13) </font></small></p>
+
+<p>Don't you think is maravellous ? Now it is very easy to locate the last lseek, because
+it is the only one in the whole program with offset 29278. And then breakpointing the next
+read will lead to victory :-). </p>
+
+<p>Let's use an advanced breakpoint in this case. This is the definition of lseek </p>
+
+<p>off_t lseek(int fildes, off_t offset, int whence) </p>
+
+<p>hence, the brk looks like this, (you'll think it looks awful, but I'm just casting a
+pointer O:-):</p>
+
+<p align="left" style="text-align: justify; line-height: 0px"><font face="Courier New"><small>(gdb)
+br *lseek if *(int*)($esp+8)==29278<br>
+Breakpoint 1 at 0x40105ae0<br>
+(gdb) cont<br>
+<br>
+... gdb breaks after a while in the middle of some library<br>
+<br>
+(gdb) finish&nbsp;&nbsp;&nbsp; /* get back to xwp code */<br>
+Run till exit from #0&nbsp; 0x4010620c in __read ()<br>
+0x84f9762 in XMapRaised ()</small><br>
+</font><font face="Fixedsys"><br>
+</font></p>
+
+<p>Ok, therefore the string is read at 84f9762. After some fishing on the stack, you'll
+get the address of the buffer. In my case ( and should be yours ) is 0874e1a0. The next
+step is breakpoint this location. </p>
+
+<p>(gdb) awatch *( 0x0874e1a0 + 69 ) </p>
+
+<p>( ... remember that the string is &quot;The evaluation period for this demonstration
+software\nwill expire in ð\032\005ð day(s).&quot; I take care of the offset of the
+number of days ) </p>
+
+<p>Gdb will break at address 0x853dcbe. This code is overwriting the right value of the
+number of days left. Using the &quot;back&quot; command ( like softice &quot;stack&quot; )
+will be useful for tracking the target:</p>
+
+<p align="left" style="text-align: justify; line-height: 0px"><font face="Fixedsys"><br>
+</font><small><font face="Courier New">(gdb) back<br>
+#0&nbsp; 0x853dcbe in XMapRaised ()<br>
+#1&nbsp; 0xbfffd8f4 in ?? ()<br>
+#2&nbsp; 0x84f9531 in XMapRaised ()<br>
+#3&nbsp; 0x84f938e in XMapRaised ()<br>
+#4&nbsp; 0x850035a in XMapRaised ()<br>
+#5&nbsp; 0x81002c5 in XMapRaised ()<br>
+#6&nbsp; 0x80ffa5d in XMapRaised ()<br>
+#7&nbsp; 0x80510cb in XMapRaised ()</font></small><font face="Fixedsys"><br>
+<br>
+</font>I'm not gonna get you bored with an endless tracking ( if you want it, get back to
+Acrobat Reader essay ). As a summary, I'll tell you that the string is completely
+overwritten with the same string ( included the number of days ). You may ask yourself how
+the string could be copied without breaking. Remember that the brpt was set with an
+offset, and the right string may be composed strcating the begining of the string with the
+number formatted. After tracing back a couple of functions, you'll land in the middle of
+this snippet:<font face="Fixedsys"><br>
+<br>
+</font><small><font face="Courier New">085002c9 pushl&nbsp; %edi<br>
+085002ca call&nbsp;&nbsp; 08500600; &lt;&lt; returns $ebx=-1 in my case<br>
+085002cf addl&nbsp;&nbsp; $0x4,%esp<br>
+085002d2 testl&nbsp; %ebx,%ebx<br>
+085002d4 jne&nbsp;&nbsp;&nbsp; 085002e0; &lt;&lt; if returned value != 0 jump<br>
+085002d6 movl&nbsp;&nbsp; $0x1,%eax; &lt;&lt; if 0 returned set a flag, hummm<br>
+085002db jmp&nbsp;&nbsp;&nbsp; 085004d0<br>
+<br>
+Referenced from jump/call at 085002d4 ; <br>
+<br>
+085002e0 movl&nbsp;&nbsp; 0x10(%ebp),%ecx<br>
+085002e3 pushl&nbsp; %ecx<br>
+085002e4 call&nbsp;&nbsp; 085008a0; &lt;&lt; this function returns the number <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&lt;&lt; of days left<br>
+085002e9 movl&nbsp;&nbsp; %eax,%edx</font></small></p>
+
+<p align="left" style="text-align: justify; line-height: 0px">Both &quot;important&quot;
+functions are called just once. It's sad looking the bunch of bytes used in both
+functions, and then showing this kind of Jurasic protection. There are a thousand ways of
+cracking this. </p>
+
+<p>Here's a perl script for &quot;correcting&quot; the file. Why perl again ? I think is
+absurd to write this in asembler. This way it is ready to run and you get the source code
+( in case you disslike running binary files compiled&nbsp; by others ).</p>
+
+<hr>
+
+<p><small><font face="Fixedsys"><br>
+</font><font face="Courier New">#!/usr/bin/perl<br>
+push(@INC,&quot;/usr/lib/perl5&quot;);<br>
+<br>
+;#/***********************************************************/<br>
+;#/**** PERL SCRIPT FOR TURNING TEMPORARY WP INTO PERMANENT **/<br>
+;#/**** (C) SiuL+Hacky 1998&nbsp;&nbsp;&nbsp; lluisote@hotmail.com
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; **/ <br>
+;#/***********************************************************/<br>
+<br>
+@magic_chain=( 0xe8, 0x31, 3, 0, 0, 0x83, 0xc4, 4, 0x85 );<br>
+<br>
+system(&quot;clear&quot;);<br>
+print &quot;\nThis will crack XWordPerfect 7.0.132&quot;;<br>
+print &quot;\nthe file should be 4,948,682 bytes long&quot;;<br>
+print &quot;\notherwise you'll get -Could not find code-&quot;;<br>
+print &quot;\n(C) SiuL+Hacky 1998&quot;;<br>
+print &quot;\nPress Enter ...\n&quot;;<br>
+getc;<br>
+<br>
+$wpfile=$ARGV[0];<br>
+open(INPUT, &quot;+&lt;&quot;.$wpfile) || die print &quot;\nError opening file:
+$wpfile\n&quot;;<br>
+seek(INPUT, 4948682, 0);<br>
+if ( read(INPUT, $_, 9) != 9 ){<br>
+&nbsp;&nbsp; print &quot;Error reading file ... \n&quot;;<br>
+&nbsp;&nbsp; exit(1);<br>
+}<br>
+(@cadena)=unpack (&quot;C9&quot;, $_);<br>
+for $n ( 0 .. 9 ){<br>
+&nbsp; if ($cadena[$n] ne $magic_chain[$n]) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp; printf(&quot;Could find original code ...&quot;);<br>
+&nbsp;&nbsp;&nbsp;&nbsp; close(INPUT);<br>
+&nbsp;&nbsp;&nbsp;&nbsp; exit(1);<br>
+&nbsp; }<br>
+}&nbsp; <br>
+seek(INPUT, 4948682, 0);<br>
+$a=pack(&quot;C&quot;, 0xBB);<br>
+$b=pack(&quot;C&quot;, 0);<br>
+print INPUT &quot;$a$b$b&quot;;<br>
+close(INPUT);<br>
+</font><br>
+</small><br>
+</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Final Notes</font><br>
+    </td>
+  </tr>
+</table>
+<!-- PASTE HERE YOUR FINAL NOTES (if any) -->
+
+<p>Thogh there's a growing number of linux users, it seems to me there's not a great
+amount of linux reversers ( at least at assembler level and no source code ). For this
+reason if any of you reading this, know any new tool or thinks he/she has the
+knowledge/interest to program one, write to the +hcu or write to me.</p>
+
+<table cellpadding="1" cellspacing="2" border="1" height="45" width="100%">
+  <tr>
+    <td bgcolor="#C6E7C6"><p align="center"><font color="blue" size="+2">Ob Duh</font><br>
+    </td>
+  </tr>
+</table>
+<i>
+
+<p align="center">I WILL bother explaining you that you should BUY this target program if
+you intend to use it for a longer period than the allowed one. Should you want to STEAL
+this software instead, you are a moron. This is the kind of software that WE NEED. Many
+people should register it and allow its Author to write even more interesting stuff!</i> <!-- WAY OUT STARTS HERE --> </p>
+
+<hr>
+<i>
+
+<p align="center">You are deep inside fravia's page of reverse engineering, choose your
+way out:</i> <br>
+<a href="ourtools.htm" tppabs="http://ftp.fravia.org/ourtools.htm" target><img src="ourtools.gif" tppabs="http://ftp.fravia.org/ourtools.gif" alt="our tools" align="CENTER"
+width="114" height="43" border="0" vspace="0" hspace="0"></a> <br>
+<font color="gray">Our tools</font><br><bR><img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM"
+width="13" height="13" border="0" vspace="0" hspace="0"><a href="index.html" tppabs="http://ftp.fravia.org/index.html">homepage</a> <img
+src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13" border="0" vspace="0"
+hspace="0"><a href="links.htm" tppabs="http://ftp.fravia.org/links.htm">links</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM"
+width="13" height="13" border="0" vspace="0" hspace="0"><a href="noanon.htm" tppabs="http://ftp.fravia.org/noanon.htm">anonymity</a>
+<img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" align="BOTTOM" border="0" vspace="0" hspace="0" width="13"
+height="13"><a href="orc.htm" tppabs="http://ftp.fravia.org/orc.htm">+ORC</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM"
+width="13" height="13" border="0" vspace="0" hspace="0"><a href="student.htm" tppabs="http://ftp.fravia.org/student.htm">students'
+essays</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13"
+border="0" vspace="0" hspace="0"><a href="academy.htm" tppabs="http://ftp.fravia.org/academy.htm">academy database</a> <br>
+<img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13" border="0"
+vspace="0" hspace="0"><a href="tools.htm" tppabs="http://ftp.fravia.org/tools.htm">tools</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red"
+align="BOTTOM" width="13" height="13" border="0" vspace="0" hspace="0"><a
+href="javascri.htm" tppabs="http://ftp.fravia.org/javascri.htm">Javascript wars</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM"
+width="13" height="13" border="0" vspace="0" hspace="0"><a href="cocktail.htm" tppabs="http://ftp.fravia.org/cocktail.htm">cocktails</a>
+<img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13" border="0"
+vspace="0" hspace="0"><a href="tppmsgs/msgs1.htm#137" tppabs="http://fravia.org/ideale.htm">antismut CGI-scripts</a> <img
+src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13" border="0" vspace="0"
+hspace="0"><a href="searengi.htm" tppabs="http://ftp.fravia.org/searengi.htm">search_forms</a> <img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red"
+align="BOTTOM" width="13" height="13" border="0" vspace="0" hspace="0"><a href="info.htm" tppabs="http://ftp.fravia.org/info.htm">mail_fravia+</a>
+<br>
+<img src="bulletr.gif" tppabs="http://ftp.fravia.org/bulletr.gif" alt="red" align="BOTTOM" width="13" height="13" border="0"
+vspace="0" hspace="0"><a href="legal.htm" tppabs="http://ftp.fravia.org/legal.htm">Is reverse engineering legal?</a> </p>
+
+<hr>
+
+<p>&nbsp;</p>
+</body>
+</html>

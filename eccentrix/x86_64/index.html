@@ -1,0 +1,585 @@
+<html><head><title>UNIX on the x86-64 laptop</title></head><body bgcolor="#000000" text="#a0a0a0" link="#f0f0f0" vlink="#a0a0c0"> 
+<font face="Courier">
+
+</font><p><font face="Courier"><br></font></p><p><font face="Courier"><br></font></p><p><font face="Courier"> 
+
+</font></p><center><font face="Courier"><b>Installing UNIX on the x86-64 Laptop</b></font></center><font face="Courier"><br></font><p>
+<!-- a table to piss off lynx users -->
+<table width="100%">
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Status</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+	<li><u>Power Management [Suspend]</u>: <font color=red>Panics kernel</font>
+	<li><u>Power Management [CPU Speed]</u>: <font color=green>Works</font>
+	<li><u>Integrated LAN</u>: <font color=green>Works</font>
+	<li><u>Integrated Modem</u>: <font color=red>Does not work</font>
+	<li><u>Integrated Wifi</u>: <font color=red>Does not work</font>
+	<li><u>Integrated Memory Card Reader</u>: <font color=red>Does not work</font>
+	<li><u>USB</u>: <font color=green>Works</font>
+	<li><u>Firewire</u>: Untested, appears to work
+	<li><u>Bluetooth</u>: Untested, appears to work
+	<li><u>Sound</u>: <font color=green>Works with ALSA</font>
+	<li><u>Video</u>: <font color=green>Works in X and framebuffer</font>
+	<li><u>DVD/CDWriter</u>: <font color=green>CD Writing works; DVD writing untested</font>
+	<li><u>VMWare</u>: <font color=green>4.52 Beta works!</font>
+	<p>
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+	Not configured yet.
+</p><br>
+<i>Mandrake x86</i><br><p>
+	<li><u>Power Management [Suspend]</u>: <font color=red>Does not work</font>
+	<li><u>Power Management [CPU Speed]</u>: <font color=red>Does not work</font>
+	<li><u>Integrated LAN</u>: <font color=green>Works</font>
+	<li><u>Integrated Modem</u>: <font color=green>Works</font>
+	<li><u>Integrated Wifi</u>: <font color=green>Works</font>
+	<li><u>Integrated Memory Card Reader</u>: <font color=red>Does not work</font>
+	<li><u>USB</u>: <font color=green>Works</font>
+	<li><u>Firewire</u>: Untested, appears to work
+	<li><u>Bluetooth</u>: Untested, appears to work
+	<li><u>Sound</u>: <font color=green>Works with ALSA</font>
+	<li><u>Video</u>: <font color=green>Works in X and framebuffer</font>
+	<li><u>DVD/CDWriter</u>: <font color=green>CD Writing works; DVD writing untested</font>
+	<li><u>VMWare</u>: <font color=green>Works</font>
+	<p>
+</p><br>
+<i>WinXP x86</i><br><p>
+	All devices appear to work.
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	<tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Background</b></font>
+	</td></tr>
+	<tr><td>
+<br>
+<i>The CPU</i><br><p>
+AMD released their Athlon64 in the last half of this year; this is a transition
+chip using the x86-64 or AMD64 ISA. The Athlon 64 can run a 32-bit kernel with
+32-bit userland applications, or a 64-bit kernel with 64-bit and 32-bit
+userland applications. This means that 32-bit x86 applications will run without
+modification on either a 32-bit or 64-bit kernel, giving all of the benefits
+of a 64-bit CPU with none of the porting issues. The Athlon64 boasts
+features such as a 1 MB L2 cache, and a dual-channel 1.6 GHz replacement
+for the frontside bus known as HyperTransport.
+</p><p>
+The Athlon64 was initially a desktop and server CPU; recently, however, AMD
+has released a mobile version known as the Athlon64 Mobile. Clock speeds for
+the mobile version are 3000+ and 3200+, which apparently cover 1.6GHz and 
+1.8 GHz of real clock speed. 
+</p><br>
+<i>The Laptop</i><br><p>
+At the time of purchase, there were only three options for an x86-64 laptop:
+the Voodoo Envy, the Hypersonic Aviator, and the Packard Bell Something. The
+Voodoo gets by far the most coolness points, the Packard Bell the least, with
+costs scaling appropriotely. The Hypersonic model was chosen since it is 
+based on the same OEM/"whitebox" notebook as the Envy, with several hundred
+dollars knocked off the price.
+</p><br>
+<i>The Operating Systems</i><br><p>
+The laptop came with Windows XP pre-installed. Due to the inability of
+the defrag.exe utility to move all files to the beginning of a partition,
+and due to the tendency of Windows XP to write files in the middle of 
+an empty 60 GB partition, XP had to be reinstalled in order to trim the
+partition size down to 5 GB.
+</p><p>
+NetBSD gets support for new architectures before any other UNIX; selecting
+it for install was automatic.
+</p><p>
+FreeBSD 5.1 and 5.2beta both support x86-64. This was an unexpected bonus;
+if the ACPI support works well and there are no driver issues, this will
+be quite a nice install.
+</p><p>
+Linux supports x86-64 with late-model 2.4.2x and 2.6.x kernels. SUSE and
+Mandrake both provide x86-64 distributions, while Debian [the preferred distro]
+is working on one. SUSE was chosen due to its reputation and to poor 
+experiences with Mandrake.
+</p><p>
+During the course of installation, it was found that many desired features
+[VMWare, Wifi, Winmodem] were only available in a 32-bit Linux. NetBSD
+was removed and Mandrake 9.0 [the only 32-bit distro at hand, sadly enough,
+with a modem for conn] installed. Mandrake 9.0 is an abomination and should
+be avoided at all costs.
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Specifications</b></font>
+	</td></tr>
+	<tr><td>
+<i>Dimensions</i>
+	<li>7.9Lbs
+	</li><li>13.1"W x 11.2"D x 1.7"H
+	</li><li>Battery life 140-200 mins
+	</li><li>15.1" SXGA+ Display
+	<p><br>
+</p><br>
+<i>Hardware</i>
+	<li>AMD Athlon64 DTR 3200+ (800MHz FSB)
+	</li><li>VIA K8T800 + VT8235 chipset
+	</li><li>1 GB 400MHz PC3200 DDR RAM
+	</li><li>ATI Radeon 9600 64MB (max 1400x1050)
+	</li><li>60 GB 7200 RPM hard drive
+	</li><li>National Semi PC887393F-VJG I/O Controller
+	</li><li>Matshita DVD-RAM UJ-811 2xDVD-R/W
+	</li><li>Atheros 802.11a+b+g Tri-band Wireless
+	</li><li>SmartLink V.92 56K Data/Fax Winmodem
+	</li><li>VIA Rhine VT6103 10/100 Fast Ethernet
+	</li><li>VIA VT82333 AC'97 Audio Controller
+	</li><li>VIA VT6307L IEEE 1394 Firewire
+	</li><li>4 VIA USB Controllers
+	</li><li>ENE 4-in-one Memory Card Reader
+	</li><li>1 Yenta PCMCIA slot
+	<p><br>
+</p><br>
+<i>Athlon64 Pages</i>
+	<li><a href="http://www.amd.com/us-en/Processors/DevelopWithAMD/0,,30_2252_739_7044,00.html">AMD x86-64 Architecture Tech Docs</a>
+	</li><li><a href="http://www.devx.com/amd/Door/16009?trk=Leftnav_FP_AMD">AMD64 DevSource</a>
+	</li><li><a href="http://www.amdzone.com/forums/categories.cfm?catid=26">AMDZone 64-bit Forum</a>
+	</li><li><a href="http://www.lostcircuits.com/motherboard/a64_oc/">Overclocking the Athlon64 3200+</a>
+	</li><li><a href="http://www.x86-64.org/">x86-64.org</a>
+	<p><br>
+</p><br>
+<i>Vendor Pages</i>
+	<li><a href="http://www.amdboard.com/athlon_64_notebook.html">Athlon64 Notebooks</a>
+	</li><li><a href="http://www.alienware.com/">Alienware</a>
+	</li><li><a href="http://www.hypersonic-pc.com/2001/systems-mobile.htm">Hypersonic</a>
+	</li><li><a href="http://fr.packardbell.be/products/node1601.asp?partNumber=P900500056_fr">Packard Bell</a>
+	</li><li><a href="http://www.voodoopc.com/systems/m855.aspx">Voodoo</a>
+	<p><br>
+</p><br>
+
+<i>Reviews</i>
+	<li><a href="http://anandtech.com/mobile/showdoc.html?i=1916">Athlon64 3200+ Notebook Review (Anandtech)</a>
+	</li><li><a href="http://www.extremetech.com/article2/0,3973,1392830,00.asp">Athlon64 3200+ Notebook Review (Extreme Tech)</a>
+	</li><li><a href="http://www.digit-life.com/articles2/amd-athlon64-m/">Athlon64 3000+ Notebook Review (IXBT)</a>
+	</li><li><a href="http://www6.tomshardware.com/mobile/20031216/yakumo_athlon64-05.html">Athlon64 3200+ Notebook Review (Tom's Hardware)</a>
+	</li><li><a href="http://www.amdzone.com/articleview.cfm?ArticleID=1371">Athlon64 3000+ Review (AMDZone)</a>
+	</li><li><a href="http://www.nordichardware.com/reviews/cpu/2003/Athlon_64/">Athlon64 3200+ Review (Nordic Hardware)</a>
+	</li><li><a href="http://www.pcstats.com/articleview.cfm?articleid=1469&amp;page=16">Athlon64 3200+ Review (PC Stats)</a>
+	<p><br>
+</p><br>
+<i>Linux x86_64 Laptop Pages</i>
+	<li><a href="http://tuxmobil.org/cpu_64bit.html">TuxMobil 64-bit</a>
+	</li><li><a href="http://bellsouthpwp.net/s/e/sedlabs1/m6807.html">Boradcom WLAN on Linux 2.64</a>
+	<p><br>
+</p><br>
+
+<!--
+<i>Pictures</i>
+</p><br>
+	<br></p></td></tr>
+-->
+<!-- ===================================================================== -->       
+	</li></td></tr></tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Installation</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+No problems.
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+No problems with install, though the 5.2 beta iso was missing Perl and X.
+</p><br>
+<i>NetBSD x86-64</i><br><p>
+Install overwrote MBR even though it was instructed not to.
+</p><br>
+<i>WinXP</i><br><p>
+No problems.
+</p><br>
+<i>Mandrake x86</i><br><p>
+Would not boot with the 2.4.19 kernel due to APIC issues. Had to use one of
+the ALT kernels, a 2.2.19, to boot. This caused serious problems with the
+installation, since PCMCIA and general laptopness were not detected. <b>NOTE
+to 32-bit Linux distro users:</b> If the machine locks up and/or the screen
+locks up during boot, try the "noapic" option or a different install kernel. 
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Hardware Support</b></font>
+	</td></tr>
+	<tr><td>
+The first surprise comes after poking around with cpuinfo, then doing a bit
+of background research. That Athlon +3200? Yeah, that's got a clock speed
+of 1.8 GHz. Now the +3200 designation naturally makes one suspicious, but
+the clock speed should at least be over 2 GHz just for modernity's sake. The
+real surprise, though, is that the CPU is underclocked to 800 MHz in order
+to conserve power.
+<p><br>
+<i>SUSE x86-64</i><br></p><p>
+	</p><li><b>CPU Support: </b></li>
+		No problems?
+	<li><b>ACPI Power Management: </b></li>
+		Does not suspend, sleep, throttle, or really do anything.
+	<li><b>APM Power Management: </b></li>
+		Untested -- missing from kernel??
+	<li><b>Motherboard resources: </b></li>
+		No problems
+	<li><b>DVD/CD-Writer: </b></li>
+		Region encoding not tested
+		DVD playback not tested
+		DVD Writing not tested
+		No problems
+	<li><b>Display: </b></li>
+		No problems using SUSE-supplied Radeon driver for X
+	<li><b>USB: </b></li>
+		No problems
+	<li><b>Firewire: </b></li>
+		No problems
+	<li><b>Keyboard: </b></li>
+		Windows keys of course do nothing, and for some reason the
+		extra backslash/pipe key acts as a greater-than lesser-than
+		key.
+	<li><b>Touchpad: </b></li>
+		Not detected during install as I was using a USB mouse.
+		Added during post-install configuration with no problems.
+	<li><b>4-way scroller: </b></li>
+		Had to configure manually. Luckily this is easy:
+		<code></code><pre>		# set Left-scroll to act like Left-arrow
+		setkeycodes 5a 105
+		# set Right-scroll to act like Right-arrow
+		setkeycodes 59 106
+		# set Up-scroll to act like Up-arrow
+		setkeycodes 69 103
+		# set Down-scroll to act like Down-arrow
+		setkeycodes 68 108
+		</pre>
+	<li><b>Integrated Network Controller: </b></li><li>
+		No problems
+	</li><li><b>Integrated Sound Card: </b></li>
+Install: worked OK Kernel recompile: unresolved dependencies due to
+ALSA. Changed kernels to 2.4.23 from kernel.org, compiled w/o alsa, and
+the OSS drivers seem to work fine, though a mixer module needs to be
+located and added since dsp0 is currently mute. 
+	<li><b>Integrated WiFi Card: </b></li>
+		32-bit binary only
+	<li><b>Integrated Card Reader: </b></li>
+		Does not work
+	<li><b>Integrated Winmodem: </b></li><li>
+		Now, did any of us really have any hope for this one?
+		32-bit binary only
+	<p>
+</p><br>
+<i>Mandrake x86</i><br><p>
+	</p></li><li><b>CPU Support: </b></li>
+		Untested
+	<li><b>ACPI Power Management: </b></li>
+		Does nothing
+	<li><b>APM Power Management: </b></li>
+		Does nothing: no APM device
+	<li><b>Motherboard resources: </b></li>
+		Untested
+	<li><b>DVD/CD-Writer: </b></li>
+		Untested
+	<li><b>Display: </b></li>
+		No problems using Vesa video driver on X
+	<li><b>USB: </b></li>
+		No problems
+	<li><b>Firewire: </b></li>
+		Untested
+	<li><b>Keyboard: </b></li>
+		No problems
+	<li><b>Touchpad: </b></li>
+		No problems
+	<li><b>4-way scroller: </b></li>
+		Untested -- see above
+	<li><b>Integrated Network Controller: </b></li><li>
+		No problems
+	</li><li><b>Integrated Sound Card: </b></li>
+		Works only with ALSA, not OSS
+	<li><b>Integrated WiFi Card: </b></li>
+		No problems
+	<li><b>Integrated Card Reader: </b></li>
+		Does not work
+	<li><b>Integrated Winmodem: </b></li><li>
+		No problems
+	<p>
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+	</p></li><li><b>CPU Support: </b></li>
+		Untested
+	<li><b>ACPI Power Management: </b></li>
+		Untested
+	<li><b>APM Power Management: </b></li>
+		Untested
+	<li><b>Motherboard resources: </b></li>
+		Untested
+	<li><b>DVD/CD-Writer: </b></li>
+		Untested
+	<li><b>Display: </b></li>
+		Untested
+	<li><b>USB: </b></li>
+		Untested
+	<li><b>Firewire: </b></li>
+		Untested
+	<li><b>Keyboard: </b></li>
+		Untested
+	<li><b>Touchpad: </b></li>
+		Untested
+	<li><b>4-way scroller: </b></li>
+		Untested
+	<li><b>Integrated Network Controller: </b></li><li>
+		Untested
+	</li><li><b>Integrated Sound Card: </b></li>
+		Untested
+	<li><b>Integrated WiFi Card: </b></li>
+		Untested
+	<li><b>Integrated Card Reader: </b></li>
+		Untested
+	<li><b>Integrated Winmodem: </b></li><li>
+		Untested
+	<p>
+</p><br>
+<i>NetBSD x86-64</i><br><p>
+	</p></li><li><b>CPU Support: </b></li>
+		Untested
+	<li><b>ACPI Power Management: </b></li>
+		Untested
+	<li><b>APM Power Management: </b></li>
+		Untested
+	<li><b>Motherboard resources: </b></li>
+		Untested
+	<li><b>DVD/CD-Writer: </b></li>
+		Untested
+	<li><b>Display: </b></li>
+		Untested
+	<li><b>USB: </b></li>
+		Untested
+	<li><b>Firewire: </b></li>
+		Untested
+	<li><b>Keyboard: </b></li>
+		Untested
+	<li><b>Touchpad: </b></li>
+		Untested
+	<li><b>4-way scroller: </b></li>
+		Untested
+	<li><b>Integrated Network Controller: </b></li>
+		Untested
+	<li><b>Integrated Sound Card: </b></li>
+		Untested
+	<li><b>Integrated WiFi Card: </b></li>
+		Untested
+	<li><b>Integrated Card Reader: </b></li>
+		Untested
+	<li><b>Integrated Winmodem: </b></li><li>
+		Untested
+	<p>
+</p><br>
+<i>WinXP</i><br><p>
+	</p></li><li><b>CPU Support: </b></li>
+		No problems
+	<li><b>ACPI Power Management: </b></li>
+		Untested
+	<li><b>APM Power Management: </b></li>
+		Untested
+	<li><b>Motherboard resources: </b></li>
+		No problems
+	<li><b>DVD/CD-Writer: </b></li>
+		Region encoding???
+		DVD/CD Writing not tested
+		No problems
+	<li><b>Display: </b></li>
+		No problems
+	<li><b>USB: </b></li>
+		No problems
+	<li><b>Firewire: </b></li>
+		No problems
+	<li><b>Keyboard: </b></li>
+		No problems
+	<li><b>Touchpad: </b></li>
+		No problems
+	<li><b>4-way scroller: </b></li>
+		No problems
+	<li><b>Integrated Network Controller: </b></li><li>
+		No problems
+	</li><li><b>Integrated Sound Card: </b></li>
+		No problems
+	<li><b>Integrated WiFi Card: </b></li>
+		Drivers as provided do not work
+	<li><b>Integrated Card Reader: </b></li>
+		Untested
+	<li><b>Integrated Winmodem: </b></li><li>
+		Untested
+	<p>
+</p><br>
+	<br></li></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Applications</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+	</p><li>Xcdroast</li>
+	Burns CDs just great. Does not burn DVDs...despite SUSE's advert.
+	<li>Xine</li>
+	Refuses to play DVDs ... despite SUSE's advert.
+	<li>Xmms</li>
+	Works fine
+	<li>Open Office</li>
+	Almost flies
+	<li>Mozilla</li>
+	Impressively smooth
+	<li>VMWare</li>
+	Not a prayer -- the kmod code is all heavily x86-specific and will not compile
+	<li>Mplayer</li>
+	Having trouble compiling some of the dependencies due to inline x86 code
+	<li>Epplets</li>
+	Will not compile due to inline x86 code
+	
+	<p><br>
+</p><br>
+<i>Mandrake x86</i><br><p>
+	Untested
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+	Untested
+</p><br>
+<i>NetBSD x86-64</i><br><p>
+	Untested
+</p><br>
+<i>WinXP</i><br><p>
+	</p><li>WinDVD</li>
+	Plays fine
+	<li>Does Windows come with any apps? ;)</li>
+<br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Kernel compiling</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+	</p><li>Many disturbing warnings
+	</li><li>Had to copy SUSE 2.4 x86-64 includes over the SUSE 2.4 kernel source tree
+	</li><li>Include files in /usr/include and /usr/src/linux/include did not match the running kernel
+	</li><li>PCI and PCMCIA Modules that worked when precompiled failed with unresolved symbols after kernel recompile
+	</li><p><br>
+</p><br>
+<i>Mandrake x86</i><br><p>
+	</p><li>Had to d/l ncurses library to 'make menuconfig'
+	</li><li>Had to overwrite Mandrake kernel source
+	</li><li>Had to update mod-init-utils
+	</li><li>Had to update pcmcia-cs
+	</li><p><br>
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+Untested.
+</p><br>
+<i>NetBSD x86-64</i><br><p>
+Untested.
+</p><br>
+	<br></li></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Programming</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+</p><br>
+<i>NetBSD x86-64</i><br><p>
+</p><br>
+<i>WinXP</i><br><p>
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Third-Party Drivers</b></font>
+	</td></tr>
+	<tr><td>
+<i>Linux</i><br><p>
+	<li><a href="ftp://ftp.smlink.com/linux/">SmartLink Modem</a></li>
+	<li><a href="http://sourceforge.net/project/showfiles.php?group_id=82936&package_id=85233">Atheros WiFi</a></li>
+	<li><a href="http://ati.com/support/drivers/linux/radeon-linux.html?type=linux&prodType=graphic&prod=productsLINUXdriver&submit.x=16&submit.y=7&submit=GO%21">ATI Radeon</a></li>
+	<p>
+</p><br>
+<i>FreeBSD</i><br><p>
+</p><br>
+<i>NetBSD</i><br><p>
+</p><br>
+<i>WinXP</i><br><p>
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Config Files</b></font>
+	</td></tr>
+	<tr><td>
+<i>SUSE x86-64</i><br><p>
+	<li><a href="linux64/config-2_4_23.txt">2.4.23 Kernel Config</a>
+	<li><a href="linux64/config-2_6_0.txt">2.6.0 Kernel Config</a>
+	<li><a href="linux64/config-2_6_1.txt">2.6.1 Kernel Config</a>
+	<li><a href="linux64/defkeymap_map.txt">Keyboard Map</a>
+	<li><a href="linux64/modules_conf.txt">/etc/modules.conf</a>
+	<li><a href="linux64/sysconfig_kernel.txt">/etc/sysconfig/kernel</a>
+	<li><a href="linux64/sysconfig_mouse.txt">/etc/sysconfig/mouse</a>
+	<li><a href="linux64/XF86Config.txt">/etc/X11/XF86Config</a>
+	<p>
+</p><br>
+<i>FreeBSD x86-64</i><br><p>
+	No files.
+	<p>
+</p><br>
+<i>Mandrake x86</i><br><p>
+	<li><a href="linux32/config-2_4_23.txt">2.4.23 Kernel Config</a>
+	<li><a href="linux32/config-2_6_0.txt">2.6.0 Kernel Config</a>
+	<li><a href="linux32/modules.txt">/etc/modules</a>
+	<li><a href="linux32/modules_conf.txt">/etc/modules.conf</a>
+	<li><a href="linux32/sysconfig_mouse.txt">/etc/sysconfig/mouse</a>
+	<li><a href="linux32/XF86Config-4.txt">/etc/X11/XF86Config-4</a>
+	<p>
+</p><br>
+<i>WinXP</i><br><p>
+	No files.
+	<p>
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+	</tbody><tbody><tr><td bgcolor="#808080"><font color="white">
+<b>Summary</b></font>
+	</td></tr>
+	<tr><td>
+<i>Pros</i><br><p>
+	</p>
+	<li>64-bit architecture is very forward-looking</li>
+	<li>Excellent desktop replacement</li>
+	<p>
+<br>
+<i>Cons</i><br><p>
+	</p>
+	<li>XP appears to run a 32-bit kernel</li>
+	<li>ACPI/Power management is worse than useless in *NIX</li>
+	<li>Inability to use binary-only kernel modules in *NIX</li>
+	<li>!Heavy!</li>
+	<p>
+<br>
+<i>Should I buy it?</i><br><p>
+This really depends on what you plan to do with the machine, and how much you
+are prepared to be disappointed. The laptop is nice -- *very* nice, with all 
+of the integrated hardware you could want -- but it is big, and the *NIX 
+support for it is limited to, well, this page at the moment.</p><p>
+For a Windows user, the question is a no-brainer: 64-bits, all of the hardware
+works, al of your favorite applications can be installed with no problems. 
+Reviews of the laptop by PC gamers demonstrate awe and joy at the smooth
+grafics handling, the speed, etc ... in short, for a Windows user, the
+answer is an unqualified 'yes'.</p><p>
+For the Linux user, things are in more of a grey area. Yes, this is 64 bits,
+and the performance obtained will blow away anything the XP users can
+achieve. Yes, this is cutting edge technology ... a little too cutting edge.
+Vendors are still getting the bugs out of a mixed 32/64-bit system, and the
+ACPI implementation brings to light shortcomings in the 2.4.x ACPI code -- 
+shortcomings in the form of kernel general protection faults. So, for
+the Linux user, be prepared for a lot of work getting this puppy stable and
+happy.
+</p><br>
+	<br></td></tr>
+<!-- ===================================================================== -->       
+</tbody></table>
+
+
+<!--13.8310546875--></body></html>

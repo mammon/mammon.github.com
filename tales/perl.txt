@@ -1,0 +1,429 @@
+Mammon_'s Tales to Jeff's Grandson
+pearls, spiders and  searches
+
+i. Algorithms and the basics of programming [theoretical background]
+--------------------------------------------------------------------
+C, pascal, perl, scheme, python, lisp, eiffel, fortran, ada .... there are a lot of programming languages out there. Each has a special purpose --hardware access, ease of use, text processing, parentheses -- and each has its own syntax. But all of these languages have one thing in common: the algorithm.
+
+Strictly speaking, an algorithm is the logic that underlies the source code for any particular computer program. Algorithms can be coded in any programming language -- they simply represent a logical approach to a problem.
+
+Let's say your problem is to output all numbers between 1 and 100 to the screen. The most primitive algoritm for this involves no logic at all:
+	print "1"
+	print "2"
+	print "3"
+      ...
+	print "100"
+It is also tremendously inefficient in terms of source code size [100 lines, minimum].
+
+An alternative algorithm could be implemented using the FOR loop. A FOR loop is simply a section or "block" of code that gets repeated a given number of times: the programmer specifies a variable that will act as a counter, the minimum and maximum values for that 
+counter [e.g. start counting at "1", stop counting at "100"], and how much the counter will increase with each increment. The FOR loop usually has the following syntax:
+	FOR ( min_value; max_value; increment) {
+		....code to execute in loop
+	}
+The { } braces in the above sample enclose the block of code that is to be executed on each iteration of the loop.
+
+To solve the 1...100 problem, one could use the following code:
+	number = 1
+	FOR ( 1; 100; 1) {
+		print number
+		number = number + 1
+	}
+[Warning: the above is pseudocode intended to illustrate the logic of the algorithm and will not compile in any known computer language. Unless stated otherwise, all examples will be 
+provded in psuedocode until the Perl treatment starts.]
+
+How does this work? The variable 'number' is set to 1 at the start of the program; the FOR loop is given a minimum value of 1 and a maximum value of 100, with an increment of 1 -- this is like saying "FOR every 1 [increment] number between 1 [min] and 100 [max], do the following" or "FOR 1-100, every 1 numbers do...". On each iteration of the loop the value of 'number' is printed to the screen, then increased by 1.
+
+Notice that this would be even more simple if the counter itself could be printed rather than assigning a separate variable for the output. For this reason, most programming languages allow the use of a variable for a counter:
+	FOR (counter = 1; counter <= 100; counter = counter + 1) {
+		print counter
+	}
+In this example -- which will be the final form of our second algorithm for the 1...100 problem -- the FOR logic itself is slightly different. Instead of assigning a minimum and maximum value, one assigns a variable ['counter'], a condition under which the loop will continue to be executed ['counter <= 100', see the coverage of conditions, below], and an operation to be performed at the end of each loop ['counter = counter + 1']. To make things a little clearer, imagine the above example expanded to the following:
+	min_value = 1
+	max_value = 100
+	increment = 1
+	counter = min_value
+	FOR ( counter; counter <= max_value; counter = counter + increment) {
+		print counter
+	}
+Notice how the various parts of the FOR loop can be controlled with variables so that they can be set --perhaps by the user-- at runtime.
+
+
+A third algorithm for the 1...100 problem could be written using a WHILE loop. A WHILE loop executes a block of code while a specified condition is 'TRUE', and usually has the following syntax:
+	WHILE (condition) {
+		...code to execute
+	}
+In the above, 'condition' is an expression that evaluates to TRUE or FALSE; the code in the WHILE loop will execute until that condition becomes FALSE. If the variable 'number' were to be set to 1, and the condition 'number == 1' was used in the WHILE loop, the loop would then execute until the value of 'number' changed.
+
+The 1...100 problem would use a WHILE loop as follows:
+	counter = 1
+	WHILE ( counter <= 100 ) {
+		print counter
+		counter = counter +1
+	}
+Once again, a condition is used to determine whether the loop should continue.
+
+In both the FOR and the WHILE loop samples the term 'condition' has been used to denote an expression which returns TRUE or FALSE. An expression is akin to a mathematical formula or problem: it is a statement *with or without variables* that is evaluated to return a result. The following are all valid expressions:
+	1 + 1
+	x = 0
+	x = y + 1
+	( x == 0 ) && ( y == 0 )
+	x < y
+	1 > 2
+Expressions can be used either to set a value or to test a value/condition. A value is set using '=' [ e.g, x = 0 ] or by the various mathematical operators [ +, -, *, /; in these the expression is replaced with the result, such that the expression '1 + 1' will be replaced with '2' ]. A value is tested using comparison operators [ <, >, <=, >=, ==, !=; these are less-than, greater-than, less-than-or-equal-to, greater-than-or-equal-to, equal-to, and not-equal-to ] or using Boolean operators [ &&, ||, !; these are AND, OR, and NOT ]. Parentheses may be used just as in math formulae: to group expressions that must be resolved first.
+
+Understanding expressions is perhaps the most important task for new programmers -- essentially, any program is a set of expressions which are controlled via FOR/WHILE/IF statements, with information being retrieved or displayed using system calls. The following demonstrates the use of various expressions:
+	+   Addition			x + 1			Add 1 to x
+	-   Subtraction			x - 1			Subtract 1 from x
+	*   Multiplication		x * 2			Multiply x by 2
+	/   Division			x / 2			Divide x by 2
+	>   Greater-than			x > 10		Is x greater than 10? y/n [T/F]
+	<   Less-than			x < 10		Is x less than 10? y/n 
+	>=  Greater-than-or-equal-to	x >= 10		Is x greater/equal to 10? y/n 
+	<=  Less-than-or-equal-to	x <= 10		Is x less/equal to 10? y/n 
+	==  Equal-to			x == 10		Is x equal to 10? y/n 
+	!=  Not-equal-to			x != 10		Is x not equal to 10? y/n 
+	!   NOT				!x			Is x TRUE? y/n 
+	||  OR				x || y		Is x TRUE or is y TRUE? y/n
+	&&  AND				x && y		Is x TRUE and is y TRUE? y/n
+	()  Grouping		(x > 0) && (y > 0) 	Is x > 0 and is y > 0? y/n
+	()  Grouping		!((x + y) > (x + 2) )	Is x+y not greater than x+2? y/n
+
+Two operators that the beginning programmer should pay special attention to are the equal sign and the parentheses. The equal sign is noteworthy in that a *single* equal sign will set a value, while a *double* equal sign will test for equality. Thus, the following two statements are entirely different:
+	x = 0
+	x == 0
+The first sets the value of x to 0; the second tests if the value of x is equal to 0.
+
+Parentheses have the potential for confusion since they are used to denote function calls as well as to enclose expressions. The syntax for a function call is:
+	function_name( parameters )
+The parameters will be a list of values or variables passed as argumentd to the function; for example,a typical MessageBox call might look like this:
+	MessageBox( NULL, "Hello, eh?", "HelloBox", MB_OK )
+An expression will roughly take the form of:
+	((expression) (expression))
+The function call is distinguished by the function name before the parentheses, the comma-delimited list of parameters, and the lack of an expression operator such as >= or ==. Note that a function call can be used as part of an expression:
+	while( IsCharUpper( currentChar ) ) {
+		currentChar = CharLower(currChar);
+	}
+This code will test if a character is uppercase and, if it is, will convert the character to lowercase.
+
+The use of expressions can be seen much more easily in IF statements. An IF statement can take one of 3 forms:
+// Form 1: IF
+	IF ( condition ) {
+		...code to execute
+	}
+// Form 2: IF-ELSE
+	IF ( condition ) {
+		...code to execute
+	}
+	ELSE {
+		...code to execute
+	}
+// Form 3: IF-ELSEIF-ELSE
+	IF ( condition ) {
+		...code to execute
+	}
+	ELSEIF ( condition ) {
+		...code to execute
+	}
+	ELSE {
+		...code to execute
+	}
+The structure of the IF statement should be pretty clear after the FOR and WHILE statements. The IF keyword is followed by an expression that returns TRUE or FALSE; if the expression returns TRUE, the code in the IF block is executed ... otherwise the code in the ELSE block [if one exists] is executed. The ELSEIF's allow additional 'IF' tests to be made before the ELSE alternative, so that the following becomes possible:
+	IF ( number == 100 ) {
+		print "Number equals 100!"
+	}
+	ELSEIF ( number > 100 ) {
+		print "Number passed 100!"
+	}
+	ELSEIF (number < 100 ) {
+		print "Not at 100 yet..."
+	}
+	ELSE {
+		print "Error - not a valid number"
+	}
+If one simply wanted to output a notice when 100 is reached, the first IF statement would suffice. However, the subsequent ELSEIF and ELSE statements allow further testing options to be implemented.
+
+
+To put it all in context, let's examine an algorithm to search a batch of URLs for keywords. The primary purpose of this example is to show the application of the FOR, IF, and WHILE statements in a search program; the various function names [GetUserInput, GetListFromFile, count, HTTP_GET, GetNextLine, SearchInLine, and print] are arbitrary and are only included for illustrative purposes:
+	keyword_to_find = GetUserInput() 					// *1*
+	list_of_urls[] = GetListFromFile()					// *2*
+	num_urls = count( list_of_urls )					// *3*
+	FOR (x = 0; x < num_urls; x = x + 1 ) {				// *4*
+		CurrentWebPage = HTTP_GET( list_of_urls[x] )		// *5*
+		WHILE ( GetNextLine( CurrentWebPage, Line)!= 0 )	// *6*		
+			IF ( SearchInLine( keyword_to_find, Line) ) { 	// *7*
+				print "Keyword found in " list_of_urls[x] // *8*
+			}
+		}
+	}
+Line *1* sets the variable 'keyword_to_find' to the results of the GetUserInput function. Line *2* sets the array 'list_of_urls' to the results of the GetListFromFile function; an array --in this example-- is a list of strings with each string given a number starting at zero. For example:
+	http://www.yahoo.com		//this is string #0
+	http://www.altavista.com	//this is string #1
+	http://www.netscape.com		//this is string #2
+The next string added to the above array would be string #3. Each string in an array may be referred to by appending its string number to the array name; thus, if the above array was named 'list_of_urls', then the yahoo url would be 'list_of_urls[0]', the altavista url would be 'list_of_urls[1]', and the netscape url would be 'list_of_urls[2]'.
+
+Line 3 of the sample algorithm calls a function to count the number of items [strings] in the 'list_of_urls' array, and sets the variable 'num_urls' to that number. The program then enters a FOR loop to iterate through the strings in 'list_of_urls' [ the array strings start at #0, remember, so the last string in 'list_of_urls' will have the number ('num_urls' - 1), which is why the counter 'x' must be '< num_urls' ]. Line *5* uses the mysterious HTTP_GET function [again, made up for this example] to download the web page at the current URL; the downloaded contents are then loaded line-by-line in *6*, and each line is searched for the keyword in *7*. URLs containing the keyword are printed in line *8*. 
+
+The fundamental logic of this example algorithm is as follows:
+	"FOR each URL in the list, do the following:
+		"Download the contents of the page at the URL
+		 WHILE there is a next line in the page,
+			"load the next line
+			 search the line for the keyword
+			 IF the keyword is in the line
+				"print the URL"
+Notice how the algorithm can be summarized with the basic control statements and a paraphrasing of the expressions. The actual technical details of the application -- getting the web page, getting user input, searching each line -- are extensions to the algorithm that can either be borrowed from existing system libraries, or that can be written to support the algorithm.
+
+ii. CGI basics [theory]
+-----------------------
+CGI, unlike Perl, C, or Python, is not a programming language. Rather, it is a protocol -- like POP3 or SMTP, for the purpose of this introduction. CGI stands for Common Gateway Interface, and as such it defines the standard [common] method of commmunicating [interfacing] with servers [gateways].
+
+Most web servers are set up with a CGI directory that is given execute-only permissions [in contrast with the html directory, which is given read-only permissions]. Any directory can be nominated as the CGI directory, though usually it is in /cgi-bin or /usr/cgi-bin.
+
+Having a separate CGI directory is a security feature for servers. You do not want to give users the power to create executable scripts within their web page directories ... with the average user's idea of security, it would be trivial for an attacker to compromise a user account and plant scripts with which to gain root access. Similarly, you do not want to put world-executable CGI scripts in a readable directory; most CGI scripts are textfiles that are processed by an interpreter such as Perl or Python, and as such any potential attacker could read the scripts in your CGI directory and analyze them for weaknesses to exploit later.
+
+How does CGI work? A client --such as a web browser-- sends a URL to the server which includes the URL of the CGI script, a question mark, and the parameters to be passed to the script, for example:
+	http://www.slartibartfast.com/cgi-bin/whois?discworld.gov
+The url of the CGI script in the above is 'www.slartibartfast.com/cgi-bin/whois', and the parameter to the script is 'discworld.gov' ... a simple 'whois' query. When the server recieves this URL, it executes the whois script in the /cgi-bin directory and passes it the parameters. The server then returns any output from the script to the client browser.
+
+The environment in which a CGI script is run is made up of 3 important elements: STDIN [Standard Input], STDOUT [Standard Output], and the Environment Variables.
+
+STDIN is a construct used in most programming languages; it simply refers to the default input device -- usually the keyboard. STDIN is often redirected in DOS and unix shells by means of the "|" or ">" commands ... for example, typing 'DIR C:\ | more' in DOS will route the output [STDOUT] of the DIR command to the input [STDIN] of the MORE comand; typing 'more' by itself on the commandline will cause the MORE command to receive its input from the keyboard since STDIN has not been redirected by a | or >. In the case of a CGI script, STDIN is everything passed to the server after the "?" in the URL; in the above example, "discworld.gov"is passed to the whois script via STDIN.
+
+STDOUT is the programs' standard output, usually the console. Like STDIN it can be redirected --typing 'DIR C:\ > dir.txt' in DOS will route the output [STDOUT] of the DIR command to a file called 'dir.txt'. A CGI script returns information to the server [and from there to the client] by writing to STDOUT. In the 'whois' example, the CGI script would write the whois results to STDOUT, and these results would then be displayed in the client browser.
+
+The Environment Variables are global variables that are set by the web server. Some of the most common variables are:
+	SERVER_SOFTWARE -- The name and version of the information server software answering the request (and running the gateway). Format: name/version   
+      SERVER_NAME -- The server's hostname, DNS alias, or IP address as it would appear in self-referencing URLs. 
+      GATEWAY_INTERFACE -- The revision of the CGI specification to which this server complies. Format: CGI/revision
+      SERVER_PROTOCOL -- The name and revision of the information protcol this request came in with. Format: protocol/revision 
+      SERVER_PORT -- The port number to which the request was sent. 
+      REQUEST_METHOD The method with which the request was made. For HTTP, this is "GET", "HEAD", "POST", etc. 
+      PATH_INFO -- The extra path information, as given by the client. In other words, scripts can be accessed by their virtual pathname, followed by extra information at the end of this path. The extra information is sent as PATH_INFO. This information should be decoded by the server if it comes from a URL before it is passed to the CGI script.
+      PATH_TRANSLATED -- The server provides a translated version of PATH_INFO, which takes the path and does any virtual-to-physical mapping to it. 
+      SCRIPT_NAME -- A virtual path to the script being executed, used for self-referencing URLs. 
+      QUERY_STRING -- The information which follows the ? in the URL which referenced this script. This is the query information. It should not be decoded in any fashion. This variable should always be set when there is query information, regardless of command line decoding. 
+      REMOTE_HOST -- The hostname making the request. If the server does not have this information, it should set REMOTE_ADDR and leave this unset.
+      REMOTE_ADDR -- The IP address of the remote host making the request. 
+      AUTH_TYPE -- If the server supports user authentication, and the script is protects, this is the protocol-specific authentication method used to validate the user. 
+      REMOTE_USER -- If the server supports user authentication, and the script is protected, this is the username they have authenticated as. 
+      REMOTE_IDENT -- If the HTTP server supports RFC 931 identification, then this variable will be set to the remote user name retrieved from the server. Usage of this variable should be limited to logging only. 
+     CONTENT_TYPE -- For queries which have attached information, such as HTTP POST and PUT, this is the content type of the data. 
+     CONTENT_LENGTH -- The length of the said content as given by the client. 
+     HTTP_ACCEPT -- The MIME types which the client will accept, as given by HTTP headers. Other protocols may need to get this information from elsewhere. Each item in this list should be separated by commas as per the HTTP spec. Format: type/subtype, type/subtype 
+     HTTP_USER_AGENT -- The browser the client is using to send the request. General format: software/version library/version.
+[source: the CGI specification, cgi@ncsa.uiuc.edu ]
+
+The way environment variables are read depends on the programming language, just as STDIN and STDOUT do. In Perl, the $ENV{variable name} statement is used; thus, in order to get the value of the REMOTE_ADDR variable, one would use
+	$ENV{ "REMOTE_ADDR" }
+A simple CGI script to log the client's IP address might look as follows:
+	hLogFile = open( "/var/logs/httpd.IP.log", W)     //open log file for write access
+	print(hLogFile, $ENV{ "REMOTE_ADDR" } + "\n")     //print IP to hLogFile
+	exit
+
+
+Seem simple enough? CGI is not overly complex --remember, it has to be easy enough for webmasters to understand-- although there are a few further details that must be considered. 
+
+STDIN, for instance, isn't always used to pass data to the CGI script. There are actually two methods a web page can use to pass parameters to a CGI script via the FORM tag: GET and POST. The GET methods will place the data in an environment variable called QUERY_STRING; the dataas a succession of name=value pairs separated by the '&' character, such that
+	name: mammon_
+	email: mammon_@hotmail.com
+	IP: 127.0.0.1
+	Company: Chaos Monastics
+will result in the following query string:
+	name=mammon_&email=mammon%40hotmail.com&IP=127%2E0%2E0%2E1&Company=Chaos%20Monastics
+Notice how the non-alphanumeric symbols are converted to a '%' character plus the ASCII hex equivalent; this is to prevent URL mishaps or exploitation.
+
+
+The POST method will send the input --encoded in the same manner as the GET method-- on STDIN, and ill store the length of the input in the environment variable CONTENT_LENGTH. The number of bytes in CONTENT_LENGTH must be read from STDIN with a function such as read():
+	// Read CONTENT_LENGTH bytes from STDIN into variable 'buffer'
+	read( STDIN, buffer, $ENV{"CONTENT_LENGTH"} )
+
+Once the CGI script has the input, it must decode it --replacing all of the %?? symbols with their ASCII characters-- and parse it into variables. Since the data is passed ot the CGI from a form as a sequence of name=value pairs , it is possible to create a variable for each 'name' and assign each 'value' to its corresponding variable:
+	( Name, Email, IPAddr, Company) = split ("&", QUERY_STRING)
+	Junk, Name = split("=", Name )
+	Junk, Email = split("=", Email )
+	Junk, IPAddr = split("=", IPAddr )
+	Junk, Company = split("=", Company )
+
+"split()" is a function available in many scripting languages, including perl. It takes as parameters the character to split on ['&'] and the name of the string to split ['QUERY_STRING']; the value it returns must be assigned to an array or to multiple variables [as is the case here...an array might be used if one did not know how many strings split() would parse the inout into]. So with the first split, QUERY_STRING is split so that Name has the value "name=mammon_", Email has the value "email=mammon_@hotmail.com", and so on. After this, each variable is split on the '=' character and the first string ["name", "email", etc] is placed in a variable called 'Junk' that simply gets overwritten, thereby discarding its contents. After this, each variable contains only the 'value' portion of each 'name=value' pair passed to the CGI script -- Name contains 'mammon_', email contains 'mammon_@hotmail.com', etc.
+
+Writing to STDOUT requires some explanation as well. Remember that the data being sent to STDOUT is going to be read by a web browser; it must be in a format that the browser will recognize. For this reason, all out put must be preceded with a header giving the MIME type of the content. Now for the most part your CGI scripts will return either text or HTML documents; therefore the before sending anything to STDOUT you should first print "Content-type: text/html\n\n" [the "\n" stands for NewLine or Carriage Return], or the browser will reject yoru CGI output as unrecognized.
+
+Now, putting it all once again into context, here is an algorithm that will load a page containing the information the use typed into the form [assuming the form uses the POST method, has three elements -- Name, Email, and Company ]:
+	read(STDIN, QueryString, $ENV{"CONTENT_LENGTH"})
+	QueryString = FixASCII( QueryString)
+	(Name, Email, Comp) = split("&", QueryString)
+	(Junk, Name)  = split("=", Name)
+	(Junk, Email) = split("=", Email)
+	(Junk, Comp)  = split("=", Comp)
+	print  "Content-type:text/html\n\n"
+	print "<HTML><BODY>\n"
+	print "<b>Your responses were:</b><P>\n"
+	print "<li>Name:", $Name, "\n"
+	print "<li>Email:", $Email, "\n"
+	print "<li>Company:", $Comp, "\n"
+	print "<li>IP Address:", $ENV{"REMOTE_ADDR"}, "\n"
+	print "</BODY></HTML>\n"
+	exit
+Not very pretty, but serviceable. First the input is read from STDIN and stored in a variable called QueryString [I avoided naming it QUERY_STRING here to avoid confusion with the 'GET' method]; next QueryString is run through the mysterious function FixASCII to take care of that %?? encoding problem. QueryString is then split into the three variables [remember, 3  form elements], and each of these is trimmed of the 'name=' part so that only the value is stored. Finally, the results are fed back to the client browser, starting first by printing the MIME type ['Content-type:text/html\n\n'], then printing the raw HTML needed to format the page [since we will be using BOLD and LIST-ITEM tags here] along with the variables themselves. Finally, exit is called to leave the CGI script.
+
+...And that's really all there is too it. The rest is what you *do* with CGI, i.e. searching web pages, fingering users, connecting to database, flooding email accounts, etc. But enough theory, it's time to move on to Programming For Obfuscation, aka 'the basics of perl'.
+
+iii. CGI + Perl [application]
+-----------------------------
+Before the lecture, let's take a look at the last psuedocode sample, re-coded in perl:
+	#!/usr/bin/perl
+	read(STDIN, $query_string, $ENV{'CONTENT_LENGTH'});
+	$query_string =~ s/%([a-fA-F0-9][a-fA-F0-9])/sprintf("%c", hex($1))/eg
+	($Name, $Email, $Comp) = split(/&/, $query_string);
+	($Junk, $Name)  = split(/=/, $Name);
+	($Junk, $Email) = split(/=/, $Email);
+	($Junk, $Comp)  = split(/=/, $Comp);
+	print  "Content-type:text/html\n\n";
+	print "<HTML><BODY>\n";
+	print "<b>Your responses were:</b><P>\n";
+	print "<li>Name: $Name\n";
+	print "<li>Email: $Email\n";
+	print "<li>Company: $Comp\n";	
+	print "<li>IP Address: $ENV{'REMOTE_ADDR'}\n";
+	print "</BODY></HTML>\n";
+	exit;
+
+The first line is somewhat annoyingly referred to as the "shebang" line; it defines the program or interpreter that will be used to process the following script. The way it work is this: a unix shell will interpret the "#" character as a comment, and the "#!" set as a comment specifying the interpreter, program, or shell to use. When this line is placed at the head of a file, the shell will launch the specified interpreter and feed the rest of the script to it via STDIN. Without this line, the script will not be "self-executable", and you must run it by invoking the interpreter on the command line:
+	perl -f [filename]
+To sum up: always include the "#!" line as the first line of your perl scripts.
+
+The second line introduces the Perl read() routine. The syntax for read() is
+	read( handle, destination-string, length-in-bytes )
+As you can see, we have used the handle TSDIN (a pre-defined or "automatic" handle to standard input), are storing the bytes read into $query_string, and are reading the number of bytes specified in the CONTENT_LENGTH environment variable. Note that the query_string variable is preceded by a "$" in Perl, for in Perl all variables must start with a "$".
+
+The third line demonstrates the FixASCII routine from the previous section's pseudocode, written in Perl. Notice how entirely cryptic it is; just what is mammon_ trying to pull here?
+
+Line 3 is a fine example of what the Unix community affectionately refer to as a regular expression [often preceded by the term "goddamn"]. Regular expressions will be the single most difficult obstacle you will encounter while learning Perl...so if you can master this line, you can learn anything.
+
+A regular expression is a pattern used for "pattern matching". By itself, a regular expression does nothing; however, it is always passed to a "find"- or "replace"-style command as a filter.
+
+How does a regular expression work? It is a bit like using wild cards at the command line. There, you use ? to match any single character and * to match any number of characters. Regular expressions, however, are a litte more precise. In a regular exression, you specify the characters that are *required* to match. Thus, a regular expression of
+	/this/
+would match all occurrences of the four characters t-h-i-s [regular expressions are usually enclosed in forward slashes; thus these are not counted as part of the pattern to be matched]. Note that every character speficies an additional character or position in the sequence to match. What if you want to match any number of possible characters in a single position? For this, you need to use brackets, so that the regular expression
+	/[Tt]his/
+will match "this" and "This". Note that you can use ranges inside of brackets as well, so that
+	/[0-9]/
+will match any digit between 0 and 9, and 
+	/[a-zA-Z]/
+will match any upper or lowercase letter. The basic regular expression used in our Perl script is
+	/%[a-fA-F0-9][a-fA-F0-9]/
+which means that it will match any three characters beginning with "%" and followed by 2 hexadecimal [0-F] digits -- note that the alphabetic hexadecimal digits are case-insensitive due to the [a-zA-Z] in our pattern. Note that including a "^" in the brackets will match a character not in that set or range, so that /[^tT]/ will match any character that is not "T" or "t", and /[^0-9]/ will match any non-numerical character.
+
+What about wildcards? In regular expressions, "." matches any character, "+" matches the preceding pattern 1 or more times, "?" matches the preceding pattern 0 or 1 times, and "*" matches the preceding pattern 0 or more times. At this point an illustration becomes necessary:
+	.		match any single character
+	a.		match an "a" followed by 0 or more "a"'s
+	a+		match an "a" followed by 1 or 1 "a"'s
+	a?		match an "a" followed by 0 or more "a"'s
+	a*		match an "a" followed by 0 or more "a"'s
+	.+		match any 1 or more characters
+	.?		match any 0 or 1 characters
+	.*		match any 0 or more characters
+Thus, if you wanted to match any word starting with "th". you would use the regular expression
+	/th.*/
+For the sake of being thorough I should point out that you can specify how many matches you want by using curly braces; this syntax for this is {min,max}, where "min" is the minimum number of matches and "max" is the maximum number of matches. The syntax for this is a little strange, so here is an example:
+	th.{2,4}		match "th" followed by any 2-4 characters
+	th.{2,}		match "th" followed by at least 2 characters
+	th.{2}		match "th" followed by any 2 characters
+So, if you felt brave, the regular expression
+	/%[a-fA-F0-9][a-fA-F0-9]/
+could be rewritten as
+	/%[a-fA-F0-9]{2}/
+Simple, eh? It gets worse. Besides matching characters, you can also match newlines, tabs, etc by using the standard C escape sequences:
+	\s	matches whitespace
+	\S	matches non-whitespace
+	\n	matches newline
+	\r	matches return
+	\t	matches tab
+	\f	matches formfeed
+	\b	matches backspace
+	\0	matches NULL
+	\c	matches control character
+	\w	matches alphanumeric character
+	\W	matches non-alphanumeric character
+	\d	matches digit [0-9]
+	\D	matches non-digit
+	^	matches beginning of line
+	$	matches end of line
+	\b	matches beginning of word
+	\B	matches end of word
+In addition, you can match braces, dots, and other special symbols [also known as "metacharacters" in Perl] by preceding [lit., "escaping"] them with a "\":
+	\.	matches "."
+	\[	matches "["
+	\(\)	matches "()"
+	\\	matches "\"
+Parentheses also have a use in regular expressions: they group a number of separate patterns into a single "pattern element" which may then be followed by a wildcard operator. Thus,
+	/([a-fA-F0-9][a-fA-F0-9])+/
+will match one or more hexadecimal bytes [a byte is two hexadecimal digits], such as you might find in a hexdump.
+
+There is one other use of parentheses, and that is to save the match in a variable. The first set of parentheses in an expression will store the match in $1, the second on $2, and so on; therefore the pattern
+	/([a-fA-F0-9][a-fA-F0-9])([a-fA-F0-9][a-fA-F0-9])/
+will store the first matched hex byte in $1 and the second matched hex byte in $2.
+
+Why this is important will become apparent in a moment. For now, let us leave regular expressions "per se" and move on to the Perl search-and-replace functions: match ["m"] and search-replace ["s"]. Syntax:
+	m/regexp/gi				#match
+	s/regexp/replacement/gie	#search and replace
+Match will search a variable for a pattern and will return that pattern; search-replace will search a variable for a pattern and will replace that pattern with the given replacement text. Match and search-replace can have a "g" ["global": match/replace as many times as possible], "i" [case-insensitive search], or "e" [interpret replacement string as an expression -- not a *regular* expression] appended to the command. These routines are called with the =~ operator as follows:
+	$variable =~ routine
+so that using the match routine to do a case-insensitive search of $query_string for "http" would appear as
+	$query_string =~ m/http/i
+Note that the regular expression occurs between the forward slashes. This example will set $query_string equal to "http" if it exists in the string. The example in the Perl script searches $query_string for %-encoded ASCII characters and replaces them with the output of the sprintf() routine:
+	$query_string =~ s/%([a-fA-F0-9][a-fA-F0-9])/sprintf("%c",hex($1))/eg
+If you look at this carefully and break it down to the "variable=~s/regexp/replace" structure, you will see that the variable $query_string is having the pattern "%([a-fA-F0-9][a-fA-F0-9])" searched for; if you notice the parentheses, you will see that the results a being saved in $1 [this is where $1 becomes important]. The pattern is then replaced by the output of a call to sprintf, which takes %1 [passed to the hex() routine] as a parameter. The options at the end --"e" and "g"-- specify to treat the replace list as an expression to be evaluated [as opposed to plain text] and to do a global search.
+
+sprintf() is a routine that returns a formatted string; its syntax is
+	sprintf( string, variable )
+The string can contain variable "templates" which are denoted by variable type [%c for character, %d for decimal, %x for hexadecimal, %s for string]; these variable types are then filled with the given variable values in sprintf()'s output in a first-come, first-used order:
+	$name = "My Name"
+	$outstring = sprintf(My name is %c, my number is %d, my favorite opcode 					is %c." $name, 156, "JNZ")
+Note that the variables must be listed in the order which they appear in the string, as they are not referenced by name in the string itself. Note also that you can perform some rudimentary translation using sprintf(); in our Perl example we are using the hex() function to canged the matched text [$1] from a hexadecimal value to a decimal value; the output of the hex command is then used as a value for the sprintf() routine, to be output as an ASCII character:
+	sprintf("%c", hex($1))
+This will print the ASCII equivalent of the decimal value in $1. Where does one find out all this great info about sprintf(), hex(), and other standard routines? In a Perl reference book, natch; or by stealing source code ;)
+
+The rest of the Perl sample should be relatively simple. The fourth line calls Perl's Split() routine, which has the following syntax:
+	split(/char/, $variable)
+Note that the query string is split into three separate variables: $Name, $Email, and $Comp; the parentheses surrounding these are necessary when sending the output of split to multiple variables [without the ()'s it would create an aray]. Each variable is then trimmed of everything up through the "=", thus transforming the "name=value" pairs into "value" variables.
+
+The print  statements are self-explanatory; Perl assumes STDOUT for all print statements unless you direct it otherwise. Once again, the Mime Header and the HTML code itself are used to format the output for the browser; exit ends the script and returns control over to the OS/web server.
+
+Alright, time for an overview of Perl itself.
+Flow Control
+------------
+	if (){ } elsif (){ } else { }
+	unless (){ } else { }
+	while (){ }
+	until (){ }
+	for ( ; ; ){ }
+	foreach var(@array){ }
+Data Types
+----------
+	$name
+	@name
+	%name
+	$name[x]
+	$#name
+Operators
+---------
+	+ - * / %
+	&& || ! 
+	== != < <= => >
+	++ --
+	=~ . x 
+Expressions
+-----------
+	? :
+	-r -w -x -o -e -z -f -d
+
+
+iv. Search engine algorithm: psuedocode [theory]
+
+v. Search engine algorithm: Perl [application]
+
+vi. Further reading
+http://www.cgi-resources.com/Documentation/Programming_in_Perl/
+http://www.gustavo.net/programming/cgi.shtml
+http://hoohoo.ncsa.uiuc.edu/cgi/overview.html

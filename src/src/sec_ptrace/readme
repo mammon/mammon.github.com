@@ -1,0 +1,55 @@
+                        Secure  Ptrace()  for  Linux
+
+
+This is a very simple idea, really. We all know that ptrace() spreads its legs 
+like a Bangkok whore for any process that calls it. This is a *huge* security 
+leak, and makes things like anti-debugging tricks ( if PTRACE_TRACEME fails then
+we are being debugged, yawn ... c'mon, exploiting ptrace is like outwitting a 
+tard ) trivial to implement.
+
+So ptrace() is lame, unreliable, allows arbitrary processes to access the memory
+of other processes, and is too simple to try to hide out of sight. Worse, 
+ptrace() cannot be compiled as a kernel module, and thus is in every "secure 
+build" for a POSIX OS.
+
+The solution is simple, really: write a loadable kernel module that prevents 
+ptrace() from running. This is trivial to do, and sec_ptrace() is a viable 
+implementation: calls to ptrace requesting PTRACE_ATTACH, PTRACE_DETACH, or 
+PTRACE_TRACEME are returned a success (0) so that existing programs do not break
+(and so that targets believe they are not being ptrace()d), and all other 
+ptrace() calls are returned an error (-1). 
+
+I've added some security holes for the public release in order to forestall any
+non-source-reading lamers from asking "how do I get gdb to work when the module
+is loaded?". By default three tasks are allowed to access ptrace(): gdb, strace,
+and ltrace. 
+
+Since any damn program can name itself one of these, I highly suggest changing 
+NUMBER_GOOD_GUYS to 0 and just unloading the module whenever you need to debug 
+something. That is definitely the only secure way to go, and is how I originally
+wrote the module for my linux box.
+
+Also, the module supports the command line option "perm"; setting perm to a
+value other than 0 will cause the module to never be unloaded. This is to 
+prevent a process which has gained root from rmmod'ing the sec_ptrace module; 
+more subtle implementations might make the sec_ptrace module a dependency of a
+module such as a NIC or FS module which is required for any real work on the
+system (note: an FS module would be the most secure, but the FS support for /
+is required to be compiled into the kernel in order to boot ... thus / would 
+have to be tiny and of a non-ext2 fs type --with the rest of the system being
+ext2, and the ext2 module depending on or incorporating into its code the 
+sec_ptrace module-- in order for this to be truly effective). For those unused
+to kernel startup parameters,
+   root@localhost> insmod sec_ptrace.o perm=1
+will enable "module permanency". Needless to say this will disable ptrace()
+permanently unless you write another module to access the kernel struct for this
+module; it should be considered only for secure builds and servers.
+
+
+Compile with 
+
+gcc -I/usr/src/linux/include -O3 -Wall -c sec_ptrace.c
+
+as you might expect. Tested with 2.4 and no others. Caveat coder. 
+
+_m

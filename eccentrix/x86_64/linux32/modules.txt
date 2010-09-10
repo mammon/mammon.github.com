@@ -1,0 +1,122 @@
+# /etc/modules: kernel modules to load at boot time.
+#
+# This file should contain the names of kernel modules that are
+# to be loaded at boot time, one per line.  Comments begin with
+# a `#', and everything on the line after them are ignored.
+
+# IDE devices that are often useful, i.e. CD-ROM
+cdrom 
+ide-cd 
+isofs
+
+# PCMCIA [before SCSI on the off chance we get a SCSI PCMCIA card]
+pcmcia_core
+yenta_socket
+
+# SCSI [before USB since USB disks are often IDE-SCSI]
+# scsi_hostadapter
+scsi_mod
+#ide-scsi 
+sr_mod 
+sg 
+
+# USB [we have 1 EHCI and 2 UHCI buses on this box]
+usbcore
+ehci-hcd
+uhci-hcd
+hid
+usb-storage
+usbserial
+#visor
+#ipaq
+#tiglusb
+#wacom
+#cdc-acm 	# usb modem
+#usblp 		# usb printer
+#audio
+#ohci-hcd
+
+# FireWire
+ieee1394
+#ohci1394
+raw1394
+
+# Sound card
+soundcore 
+snd
+snd_page_alloc
+snd_ioctl32 
+snd_seq_device
+snd_seq 
+snd_mixer_oss 
+snd_pcm_oss 
+snd_pcm
+snd_timer 
+snd_ac97_codec
+snd_rawmidi
+snd_mpu401_uart
+snd_via82xx 
+
+# Serial port support [for PPP and PCMCIA modem cards]
+serial_core
+serial_cs
+serial
+
+
+# Winmodem
+#slamr		# use this for the unstable 2.9.x modem
+slamrmo		# use this for the stable 2.7.x modem
+
+# Bluetooth
+bluetooth
+l2cap	# connection oriented and connection-less data transport
+#bt3c_cs	# BT3C PC Card 3Com/HP http://bluez.sf.net
+#dtl1_cs	# DTL1 PCMCIA Card: Nokia interface
+hci_uart	# serial port interface/pcmcia cards
+hci_usb		# usb interface
+#hci_vhci	# virtual hci devices
+#rfcomm	# connection oriented stream transport for Dialup Networking, OBEX
+#sco	# voice transport
+#bnep	# Ethernet emulation
+#bluecard_cs	# bluetooth pcmcia cards
+
+# CPU- and MB-specific things
+proc_intf
+req_table
+cpufreq_powersave
+cpufreq_userspace
+powernow-k8
+#acpi	# cpufreq: No CPUs supporting ACPI performance management found.
+#apm	# apm: BIOS not found.
+#cpuid
+#msr
+#edd	# determine boot disk
+rtc	# enhanced realtime clock
+nvram	# non-volatile ram
+#genrtc	# generic realtime clock
+#hw_random	# Intel/VIA random number generator
+
+
+# ACPI Drivers
+processor
+thermal
+button
+fan
+#firmware_class
+
+# Related file systems
+ntfs		# for /dev/hda1
+vfat		# for memory cards/sticks and USB drives
+ufs		# for /dev/hda4
+udf		# for DVD-ROM
+loop		# for mounting files
+#cryptoloop	# for mounting encrypted filesystems
+
+# Printer
+lp
+#tipar	# Ti Graphlink
+
+# PPP, last but not least
+ppp_generic 
+ppp_async
+
