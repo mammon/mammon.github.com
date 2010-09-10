@@ -1,0 +1,117 @@
+<HTML>
+<HEAD>
+<TITLE>Introduction</TITLE>
+</HEAD>
+<BODY BGCOLOR="#FFFFFF">
+<CENTER><H2>Windows NT Security Identifiers</H2></CENTER>
+<HR><B><U><FONT SIZE=2><P>Introduction</P>
+</B></U><P>Two simple utilities, user2sid.exe and sid2user.exe, created by Evgenii Rudnyi have potentially done more damage to NT security than any other though they were not designed with this in mind. User2sid.exe can retrieve a SID from the SAM (Securi
+ty Accounts Manager) from the local or a remote machine Sid2user.exe can then be used to retrieve the names of all the user accounts and more. These utilities do not exploit a bug but call the functions LookupAccountName and LookupAccountSid respectively.
+ What is more these can be called against a remote machine without providing logon credentials save those needed for a null session connection. This can and is exploited by hackers/crackers.</P>
+<B><U><P>&nbsp;</P>
+<P>What is a SID</P>
+</B></U><P>Windows NT keeps track of User accounts and groups with Security Identifiers or SIDs. All  SIDs are unique within a given system and are issued by what is known as an "Authority" such as a domain. There are five authorities:</P>
+<P>&nbsp;</P>
+<P>SECURITY_NULL_SID_AUTHORITY</P>
+<P>There is a universal Well-Known SID S-1-0-0 that represents a group with no members and is generally used when the SID of an object is not known. A universal well-known SID is a SID that is common to all machines. That is the value of the SID is the sa
+me on my machine as it is on yours. </P>
+<P> </P>
+<P>SECURITY_WORLD_SID_AUTHORITY</P>
+<P>This authority is responsible for the Everyone group. The well-known SID of this group is S-1-1-0</P>
+<P>&nbsp;</P>
+<P>SECURITY_LOCAL_SID_AUTHORITY</P>
+<P>Responsible for Local issues. Users with the right to Log on locally will have membership of the group SID S-1-2-0.</P>
+<P>&nbsp;</P>
+<P>SECURITY_CREATOR_SID_AUTHORITY</P>
+<P>There are two group well-known SIDs issued by this authority namely Creator Owner ID (S-1-3-0) and Creator Group (S-1-3-1)</P>
+<P>&nbsp;</P>
+<P>SECURITY_NT_AUTHORITY</P>
+<P>This is, as far as this document is concerned anyway, the most important SID issuing Authority. This will dish out the SIDs for all user accounts, default global (domain) groups, default local groups, as well as both non-default local and global groups
+. It must be noted that all of these share the same sub-authority except the default local groups and the special internal objects</P>
+<P>&nbsp;</P>
+<U><P>Internal </P>
+</U><P>DIALUP&#9;&#9;&#9;S-1-5-1</P>
+<P>Network &#9;&#9;S-1-5-2</P>
+<P>BATCH&#9;&#9;&#9;S-1-5-3&#9;</P>
+<P>Interactive &#9;&#9;S-1-5-4</P>
+<P>SERVICE&#9;&#9;S-1-5-6</P>
+<P>ANONYMOUS LOGON&#9;S-1-5-7</P>
+<P>SERVER LOGON&#9;&#9;S-1-5-9</P>
+<P>Authenticated Users&#9;S-1-5-11</P>
+<P>SYSTEM&#9;&#9;S-1-5-18</P>
+<P>BUILTIN&#9;&#9;S-1-5-32</P>
+<P>&nbsp;</P>
+<U><P>Local groups</P>
+</U><P>Administrators&#9;&#9;S-1-5-32-544</P>
+<P>Users&#9;&#9;&#9;S-1-5-32-545</P>
+<P>Guests&#9;&#9;&#9;S-1-5-32-546</P>
+<P>Account Operators &#9;S-1-5-32-548</P>
+<P>Server Operators&#9;&#9;S-1-5-32-549</P>
+<P>Print Operators&#9;&#9;S-1-5-32-550</P>
+<P>Backup Operators&#9;S-1-5-32-551</P>
+<P>Replicator&#9;&#9;S-1-5-32-552</P>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+<P>All the SIDs below are relative to the domain. All other SIDs (ie those listed above) are universal and are the same on every machine.</P>
+<P>&nbsp;</P>
+<U><P>Default Global groups (SidTypeGroup)</P>
+</U><P>Domain Admins&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-512</P>
+<P>Domain Users&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-513</P>
+<P>Domain Guest&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-514</P>
+<P>&nbsp;</P>
+<U><P>Non-Default Global Groups (SidTypeAlias)</P>
+</U><P>Example&#9;&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-n=&gt; 1000</P>
+<P>&nbsp;</P>
+<U><P>Non-Default Local Groups (SidTypeAlias)</P>
+</U><P>Example&#9;&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-n=&gt; 1000</P>
+<P>&nbsp;</P>
+<U><P>Default Accounts (SidTypeUser)</P>
+</U><P>Administrator&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-500</P>
+<P>Guest&#9;&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-501</P>
+<P>&nbsp;</P>
+<U><P>Non-Default User Accounts (SidTypeUser)</P>
+</U><P>jsmith&#9;&#9;&#9;S-1-5-21-&lt;number&gt;-&lt;number&gt;-&lt;number&gt;-n=&gt; 1000</P>
+<P>&nbsp;</P>
+<P>Any group or user that is not created by default will have a RID of 1000 or greater. A RID is a Registered ID. This is the last portion of the SID. Once a RID has been issued it will never be used again. (Going off on a slight tangent this begs the que
+stion : What would happen if a user created a self-calling batch file that created and then deleted a local group and then let in run? There must be an upper ceiling on the allowable RID value.)</P>
+<P>&nbsp;</P>
+<P>&nbsp;</P>
+<B><U><P>The Attack</P>
+</B></U><P>&nbsp;</P>
+<P>Firstly an attacker must connect to the IPC$ share on the remote machine. More than likely they will connect with a null session:</P>
+<P>&nbsp;</P>
+<P>net use \\remote.compter.com\ipc$ "" /user:""</P>
+<P>&nbsp;</P>
+<P>To be able to suck down the user list from the remote machine the attacker will need to know the value of a SID issued by the SECURITY_NT_AUTHORITY. He will use user2sid.exe for getting such a value. Because the SIDs of the Global groups are issued by 
+the SECURITY_NT_AUTHORITY, renaming the default accounts (Administrator and Guest) to something else will not help (as far as this attack is concerned anyway.) Groups like "Domain Admins" cannot be renamed so the attack will be launched providing "Domain 
+Admins" as the lpAccountName placeholder. Note that this group  only exists on domain contollers. For workstations or member servers the guest or administrator account will be tried and will fail if they have been renamed. Then it is a case of guessing or
+ running nbtstat against the remote machine to get the logged on user account name etc.</P>
+<P>&nbsp;</P>
+<P>c:\&gt;user2sid \\remote.computer.com "Domain Admins"</P>
+<P>&nbsp;</P>
+<P>The response will be similar to the following :</P>
+<P>&nbsp;</P>
+<P>S-1-5-21-1125394485-807628933-549785860-512</P>
+<P>&nbsp;</P>
+<P>Number of subauthorities is 5</P>
+<P>Domain is OLYMPUS</P>
+<P>Length of SID in memory is 28 bytes</P>
+<P>Type of SID is SidTypeGroup</P>
+<P>&nbsp;</P>
+<P>Once this SID has been retrieved it is now a simple case of changing the RID and counting from 1000 upwards until "LookupSidName" fails.</P>
+<P>&nbsp;</P>
+<P>c:\&gt;sid2user \\remote.machine.com 5 21 1125394485 807628933 549785860 1000</P>
+<P>&nbsp;</P>
+<P>This whole process can be automated by using a Perl script like the one I provide here <A HREF="sid.zip">(sid.zip)</A>Sid.zip contains sid2user.exe, user2sid.exe and userlist.pl. Command line = c:\>perl userlist.pl target</P>
+<P>This will connect to the IPC$ shareon the target eg www.victim.com with a null session get the SID of the Guest account (rarely renamed) and then automatically run sid2user and get the 1st 100 accounts.</P>
+<P>Once the user list is obtained it is then a simple case of trying to guess the passwords.</P>
+<P>Net use, user2sid and sid2user all operate over TCP port 139 - NetBIOS session.</P>
+<P>&nbsp;</P>
+<B><U><P>Preventing this Attack</P>
+</B></U><P>Because you can't stop a null session connecting to the IPC$ share the only sure way to prevent this attack is to prevent inbound traffic to TCP port 139. This can be done by enabling security from the TCP/IP advanced properties window and then
+ configuring it to disallow inbound traffic to this port or if you had a multihomed host with MS-Proxy server you could enable dynamic packet filtering. This can be achieved from the Packet filter tab reached from the Security button on the Web Proxy Serv
+ice properties in Internet Service Manager. </P>
+<P>&nbsp;</P>
+<P>If for whatever reason that disallowing inbound traffic to this port is not an option it is important to ensure that a strong password policy is enforced. This is good administrative practice anyway.</P></FONT></BODY>
+
+</HTML>

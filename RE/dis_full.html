@@ -1,0 +1,66 @@
+<html>
+<head><title>Disassembly</title></head>
+<body bgcolor=A0A0A0 link=FFFFFF text=4040A0 vlink=0000A0>
+<!-- schema: code editor. Blue w/yellow + white fg -->
+<center><h1><font color=FFFFFF>R.E. HQ</font></h1></center>
+<center><h3>The science of reverse engineering</h3></center>
+<HR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++++Abstract -->
+	       <center><font color=FFFFFF>Disassembly</font></center>
+	  <i><font size=-1>
+	  Full disassembly, the goal of which is to produce a recompilable 
+	  assembly language source code of the target program. To be distinguished
+	  from source code recovery in that it does not produce code for the 
+	  original compiler of the target.
+	  </font></i>
+	  <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++Background -->
+     <font color=000080>
+	  The purpose of disassembly is to obtain a compilable version of a 
+	  binary executable. In simple operating systems, with simple programs,
+	  this is not too difficult. Parsing the file into its component 
+	  sections, fixing any absolute address references, and formatting the 
+	  code for its future assembler are services that can be provided by 
+	  any quality disassembler.<P>
+	  With large or complex programs, or with an OS that allows dynamic 
+	  linking and other forms of referencing volatile external addresses, 
+	  things become more difficult. Larger programs result in a greater chance 
+	  of error, and address or register references which work at runtime may 
+	  fail to assemble. <P>
+     Disassembly must be viewed as a complete reversal of the compilation 
+     process. The typical compilation of a binary executable is as follows:<P>
+	  <center><table width=60%>
+	  <tr><td bgcolor=FFFFFF><center>High-Level Source</td>
+	      <td><font color=000000>--Compiler--&gt</td>
+			<td bgcolor=FFFFFF><center>Assembly Source</td>
+	      <td><font color=000000>--Assembler--&gt</td>
+			<td bgcolor=FFFFFF><center>Object File</td>
+			<td><font color=000000>--Linker--&gt</td>
+			<td bgcolor=FFFFFF><center>Binary executable</td>
+			</tr></table></center>
+         <P>
+     The compiler formats the high-level language into assembler instructions -- 
+     it is this assembly code that a disassembly endeavors to recover. In the 
+     next step of compilation, the assembler generates object code by translating 
+     assembler mnemonics into machine opcodes. Finally, a linker combines related 
+     object code into a single executable, creates the file header and component 
+     sections, and formats exported symbols and external references according to 
+     the requirements of the OS loader/dynamic linker. <P>
+     Note that the linker can also embed pre-generated object code, such as the 
+     code libraries shipped with professional compilers and development 
+     environments [e.g. STDLIB, the C standard library; MFC, the Microsoft C++ 
+     class hierarchy; and VCL, the Borland/Inprise C++ class hierarchy]. This 
+     embedded code can be recognized by <i>signatures</i> [byte sequences within 
+     the code that are specific to the compiler/vendor and the embedded routine] 
+     and replaced in the disassembly with calls to the library code, thereby 
+     simplifying the disassembled code.<P>   
+     </font>    
+	  <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++++++Papers -->
+	  <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++Case Studies -->
+	  <p>
+	  <HR>
+	  <center><a href="index.html">R.E. HQ</a></center>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<html>
+<head>
+<TITLE>'95 Registry &Etc...</TITLE>
+<META HTTP-EQUIV="Keywords" CONTENT="Mammon, mammon, registry, Registry, 95, NT">
+</head>
+<BODY bgcolor="000000" text= "a0a0a0" link=FF0000 vlink=A08080>
+
+<center><font color="FF0000"><a href="#95Reg">95 Registry</a> * <a href="#CmdLine">Command Line</a> * <a href="#AutoRun">AutoRun</a> * <a href="#GetIn">Getting In</a> * <a href="#FullCtrl">Full Control</a> * <a href="#NT">NT Tricks</a> * <a href="#NTBoot">NT Bootup</a> * <a href="#WebRing">The Ring</a></center></font><BR><P>
+
+<P><BR>
+
+<center>
+<A name="New"></a><FONT color=ff0000>N E W</font><font color=FFFFFF>: Ported to Eccentrica domain 11.16</font>
+</center><P><BR>
+<BR><P><BR>
+<A name="95Reg"></a>
+<FONT COLOR=#AAAAAA>
+<b><h3><FONT COLOR="FF0000" face="Arial" size=+1>windows 95 registry</FONT></b></h3><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+<B>Indispensable Tools: </b>
+<a href="http://www.geocities.com/SiliconValley/Vista/2299/Installw.zip">Install-Watch</a> is fantastic utility for uncovering just what is happening to your hard drive
+under the veil of an "Install Wizard". Install-Watch allows you to monitor all of the system files and directories for additions, changes, 
+and deletions (all of which are recorded in a log), as well specific registry keys and directories of your choosing. In addition, 
+ this program comes with an Uninstall feature that is quite frankly the only one that WORKS. The <a href="http://www.geocities.com/SiliconValley/Vista/2299/Regmon95.zip">95 Registry Monitor</a> is a must-have tool for those who want to delve deep into the "mystery" of the 95 registry; it monitors Registry calls in the background while other
+ applications are running (like Filemon for the registry....).<P>
+<B>What is the Registry?</B> The 95 Registry has been made out to be a phenomenal mystery--probably due to the CLSID keys alone--and as such has
+ inspired a number of books (by Que, O'Reilly, even Microsoft at last...), FAQs, Web-Sites...you name it. Quite simply, the Registry is one huge (and I
+ mean huge; after installing Visual C++ and MS Outlook, my system.dat is 2.2 MB) configuration database, storing information such as where certain dll's are
+found, what programs are associated with which extensions, what are the most recent network connections made/URL's visited, what position was an application window 
+in when the user last exited the program, what color is the desktop, what driver is used for the modem, what shows up on the right-clisk menu....all sorts of things.
+ In fact, it is often more suprising to find what <I>isn't</i> recorded in the Registry that to find what <I>is</I>. The Registry is contained in two files in the Windows
+ directory (in NT they are called "hives"): system.dat and user.dat, with backup copies system.da0 and user.da0. The Registry database is accessed with regedit.exe (in
+ the Windows directory), or with shareware utilities such as grep_reg or RegSearch&Replace, and consists of six keys: HKEY_LOCAL_MACHINE (all of the settings for the machine,
+ such as software location and drivers), HKEY_CURRENT_CONFIG (a subset of HKEY_LM that details the current configuration), HKEY_USERS (all of the settings for the users of
+ the machine, such as favorite application settings and URL history), HKEY_CURRENT_USER (a subset of HKEY_USERS that details out the profile of the current user), HKEY_CLASSES_ROOT
+ (a subset of HKEY_LM\SOFTWARE that lists all of the software "classes" and extensions), and HKEY_DYNAMIC_DATA (dynamic information regarding the PC that is built at startup and
+ is good only until shutdown). Registry keys can be exported to .REG files which may then be modified in Notepad and double-clicked to have their contents be appended to the Registry--note that this provides a fantastic way to implement Registry patches on a large number of computers (LAN), or to keep your customizations on floppy so that they follow wherever you go. The Microsoft documentation warns you to NOT mess with the Registry as it may render your machine unusable...that is, unless you know DOS and can go in 
+via the command line, then replace the Registry files either with backups or with someone else's Registry files (yes, this works, though you have to do a hardware-detect and a lot
+of your software settings will be toast...). Fortunately most of us ignore Microsoft's documentation as it never really tells you anything anyway.....<P>
+<CENTER><b><U>HKEY_CLASSES_ROOT</U></b></CENTER>
+<LI> \.???<LI> \<i>objecttype</i><LI> \CLSID<P>
+In the Windows GUI, everything--every file, every directory, every applet, every link, every drive--is treated as an object; every object has certain properties associated with it. The HKCR key contains the list of object types and their properties. The main functions configured by HKCR are: 1) Associating a file extension with an object type, 2) Associating an icon with a object type, 3) Associating a series of command-line actions with an object type, 4) Defining Context Menu options for an object type, and 5) Defining Property Sheet options for each object type. In Windows 95, the Context Menu is the menu that pops up when you right-click an object; the Property Sheet is the dialogue box that opens when you select the Properties... option for an object.<P>
+What does this mean? It means that by changing the settings in HKCR you can change the default association for a given file extension, change the default icon for a file type, and add or remove items from the Context Menu of a given object type (or all object types).  HKCR contains three basic types of subkeys: the \??? or <i>file extension</i> subkey, the \<i>object type</i> subkey, and the \CLSID subkey. The file extension subkey links file extensions to object types and provides control over the Context Menu, Property Sheet, and Action association. The object type subkey defines an object type in terms of its default icon, its Context Menu and Property Sheet, its action associations and its CLSID links. The CLSID subkey provides OLE and DDE information for object types and may have icon, Context Menu, or Property Sheet information contained in its subkeys.<P>
+<i>A note on subkeys:</i> Apparently documentation on the Registry was so scarce in the early days of '95 that most programmers were making up Registry fixes as they went along. As a result, there is some overlap within the HKCR subkeys, such that a subkey such as \shell can be found under a \.??? key, an object type key, or a CLSID key. The typical "code" keys (being keys that do not identify an object type or name but that actually describe the properties of an object), if you will, are usually 1) shell, 2) shellex, 3) ShellNew, and 4) DefaultIcon. <B>Shell</B> keys have an "action" subkey, such as "open", which in turn has a command subkey; the command subkey has a Default string value that contains the command line for the program to be run. Placing an "open" subkey in an object type's shell subkey will put an "open" option on the Context Menu for that object type, and giving the open subkey a command key with the default string value "C:\Windows \Notepad.exe %1" will cause Notepad to be the default application used to open that object type. Other action options include View, Print, Copy, Virus Scan, etc.. <B>Shellex</B> keys have a subkey for ContextMenuHandlers and/or PropertySheetHandlers. Each of these contains subkeys that point to CLSID entries to perform OLE and DDE functions fo that object type (an example being Quickview, a ContextMenuHandler subkey under * that points to a CLSID key with a string value that lists the .dll file containing the file-viewing function). <B>ShellNew</B> contains a "command" string value that contains the command line for opening a "new" instance of that object type (for example, new .txt file would have a "command" value of "C:\Windows \Notepad.exe"). <B>DefaultIcon</b> subkeys contain a "Default" string value that contains a command line pointing to the icon (for example, "C:\Windows \System \shell32.dll,2" where 2 is the third icon--count starts at 0, remember-- in the shell32.dll).<P>
+<B>HKCR\file extension</B> The following subkeys will demonstrate the modifications that can be made in HKCR:  *, .386, .dll, .exe, .zip<P>
+<B>HKCR\object type </B> The use of this key can be illustrated by the following selection of subkeys: Allfile, drive, exefile, file, fndfile, folder,, mailto, regfile, unknown<P>
+<B>HKCR\CLSID</B> This is probably the most disconcerting key to look at. Each CLSID number must be unique--in fact, Microsoft has produced a CLSID-generation program just for this purpose--and as a result you tend to get strings of  32-digit hex numbers. For the most part these keys are of no interest unless you are programming or reverse engineering; they contain memory management models, client-server configurations, and links to .dll's for OLE handling.<P>
+<BR><P>
+Here are some sample .REG files for Context-Menu actions:
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/doshere.zip">Dos Prompt Here </A>Opens selected folder in a DOS box.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/RunInDOS.zip">Run In Dos </A>Runs selected .COM or .EXE file in a DOS box and leaves the box open afterwards.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/find.zip">FileFind </A>The built-in Windows FileFind function.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/explore.zip">Explore From Here </A>The built-in Windows Explore function.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/FileShare.zip">Sharing </A>Network FileSharing enabled on drive: Properties tag.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/dirprint.zip">Print Directory </A>Same as DIR>LPT1 or DIR/S>LPT1 in DOS.
+<LI><A HREF= "http://www.geocities.com/SiliconValley/Vista/2299/HexEdit.zip">HexEdit </A>Open in Hex Editor of your choice. Example uses HIEW.EXE<P>
+<P>
+
+<BR>
+<CENTER><B><U>HKEY_CURRENT_USER</U></b></CENTER>
+
+<LI> \AppEvents
+	<LI> \Control Panel
+	<LI> \Install LocationsMRU
+	<LI> \keyboard layout
+	<LI> \Network
+	<LI> \RemoteAccess
+	<LI> \Software<P>
+This key contains the settings for the current user drawn from that user's profile in the  HKU key at startup. For the most part, HKCU contains all of the information about the system that HKLM does not; for example, software settings and user preferences. Probably the most interesting subkey is \Software; most everything else can be set through the Control Panel.<P>
+<B>\AppEvents</B> This key contains the sounds that are linked to application or OS events, as set in "Sounds" in the Control Panel. EventLabels contains subkeys that provide the names of the events, Schemes\Apps provides the paths to the .wav files, and Schemes\Names provides the names for the sound schemes.<P>
+<B>\Control Panel</B> This contains more options that are configured via the Control panel, notably Accessibility (wheelchair options as set in the Accessibility Property Sheet with the following subkeys: HighContrast, KeyboardResponse, MouseKeys, SerialKeys, ShowSounds, SoundSentry, Stickykeys, TimeOut, ToggleKeys), Appearance (color scheme set in the Appearance tab of the Display Properties Sheet along with definitions for all schemes), Colors (current color scheme as set in Appearance, given in hex RGB values for each window, border, button, etc), Cursors (scheme definitions), Desktop (Misc settings such as wallpaper, drag option, icon size, and background pattern), International (string value: Locale), and Sound (string value: Beep). <P>
+<B>\Install LocationsMRU</B> M.R.U. is Microspeak for Most-Recently-Used; in this case it refers to the M-R-U install locations....here you find a list of directories where software was installed via the InstallWizard (bigbrotherbigbrother). Very useful to scan if you are a software vendor and want to delete the competition's software from your users' hard drives. <P>
+<B>\keyboard layout</B> This key defines your....wait for it....keyborad layout. Yes, the Reigstry isn't always as mysterious as Microsoft makes out. The preload subkey defines you key configuration according to some obscure numbering system.<P>
+<B>\Network</B> The Network subkey lists your past network connections in two subkeys: Persistent (the drives and devices you have mapped to with the "reconnect at logon" option checked, organized by subkeys labelled with the drive letter or device name, each containing your network client--i.e. Client For Microsoft Networks--your user ID, and the full network path to the driver or device) and Recent (the last 20 or so network connections you have made without the "reconnect at logon" option checked, organized in subkeys named with the full network path of the connection, and contain the same info as the Persistent subkeys). The Persistent connections are all connected and given "My Computer" icons at startup; the Recent connections appear in the drop-down list box for "Path" when you map a network drive.<P>
+<B>\RemoteAccess</B> This key contains the scripts for Dialup Networking. It consists of two subkeys: Addresses, whihc contains a binary key for each connection, and Profile, which contains a subkey for each connection with values for IP addresses, vendor-supplied scripts, domain names and user ids..<P> 
+<B>\Software</B> All of the sub-keys under this key represent software installed on your computer, listed by vendor name (note that some of the same vendors will have keys under HKLM, but the contents of the key will differ). The software settings contained in these keys will be user-specific (hence the HKCU placement), such as user preferences, location of log files, default directories for saving files, etc. A fine example can be had in the one key everyone will have, \Microsoft\Windows\CurrentVersion, which has just about all of your windows settings not covered elsewhere. The following subkeys branch off: Applets, explorer (look at all the MRU's here as well as the "recent docs" key, lots of keys to "clean"....), GrpConv (convert 3.1 progman groups to 95 explorer), Multimedia, Policies (what you are/are not allowed to do according to your sysadmin--if you do not have access rights, tailor this key at home and export it to a .REG file that you run after login to restore your lost user rights), Profile Reconciliation (where to look for profile info upon login), Secondary Profiles, and Taskman.<P>
+<BR><BR>
+<CENTER><B><U>HKEY_LOCAL_MACHINE</U></B></CENTER>
+<LI> \Config
+	<LI> \Enum
+	<LI> \hardware
+	<LI> \Network
+	<LI> \Security
+	<LI> \SOFTWARE
+	<LI> \System<P>
+The HKLM key stores the system information for the computer. This covers everything from software settings (such as file locations, registered/unregistered status, version number) to network and hardware configurations.<P>
+<B>\Config</B> This key stores all of the different hardware configurations for your computer (the ones you create in the System Properties Sheet of the Control Panel). The configuration that is currently in use is copied to HKCC at startup.<P>
+<B>\Enum</B> This is where the majority of your hardware settings are located, including the information for PNP (Plug N' Play) cards. Subkeys include ESDI, FLOP, HTREE, ISAPNP, Monitor, Network, Root, SCSI, and VIRTUAL.<P>
+<B>\hardware</B> The hardware subkey has two further subkeys: the DESCRIPTION key, which leads to a Floating Point Processor key (poss present: 0/1), and a devicemap key, whihc leads to a serialcomm key that lists all of your com ports.<P>
+<B>\Network</B> This key has one subkey, Logon, that contains the values LMLogon (local machine logon? 0=False 1=True), logonvalidated (logon must be validated 0/1), Policy Handler, Primary Provider (primary logon, i.e., client for MS networks), username, and UserProfiles.<P>
+<B>\Security</B> There are two subkeys to the Security key, the first being Access (which leads ultimately to a Remote key that lists the source for network security,i.e., access rights), and Provider (containing keys that list the network "address book" and "address server").<P>
+<B>\SOFTWARE</B> Most of the subkeys exist simply to provide a version number for the installed software. Once again, however, we can find some interesting settings under \Microsoft\Windows\Current Version, which has the following subkeys: App Paths (program locations for just about all of the 32-bit software that you have ever installed on your machine), Applets, Compression, Controls Folder (contains Property Sheet add-ons for Control Panels like Display), Detect, explorer (the most interesting subkeys here are the Namespace keys of Desktop and My Computer--they point to CLSID strings for the Recycle Bin and Dialup Networking--and the Tips subkey that lets you create your own tips), Extensions (a list of extension associations, this time associating extensions with specific executable files rather than with object types), Fonts, fontsize, FS Templates (File System templates, i.e. Server, Desktop or Mobile, from the System Property Sheet), MS-DOS Emulation (contains an App Compatibility subkey which has binary values for a ton of outdated programs), MS-DOS Options (settings for Himem.sys, CD-ROMs, etc, in DOS mode), Network (configurations for your network drivers), Nls, Policies (more things that your sysadmin thinks you should not be allowed to do), ProfileList (list of all of the usernames that have ever been used to log on to your machine, very handy), Run (programs that are run on startup: VERY IMPORTANT), RunOnce (programs that are run at startup only one time ala WinInit.exe, this wil usually be blank except after an install that requires a reboot), RunServices (like Run but contains "services" which are unlike normal programs in that they are elite or "system" programs...however they are not VXDs, just stuff like McAfee or RegServ), RunServicesOnce (just like RunOnce, but for "services", Setup (tons of windows setup parameters: mostly string values containing system directory locations, with subkeys for '95 Updates, Optional Installed Components, and Windows Boot Directory), SharedDLLs (a list of the shared DLLs, each given a number rating on an unknown system of measurement), Shell Extensions (lists "approved" OLE registry patches, with links to the relevant CLSIDs), ShellScrap (contains a subkey called PriorityCacheFormats which contains a blank numbered value...most likely derivative of the old SmartDrive command-line switches), Time Zones (the main string value is your current time zone; the subkeys define all of the possible time zones. Snore.), Uninstall (this stores the programs that show up in the Add/Remove programs dialogue box; the subkeys contain paths that point to the vendors' uninstall programs. So much for InstallWizard.....), WinLogon (contains the text strings used for logon legal notices).<P>
+<B>\System</B> The system subkey contains a CurrentControlSet subkey that branches off into the ComputerName, FileSystem, IDConfigDB, InstalledFiles (being dlls, vxds, and exes), keyboard layouts (pointers to the files that define various keyboard layouts), MediaProperties, MediaResources (string names and dll links for various multimedia resources), NetworkProvider, Nls, PerfStats (Performance Stats, with the following subkeys: Kernel, SMBRedir, VFAT, VMM--does not provide actual statistics but instead defines labels for use by a peformance monitor program), Print (provides the configuration information for the printers defined in HKCC\System\CurrentControlSet), PwdProvider (lists the password manipulation files--usually .cpl or .dll--for the various network clients that 95 is running), ServiceProvider, SessionManager (contains many intersting-sounding subkeys such as AppPatches, CheckBadApps, CheckVerDLLs, HackINIFiles, Known16DLLs, KnownDLLs, and WarnVerDLLS; most of these are of no practical interest unless you have software that you are trying to fool 95 into running), Shutdown, TimeZoneInformation, Update, and VMM32Files (a listing of the VXDs installed on your system; if you write your own VXD, you may want to register it here) subkeys.<P>
+<BR><BR>
+<CENTER><B><U>HKEY_USERS</U></B></CENTER>
+<LI> \.Default
+	<LI> \<i>username</i><P>
+HKU contains the profiles for all of the users on the system; at startup, the login profile is copied to HKCU..<P>
+<B>\.Default</B> Structure is the same as HKCU.<P>
+<B>\username</B> Structure is the same as HKCU.<P>
+
+<BR><BR>
+<CENTER><B><U>HKEY_CURRENT_CONFIG </U></B></CENTER>
+<LI> \Display
+	<LI> \System<P>
+The contents of the HKCC key are taken from the appropriate configuration profile in the HKLM\Config key at startup.<P>
+<B>\Display</B> Has the subkey Fonts which provides string values listing the fonts available for the main screen font, and the subkey Settings which has string value settings for BitsPerPixel, Resolution, MouseTrails, DPI, and VGA Fonts.<P>
+<B>\System</B> Has a single subkey, CurrentControlSet\control\Print\Printers, which defines the printers that are placed in the Printers object (in My Computer) at startup.<P>
+<BR><BR>
+
+
+<CENTER><B><U>HKEY_DYN_DATA</U></B></CENTER>
+<LI> \Config Manager
+	<LI> \PerfStats
+	<LI> \Security<P>
+The HKDD key contains information about your system that is detected at startup. The information in this key is, as the name explains, dynamic, and is subject to change while the OS is running. Changes made to this key do not appear to be saved to disk.<P>
+<B>\Config Manager</B> This key has a single subkey, Enum, that branches into further subkeys that describe the PNP devices detected at startup.<P>
+<B>\PerfStats</B> The actual performance statistics are recorded in binary values in subkeys of this key (StartSrv, StartStat, StatData, StopServ, StopData). It seems each of the primary string types (VMM, SMBRedit, VFAT, and KERNEL) correspond to a section of the '95 System Monitor applet (Memory Manager, Microsoft Network, File System, and Kernel).<P>
+<B>\Security</B> This key has a single subkey, Provider, that mirrors the Security\Provider key in HKLM. It is likely that this key is constantly updated to keep up with changes in the network, while the HKLM key remains static.<P>
+<BR>
+
+
+
+<i>Serious enthusiasts are directed to <a href="http://www.woram.com/">John Woram's</a> <a href="http://www.mandt.com/excerpts/regtoc.htm">The Windows 95 Registry</a> from <a href="http://www.mispress.com/">MIS Press </A>.
+</i><BR><P></font>
+<BR><P>
+
+<BR><P><BR><P>
+
+<BR>
+<A name="CmdLine"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>command line 95</FONT></b></h3><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+Windows 95 can be converted to a command-line operating system with multiple virtual terminals, reminiscent of a crippled version of Linux. To start off, do <i>not</i> set GUI=0 in MSDOS.SYS; this merely disables 95 from entering Protected Mode at all. Instead, set shell=command.com in SYSTEM.INI (instead of shell=explorer.exe)--though you can use NDOS or 4DOS if you prefer. What will happen is that Windows will run (yes, it is still slow-loading) and produce a DOS box; after you hit ALT-ENTER you will get a full-screen DOS terminal, and this will stay in effect through subsequent reboots. Additional DOS terminals can be created by typing <b>start command.com</b> at the DOS prompt; ALT-TAB will switch you between DOS terminals (and open windows applications). Windows applications can be run using the same <b>start</b> command (i.e., <b>start explorer.exe</b>); the DOS terminal will minimize, and the Windows application will run over your background bitmap (it is a good idea to create batch files for running your most-used apps, and put them in a directory in your path). One final note: to shut down this "version" of Windows, you must hit CTRL-ESC to bring up the Task List, then choose File->Shutdown Windows from the menu.<P>
+<U>Explorer Command Line Options</U><P> 
+The following command-line options may be used with explorer in a DOS box or the Run dialogue box:
+<LI>explorer <i>path</i> :opens folder specified in <i>path.</i>
+<LI>explorer /e <i>path</i>:opens folder specified in <i>path</i> in dual-pane (explorer) view.
+<LI>explorer /root,<i>path</i> :opens explorer window rooted at the folder specified in <i>path</i>.
+<LI>explorer /s :opens single-pane (MAC-like) explorer window in current dir.
+<LI>explorer /n <i>path</i> :opens folder specified in path in a new window. 
+<LI>explorer /select <i>path</i> :opens an explorer window with the file specified in <i>path</i> selected.<P>
+<U>Notes</U>: <B>IDlist:</B> The Registry uses an idlist parameter but it seems to have no effect. <B>NameSpace:</B> Explorer.exe uses "namespaces" instead of directories. A namespace is more or less a "virtual directory"; specifically, it includes everything in the client area of a window. The root window is the desktop window;  therefore the "root" namespace for explorer.exe is the Desktop. The child windows of Desktop include My Computer (with its sub-windows of all of your drives), Network Neighborhood, the Trash Can ('scuse me, <i>Recycle Bin</i>, how PC....), the Inbox, etc.  Note that a namespace contains more than just real files; it can contain applets such as the Network Neighborhood and the Control Panel. You can move these "special folders" around by including them in a namespace (for example, the namespace of My Computer) in the registry or by turning them into actual folders with TweakUI. <P>
+
+<U>Command-Line Networking Utilities</U>: 
+
+<LI><I>arp.exe</I> (Address Resolution Protocol): Displays and/or changes entries in the ARP IP address-to-hardware address tables. Sample uses: Type "arp -a ###.#.##.##"  with an IP address filling in the #'s and you get the physical address of the network card--useful for intercepting TCP/IP packets with Net X-Ray. Switches: -a ipaddr=display entry, -d ipaddr=delete entry, -s ipaddr hdaddr=add entry.
+<LI><I>finger.exe</I>: Disabled on most hosts; shows information on a user. Sample uses: Type finger user@host.com to start stalking a person. Switches: -L =verbose display.
+<LI><I>ipconfig.exe</I>: Displays the current TCP/IP network settings on your PC. Switches: /all =full display, /renew adaptername =renew DHCP info, /release adaptername =release DHCP configuration.
+<LI><I>nbtstat.exe</I>: Displays protocol stats and NetBios/TCP/IP connections. Sample uses: Type "nbtstat -s" to see your current connections, along with the amount of data sent and received along each connection. Switches: -a remotename=displays remotename's name table, -A ipaddr =display ipaddr's name table via IP, -c =shows NetBios names cache, -n =lists local NetBios names, -R =reloads LMHOSTS file, -r =displays Name Resolution statistics (WINS), -S =display workstation and server sessions by IP address, -s display workstation and server sessions by hostname.
+<LI><I>net.exe</I>: Network services. Sample uses: Type "net use" to view your current network connections, and "net use x: aaaaaaa" to map drive x: to server aaaaaaa. Type "net view aaaaa.com" to see all the shared resources on a server. Type "net view" on a lan to find out the machine names in your workgroup. Type "net diag" on two computers to start  network diagnostics on the second of the two computers. Switches: config, diag, help, init, logoff, logon, password, print, start, stop, time, use, ver, view.
+<LI><I>netstat.exe</I>: Display protocol stats and TCP/IP connections. Sample uses: Type "netstat" to see what protocols you are using to attach to which servers. Switches: -a =display all, -e =display ethernet stats, -n =display IP numbers and port numbers, -s =list by protocol, -p protocol =show all connections for the specified protocol, -r =display routing table.
+<LI><I>nslookup</I>: Display information from DNS servers. Syntax: nslookup hostname dnsserver
+<LI><I>ping.exe</I>: Verify connection with a remote computer. Syntax: ping hostname. Switches: -t  =ping until interrupted, -a =resolve IP address to host name, -n count =send count number of echos, -l length =send packet of length number of bytes, -r count =trace route of outgoing packet for count number of hosts.
+<LI><I>route.exe</i>: Manipulate network routing tables. Suggested uses: Type "route print" to get your gateway addresses. Switches: -f =clear routing tables, print =print a route, add =add a route, delete= delete a route, change = modify a route.
+<LI><I>telnet.exe</I>: Interact with a telnet server. Syntax: telnet hostname, or telnet hostname port.
+<LI><I>tracert.exe</I>: Record the route used to connect with a remote computer. Suggested uses: Type "tracert ###.#.##.##" to see which servers you use to connect to ###.#.##.## and how many ms you waste by going through them. Switches: -d =do not resolve IP addresses to host names, -h hops=specify maximum number of hops in which to find target computer.<P>
+
+<U>Other command-line programs</U>:
+<LI>"command.com" starts a new DOS box; ALT-Tab switches between the DOS virtual terminals much like in Unix.
+<LI>"start <i>path</i>" runs a windows program from a DOS box. <P>
+
+
+
+<U>Useful Keyboard Commands for '95/NT4</U>:
+<LI> Alt-Enter: Makes a full-screen DOS box "not so full-screen".
+<LI> Alt-M: Minimize all windows. 
+<LI> Alt-Tab: Switches between active applications.
+<LI> Alt-Windowskey: "Run" dialogue box.
+<LI> F3: "Find" dialogue box.
+<LI> Ctrl-Esc: Start Menu or Task List.
+<LI> Ctrl-Z: Global Undo (try it!).
+<LI> Shift-F10: Right-click.</font>
+<BR><P>
+<BR><P>
+<BR><P>
+<BR><P>
+
+<BR>
+<A name="AutoRun"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>autorun</FONT></b></h3><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+Normally this is of no real consequence as it only works with CD-ROMS--but somehow I got it to 
+kick in on my hard drive as well. Basically you create an AUTORUN.INF text file, in the root directory of the disk, that contains the following:<P>
+[AutoRun]<P>
+OPEN=autorun.exe<P>
+with Autorun.exe being the name of the file you want to run automatically (perhaps virus.com? claymore.exe?)
+It still seems pretty limited...<a href="mailto:mammon_@hotmail.com">anybody </a>know how to get this to work with a floppy?</font>
+<BR><P>
+<BR><P>
+<BR><P>
+<BR><P>
+
+<BR>
+<A name="GetIn"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>getting in</FONT></h3></b><font face="Courier" size=-1 color=a0a0a0>
+<LI><i>Password Bypass </i>: Ctrl-Esc is not gone, nor is the 3.1 task list. Next time you are stuck at a password prompt--say, for example, at a less-than-friendly network--Ctrl-Esc will bring up said task list, and Alt-File-Run Application allows you to run Explorer. You're in! If the desktop doesn't respond (happens on some NT networks) choose Start>Run>C:\ [ENTER] and start maneuvering....
+
+<LI><i>Floopy booting </i>: sys.com a floppy, then copy the msdos.sys from c:\ to a:\ (overwrite the useless a:\ one). Make sure all of the msdos.sys options are to your liking (WinDir=C:\Windows, WinBootDir=C:\Windows, BootMenu=1,Network=0,GUI=0, etc), then add set path=c:\windows;c:\windows\command;c:\windows\system;%path% to your autoexec.bat.
+
+<LI><i>Variation on the floppy-boot trick </i>: call Soft-Ice from the floppy autoexec.bat (set GUI=0 and all that...), with SVGA--or you favorite video display--as the default. I recommend doing this with Soft-Ice 2.0 as it is more portable (read: small enough to fit on a floppy) than 3.0. But then again, since you  can use DriveSpace to compress floppies (and zip disks!), why hold back? Warning: The Soft-Ice trick is s---l---o---w. But the Ctrl-D is worth it. <I>Variation</I>: You set the video card by copying one of the driver files to the softice directory and naming it siwvid.386. With some creative .bat-ing, you can create a startup file that a) prompts you for a video card, b) creates c:\siw95, c) copies all of the soft-ice files with the correct driver to c:\siw95, d) runs Soft-Ice and thereby loads windows, and e) deletes c:\siw95. <a href="http://www.geocities.com/SiliconValley/Vista/2299/Ice_disk.zip">Here</a> is my attempt.<P>
+</font>
+
+<BR><P>
+<BR><P>
+<BR><P><BR><P>
+
+<A name="FullCtrl"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>full control</FONT></h3></b><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+How to get the most out of your machine with the least amount of effort:
+<LI>Unable to access the Registry? Use <A HREF="http://www.geocities.com/SiliconValley/Vista/2299/poledit.zip">PolEdit</A>!
+<LI>Get <A HREF="http://www.geocities.com/SiliconValley/Vista/2299/ktoys.zip">Kernel Toys</A> Now: Use Keyboard Remap for mimicking that Microsoft 95 keyboard (for example, RtAlt + R= Run dialogue box); WinTop is a more or less adequate system monitor; Doswzcfg for full control of your ms-dos mode environment. 
+<LI>Get <A HREF="http://www.geocities.com/SiliconValley/Vista/2299/ptoys.zip">Power Toys</A> Also: HTMLDriver, QuickRes, and ShellFix are okay, but for real system control you need TweakUI (with its Paranoia! option...) and CabView (treats .CAB files as directories, double-click a file to extract it).
+<LI>The Start Menu (as well as SM>Programs>Startup), Desktop, and SendTo folders are all good places to have "shortcutted" on your Desktop or in your Start Menu (in NT, be sure to link to the "All Users" subdirectories (\winnt\profiles\All Users\StartMenu) except for SendTo, which must be under your specific profile). Another fun trick is to shortcut SendTo and put that in your "SendTo" directory, so that you can easily send shortcuts to your right-mouse-button>SendTo menu.
+<LI>Keep an eye on WinInit.ini. This file contains the changes that will be made to your system the next time you boot up; it is called by WinInit.exe (which runs at bootup) and is deleted when the .exe has finished running (it is like the RunOnce key in the Registry except that the RunOnce key actually runs a specific executable file at startup, while WinInit implements enviromental changes (renaming files, changing strings, etc).
+<LI>If you are on a LAN, watch out for Regserv; this device loads at startup (Run Service in the Registry) and remotely updates your registry. Use Ctrl-Alt-Delete to monitor the services running at startup (this is kind of like fishing) and if you find regserv, either disable it (to hell with the sysop!) or keep a backup of your registry in your harddrive. For more network chaos, run KOH on your system (or similar non-viral utilities such as Cerebrus or Lock-And-Key) to make your hard drive inaccessible to others; also, combining arp.exe with Net X-Ray (available on the web...) gives you TCP/IP packet generating/intercepting capabilities without requiring admin rights.
+<LI>The following are all of the places where a program or driver can be specified to load at startup: c:\config.sys, c:\autoexec.bat, c:\windows\win.ini (load= and run= lines), c:\windows\system.ini (drivers only), c:\windows\Start Menu\Programs\Startup (anything in this folder...), and the \Software\Microsoft\Windows|CurrentVersion\Run and RunService keys (also the RunOnce and RunServiceOnce keys, for installs or patches) located in both HKEY_LOCAL_MACHINE and HKEY_CURRENT_USER in the Registry.
+<LI>On occasion you will need to manually register a .dll file. The executable used for this is Regsvr32.exe; the syntax is simply REGSVR32 <i>filename</i>, from the DOS prompt. If one of your applications is failing to load a .DLL due to a flaw in the app (as opposed to a flaw in the DLL), this may help you out.
+<LI>Setting up a new machine with your 95 settings: this happens a lot where I work; you wouldn't believe how much of a pain it can be to get all of your 95 settings and your third-party software working on another machine if you've never done it before (the problem is that software vendors put shared files--.dll's--in the Windows\System directory instead of another common directory like, say, Program Files, because the system path can be returned with the GetSystemDirectory API call...which is much easier than creating a \Program Files\Shared directory and then loading your files into it; this makes files easier to install but much, much harder to uninstall or move, for you have to be able to distinguish between the Windows .dll files and the vendor .dll files....). The first rule is: never do this in DOS--you'd be amazed how much a problem it can be not having those long filenames like ShellIconCache. The hardcore tech way to do this is to install 95 on the new hard drive, slave the new HDD to the old HDD and boot off the old then a) copy everything but the Windows directory to the new HDD, b) create a Windows directory on the new HDD, and c) go into the Windows directory on the old HDD and copy everything except win386.swp (it will crash your copy process) to the Windows directory on the new HDD. "What about laptops?", comes the obvious cry. There is another method: a) export the HKEY_Current_User key to a file such as USER.REG, b) back up your entire (old) hard drive, and c) selectively restore files, namely: the USER.REG file (which you must double-click to import into the Registry), all of your program Directories, the C:\Windows\Desktop, C:\Windows\Sendto and C:\Windows\Start Menu directories (be sure not to have two copies of the contained shortcuts), and all of the files from C:\Windows\System, C:\Windows\Fonts, and C:\Windows that are not the same (use <a href="http://www.fortunecity.com/victorian/brambles/38/windiff.zip">WinDiff.exe</a> to determine which files to copy). The Registry Key and the SendTo, Start Menu, and Desktop folders will contain all of your 95 settings; the remaining steps copy files needed for vendor applications onto your new hard drive. Almost as easy as DOS, huh?<P>
+</font>
+<BR><P>
+<BR><P>
+<BR><P><BR><P>
+
+<A name="NT"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>nt tricks</FONT></h3></b><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+Windows NT: the wave of the future. Just when Windows got to Plug-and-Pray, now we take a few steps back to the 3.1 days of "how do I get my SCSI card to work?"; if NT stays like this <i>and</i> becomes an industry standard, expect the MacIntosh to make a comeback. But yes, OK, the system is more stable than 95 (remarkably so), is much more efficient than 95 on high-RAM (48+ MB) systems, and is reasonably secure (unless you have a floppy drive, see below... ), so I guess some improvements have been made after all. N.B.: most of the tips about 95 (especially where the UI is concerned; for some reason both of these OSs use EXPLORER.EXE) listed above apply to NT as well.
+<LI>Worried about losing your files when you convert a partition to NTFS? Cue the entrance of <a href="http://www.geocities.com/SiliconValley/Vista/2299/ntfsdos.zip">NTFS-DOS</a>: A handy utility that allows you to view NTFS volumes as if they were FAT volumes. This is a TSR that you run from DOS: it detects NTFS volumes on the local machine and mounts them as FAT logical drives. If you run this before Windows (3.1/95) loads, the NTFS drives will be available globally through the <b>My Computer</b> applet. If you run it after Windows has loaded, you will be able to access the NTFS volumes only in the DOS box where you ran the TSR. One quirk: on my system it does not load the \WINNT directory on the NTFS drive. <i>Endless Fun Trick</i>: Make a DOS 5.0 or higher bootable diskette with ntfsdos.exe and an NT password cracker (avail on the web, everywhere...even <a href="http://www.somarsoft.com/ntcrack.htm">here</a> or <a href="http://www.l0pht.com/advisories.html">here</a>), maybe a copy of getadmin.exe (see below)...
+<LI>Recover your lost admin rights! Are you trapped with the choice of using the "guest" account or not using a computer at all? Despair no longer--now available is <a href="http://www.geocities.com/SiliconValley/Vista/2299/getadmin.zip">GETADMIN</a>, a utility that will temporarily assign the current user admin rights--regardless of the user's assigned rights. Just like SU in UNIX, but no password needed; I'm sure you can see the possibilities... One caveat is that it only recovers admin rights from the local user table: if you run it while logged into a remote NT server, for example while logged in to the network at work, you will get a GPF right after the rights are assigned. The program comes with source, though, so I am on my way to developing a networkable version...
+<LI>NT Boot repair: Running Windows NT and Windows 95 on the same system cna be a bit tricky--especially with NT's special boot sequence. If your 95 crashes, for example, and you have to SYS.COM the drive to get it working again, you can assume your NT boot track is toast.  At this point you have two options: Install NT all over again, or trick the computer into thinking you did so. For the second option, run the install program from the NT CD-ROM from DOS or '95 up to the point where it asks you to reboot after it has copied the NT files into a temporary directory. At this point the NT bootsector has been restored; you can delete the temporary directory and delete the "Install Windows NT" option from BOOT.INI . Preventative measures include running <a href="http://www.geocities.com/SiliconValley/Vista/2299/disksave.zip">DISKSAVE</a> from the DOS command prompt (note: must be DOS 5.0 to 6.11; Microsoft blew it when coding this routine so that it <b>will not run</b> in DOS 7.0, regardless of how clean you boot up) in order to back up your boot partition, or making a bootable floppy diskette in NT (format a 1.44 MB floppy with system files) and copy the following files from the root directory of your boot drive onto the floppy: BOOT.INI, BOOTSECT.DOS, NTDETECT.COM, and NTLDR. Note: if you have a SCSI drive controller, be sure to add the drivers to your floppy. Either of these methods will allow you--with some work, of course--to recover the boot sector on your hard drive. Nothing like SYS.COM available, unfortunately.
+<LI>NT Workstation to Server in 2 Registry Keys: this one is untested, but as it comes from Schulman and O'Reilly & Associates you can more  or less count on it as fact. The NT kernel is built at bootup, not (as with other versions of Windows) during Setup--and it takes its configuration parameters from the NT Registry. Apparently there are two special keys (HKEY_LOCAL_MACHINE\System\CurrentContolSet\Control \ProductOptions\ProductType, which has a string value that must be changed from "WinNT" to "ServerNT", and HKEY_LOCAL_MACHINE\System\Setup\SystemPrefix, which is a binary value that must be changed so that the bit masked by x04000000 is set to 1 instead of 0; using a <a href="http://biosys12.ee.unsw.edu.au/personal/software/basecalc/bcalc1.zip">base calculator</a>, that is the bit that is in the 27th position from the end of the high-order DWORD value ) that, when modified, cause anywhere from 75 to 700 (your guess) changes in the NT kernel and enable it as either a Workstation ($139) or Server ($759). NT has a thread running that prevents these keys from being changed; however from DOS you can always regedit a patch or, as <a href="ftp://ftp.ora.com/pub/examples/windows/win95.update/ntnodiff.html">Russinovich</a> decided, write a utility that kills these two threads and patches the registry itself. As for myself, I already have server...no need to try making it a workstation.<P></font>
+<BR><P>
+<BR><P>
+<BR><P><BR><P>
+
+<A name="NTBoot"></a><b><h3><FONT COLOR="FF0000" face="Arial" size=+1>nt boot sequence</FONT></h3></b><P>
+<BR><font face="Courier" size=-1 color=a0a0a0>
+<i>The following information is culled from Micro$oft's <b>Technet</b> techncian's reference and not from my own personal experience/experimentation, therefore I cannot attest to its accuracy or reliability. I trust the inclusion of such third-party information will not compromise the integrity of my page....</i><P>
+<b>Services: Order of Loading</B><P>
+<LI>SCSI miniport
+<LI>Port
+<LI>Primary disk
+<LI>SCSI class
+<LI>SCSI cd-rom class
+<LI>Filter
+<LI>Boot file system
+<LI>Base
+<LI>Pointer port
+<LI>Keyboard port
+<LI>Pointer class
+<LI>Keyboard class
+<LI>Video init
+<LI>Video
+<LI>Video save
+<LI>File system
+<LI>Event log
+<LI>Streams drivers
+<LI>NDIS
+<LI>TDI
+<LI>NetBIOS group
+<LI>Spooler group
+<LI>NetDDE group
+<LI>Parallel arbitrator
+<LI>Extended base
+<LI>Remote validation
+<LI>PCI configuration<P>
+<b>Services Automatically Started</B><P>
+NT loads these services automarically, unless you configure it not to:
+<LI>Alerter
+<LI>Computer browser
+<LI>Event log
+<LI>License loggin service (ugh)
+<LI>Messenger
+<LI>Net logon
+<LI>NT LM security support provider
+<LI>Server
+<LI>Spooler
+<LI>TCP/IP NetBIOS helper
+<LI>Workstation<P>
+<b>"Kernel-Mode" Drivers Automatically Started</b><P>
+The drivers listed below are loaded automatically by NT, even when no network is running. This is a bare-bones boot:
+<LI>ntoskrnl.exe
+<LI>hal.dll
+<LI>atdisk.sys
+<LI>ntfs.sys
+<LI>floppy.sys
+<LI>scsiflop.sys
+<LI>scsiscan.sys
+<LI>scsicdrm.sys
+<LI>cdaudio.sys
+<LI>fs_rec.sys
+<LI>null.sys
+<LI>beep.sys  
+<LI>i8042prt.sys 
+<LI>mouclass.sys 
+<LI>kbdclass.sys  
+<LI>videoport.sys  
+<LI>vga.sys 
+<LI>qv.sys  
+<LI>vga.sys  
+<LI>msfs.sys  
+<LI>npfs.sys  
+<LI>fastfat.sys
+<LI>parport.sys
+<LI>parallel.sys
+<LI>serial.sys<P>
+
+<B>Typical NT Driver Initialization</B><P>
+The following is a sequence of drivers initialized during a typical NT bootup, as captured at M$oft by a kernel debugger:
+<LI>atdisk.sys (non-SCSI HDD driver)
+<LI>ntfs.sys (booting from NTFS partition)
+<LI>floppy.sys (FDD driver)
+<LI>scsiflop.sys  (SCSI FDD driver)
+<LI>scsiscan.sys (SCSI device scanner)
+<LI>scsicdrm.sys (SCSI CD-ROM driver)
+<LI>cdaudio.sys (sound card driver)
+<LI>fs_rec.sys (file system recognizer)
+<LI>null.sys (NULL device driver)
+<LI>beep.sys (computer speaker driver)
+<LI>i8042prt.sys (mouse/keyboard port driver)
+<LI>mouclass.sys (mouse driver)
+<LI>kbdclass.sys (keyboard driver)
+<LI>videoport.sys (std display driver)
+<LI>vga.sys (std display driver)
+<LI>qv.sys (video driver)
+<LI>vga.sys (vga driver re-loaded)
+<LI>msfs.sys (mailslot file system)
+<LI>npfs.sys (named-pipe file system)
+<LI>fastfat.sys (FAT file system driver)
+<LI>ndis.sys (ndis layer driver)
+<LI>elnkii.sys (ethernet card driver--3com, in this instance)
+<LI>tdi.sys (tdi layer driver)
+<LI>tcpip.sys (tcp/ip protocol driver)
+<LI>netbt.sys (netbios over tcp/ip driver)
+<LI>netbios.sys (netbios interface)
+<LI>parport.sys (parallel port driver)
+<LI>parallel.sys (parallel port driver)
+<LI>serial.sys (serial port driver)
+<LI>mup.sys (multiple UNC provider)
+<LI>rdr.sys (workstation service file system driver)
+<LI>srv.sys (server service file system driver)
+<LI>afd.sys (windows sockets driver)<P>
+<BR><P></font>
+<BR><P><BR><P>
+<BR><P>
+
+
+<CENTER><A name="WebRing"></a><font color="FF0000">
+ <A HREF="http://www.cmpcmm.com/cc/standards.html">Standards</A> * 
+<A HREF="http://www.geocities.com/Area51/Vault/6702">Member1</A> * <font color="ff0000"><U>Member2</u></font> * <A HREF="http://www.cybercity.hko.net/SanFrancisco/mammon">Member3</A> * 
+ <A HREF="http://www.geocities.com/Athens/Forum/9684/index.html">Member4</A> *   
+<A HREF="http://www.angelfire.com/ca/mammon/">Member5</A> * <a href="http://www.fortunecity.com/skyscraper/firelli/29/mammon.html">Member6</a> * 
+ <A HREF="ftp://ftp.ora.com/pub/examples/windows/win95.update/schulman.html">Schulman</A></font>
+</CENTER><BR><BR>
+<P>
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+

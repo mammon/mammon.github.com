@@ -1,0 +1,105 @@
+
+F1 = "h;"
+F2 = "^wr;"
+F3 = "^src;"
+F4 = "^rs;"
+F5 = "^x;"
+F6 = "^ec;"
+F7 = "^here;"
+F8 = "^t;"
+F9 = "^bpx;"
+F10 = "^p;"
+F11 = "^G @SS:ESP;"
+F12 = "^p ret;"
+
+SF1 = "^watch es:di;watch eax;watch *es:di;watch *eax;"
+SF3 = "^format;"
+
+CF1="^bl;"
+CF2="^bd *;"
+CF3="^bc *;"
+CF4="^bstat;"
+CF5=
+CF6=
+CF7=
+CF8 = "^XT;"
+CF9 = "TRACE OFF;"
+CF10 = "^XP;"
+CF11 = "SHOW B;"
+CF12 = "TRACE B;"
+
+AF1 = "^wr;"
+AF2 = "^wd;"
+AF3 = "^wc;"
+AF4 = "^ww;"
+AF5 = "CLS;"
+AF8 = "^XT R;" 
+
+INIT = "faults off;lines 60;wr;wl;wd 13;wc 28;ww 5;code on;color 07 0B 71 04 02;DEX 0 SS:ESP;X;"
+;color 70 7f 71 04 74
+SYM =1024
+
+; *************************************************************************
+; If your have MORE than 32MB of physical memory installed, change
+; the following PHYSMB line to the correct # of Megabytes.
+; If you have LESS than 32MB you can save a bit of memory by 
+; specifying the correct # of Megabytes
+; *************************************************************************
+PHYSMB =39
+
+; ***** Examples of sym files that can be included if you have the SDK *****
+;	Change the path to the appropriate drive and directory
+;load=c:\windows\system\user.exe
+;load=c:\windows\system\gdi.exe
+;load=c:\windows\system\krnl386.exe
+;load=c:\windows\system\mmsystem.dll
+;load=c:\windows\system\win386.exe
+
+; ***** Examples of export symbols that can be included *****
+;	Change the path to the appropriate drive and directory
+;exp=c:\windows\system\vga.drv
+;exp=c:\windows\system\vga.3gr
+;exp=c:\windows\system\sound.drv
+;exp=c:\windows\system\mouse.drv
+;exp=c:\windows\system\netware.drv
+;exp=c:\windows\system\system.drv
+;exp=c:\windows\system\keyboard.drv
+exp=c:\windows\system\toolhelp.dll
+;exp=c:\windows\system\shell.dll
+exp=c:\windows\system\commdlg.dll
+exp=c:\windows\system\olesvr.dll
+exp=c:\windows\system\olecli.dll
+;exp=c:\windows\system\mmsystem.dll
+exp=c:\windows\system\winoldap.mod
+;exp=c:\windows\progman.exe 
+;exp=c:\windows\drwatson.exe
+exp=c:\instapi.dll
+exp=c:\msuilstf.dll
+exp=c:\instdlg.dll
+exp=c:\act_inc\flex32.dll
+
+; ***** Examples of export symbols that can be included for Chicago *****
+;	Change the path to the appropriate drive and directory
+exp=c:\windows\system\vb40032.dll
+exp=c:\windows\system\vbrun300.dll
+exp=c:\windows\system\kernel32.dll
+exp=c:\windows\system\user32.dll
+exp=c:\windows\system\gdi32.dll
+exp=c:\windows\system\kernel.exe
+exp=c:\windows\system\user.exe
+exp=c:\windows\system\gdi.exe
+exp=c:\windows\system\comdlg32.dll
+;exp=c:\windows\system\shell32.dll
+exp=c:\windows\system\advapi32.dll
+;exp=c:\windows\system\shell232.dll
+exp=c:\windows\system\comctl32.dll
+;exp=c:\windows\system\crtdll.dll
+;exp=c:\windows\system\version.dll
+;exp=c:\windows\system\netlib32.dll
+;exp=c:\windows\system\msshrui.dll
+exp=c:\windows\system\msnet32.dll
+;exp=c:\windows\system\mspwl32.dll
+exp=c:\windows\system\mpr.dll
+
+
+

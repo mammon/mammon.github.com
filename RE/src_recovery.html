@@ -1,0 +1,45 @@
+<html>
+<head><title>Source Code Recovery</title></head>
+<body bgcolor=A0A0A0 link=FFFFFF text=4040A0 vlink=0000A0>
+<!-- schema: code editor. Blue w/yellow + white fg -->
+<center><h1><font color=FFFFFF>R.E. HQ</font></h1></center>
+<center><h3>The science of reverse engineering</h3></center>
+<HR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++++Abstract -->
+	  <center><font color=FFFFFF>Source Code Recovery</font></center>
+	  <i><font size=-1>
+	  Source code recovery, the goal of which is to reproduce the source code 
+	  of the target for the compiler or language with which it was originally
+	  written. 
+	  </font></i>
+	  <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++Background -->
+	  <font color=000080>
+     Source code recovery, or <i>decompilation</i>, is the most difficult 
+     goal to achieve in reverse engineering. The intent is to produce not 
+     just a compilable version of a binary executable, but a version which is 
+     also in the language which the executable was originally written in.<P>
+     Naturally, recovery of the exact original source code is impossible; even 
+     if debug information is present, the comments in the code will have been 
+     stripped by the compiler, and any preprocessor macros will have been 
+     expanded. Nevertheless, source code can be produced which will compile on 
+     the same development platform as used in the original.<P>
+     The process of source code recovery entails what amounts to a reversal of 
+     the compilation procedure; the binary must be disassembled, and the 
+     resulting assembly language passed through parsers which will create 
+     successively more abstract [or <i>higher level</i>] interpretations of 
+     patterns in the assembly code. Once a sufficiently high-level interpretation 
+     of the code is produced -- that is, one which contains primtives that directly 
+     map to structures and elements in the target high level language [sometimes 
+     referred to as the <i>HLL</i>] -- the working interpretation can be translated 
+     into that language with a final parser or lexical analyzer.<P>
+     </font>
+     <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++++++Papers -->
+	  <P><BR>
+	  <!--  +++++++++++++++++++++++++++++++++++++++++++++Case Studies -->
+	  <p>
+	  <HR>
+	  <center><a href="index.html">R.E. HQ</a></center>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<html>
+<head><title>visual assembler</title></head>   
+<body text=000000 link=A0A0A0 vlink=A08080 BGCOLOR=#000000>   
+<font color=808080 Face="Courier">   
+ <BR><P>
+ <center><font color=FFFFFF>
+ There is now a <a href="http://www.fortunecity.com/skyscraper/lycos/403">Fortune City page</a>
+  and a <a href="http://venus.beseen.com/boardroom/l/16009/">Message Board</a> for Visual Assembler</font>
+ </center>
+ <BR><P>
+<font size=+1 face="Arial" color=FF0000><b>visual assembler</b></font><P>   
+<font color=808080 Face="Courier"> 
+Visual Assembler was born from an email discussion between fravia and mammon_ regarding the use of  
+Rapid Application Development technology (as seen in Delphi, VB, and C++ Builder) to make assembly  
+language programs easier to build. Visual Assembler will provide an IDE for developing assembly  
+language programs for windows, including standard tools (hex editor/calculator), reference material  
+(opcodes, win32 API, ASCII table), insertable code (for winmain, the wndproc event handler, the dlgproc event  
+handlers, and for the standard windows api functions), and basic components (dialogs, controls, etc) that 
+developers can compile into their applications.<P> 
+ 
+Visual Assembler will work by creating .asm modules that will be compiled into a standalone executable. Each 
+module has a specific function: every application will have a winmain.inc module (includes/header info/#defines), 
+a winmain.asm module (the startup windows code and message loop), a wndproc.asm module (main event handler), 
+and userproc.asm (custom functions/routines written by the user) or dlgproc.asm modules (event handlers  
+for user-created dialog boxes) if created by the user. These modules will be created from skeleton files and modified 
+according to user responses to Visual Assembler dialog boxes/wizards. For example, the winmain module will modified to include 
+information specific to this executabe; wndproc will be modified to take all of the resources into account; dlgproc modules will be modified 
+to include all of the resources in the dialog box. Needless to say, a project database (.pdb) file will need to be created that contains 
+info on the what the modifications are so that changes to the application's resources, for example, will be reflected in the source code immediately. 
+The source code will always be available for further editting--this tool is intended to speed coding, not take control away from the coder.<P> 
+ 
+The idea behind Visual Assembler is that you fill in fields in an initial dialog box that determine the resource script, application name, etc; this information will be 
+added to the .pdb file and will be used to create the winmain and wndproc modules as soon as the user presses "OK". At this point the user will have a skeleton application 
+that they can edit directly. Next, a dlgproc module will be created using a similar user-interface that allows the user to name the exported dlgproc() for each dialog box in the 
+resource script; event loops will be generated for the dialog boxes and the user will be prompted for the name of a handler function for each event (example: On_OKbutton1_click() ); 
+these functions will then be included in the userproc.asm module (as protoypes only; they will have to be coded by the user). In the end, the user should only have to directly edit the  
+userproc.asm module to have an effective application (as the event handlers will all directly call functions contained in userproc.asm). 
+To speed up the coding of the userproc.asm functions,Visual Assembler will have code-insertion routines that enter the skeletal code for calling standard API functions. Also, a number of 
+common components such as SaveAs dialog boxes, Win95 controls, etc will have dialogbox/wizards that allow the user to configure the component (i.e., enter the parameters for the comctl32 call), 
+and then will paste the complete (ready-to-run) code into the source code [example: in wndproc you could insert a FileOpen dialog box in the handler for your 
+File->Open menu item without having to code the call in asm yourself). Eventually applets for things like text editors, hex editors, etc will be included in modules that the user can 
+compile into their own application.<P> 
+ 
+Unlike standard RAD environments, Visual Assembler will not use a class library; rather, it will use standard win32 API calls for all of its components. In addition, nothing will be precompiled: the 
+source code inserted by Visual Assembler when using a component or API call can always be editted by the user.<P> 
+ 
+Visual Assembler will initially be designed to only make win32 assembly programs; however with a little 
+work and some time it can be updated to create win 16/32 .exe, .vxd, .dll,  and dos .exe and .com files.<P> 
+<P><BR> 
+<a href="http://www.eccentrica.org/Mammon/Vasmdemo.zip">Download the demo</a><P> 
+</font>   
+<P>   
+<BR> 
+ 
+<font size=+1 face="Arial" color=FF0000><b>demo notes</b></font><P>   
+<font color=808080 Face="Courier"> 
+Here is an explanation of the what each menu item in the demo will eventually do: 
+<LI><B>File Menu</b>: Open, New, Close, Save, and Save As all refer to single files; Save All refers to every open file and the current project; Close all refers to every open file. Print, Page Setup, and Exit are all 
+relatively normal. 
+<LI><B>Edit Menu</b>: Cut, copy, paste, search, and replace all refer to the file with current input focus. Search all will search all open files. 
+File compare and file find are pretty explanatory; the edit item allows configuration of Visual Assembler and its changes will be saved in an .ini file (not the Registry, that is crowded enough already). 
+<LI><B>Project Menu</B>: The Open, New, Close, and Save project items all deal with .pdb files; a wizard may be incorporated in New Project in the future. Compile, Link, and Make will each perform the requested operation on all files listed in 
+the .pdb file using the executables set up in Edit->Configuration. A "Generate Makefile" item may be added later. The options item will provide a dialog box for setting project options that will be stored in the .pdb file. 
+ 
+<LI><B>Code Menu</b>: The winmain, wndproc, and dlgproc items will prompt the user for more information (resource scripts, appname, etc) and will create 
+the winmain, wndproc, and dlgproc modules respectively (overwriting existing ones if necessary). The Opcodes items will expand into submenus with an item for each 
+ix86 opcode; each item will then insert skeletal code for that opcode (e.g. "mov destination, source"), possibly with comments. The advapi...winsock items will expand into 
+submenus that contain all (or most) of the exported functions for each of these windows libraries; selecting one of these items will insert skeletal asm source code for calling 
+that API function (including all pushes, pops, etc and comments) at the current cursor position. 
+<LI><B>Objects Menu</b>: The Dialogs, Controls, and DDE items will prompt the user for further information (i.e., dialog configuration, parameters, etc)  
+and then will insert fully-functional asm code at the current cursor position. The Applets items will add applet modules to the .pdb file and will insert a call to  
+the main applet function at the current cursor position.    
+<LI><B>Tools Menu</b>: The compile, link, and make items will take strings that are passed to the executables set up in Edit->Configuration. 
+The calculator, hex editpor, notepad, debug, and disassemble options will all run programs set up in Edit->Configuration. The Dumpbin item uses 
+dumpbin.exe to retrieve information from a file (kudos to Proc Tree, this is a nice feature). 
+<LI><B>Reference Menu</b>: The ASCII item will load the asciitable.hlp file, the Opcodes item will load the opcodes.hlp file, 
+the API item will load the win32api.hlp file, and the contributors item will show everyone's name and the legal junk. An application 
+hep file can be created if necessary.<P> 
+The tab-pages also require a little explanation. The idea is that each page represents one of the main modules of the program; however this is really for illustration, for a tab-page will be opened for every file that is currently being editted, plus the "View Modules" page which 
+will show a list of all of the modules listed in the .pdb file. This may be changed to a standard MDI interface in the future. 
+<P> 
+<b>Priorities</b>: 
+The IDE really needs to be created. It would be nice to have syntax highlighting. Also, .asm source and wizards for the main four modules 
+(winmain, wndproc, dlgproc, and userproc) and the winmain.inc file need to be created. Code for insertion is a second priority, components a third, and applets a fourth and final 
+priority. The tools will all be external applications and can take care of themselves. <P> 
+The hard part is therefore going to be the applets, the wizards, and the IDE: the .pdb file format must also be developed. Code for insertion is simple but there will be a lot of 
+it. So, C programmers go for the IDE, ASM programmers go for the modules! 
+ 
+</font>   
+<P>   
+<BR> 
+ 
+<font size=+1 face="Arial" color=FF0000><b>faq</b></font><P>   
+<font color=808080 Face="Courier">   
+<LI><B>Who can help out?</b> 
+Assembly language programmers can develop .asm modules which will be at the core of Visual Assembler, 
+C/C++ programmers can help out with the IDE development. Testers, etc will be needed eventually. Contact 
+<a href="mailto:mammon_@hotmail.com">mammon_@hotmail.com</a> to help out. 
+<LI><B>Why aren't you programming the whole thing?</b> 
+I do not have that kind of time. If I were to do that, it would never be finished, and then where would we be? 
+<LI><B>Are the developers paid?</b> 
+No. This is a "labour of love", born from the need to make the development of small, asm-driven 
+windows apps both quick and easy. 
+<LI><B>Is this for sale?</b> 
+No. This will be a free development environment. Some of the tools/compilers will have to 
+be found by the end user, of course... 
+<LI><B>Why C++ Builder?</b> 
+I would rather do this in straight C but am pressed for time; I cannot bring myself to use VB 
+or Delphi for a project such as this, and Envelope is too obscure--C++ Builder seemed the logical RAD choice. 
+If anyone wishes to update the demo to real C, please do so and send me the source. 
+<LI><B>Why is the demo useless?</b> 
+I wanted to get a mock-up of what the end product will look like so that the developers will 
+know what we are trying to achieve. The demo will be updated as real features are added. 
+<LI><B>Why is the demo missing some good features?</b> 
+I was in a hurry or I didn't think of them. Please email me with suggestions. 
+<LI><B>When is this going to be finished?</b>  
+No idea. Hopefully in a matter of weeks/months. 
+</font>   
+<P>   
+<BR> 
+ 
+ 
+<P><BR>   
+<center>   
+<a href="mailto:mammon_@hotmail.com"><img src="pgram.gif" border=0></a><P>   
+<a href="mailto:mammon_@hotmail.com"><font color=FF0000 face="Courier">Mail</font></a>   
+</center>   
+ 
+</font>   
+</body>   
+</html>   
+   
+   
+   
+   
+   
+   
+  
+  
+ 
+ 
+
+
+
+
+
+

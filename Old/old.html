@@ -1,0 +1,166 @@
+<html>
+<header>
+<title>YOU Have Found MAMMON_</title>
+</header>
+<body bgcolor="000000" 
+ text="cccccc" link="0080c0" vlink="808000">
+<P><BR><P>
+<font size=-1>Remember back when HTML was a Markup Language used to link <u>keywords</u> to actual 
+<u>information</u> without the constant bombardment of multimedia distractions that lend readily to the 
+adoption of a channel-surfing as opposed to a knowledge-seeking attitude? When browsing implied a specific 
+goal, an area of knowledge that needed illumination? Perhaps you do not...</font><P>
+<Table border="0" bordercolor="000000" width="100%" align="center">
+<TR  align="center"><font face= "Bauhas Lt BT", "Bitstream Arrus BT" size=2>
+<TD width="120" bgcolor="0080c0" align="center"><a href="#intents"><font color="000000"><center>Intents & Purposes</center></font></a></td>
+<TD width="125" bgcolor="0080c0" align="center"><a href="#reverse"><font color="000000"><center>Reverse Engineering</center></font></a></td>
+<TD width="70" bgcolor="0080c0" align="center"><a href="#asm"><font color="000000">Assembly</font></a></td>
+<TD width="70" bgcolor="0080c0" align="center"><a href="#edu"><font color="000000">Education</font></a></td>
+<TD width="50" bgcolor="0080c0" align="center"><a href="http://www.fortunecity.com/roswell/leehigh/0/tools.html"><font color="000000">Tools</font></a></td>
+<TD width="50" bgcolor="0080c0" align="center"><a href="http://www.fortunecity.com/victorian/brambles/38/index.html"><font color="000000">Links</font></a></td>
+<TD width="50" bgcolor="0080c0" align="center"><a href="#WebRing"><font color="000000">Ring</font></a></td>
+</font></TR>
+	</Table>
+<P>
+<BR>
+<P>
+<BR>
+<center><img src="http://www.angelfire.com/ca/mammon/images/DemonJack2.JPG" border="0"></center>
+<P><center></center><BR><left></left><P>
+<b>Mammon</b> (ma'mun) n. The god of this world. The word in Syriac means riches. (See Milton: <i>Paradise Lost</i>, bk. i. 678.) His speech in the council is
+book ii. 229, etc.
+<a href="http://www.mk.net/~dt/Bibliomania/Reference/PhraseAndFable/data/799.html">Brewer's Dictionary of Phrase and Fable</a>
+<P><center></center><BR><left></left><P>
+<BR><center><a href="redrum.au" onMouseOver="window.location='http://www.eccentrica.org/Mammon/redrum.au'"><img src="speaker.JPG" border="0"></a>
+<font color=ff0000>New:</font>disasm.html mod 10.31 | index.html mod 10.31 </center><P>
+<P><BR><center></center>
+<P><BR>
+<HR><P>
+<center><b><h3><A name="intents"></a>
+Intents & Purposes</h3></b></center>
+This page has been set up primarily as a resource for the "bete noir" of programming, Reverse Engineering. In essence, Reverse Engineering appears deceptively simple: to regain the original source code from a compiled, functional exectuable file should be fairly straightforward. Right?<P>
+Wrong. The Intel x86 instruction set is very complex, and contains a lot of redundancies. The complexity results mostly from Intel's memory addressing scheme, in which offsets which are referred to by the programmer can reside in any number of 64K (64 thousand, not 64 Kilobyte) segments; in addition, there is no standard sequence for interleaving data and actual code in a program, so that a disassembler must make multiple passes in examining the program to determine what is actual code and what is, in fact, data. The redundancy inherent in the x86 instruction set is due to machine-code functions that have multiple mnemonics in order to make the assembly language somewhat more intuitive for the programmer; as a quick example the functions JZ (Jump If Zero) and JE (Jump If Equal) both translate to Jump If Zero Flag Is Set (or Jmp ZF=1), which translates to 74 hex in machine code...yet the clarity of the surrounding code will depend on whether the instruction is testing the result of an equality test or a "zero-
+ing" test.<P>
+So what exactly is required in order to properly Reverse Engineer? 1) Time. And lots of it. I know this because I have none.... 2) An intimate knowledge of assembly language (ASM), and a general familiarity with high-level languages such as C/C  , Pascal, Visual Basic (well, some people call it a language), and generally any language that the target program might have been written in (Java, Perl, Fortan). 3) Books. The amount of reference material you need, either on- or off-line, is staggering: an Op-codes listing (a listing of the assembler mnemonics and their hexidecimal machine-code equivalents), a list of OS and BIOS services, hardware and programming documentation of APIs, port numbers, etc. 4) Tools. The more tools you have, the less reference material you are likely to need. Good software tools (such as disassemblers, resource editors, etc.) pull information from the executable itself and will save you a ton of research. 5) Perseverance. If you have excellent concentration and a bulldog-like determination, Reverse Engineering is the sport for you.<P>
+Is it wrong? Like so many other things in life, it depends on what you do with it. There is nothing wrong with Reverse Engineering a program out of curiosity to see how it works; it is considered wrong to steal code gained by Reverse Engineering a product, and the art of "cracking" programs by Reverse-Engineering their protection schemes often brings cries of "software piracy". Most companies--given the chance--will not allow you to Reverse Engineer their products even if you are a registered owner; the code of the product, while lying visible for anyone with Debug.exe to read, is considered a trade secret. What it all boils down to is something that must be viewed rationally and with great practicality: with the popularity of the Internet: Knowledge (or software or code) is Free. Whether or not you make your knowledge/ code/ software available to the Internet or not, it will end up there, and someone will reverse-engineer it if it is interesting, someone will crack it if it is protected, and someone else will inevitably get a free ride.  The best you can do is either to a) throw on the heaviest protection scheme you can afford and charge enough so that the purchases of the people who can't crack your program will cover your losses, or b) provide the source code with the program and ask for donations. You will find that most of the software developers who choose to profit from their trade will follow one of these two courses.<P>
+
+Once again, is it wrong? In my view, no. If you have the wit and will to draw the source code from a 4 MB executable, then you deserve the routines that lie therein. If you can go one-on-one with a protection scheme and crack the program, you've won: it's yours. This is mostly a practical attitude: short of monitoring every PC in the world, you cannot stop a person from cracking or Reverse Engineering a product, so you might as well not exhaust yourself trying to prevent it. It would be nice if only those who were able could benefit from cracks, i.e. if they were only available within the "cracking community" (which, to some extent, they are), but the nature of the medium prevents that; any user can type Winword Crack on their search engine and pull up results.<P>
+<BR>
+<HR>
+<center><b><h3><A name="reverse"></a>
+Reverse Engineering</h3></b></center>
+Reverse Engineering is the art of arts, as far as computers are concerned. When you can pull apart a commercial application to learn its secrets, or single-step through the boot sequence of an OS to steal its innermost secrets, <i>then </i>you have power over your computer. Until that point you are just another user subject to the whim and caprice of your machine, seperated from the knowledge of its operation by a shroud of mysticism that clouds your eyes and your judgement.<P>
+Some of the best tutorials on the web are available from this mirror of Fravia's <a href="http://207.30.50.126/fravia/orc.htm"> ORC</a> and <a href="http://207.30.50.126/fravia/academy.htm"> HCU</a> pages.<P>
+<LI><a href="http://www.eccentrica.org/Mammon/reverse1.html">Getting Started</a>
+<LI><a href="http://www.eccentrica.org/Mammon/pefile.html">PE File Format</a> <font color=FF0000>New</font>
+<LI><a href="http://www.eccentrica.org/Mammon/ice.html">Soft-Ice Basics</a>
+<LI><a href="idaprimer.txt">IDA Primer</a>
+<LI><a href="http://www.eccentrica.org/Mammon/disasm.html">Disassemblers</a>
+<LI><a href="http://www.eccentrica.org/Mammon/projects.html">Projects</a>
+<LI><a href="http://disc.server.com/discussion.cgi?id=37">Forum</a><P>
+
+
+The following links may prove useful to those interested in Reverse-Engineering and other hard-core PC ventures:
+
+
+<LI><a href="http://wwwis.cs.utwente.nl:8080/~faase/Ha/decompile.html">Decompiling Page</a>
+<LI><a href="http://www.cs.uq.edu.au/groups/csm/dcc.html#publications">Decompiling Publications</a> (DCC)
+<LI><a href="ftp://ftp.cs.cmu.edu/afs/cs.cmu.edu/user/ralf/pub/WWW/files.html">Interrupt List</a> (Ralph Brown)
+<LI><a href="http://www.cc.gatech.edu/reverse/">Reverse Engineering Group</a> (Georgia Tech)
+<LI><a href="http://acp.xforce.net/TUTORIAL/softice/index.html">Soft-Ice Manual</a> (APC)--down
+<LI><a href="http://acp.xforce.net/TUTORIAL/win32sdk/index.html">Win32 SDK Help</a> (APC)--down
+<BR>
+<HR>
+<center><b><h3><A name="asm"></a>
+Assembly Language</h3></b></center>
+I have come across a number of assembly language tutorials on the Web--more, in fact, than I have books or manuals. What I have noticed about ASM tutorials is that they seem to be either very basic (what registers and services are, what the basic commands are, etc.) 
+or very specialized (games/graphics programming, virus writing, etc.). What I 
+hope to provide on this page--though I am by no means an ASM master--is a 
+practical introduction to ASM programming, with explanations of full 
+programs as opposed to the "snippets" I come across so often.<P>
+
+<LI><a href="http://www.eccentrica.org/Mammon/asmintro.html">Foundations of Assembly Language</a>(started)
+<LI><a href="http://asmjournal.freeservers.com">Assembly Programming Journal</a>
+<LI><a href="assembly.html">Assemnly Language Resources</a>
+<LI><u>Writing Programs in Assembly</u>(inactive)
+<LI><u>Commented Source Code</U>(inactive)<P>
+
+
+The following links may help the ASM aspirant on his quest for knowledge:
+<LI><a href="http://udgftp.cencar.udg.mx/ingles/tutor/Assembler.html">Assembly Language Tutorial</a>
+<li><a href="http://www.imada.ou.dk/~jews/PInfo/intel.html">Intel Opcodes Listing</a>
+<li><a href="http://www.wrox.com/ftp/Professional/125.zip">Revolutionary Guide to Assembly</a> (Source Code)
+<li><a href="http://www.wrox.com/ftp/Masterclass/346.zip">Master Class Assembly</a> (Source Code)
+<BR>
+<HR>
+
+<center><b><h3><A name="utils"></a>
+System Utilities</h3></b></center>
+Every "engineer" needs tools. Over the course of my time spent with PCs I have come across many good tools: some interesting, some useful, some indispensable. There are so many, in fact, that I have devoted an entire page to <a href="tools.html">Tools</a>.
+<P><BR>
+<HR>
+<center><b><h3><A name="edu"></a>
+Continuing Education</h3></b></center>
+Reverse-Engineering requires constant study to keep up with changing technologies. I have found <a href="www.fravia.org">Fravia's</a> site to consistently impressive in terms of both the amount of knowledge available, and its sheer applicability--most notably in the <a href="www.fravia.org/student.htm">student</a> and <a 
+href="www.fravia.org/orc.htm"> ORC</a> pages. In addition, <a href="http://acp.xforce.net/main.html">ACP</a> maintains an excellent <a href="http://acp.xforce.net/TUTORIAL/index.html">tutorial</a> page which even contains the coveted Soft-Ice manual (warning: page is down)! Let us not forget the eternal (or so it seems) 
+<a href="http://www.silitoad.org/">Silicon Toad</a> and <a href="http://www.freenet.tlh.fl.us/~gthorne/">Greythorne the Technomancer</a>, whose  Symbiote program is not only an excellent cracking tool, but a perfectly-commented example for learning assembly language and a demonstration of virii programming techniques applied to conventional--or perhaps I should say non-virii--programs. Additional sites may be found on my <a href="links.html">Links</a> page, with comments (natch). Finally I maintain a "web-ring" of sorts, with <a href="http://www.geocities.com/Area51/Lair/4688/">Member1</a> being a rather utilitarian startup page, <a href="http://www.geocities.com/SiliconValley/Vista/2299/">Member2</a> being a growing knowledge-base on Windows 95 (especially the Registry) and--eventually--NT, <a href="http://www.fortunecity.com/victorian/brambles/38/main.html">Member3</a> being a site dedicated to the functional side of Reverse-Engineering (read: Tools Of The Trade), and <a href="http://www.geocities.com/Athens/Forum/9684/">Member4</a> being a small step into the area of classic literature. I suppose this site shall become Member5. Work is currently being done on <a href="http://www.fortunecity.com/skyscraper/firelli/29/mammon.html">Member6</a>, a tentative foray into the Java/Javascript world. <P>
+<HR><P>
+<center><BR><A name="WebRing"></a>
+<a href="http://www.geocities.com/Area51/Lair/4688/">Member1</a> * 
+<a href="http://www.geocities.com/SiliconValley/Vista/2299/">Member2</a> * 
+<a href="http://www.fortunecity.com/victorian/brambles/38/main.html">Member3</a> * 
+<a href="http://www.geocities.com/Athens/Forum/9684/">Member4</a> 
+ * <u>Member5</u> * 
+<a href="http://www.fortunecity.com/skyscraper/firelli/29/mammon.html">Member6</a>  
+</center><P><HR><P><BR><P>
+
+<center><B><h3>Resources</h3></B></CENTER><P>
+<P><BR>
+The <a href="web.html">Web Developer</a> resource and tools section is now open on the <a href="http://www.eccentrica.org/Mammon">Eccentrica</a> site.
+<P><BR>
+Free Email: 
+<LI><a href="http://www.hotmail.com">HotMail</a>--Anonymous, but puts your IP in email header  
+<LI><a href="http://www.netaddress.com">NetAddress</a>--Anonymous, but same as above 
+<LI><a href="http://www.supernews.com">SuperNews</a>--Want an existing email account: Mine never worked...
+<LI><a href="http://www.rocketmail.com">Rocketmail</a>--Demands Cookies 
+<P><BR><P>
+
+Free WebPages:
+<LI><a href="http://www.geocities.com">Geocities</a> (2 MB) Sort-Of-Strict Policy 
+<LI><a href="http://www.cybercity.hko.net">Cybercity</a> (5 MB) Okay Policy
+<LI><a href="http://www.fortunecity.com">FortuneCity</a> (6 MB) Okay Policy
+<LI><a href="http://www.angelfire.com">Angelfire</a> (200 K) Strict Policy
+<BR>
+<HR><BR><P><i> _m </i><P>
+
+<! a href="http://www.fortunecity.com/skyscraper/firelli/29/theme.au" onmouseover="window.location='http://www.fortunecity.com/skyscraper/firelli/29/theme.au'" -->
+<img src="pgram.gif" border="0">
+<! /a --><P><BR>
+<center>If you must: <a href="mailto:mammon_@hotmail.com">mail</a></center>
+
+<center><! a href="http://Counter.telecom.at" -->
+       <! img src="http://Counter.telecom.at/allworld/Count.cgi?dd=D|df=mammon_@usa.net" border=0 --><!-- /A -->
+</center>
+
+
+
+
+
+<P><BR><P>
+
+
+<BR><P><center><a href="http://www.angelfire.com/ca/mammon/images/dogbert.gif">
+
+
+<img src="http://www.angelfire.com/ca/mammon/images/dollar.gif" border="0"></a><BR></center>
+
+
+</body>
+
+
+</html>
+
+
+
+
+
+

@@ -1,0 +1,744 @@
+Library Interface:
+Library routines are used to centralize code which will be called from
+many parts of the program; they accept parameters, return a value, and have a
+predefined calling syntax [the default is stdcall]. All routines must provide
+Win32 and DOS versions if they have any OS-dependent code by using %ifdef
+blocks:
+        FunctionStart:
+           ;OS-independent code
+        %ifdef __WIN32
+           ;windows-specific
+        %else
+           ;DOS-specific  code
+        %endif
+           ;OS-independent code
+Note that common code can be inserted before and after the %ifdef blocks.
+Functions which by design only support one OS must inform the programmer via
+%error:
+        %ifdef __WIN32
+            %error [FunctionName] not available under Win32
+        %else
+            ;DOS-specific code
+        %endif
+All include files must %define themselves and check for previous definitions
+to prevent assembler errors.
+
+datastruct.inc
+--------------
+   +Array+
+    An array consists of a sequence of values or addresses which are accessed via
+    sequential allocation -- that is, the entire array is located in one contiguous
+    memory block. If the array needs to be resized, the entire block must be 
+    re-allocated to incorporated the size changes.
+    
+    Current Implementation:
+     InitArray		Creates an array,with a range of 65535 cells/dimension	14-jun-1999
+     FreeArray		Frees allocated memory					14-jun-1999
+     PointCell		Calculates the correct offset in the array of a cell	14-jun-1999
+     ReadCell		puts the contents of a cell in a buffer			14-jun-1999
+     WriteCell		puts the contents of a buffer in a cell
+   
+   +Sequence [Array Derivative]+
+    A sequence is an array of strings implemented such that each string is 
+    equated with a numeric value based on its position in the array; e.g.
+    Sequence[0] provides a pointer to String0, Sequence[1]provides a pointer 
+    to String1, and so on.
+    
+   +Linked List+
+    A linked list consists of a sequence of nodes [structures containing values, 
+    addresses, and node links] which are accessed via linked allocation -- i.e., 
+    each node is allocated/managed independently of the list itself. The "list 
+    itself" consist of a pointer to the head node of the list.
+    
+    The linked list implementation depends on a Nasm structure definition
+    for the linked list nodes:
+     %macro LISTSTRUCT
+     struc %1
+     .tail:    resd    1
+     .prev:    resd    1
+     .next:    resd    1
+     %endmacro
+     %macro END_LISTSTRUCT
+     endstruc
+     %endmacro
+    This allows the default linked-list pointers 'tail', 'prev', and 'next'
+    to be defined while allowing the programmer full control over what data 
+    members are included with each node. Thus the definition
+     LISTSTRUCT LList
+     .hWnd:           resd    1
+     .ptrTitle:       resd    1
+     .ptrCallback:    resd    1
+     END_LISTSTRUCT
+    would result in the following node structure:
+     .tail:    resd    1
+     .prev:    resd    1
+     .next:    resd    1
+     .hWnd:           resd    1
+     .ptrTitle:       resd    1
+     .ptrCallback:    resd    1
+    
+    ListCreate (void)
+     Input: None
+     Output: DWORD ptrHead
+     Syntax: StdCall
+     Outline:
+    ListDestroy ()
+     Input: DWORD ptrHead
+     Output: 
+     Syntax: StdCall
+     Outline:
+    ListAdd () 
+     Input: 
+     Output: 
+     Syntax: StdCall
+     Outline:
+    ListRemove ()
+     Input: 
+     Output: 
+     Syntax: StdCall
+     Outline:
+    ListFind ()
+     Input: 
+     Output: 
+     Syntax: StdCall
+     Outline:
+    %define ListNext
+    %define ListPrev
+    %define ListTail
+    
+   +Deque [Linked List Derivative]+
+    A deque is a doubly-linked list with provisions for inserting or removing a
+    node from either end of the list.
+ 
+   +Queue [Linked List Derivative]+
+    A queue is a singly-linked list with provisions for inserting a node at one 
+    end of the list and removing it from the other end [FIFO]. 
+    QueueCreate ()
+    QueueDestroy ()
+    QueueIn ()
+    QueueOut ()
+
+   +Stack [Linked List Derivative]+
+    A stack is a singly-linked list with provisions for inserting or removing a 
+    node from one end of the list only [FILO].
+    StackCreate ()
+    StackDestroy ()
+    StackPush ()
+    StackPop ()
+
+   +Table [Linked List Derivative]+
+    A table is a pair of parallel linked lists named Key and Value, such that 
+    each string in Key corresponds to a string in the same position in Value. 
+    The Key list is content-addressable; thus it is best implemented as a 
+    hash table for which each hash entry points to a list of key names nodes. 
+    Each key name node will contain a pointer to a value node. 
+
+
+debug.inc
+---------
+    void DebugOut(char *)
+             Summary:
+             Uses:
+    macro DebugBreak()
+             Summary:
+             Uses:
+
+error.inc       Exception handling/assert routines
+---------
+        void assert(int test)
+             Summary: Tests a condition and possibly aborts.
+             Uses:
+        void perror(const char *s)
+             Summary:  Prints a system error message
+             Uses:
+        macro TRY
+             Summary:
+             Uses:
+        macro CATCH
+             Summary:
+             Uses:
+        macro THROW
+             Summary:
+             Uses:
+        macro FINALLY
+             Summary:
+             Uses:
+
+math.inc        Complex math routines
+--------
+
+mem.inc         Memory management routines
+-------
+        void *alloca(size_t size)
+             Summary: Allocates temporary stack space.
+             Uses:
+        void *calloc(size_t nitems, size_t size)
+             Summary:  Allocates main memory [heap]
+             Uses:
+        void free(void *block)
+             Summary:  Frees allocated block
+             Uses:
+        int heapcheck(void)
+             Summary:   Checks and verifies the heap
+             Uses:
+        int heapcheckfree(unsigned int fillvalue)
+             Summary:  Checks the free blocks on the heap for a constant value.
+             Uses:
+        int heapchecknode(void *node)
+             Summary:  Checks and verifies a single node on the heap
+             Uses:
+        int heapwalk(struct heapinfo *hi)
+             Summary:  heapwalk is used to "walk" through the heap, node by node
+             Uses:
+        void *malloc(size_t size)
+             Summary:  malloc allocates a block of size bytes from the memory heap.
+             Uses:
+        void *memccpy(void *dest, const void *src, int c, size_t n)
+             Summary:  Copies a block of n bytes.
+             Uses:
+        void *memchr(const void *s, int c, size_t n)
+             Summary:  Searches n bytes for character c.
+             Uses:
+        int memcmp(const void *s1, const void *s2, size_t n)
+             Summary:  Compares two blocks for a length of exactly n bytes
+             Uses:
+        void *memmove(void *dest, const void *src, size_t n)
+             Summary:  Copies a block of n bytes
+             Uses:
+        void *memset(void *s, int c, size_t n)
+             Summary:  Sets n bytes of a block of memory to byte c
+             Uses:
+        void *realloc(void *block, size_t size)
+             Summary:  realloc attempts to shrink or expand the previously allocated block to size bytes
+             Uses:
+        void setmem(void *dest, unsigned length, char value)
+             Summary:  setmem sets a block of length bytes, pointed to by dest, to the byte value
+             Uses:
+        size_t stackavail(void)
+             Summary:  Gets the amount of available stack memory
+             Uses:
+
+sort.inc
+--------
+       +B-Tree+
+       +Hash Table+
+       +Search Routines+
+         Pattern Match
+	 Radix
+       +Sort Routines+
+        BubbleSort
+	QuickSort
+	RadixSort
+stdio.inc       I/O routines
+---------
+        int access(const char *filename, int amode)
+             Summary: Determines accessibility of a file
+             Uses:
+        int chmod(const char *path, int amode)
+             Summary:
+             Uses:
+        int chsize(int handle, long size)
+             Summary:
+             Uses:
+        int close(int handle)
+             Summary:
+             Uses:
+        int creat(const char *path, int amode)
+             Summary: Creates a new file or overwrites an existing one
+             Uses:
+        int creattemp(char *path, int attrib)
+             Summary: Creates a unique file in the directory associated with the path name
+             Uses:
+        int cscanf(char *format[, address, ...])
+             Summary: Scans and formats input from the console
+             Uses:
+        int dup(int handle)
+             Summary: Duplicates a file handle
+             Uses:
+        int eof(int handle)
+             Summary: Checks for end-of-file
+             Uses:
+        int fclose(FILE *stream)
+             Summary:
+             Uses:
+        int fgetc(FILE *stream)
+             Summary:
+             Uses:
+        long filelength(int handle)
+             Summary:
+             Uses:
+        FILE *fopen(const char *filename, const char *mode)
+             Summary:
+             Uses:
+        int fprintf(FILE *stream, const char *format[, argument, ...])
+             Summary:
+             Uses:
+        int fputc(int c, FILE *stream)
+             Summary:
+             Uses:
+        int fputs(const char *s, FILE *stream)
+             Summary:
+             Uses:
+        size_t fread(void *ptr, size_t size, size_t n, FILE *stream)
+             Summary:
+             Uses:
+        int fscanf(FILE *stream, const char *format[, address, ...])
+             Summary:
+             Uses:
+        int fseek(FILE *stream, long offset, int whence)
+             Summary:
+             Uses:
+        int fsetpos(FILE *stream, const fpos_t *pos)
+             Summary:
+             Uses:
+        int getc(FILE *stream)
+             Summary:
+             Uses:
+        int getftime(int handle, struct ftime *ftimep)
+             Summary:
+             Uses:
+        int setftime(int handle, struct ftime *ftimep)
+             Summary:
+             Uses:
+        char *gets(char *s)
+             Summary: Gets a string from stdin
+             Uses:
+        long lseek(int handle, long offset, int fromwhere)
+             Summary: Moves file pointer
+             Uses:
+        int open(const char *path, int access [, unsigned mode])
+             Summary:
+             Uses:
+        int printf(const char *format[, argument, ...])
+             Summary:
+             Uses:
+        int putc(int c, FILE *stream)
+             Summary:
+             Uses:
+        int puts(const char *s)
+             Summary:
+             Uses:
+        int read(int handle, void *buf, unsigned len)
+             Summary:
+             Uses:
+        int remove(const char *filename)
+             Summary:
+             Uses:
+        int rename(const char *oldname, const char *newname)
+             Summary:
+             Uses:
+        int scanf(const char *format[, address, ...])
+             Summary:
+             Uses:
+        void setbuf(FILE *stream, char *buf)
+             Summary:
+             Uses:
+        int setmode(int handle, int amode)
+             Summary:
+             Uses:
+        int sprintf(char *buffer, const char *format[, argument, ...])
+             Summary:
+             Uses:
+        int sscanf(const char *buffer, const char *format[, address, ...])
+             Summary:
+             Uses:
+        long tell(int handle)
+             Summary:
+             Uses:
+        FILE *tmpfile(void)
+             Summary:
+             Uses:
+
+
+stdlib.inc      Misc "standard" routines
+----------
+        double atof(const char *s)
+             Summary: Converts a string to a floating-point number
+             Uses:
+        int atoi(const char *s)
+             Summary: Converts a string to an integer
+             Uses:
+        long atol(const char *s)
+             Summary: Converts a string to a long
+             Uses:
+        char *fcvt(double value, int ndig, int *dec, int *sign)
+             Summary: Converts a floating-point number to a string
+             Uses:
+        BOOL isalnum(int c)
+             Summary:
+             Uses:
+        BOOL isalpha(int c)
+             Summary:
+             Uses:
+        BOOL isascii(int c)
+             Summary:
+             Uses:
+        BOOL iscntrl(int c)
+             Summary:
+             Uses:
+        BOOL islower(int c)
+             Summary:
+             Uses:
+        BOOL ispunct(int c)
+             Summary:
+             Uses:
+        BOOL isspace(int c)
+             Summary:
+             Uses:
+        BOOL isupper(int c)
+             Summary:
+             Uses:
+        BOOL isxdigit(int c)
+             Summary:
+             Uses:
+        char  *itoa(int value, char *string, int radix)
+             Summary: Converts an integer to a string.
+             Uses:
+        double strtod(const char *s, char **endptr)
+             Summary: Convert a string to a double value
+             Uses:
+        long strtol(const char *s, char **endptr, int radix)
+             Summary: Converts a string to a long value
+             Uses:
+        int tolower(int ch)
+             Summary:   Translates characters to lowercase
+             Uses:
+        int toupper(int ch)
+             Summary: Translates characters to uppercase
+             Uses:
+
+strings.inc     String manipulation routines
+-----------
+        char *strcat(char *dest, const char *src)
+             Summary: strcat appends a copy of src to the end of dest
+             Uses:
+        char *strchr(const char *s, int c)
+             Summary: Scans a string for the first occurrence of a given character
+             Uses:
+        int strcmp(const char *s1, const char *s2)
+             Summary:Compares one string to another
+             Uses:
+        int strcmpi(const char *s1, const char *s2)
+             Summary: Compares one string to another, without case sensitivity.
+             Uses:
+        char *strcpy(char *dest, const char *src)
+             Summary: Copies string src to dest, stopping after the terminating null character has been moved
+             Uses:
+        size_t strcspn(const char *s1, const char *s2)
+             Summary: The strcspn functions search s1 until any one of the characters contained in s2 is found
+             Uses:
+        char *strdup(const char *s)
+             Summary: strdup makes a duplicate of string s, obtaining space with a call to malloc
+             Uses:
+        size_t strlen(const char *s)
+             Summary: Calculates the length of a string.
+             Uses:
+        char *strlwr(char *s)
+             Summary: Converts uppercase letters in a string to lowercase
+             Uses:
+        int strncmp(const char *s1, const char *s2, size_t  maxlen)
+             Summary: Compares a portion of one string to a portion of another
+             Uses:
+        char *strncpy(char *dest, const char *src, size_t maxlen)
+             Summary: Copies a given number of bytes from one string into another
+             Uses:
+        char *strnset(char *s, int ch, size_t n)
+             Summary: Sets a specified number of characters in a string to a given character.
+             Uses:
+        char *strpbrk(const char *s1, const char *s2)
+             Summary:  strpbrk scans a string, s1, for the first occurrence of any character appearing in s2
+             Uses:
+        const char *strrchr(const char *s, int c)
+             Summary: Scans a string for the last occurrence of a given character
+             Uses:
+        char *strrev(char *s)
+             Summary: Reverses a string.
+             Uses:
+        char *strset(char *s, int ch)
+             Summary: Sets all characters in a string to a given character
+             Uses:
+        size_t strspn(const char *s1, const char *s2)
+             Summary: strspn finds the initial segment of string s1 that consists entirely of characters from string s2
+             Uses:
+        char *strstr(const char *s1, const char *s2)
+             Summary: strstr scans s1 for the first occurrence of the substring s2
+             Uses:
+        char *strtok(char *s1, const char *s2)
+             Summary: Searches one string for tokens, which are separated by delimiters
+             Uses:
+        char *strupr(char *s)
+             Summary: Converts lowercase letters in a string to uppercase
+             Uses:
+        array *split(char *str, char token)
+             Summary:
+             Uses:
+
+sys.inc         Process, thread, and FS routines
+-------
+        int chdir(const char *path)
+             Summary:
+             Uses:
+        void closedir(DIR *dirp)
+             Summary:
+             Uses:
+        int findclose(struct ffblk _FAR *__ffblk )
+             Summary: findclose closes a handle associated with previous calls to findfirst() and findnext()
+             Uses:
+        int findfirst(const char _FAR *__path, struct ffblk _FAR *__ffblk, int __attrib )
+             Summary: Searches a disk directory
+             Uses:
+        int findnext(struct ffblk _FAR *__ffblk )
+             Summary:
+             Uses:
+        char * _fullpath(char *buffer, const char *path, int buflen)
+             Summary:
+             Uses:
+        int getcurdir(int drive, char *directory)
+             Summary:
+             Uses:
+        char *getcwd(char *buf, int buflen)
+             Summary:
+             Uses:
+        int getdisk(void)
+             Summary:
+             Uses:
+        int mkdir(const char *path)
+             Summary:
+             Uses:
+        DIR *opendir(char *dirname)
+             Summary: Opens a directory stream for reading
+             Uses:
+        struct dirent *readdir(DIR *dirp)
+             Summary: Reads the current entry from a directory stream
+             Uses:
+        int rmdir(const char *path)
+             Summary:
+             Uses:
+        char *searchpath(const char *file)
+             Summary: Searches the operating system path for a file
+             Uses:
+        void searchstr(const char *file, const char *ipath, char *buf)
+             Summary:  Searches a list of directories for a file
+             Uses:
+        int setdisk(int drive)
+             Summary:
+             Uses:
+        char *mktemp(char *template)
+             Summary: Makes a unique file name.
+             Uses:
+        void fnmerge(char *path, const char *drive, const char *dir, const char *name, const char *ext)
+             Summary:
+             Uses:
+        int fnsplit(const char *path, char *drive, char *dir, char *name, char *ext)
+             Summary:
+             Uses:
+        void abort(void)
+             Summary: Abnormally terminates a program.
+             Uses:
+        int execl(char *path, char *arg0 *arg1, ..., *argn, NULL)
+             Summary:
+             Uses:
+        int execlp(char *path, char *arg0,*arg1, ..., *argn, NULL)
+             Summary:
+             Uses:
+        int execlpe(char *path, char *arg0, *arg1, ..., *argn, NULL, char **env)
+             Summary:
+             Uses:
+        int execv(char *path, char *argv[])
+             Summary:
+             Uses:
+        int execvp(char *path, char *argv[])
+             Summary:
+             Uses:
+        int execvpe(char *path, char *argv[], char **env)
+             Summary:
+             Uses:
+        void exit(int status)
+             Summary:
+             Uses:
+        unsigned getpid(void)
+             Summary:
+             Uses:
+        int _pclose(FILE * stream)
+             Summary: Waits for piped command to complete
+             Uses:
+        int _pipe(int *handles, unsigned int size, int mode)
+             Summary: The _pipe function creates an anonymous pipe
+             Uses:
+        FILE *popen (const char *command, const char *mode)
+             Summary: Creates a command  processor pipe
+             Uses:
+        int raise(int sig)
+             Summary: Sends a software signal to the executing program
+             Uses:
+        void (_USERENTRY *signal(int sig, void (_USERENTRY  *func) (int sig[, int subcode])))(int)
+             Summary:  Specifies signal-handling actions
+             Uses:
+        int spawnl(int mode, char *path, char *arg0, arg1, ..., argn, NULL)
+             Summary:
+             Uses:
+        int spawnlp(int mode, char *path, char *arg0, arg1, ..., argn,  NULL)
+             Summary:
+             Uses:
+        int spawnlpe(int mode, char *path, char *arg0, arg1, ..., argn, NULL, char *envp[])
+             Summary:
+             Uses:
+        int spawnv(int mode, char *path, char *argv[])
+             Summary:
+             Uses:
+        int  spawnvp(int mode, char *path, char *argv[])
+             Summary:
+             Uses:
+        int spawnvpe(int mode, char *path, char *argv[], char *envp[])
+             Summary:
+             Uses:
+        int wait(int *statloc) Waits for one or more child processes to terminate
+             Summary:
+             Uses:
+        CreateThread()
+             Summary:
+             Uses:
+        SuspendThread()
+             Summary:
+             Uses:
+        TerminateThread()
+             Summary:
+             Uses:
+        macro THREAD_CALLBACK
+             Summary:
+             Uses:
+
+
+
+time.inc        Date and time routines
+--------
+        char *asctime(const struct tm *tblock)
+             Summary: asctime converts date and time to ASCII
+             Uses:
+        double difftime(time_t time2, time_t time1)
+             Summary: Computes the difference between two times
+             Uses:
+        void gettime(struct time *timep)
+             Summary:
+             Uses:
+        void settime(struct time *timep)
+             Summary:
+             Uses:
+
+Macro Interface
+Macros are short, often single-line code expansions which allow the programmer
+to insert lengthy or complex code sequences via the use of an alias. Using
+macros will increase the size of the codebase while using library routines
+will decrease the size of the code base while adding additional runtime
+overhead. Macros should be OS-independent.
+
+ C.inc           Macros to mimic C features
+ -----
+        macro pcall
+        macro ccall
+        macro stdcall
+        macro fastcall
+        macro IF(val1, comp, val2)
+        macro ELSEIF(val1, comp, val2)
+        macro ELSE
+        macro ENDIF
+        macro WHILE(var1,comp,var2)
+        macro FOR(var1,comp,var2,var3)
+        macro ENDF
+        macro SWITCH(var1)
+        macro CASE(var1)
+
+
+stdmac.inc      Misc "standard" macros
+----------
+    macro GetEnv()
+    macro GetFilename()
+    macro GetParams()
+    macro sizeof()
+
+va_arg.inc      Variable-length argument macros
+----------
+    macro va_arg
+    macro va_end
+    macro va_start
+
+visasm.inc
+----------
+
+
+OS-Specific Header Files
+win32.inc       Windows 95/NT headers
+---------
+        atatype.inc
+        system.inc
+        messages.inc
+        winstyle.inc
+        winerr.inc
+        vkeys.inc
+        winhelp.inc
+        network.inc
+        lang.inc
+        ole.inc
+        dde.inc
+        media.inc
+
+
+
+
+
+
+
+<anybody>'s libs:
+Misc.lib                Description                                             updated
+--------		-----------						-------
+TimeDelay		Delay loop in micro seconds				13-jun-1999
+
+
+Arrays.lib		Description						updated
+----------		-----------						-------
+InitArray		Creates an array,with a range of 65535 cells/dimension	14-jun-1999
+FreeArray		Frees allocated memory					14-jun-1999
+PointCell		Calculates the correct offset in the array of a cell	14-jun-1999
+ReadCell		puts the contents of a cell in a buffer			14-jun-1999
+WriteCell		puts the contents of a buffer in a cell			14-jun-1999
+
+Math.lib		Description						updated
+--------		-----------						-------
+Getseed			Get a seed from the WINAPI call GetTickCount		15-jun-1999
+Random			Generate random numbers in a specified range		15-jun-1999
+SummByte		Get the summ of X unsigned bytes     (int.buf. 32bit)	15-jun-1999
+SummWord		Get the summ of X unsigned words     (int.buf. 32bit)	15-jun-1999
+SummDword		Get the summ of X unsigned dwords    (int.buf. 64bit)	15-jun-1999
+SummByteS		Get the summ of X signed bytes	     (int.buf. 32bit)	15-jun-1999
+SummWordS		Get the summ of X signed words	     (int.buf. 32bit)	15-jun-1999
+SummDwordS		Get the summ of X signed dwords	     (int.buf. 32bit)	15-jun-1999
+AverByte		Takes the average of unsigned bytes  (int.buf. 32bit)	15-jun-1999
+AverWord		Takes the average of unsigned words  (int.buf. 32bit)	15-jun-1999
+AverDword		Takes the average of unsigned dwords (int.buf. 64nit)	15-jun-1999
+AverByteS		Takes the average of signed bytes    (int.buf. 32bit)	15-jun-1999
+AverWordS		Takes the average of signed words    (int.buf. 32bit)	15-jun-1999
+AverDwordS		Takes the average of signed dwords   (int.buf. 32bit)	15-jun-1999
+
+Conversion.lib		Description						updated
+--------------		-----------						-------
+Bin2Asc			Convert a binary value to ASCII		(32 bit)	16-jun-1999
+Asc2Bin			Convert ASCII to a binary value	 	( 8 bit)	16-jun-1999
+Bin2Bcd			Convert a binary value to packed BCD	(32 bit)	16-jun-1999
+Bcd2Bin			Convert packed BCD to a binary value	(32 bit)	16-jun-1999
+
+Listops.lib		Description						updated
+-----------		-----------						-------
+BubSortByte		Sort list of unsigned bytes				16-jun-1999
+BubSortWord		Sort list of unsigned words				16-jun-1999
+BubsortDword		Sort list of unsigned dwords				16-jun-1999
+BubSortByteS		Sort list of signed bytes				16-jun-1999
+BubSortWordS		Sort list of signed words				16-jun-1999
+BubsortDwordS		Sort list of signed dwords				16-jun-1999
+GetLimitByte		Get the highest and lowest unsigned byte in a list	16-jun-1999
+GetLimitWord		Get the highest and lowest unsigned word in a list	16-jun-1999
+GetLimitDword		Get the highest and lowest unsigned dword in a list	16-jun-1999
+GetLimitByteS		Get the highest and lowest signed byte in a list	16-jun-1999
+GetLimitWordS		Get the highest and lowest signed word in a list	16-jun-1999
+GetLimitDwordS          Get the highest and lowest signed dword in a list       16-jun-1999
+
+

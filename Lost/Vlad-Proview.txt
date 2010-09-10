@@ -1,0 +1,126 @@
+                    
+                    T R I C K I N G   P R O V I E W
+                               Written by
+                              Darkman/VLAD
+
+------------
+Introduction
+------------
+
+  This document is an example of how to trick PROVIEW, by changing the
+address of interrupt 21h and point it to the hole in the memory, after the
+interrupt table. In the memory hole we create a jump to the virus code and
+the virus code will return to the original interrupt 21h.
+
+-----------
+Information
+-----------
+
+  Analysing the interrupt vectors with PROVIEW, would usually look something
+like this:
+
+No T Interrupt Name                 Address    Points to
+21 û DOS Function call              0021:40F8  DOS CODE
+
+  When a virus is resident, the analysis of the interrupt vectors with
+PROVIEW, will usual look something like this:
+
+No T Interrupt Name                 Address    Points to
+21 û DOS Function call              9FC8:0062  !!! Unknown !!!
+
+  When a virus, which tricks PROVIEW, is resident, the analysis of the
+interrupt vectors with PROVIEW, will look like this:
+
+No T Interrupt Name                 Address    Points to
+21 û DOS Function call              001E:0000  Interrupt Vector Table
+
+-------------------------------
+McAfee Associates about PROVIEW
+-------------------------------
+
+     PROVIEW (tm) Integrated System Analyzer and Viewer
+       Copyright (C) 1992 - 1993 by McAfee Associates
+                    All rights reserved
+
+
+     PROVIEW is a menu driven program used to analyze, view
+     and edit the basic components of a system, including the
+     system memory, system interrupts, device drivers, and
+     installed disk drive sectors and file contents.  PROVIEW 
+     will allow you to view system elements in HEX, ASCII or 
+     disassembled code format.  Full searching and editing 
+     functions are included.
+
+
+     Interrupts
+
+          View/Edit the System Interrupt Vectors.  Proview 
+          indicates which ones are currently in use, their
+          memory addresses, owners and interrupt chains. 
+          You may display/edit the actual interrupt code in 
+          hex or ASM format.
+
+--------------------
+How to trick PROVIEW
+--------------------
+
+The below steps must be followed to trick PROVIEW:
+
+  1. Load and store address of interrupt 21h.
+  2. Create a jump far in the memory hole.
+
+---------------------------------------
+Load and store address of interrupt 21h
+---------------------------------------
+
+  The below code shows a example of how to load and store the address of
+interrupt 21h:
+
+;------------------------------------------------------------=< cut here >=-
+             xor     ax,ax               ; Clear AX
+             mov     ds,ax               ; DS = segment of interrupt table
+             xchg    ax,ds:[21h*04h]     ; Load and store offset of INT 21h
+             mov     es:[int21off],ax    ; Store offset of INT 21h
+             mov     ax,1eh              ; AX = segment of hole in memory
+             xchg    ax,ds:[21h*04h+02h] ; Load and store segment of INT 21h
+             mov     es:[int21seg],ax    ; Store segment of INT 21h
+;------------------------------------------------------------=< cut here >=-
+
+  This code presumes that two variables of a word called int21off and
+int21seg exists.
+
+------------------------------------
+Create a jump far in the memory hole
+------------------------------------
+
+  The below code shows a example of how to create a jump far in the
+memory hole:
+
+;------------------------------------------------------------=< cut here >=-
+             mov     byte ptr ds:[1e0h],0eah
+             mov     word ptr ds:[1e1h],offset virusint21
+             mov     ds:[1e3h],es        ; Store segment of virusint21
+;------------------------------------------------------------=< cut here >=-
+
+  This code presumes that a procedure called virusint21 exists.
+
+----------------------------------------------------
+Necessary labels, variables and code to the examples
+----------------------------------------------------
+
+  The above examples presumes that two variables of a word called int21off
+and int21seg exists. These variables holds the address of the original
+interrupt 21h.
+
+  The above examples presumes that a procedure called virusint21 exists. This
+procedure is interrupt 21h of the virus.
+
+---------------------
+Final tips and tricks
+---------------------
+
+- Encrypt the jump far in the memory hole, then PROVIEW can't disassemble
+  it.
+- Use a lot anti-heuristic's, so other programs can't find the virus either.
+- Remember to optimize your code.
+
