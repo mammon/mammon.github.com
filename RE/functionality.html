@@ -1,7 +1,6 @@
 <html>
 <head><title>Replicating Functionality</title></head>
 <body bgcolor=A0A0A0 link=FFFFFF text=4040A0 vlink=0000A0>
-<!-- schema: code editor. Blue w/yellow + white fg -->
 <center><h1><font color=FFFFFF>R.E. HQ</font></h1></center>
 <center><h3>The science of reverse engineering</h3></center>
 <HR>
@@ -16,6 +15,25 @@
 	  <P><BR>
 	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++Background -->
 	  <font color=000080>
+	  When a program is to be re-coded rather than re-compiled, it is 
+	  necessary to identify functionality which is unique to the program 
+	  in order to replicate it. For the most part, such a task is concerned 
+	  primarily with determining the OS and shared library routines invoked 
+	  by the program, as well as any specific hardware that is accessed. 
+	  <P>
+	  This differs from the act of recovering subroutines or of decompiling in 
+	  that disassembled executable code is often of no consequence; quite often 
+	  the use of an undocumented interface, or the abnormal use of a documented 
+	  interface, will provide the key needed to rewrite the program. A look at 
+	  the specific memory locations, ports, system calls, and library routines 
+	  referenced by a program will prove sufficient in most cases, and the 
+	  overall program logic is of little or no interest.
+	  <P>
+	  Such techniques are virtually useless for porting programs, as they assume 
+	  the future program will run on the same platform as the target. As such this 
+	  is primarily an educational technique, useful in learning how to use 
+	  undocumented interfaces, or to gain the information necessary to write a 
+	  third-party device driver.
      </font>
      <P><BR>
 	  <!--  +++++++++++++++++++++++++++++++++++++++++++++++++++Papers -->
