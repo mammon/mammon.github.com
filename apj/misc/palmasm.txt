@@ -1,0 +1,186 @@
+Hola! This is a tutorial on assembler for the PalmOS enviroment.I 
+ decided to write them due to the lack of material on the web. To 
+ assemble the asm presented in this paper, you need to get Darrin 
+ Massena's ASDK; which can be downloaded from http://www.massena.com/darrin/pilot/index.html. 
+ The ASDK contains an assembler,disassembler, the palm emulator and many other great tools. 
+ Massena is the low-level-semi-god-techno-guru who created the assembler 
+ (Pila), along with many other tools and documents. He was my starting 
+ point (and for many others too) for asm coding in the Palm enviroment.
+
+ The Palm uses a variation of the 68K Motorola CPU called 'DragonBall' 
+ which has 8 32-bit Data registers (from D0 to D7), 8 Addres registers 
+ (from A0 to A7) being A7 the stack pointer,one PC register which 
+ is the 'Program Counter' which contains the address of the instruction 
+ to be executed next and one 16 bits register called the Status Register (SR).
+ Another thing to be noted is the way operands are specified in the 
+ DragonBall enviroment. It's not 'DEST,SRC' as in the Wintel world 
+ we all know, but 'SRC,DEST'. Say if you wanted to copy all the contents 
+ of the D7 register to the D0 this should be done: 'MOVE.L D7,D0'.
+
+ One last very important thing too is how to specify data types. 
+ In the previous example i used 'MOVE.L' where '.L' is talking about 
+ a 'long' data type. I could have used '.b' or '.w' meaning byte 
+ and word respectively. The size is always appended, when suitable, to the instruction nmemonic.
+ So what im gonna show you here is something pretty basic, but will 
+ be enough as a start. It's the typicall 'Hello World'.
+
+ Theory: 
+ -------
+
+ We will create a basic Palm program in assembly which will make 
+ use of the FrmAlert Systrap in order to display an Alert Resource. 
+
+ Word FrmAlert (
+
+         Word alertId
+ );
+
+ As you can see this Systrap (the word Systrap can be taken as a 
+ sinonym of the word 'API') takes one parameter. An Alert resource. 
+ There are many resource types (String,Form,version,etc) but we only care for the 'Alert' type.
+ All this means that we must create a resource file (.rcp) which 
+ includes our Alert and the Asm file (.asm) which contains the code to display the Alert resource.
+
+ All this said, lets do some 'Hello tiny world' :)
+
+ The resource file (Hello.rcp):
+ ------------------------------
+
+                   ;   Here we are going to declare our resources. In this case only an Alert resource
+                   ;   is going to be create since that's all we need
+
+                           ALERT ID 1000
+                   ; This is the ID of our Alert.
+                           
+                           INFORMATION                     
+                   ; This is the TYPE of the Alert. It could be [INFORMATION] 
+                   ; or  [CONFIRMATION]  or [WARNING] or [ERROR]
+                           
+                           BEGIN                           
+                   ;Beginning of the Alert resource. Let's define all it's properties.
+
+                           TITLE "Hello tiny World!"                               
+                   ; This would be the title of the Alert
+                           
+                           MESSAGE "This is just the beginning!"    
+                   ; Yes, you guessed. Its the Message
+                           
+                           BUTTONS "Ciao :)"
+                   ; In this case we have only one button
+                           
+                           END
+                   ; END of the Alert resource
+                           
+
+         
+         
+ The asm file (Hello.asm):
+ -------------------------
+
+                   Appl    "MBox", 'Lat1'          
+         
+                   ; This sets the program's name and Id. The name is the one that will show up
+                   ; in the installed program's list. The ID is that,an ID :)
+                            
+                   include "Pilot.inc"             
+                    ; Just like windows.inc, full of constants, structure offsets,API trap codes, etc.
+
+                   include "Startup.inc"           
+                   ; Startup.inc contains a standard startup function which must be
+                   ; the first within an application and is called by the PalmOS after the app
+                   ; is loaded. 
+                   ; SysAppStartup is first executed, if it doesn't fail, then PilotMain in our app
+                   ; is called and after it returns, SysAppExit is called. In short, don't remove this :)
+                                   
+
+
+                   MyAlert   equ     1000                  
+                   ; Some Constants
+                            
+                           code                            
+
+                   proc PilotMain(cmd.w, cmdPBP.l, launchFlags.w)
+
+                   ; Just like WinMain; PilotMain's prototype is in Pilot.inc.
+                   ; It takes three parameters, a WORD (cmd), a LONG 
+ (cmdPBP) and another WORD (launchFlags)
+                   ; Whenever parameters are passed to API calls, 
+ their size has to specified too. 
+                   ; So '.b' for a byte,'.w' for a word and '.l' for a Long.
+                   ; Remember that PilotMain is called from StartUp.inc!!
+
+                   beginproc
+                   ; Marks the beginning of a procedure by reserving the needed space in the 
+                   ; stack for local variables if any. To do this it performs the
+                   ; link a6,#nnnn where #nnnn is the number of bytes. 
+
+                   TST.W   cmd(a6) 
+                   ; PilotMain function is called many times in different circumstances
+                   ; so here we check that the cmd parameter is 0 
+                   ; (sysAppLaunchCmdNormalLaunch is 0?) which would 
+ mean a 'normal' program launching.
+                   ; TST.W   cmd(a6) means 'CMP WORD PTR cmd,0' in the Intel enviroment
+                   ; .W implies that only 2 bytes out of the cmd variable will be TeSTed
+                   ; cmd(a6) tells pila that the cmd variable is 
+ a LOCAL variable. Would it have been
+                   ; cmd(a5), then the assembler would know that cmd is a GLOBAL variable.
+
+                   BNE     PmReturn        
+                   ; BNE = Branch Not Equal. Just like the beloved JNZ
+
+                   systrap FrmAlert(#MyAlert.w)    
+                   ; MessageBox! :) systrap is the keyword to invoke APIs
+                   ; it PUSHes the specified parameters and cleans the stack
+                   ; after the API execution.
+                   ; # means that MyAlert is specifying a CONSTANT NUMBER
+                   ; and .w means that MyAlert is making reference to a WORD
+                   ;
+                   ; systrap FrmAlert(#MyAlert.w) would be the same as:    
+                   ; move.w  #MyAlert,-(a7)         = push alert id on stack and decrement it
+                   ; trap    #15                    = PalmOS API call
+                   ; dc.w    sysTrapFrmAlert        = invoke the 
+ alert dialog! by declaring the word that is equivalent to
+                                                      'sysTrapFrmAlert'
+                   ; addq.l  #2,a7                  = correct stack
+
+                                           
+                   PmReturn
+                   ; Just a Label
+
+                   endproc
+                   ; Sefiní, endproc executes the unlk and rts instructions
+
+                   ;-----------------------Resources------------------------------
+                   ; Here we must 'tell' pila all those resources that we created so it will include them to our
+                   ; assembled code. 
+                   ; We now declare ALL the resources being used by Hello.asm
+                   ; the keyword 'res' is first placed; followed by the TYPE of the resource.
+
+
+                           ;-=Alert   Resources=-
+                   res 'Talt', MyAlert, "Talt03e8.bin"     
+                           
+                          
+                           ; This resource defines launch flags, stack and heap size :)
+                   res     'pref', 1
+                           dc.w    sysAppLaunchFlagNewStack|sysAppLaunchFlagNewGlobals|sysAppLaun
+ chFlagUIApp|sysAppLaunchFlagSubCall
+                           dc.l    $1000                   ; stack size
+                           dc.l    $1000                   ; heap size
+
+
+                   ;------------------------------ end --------------------------------------------
+
+ That's all my friends! to assemble and link this program execute the following:
+         
+         pilrc Hello.rcp
+         pila Hello.asm
+
+ Pilrc being the resource compiler and pila the assembler of course.
+ Well, that's it! easy huh? Next time i'll complicate things a little bit including a Form :)
+ Should your Palm Asm hunger be unstoppable, you could check my site 
+ for more coding and reversing stuff: www.latigo.cjb.net.
+
+ Take Care! Bye!
+
+ Latigo

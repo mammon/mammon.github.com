@@ -1,0 +1,1598 @@
+Compressing data.
+ Intro by Feryno: ASSEMBLER-only and DISASSEMBLER-only wonderful
+
+ (http://feryno.homepage.com)
+
+ First, intro about decompress. It's needed a routine called
+ get_next_bit
+ Here are 3 examples:
+
+ ;-----
+ get_next_bit:
+         add     dl,dl
+         jnz     no_new_byte
+         lodsb
+         mov     dl,al
+         adc     dl,dl
+ no_new_byte:
+         ret
+ ;-----
+ get_next_bit:
+         shl     bx,1
+         jnz     no_new_word
+         mov     bx,word [esi]
+         inc     esi
+         inc     esi
+         rcl     bx,1
+ no_new_word:
+         ret
+ ;-----
+ get_next_bit:
+         shl     ebp,1
+         jnz     no_new_dword
+         lodsd
+         rcl     eax,1
+         xchg    ebp,eax
+ no_new_dword:
+         ret     
+ ;-----
+
+ And this is usage of get_next_bit:
+
+ ;-----
+         mov     esi,control_bits_offset
+         mov     edi,place_for_store_decompressed_bytes
+         cld
+         mov     dl,80h
+ B0:     call    get_next_bit
+         jc      L1
+ L0:     ... some decompress instructions ...
+         jmp     B0
+ L1:     ... some decompress instructions ...
+         jmp     B0
+         
+ get_next_bit:
+         add     dl,dl           ; this is instruction for put next bit to Carry
+                                 ; highest bit will be become to Carry Flag and
+                                 ; all lower bits are shifted left by 1
+         jnz     no_new_byte
+ ; next 3 instructions handle: all control_bits are processed and removed
+         lodsb                   ; load new control_byte with 8 control_bits
+         xchg    edx,eax         ; swap to another register only
+         adc     dl,dl           ; puth highest control_bit to Carry
+                                 ; shift all bits left by 1
+                                 ; recycle highest bit by MOV DL,80h ( bit=1
+                                 ; become to lower bit (bit 0.) )
+ no_new_byte:
+         ret
+ ;-----
+
+ Note about two instructions: MOV DL,80h and ADC DL,DL.
+ MOV DL,80h set up first control_bit, but this isn't true control_bit used for
+ switch decompress between L0 and L1. Binary, 80h = 10000000b and highest bit
+ (bit 7.) of 80h is bit=1 . All other bits=0 (bits 6. 5. 4. 3. 2. 1. 0.).
+ Highest bit name can be as helper_control_bit. Helper_control_bit is never
+ destroyed until decompress process end. Helper_control_bit recycle through
+ instruction ADC DL,DL after each loaded bits (8 bits by LODSB, 32 by LODSD) are
+ used (after 8 times call get_next_bit with LODSB - 1st example procedure or
+ 32 times call get_next_bit with LODSD 3nd example procedure).
+ Image of first call get_next_bit and call get_next_bit after use and remove all
+ control_bits is similar:
+
+ Status is: DL register = 80h = 10000000b
+
+ Here is instructions run:
+
+ 1.      ADD     DL,DL
+         80h + 80h = 00h CarryFlag=1 ZeroFlag=1 (in Carry is helper_control_bit)
+
+ 2.      LODSB
+         load control_byte with 8 control_bits, this instruction dont touch Carry
+
+ 3.      XCHG    EDX,EAX
+         swap control_byte to DL register, this instruction don't touch Carry
+         (note that instructions PUSH,POP,MOV,XCHG,INC,LODSB,... don't change Carry)
+
+ 4.      ADC     DL,DL
+         recycle helper_control_bit, shift all bits left by 1 and new highest
+         control_bit become to Carry
+
+ This may be the most difficult part of decompress for understand. OK, next...
+ Instructions on L0 and L1 can be as:
+ L0:     MOVSB
+         JMP     B0
+ L1:     ... calculate ECX
+         ... calculate EBX (delta, shift)
+         PUSH    ESI
+         MOV     ESI,EDI
+         SUB     ESI,EBX
+         REPZ MOVSB
+         POP     ESI
+         JMP     B0
+
+ First mode, L0, isn't true decompress mode. Byte isn't compressed and it will be
+ moved only. This mode has bad pack ratio, but must be used for store some bytes
+ that can't be decompressed by L1 mode. It use 1 byte + 1 bit = 9 bits for strore
+ 1 byte = 8 bits.
+ Second mode, L1, is true decompress mode. It calculate ECX number of bytes for
+ decompress and calculate EBX, value that can be named as DELTA or SHIFT. This
+ assume that chain of ECX bytes is on positions [EDI] and [EDI-EBX] in DATA bytes
+ and ASM code like
+         MOV     ESI,EDI
+         SUB     ESI,EBX
+         REPZ CMPSB
+ in data bytes compression process return with ZeroFlag=1 and ECX=0
+ It has good pack ratio, better for large chains (big ECX) and small shift (small
+ EBX). Methods for calculate ECX and EBX are similar:
+ It's lucid that ECX as well EBX aren't zero (ECX<>0 EBX<>0) hence highest bit
+ of register is bit=1
+ First instruction for calculate ECX setup highest bit=1 and all next bits will
+ be put by call get_next_bit. First instruction is:
+         MOV     ECX,1
+
+ or INC ECX if ECX=0
+
+ Next instructions are:
+         CALL    GET_NEXT_BIT
+         ADC     ECX,ECX                 ; as well RCL ECX,1 can be used
+ How to terminate calculate ECX ? Again through use call get_next_bit !
+ Here is full routine for calculate ECX in decompress:
+         MOV     ECX,1
+ LCC0:   CALL    GET_NEXT_BIT
+         ADC     ECX,ECX
+         CALL    GET_NEXT_BIT
+         JC      LCC0
+
+ A minimal value ECX=2 can be produced by this code. ECX=1 isn't needed because
+ this handle L0 mode (MOVSB) and L0 is more rational (but has bad pack ratio) for
+ pack 1 byte as L1 mode.
+
+ Example for calculate ECX=5=101b
+ Highest bit is by INC ECX and i remove it - binary 01b
+ Bit sequence for calculate ECX=5 is 01 10 binary.
+
+ Calculate ECX=110100b
+ Remove highest bit (this bit put INC ECX in decompress) - binary 10100b
+ Bit sequence for calculate ECX is 11 01 11 01 00 binary.
+
+ Calculate ECX=2=10b. Bit sequence is 0 0 binary.
+ Calculate ECX=3=11b. Bit sequence is 1 0 binary.
+ Calculate ECX=4=100b. Bit sequence is 0 1 0 0 binary.
+ Calculate ECX=5=101b. Bit sequence is 0 1 1 0 binary.
+ Calculate ECX=6=110b. Bit sequence is 1 1 0 0 binary.
+ Calculate ECX=7=111b. Bit sequence is 1 1 1 0 binary.
+ Calculate ECX=8=1000b. Bit sequence is 0 1 0 1 0 0 binary.
+ Calculate ECX=16=10000b. Bit sequence is 0 1 0 1 0 1 0 0 binary.
+ Calculate ECX=17=10001b. Bit sequence is 0 1 0 1 0 1 1 0 binary.
+ Calculate ECX=18=10010b. Bit sequence is 0 1 0 1 1 1 0 0 binary.
+ Calculate ECX=19=10011b. Bit sequence is 0 1 0 1 1 1 1 0 binary.
+
+ Calculate EBX has some similar steps but some other steps.
+ EBX can be EBX=1 and can be done as
+         MOV     EBX,1
+ LCD0:   CALL    GET_NEXT_BIT
+         ADC     EBX,EBX
+         CALL    GET_NEXT_BIT
+         JC      LCD0
+         DEC     EBX
+ But by experients, it's often EBX>16 and for EBX<16 can be used another
+ decompress mode. Calculate EBX=15 require 8 bits = 1 byte by use upper codes.
+ It's a better use 8 bits = 1 byte for fill BL in EBX and calculate all bits
+ highest of BL ( bits 31. - 8. ) by mode similar as calculate ECX.
+ Here is it:
+         MOV     EBX,1
+ LCD0:   CALL    GET_NEXT_BIT
+         ADC     EBX,EBX
+         CALL    GET_NEXT_BIT
+         JC      LCD0
+         DEC     EBX
+         DEC     EBX
+         SHL     EBX,8
+         MOV     BL,byte [ESI]
+         INC     ESI
+
+ Note that at least 2 times DEC EBX must be used for make EBX=0 possibility
+ before SHL EBX,8 shift all bits higher and free BL.
+
+ It's a mode named without_change_delta. Principle is 3 times use DEC EBX after
+ calculate EBX=2. Calculate EBX=-1 indicate that calculate new delta isn't needed
+ and old delta can be used. Old delta can be saved to unused register or stack
+ by previous SUB ESI,EBX REPZ MOVSB and restored by mode without_change_delta.
+
+ Principle of mode for pack 2-3 bytes with delta from 1 to 7Fh:
+ 1. Load 1 byte = 8 bits
+ 2. bit 0. = 1 indicate packed 2 bytes
+    bit 0. = 0 indicate packed 3 bytes
+ 3. high 7 bits ( bits 7. - 1. ) is delta
+
+ Here is code example
+         XOR     EBX,EBX ; (EBX=0)
+         MOV     ECX,1   ; (ECX=1)
+         MOV     BL,[ESI]
+         INC     ESI
+         SHR     BL,1    ; this explore bit 0. and shift bits to make EBX=delta
+         SBB     CL,0
+         INC     ECX
+         INC     ECX
+
+ It's lucid that result BL=0 after this code is impossible delta. I make use of
+ this for TERMINATE decompress process.
+
+ A nice idea for pack 1 byte with delta from 1 to 15
+         XOR     EBX,EBX
+         MOV     ECX,1
+ U02:    MOV     BL,00010000b
+         CALL    GET_NEXT_BIT
+         ADC     BL,BL
+         JNC     U02
+
+ Result EBX=0 is impossible delta and is used for pack byte 00h. This byte 00h
+ is the most frequent byte in 32-bit opcodes. Last code continue...
+         JNZ     STORE_1_BYTE
+         XCHG    EBX,EAX ; make EAX=0 in 1 byte 32-bit opcode
+         JMP     STORE_BYTE
+         ...
+ STORE_1_BYTE:
+         NEG     EBX
+         MOV     AL,[EDI+EBX]
+ STORE_BYTE:
+         STOSB
+
+ This is all about decompress intro. It's a part not implemented in decompress
+ meanwhile. This is part like:
+                 CMP     EBX,7D00h
+                 JNC     ZVYS_O_DVE
+                 CMP     EBX,500h
+                 JNC     ZVYS_O_JENNU
+                 JMP     NYST_NEZVYSUJ
+ ZVYS_O_DVE:     INC     ECX
+ ZVYS_O_JENNU:   INC     ECX
+ NYST_NEZVYSUJ:
+ It's not rational compress 2 bytes with delta > 4FFh because this request
+ 2+(3*2)+8+2 = 18 bits and this can be done with 2 times use MOVSB mode (2*9=18 bits)
+ U00:    movsb                   ; require 1 byte = 8 bits
+         call    get_next_bit    ; require 1 bit
+         jnc     U00
+
+ It's rational compress 4 bytes with delta > 7CFFh because this request
+ 2+(8*2)+8+(2*2) = 28 bits without, 26 bits with this implementation
+
+ ;-------------------------
+
+ Intro for COMPRESS...
+
+ some equivalents:
+ DECOMPRESS         COMPRESS
+ MOV DL,80h         CALL o_c_0         ; setup helper_control_bit
+ CALL GET_NEXT_BIT  CALL PUT_BIT
+
+ Routines for scan chains, calculate bit request for pack this chain, pack chain,
+ some optimalizations for found better chains are in source code.
+
+ Sorce is ELF compressor, but this isn't universal ELF compressor. It support ELF
+ header included in the source only. This header is enough for LINUX NASM use.
+ You can download sources as well binaries from
+ http://feryno.homepage.com/linux/compressELF.tar.gz
+
+ ; ----- CUT HERE -----
+
+ ; fy1ename: a00.asm
+ ; dezkrypt: ASM, ELF, k0mprezz0r, myny, exekutab1e
+ ; Au~tchor: ch lap aj   Feryno
+ ; kompy1e:
+ ; nasm -f bin a00.asm
+ ; chmod +x a00
+ ; example of use
+ ; ./a00 a00 compressed_a00
+ ; this self compress compressor
+
+ BITS 32
+
+                 org     08048000h
+
+ ehdr:                                           ; Elf32_Ehdr
+                 db      7Fh, 'ELF', 1, 1, 1     ;   e_ident
+         times 9 db      0
+                 dw      2                       ;   e_type
+                 dw      3                       ;   e_machine
+                 dd      1                       ;   e_version
+                 dd      START                   ;   e_entry
+                 dd      phdr - $$               ;   e_phoff
+                 dd      0                       ;   e_shoff
+                 dd      0                       ;   e_flags
+                 dw      ehdrsize                ;   e_ehsize
+                 dw      phdrsize                ;   e_phentsize
+ phdr:                                                           ; Elf32_Phdr
+                 dw      1                       ;   e_phnum     ;   p_type
+                 dw      0                       ;   e_shentsize
+                 dw      0                       ;   e_shnum     ;   p_offset
+                 dw      0                       ;   e_shstrndx
+ ehdrsize        equ     $ - ehdr
+                 dd      $$                                      ;   p_vaddr
+                 dd      $$                                      ;   p_paddr
+                 dd      filesize                                ;   p_filesz
+                 dd      memsize                                 ;   p_memsz
+                 dd      111b                                    ;   p_flags
+ ;                       EWR                                     ;Exec,Write,Read
+                 dd      1000h                                   ;   p_align
+ phdrsize        equ     $ - phdr
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ START:
+
+         pop     ebx     ; pop number of strings in comand line , must be =3
+         dec     ebx
+         dec     ebx
+         dec     ebx     ; set zero flag if after this EBX=0  
+         pop     ebx     ; offset of first string ( executable file )
+         jz      short mode      ; number of strings = 3 = executable + file0 + file1
+ use:    mov     ecx,usage
+         xor     edx,edx
+         mov     dl,usagesize
+ ;;;     call    WS
+         jmp     short ex00
+
+ mode:   pop     ebx     ; pop offset of second string (first string, 0, second string, 0, third...)
+
+ open:   mov     edi,f0h
+         cld
+
+ ; ebx is now pointed to second string in a shell = in_file
+ open_f: xor     ecx,ecx ; open flags, open for read-only
+ ;       xor     eax,eax
+ ;       mov     al,5    ; sys_open
+         db      6Ah,5   ; push dword 5
+         pop     eax
+         int     80h     ; open , note - return HANDLE in EAX
+         or      eax,eax
+         jns     short OK_open
+         mov     ecx,MEOF
+ ;       xor     edx,edx
+ ;       mov     dl,MEOFS
+         db      6Ah,MEOFS       ; push dword MEOFS
+         pop     edx
+ ;;;     call    WS
+ ex00:   jmp     short ex01
+ OK_open:stosd           ; store file handle
+
+         pop     ebx     ; EBX pointed to second filename out_file
+         mov     ecx,111101101b  ; 111 owner can read, write, execute, 101 group 
+ can read, execute, but don't write / search, other 101 as well groups
+ ;       xor     eax,eax
+ ;       mov     al,8    ; sys_creat
+         db      6Ah,8   ; push dword 8
+         pop     eax
+         int     80h     ; creat , note - return HANDLE in EAX
+         or      eax,eax
+         jns     short OK_creat
+         mov     ecx,MECF
+ ;       xor     edx,edx
+ ;       mov     dl,MECFS
+         db      6Ah,MECFS       ; push dword MECFS
+         pop     edx
+ ;;;     call    WS
+ ex01:   jmp     short ex02
+ OK_creat:stosd          ; store file handle
+
+                         ; EDI=f0s
+         mov     ebx,dword [edi - 4*2]   ; handle for in_file
+         xor     ecx,ecx ; ECX=0 seek 0 bytes
+ ;       xor     edx,edx
+ ;       inc     edx
+ ;       inc     edx     ; EDX=2 seek to end of file + ECX=0 bytes
+         db      6Ah,2   ; push dword 2
+         pop     edx
+ ;       xor     eax,eax
+ ;       mov     al,13h  ; sys_seek
+         db      6Ah,19  ; push dword 19
+         pop     eax
+         int     80h     ; note - return filesize in EAX
+         or      eax,eax
+         jns     short OK_seek_to_end
+         mov     ecx,MSEEF
+ ;       xor     edx,edx
+ ;       mov     dl,MSEEFS
+         push    byte MSEEFS
+         pop     edx
+ ;;;     call    WS
+ ex02:   jmp     short ex03
+ OK_seek_to_end:
+ ;;;     or      eax,eax
+ ;;;     jz      ex04    ; filesize=0 -> this file needn't compression
+         cmp     eax,f0b_size
+         jnbe    ex04    ; LIMIT f0b_size OVERFLOW !!!!!!
+         cmp     eax,4Ch
+         jbe     ex04    ; can't be a ELF executable, ELF header require 4C bytes
+         stosd           ; store in_file size to f0s_2
+         stosd           ; store in_file size to f0s
+         push    eax     ; and push it to stack
+
+         xor     ecx,ecx ; seek 0 bytes
+         xor     edx,edx ; seek to begin of file + ECX=0 bytes
+ ;       xor     eax,eax
+ ;       mov     al,13h
+         db      6Ah,19  ; push dword 19
+         pop     eax
+         int     80h
+         or      eax,eax
+         jns     short OK_seek_to_begin
+         mov     ecx,MSEBF
+ ;       xor     edx,edx
+ ;       mov     dl,MSEBFS
+         db      6Ah,MSEBFS      ; push dword MSEBFS
+         pop     edx
+ ;;;     call    WS
+ ex03:   jmp     short wsex04
+ OK_seek_to_begin:
+
+         mov     esi,fy1eObuffer
+         mov     edi,f1b
+
+ read_f: mov     ecx,esi
+         pop     edx     ; pop in_file_size from stack
+ ;       xor     eax,eax
+ ;       mov     al,3    ; sys_read
+         db      6Ah,3   ; push dword 3
+         pop     eax
+         int     80h     ; note - return in EAX number of bytes read (negative value if error)
+         cmp     eax,edx
+         jz      short OK_read
+ oops:   mov     ecx,MERF
+ ;       xor     edx,edx
+ ;       mov     dl,MERFS
+         db      6Ah,MERFS       ; push dword MERFS
+         pop     edx
+ wsex04: call    WS
+ ex04:   jmp     long ex05       ;short ex05
+ OK_read:
+
+         add     eax,esi
+         mov     dword [konyc_dat],eax
+ ;       mov     ecx,4Ch         ; header size
+         db      6Ah,4Ch         ; push dword 4Ch
+         pop     ecx
+         sub     dword [f0s],ecx
+         repz movsb
+         push    esi
+         mov     esi,uncompress_routine
+         mov     cl,uncompress_routine_size
+         repz movsb
+         pop     esi
+
+ ; all self compressing is below this:
+
+         movsb           ; first byte, store it, this byte can't be compressed
+         call    o_C_0   ; setup [position] and byte on [position]
+         dec     dword [f0s]
+         jz      near terminate002
+
+ ;       xor     eax,eax
+ ;       mov     dword [last_delta],eax  ; I know : all data in UDATASEG is zero
+ ;                                       ; but use dirty tricks and must be sure
+ ;                                       ; dword [last_delta] can be non zero if
+ ;                                       ; compressed fy1e overwrite [last_delta]
+ ;                                       ; but i hope that compressed will be
+ ;                                       ; smaller as original executable
+         call    progress
+
+ compress002:
+
+         call    scan002
+
+ ; some optimalizations for found better chain as chain by scan0002
+         cmp     eax,1
+         jbe     near    cant_optimize_002_L0
+ ; on ESI is EAX lenght chain
+ ; explore if on SI isn't chain with no change delta - if it's use this chain
+         call    scanincd        ; include procedure in scan_ncd.inc
+         jc      cant_optimize_002_L1
+         mov     ebx,dword [last_delta]
+ ; pack without change delta has superior pack priority ( the best pack ratio )
+         jmp     near    A08_new_optimalization
+
+ cant_optimize_002_L1:
+         xchg    dword [last_delta],ebx
+         push    ebx
+         push    eax
+         push    esi
+         add     esi,eax
+         stc
+         cmp     dword [konyc_dat],esi
+         jz      chumaj
+         inc     esi
+         cmp     dword [konyc_dat],esi
+         jz      chumaj
+         call    scan002
+         call    scanincd
+ chumaj: pop     esi
+         pop     eax
+         pop     ebx
+         xchg    dword [last_delta],ebx
+         jnc     near    cant_optimize_002_L0
+
+ skus_toto_L0:
+         push    ebx
+         push    eax
+         inc     esi
+         call    scan002
+         call    scanincd
+         dec     esi             ; DEC don't change Carry !!!
+         xchg    ecx,eax         ; number of bytes to ECX
+                                 ; XCHG don't change Carry !!!
+         pop     eax             ; POP don't change Carry !!!
+         pop     ebx
+         jc      try_next_optimalization
+ ; use chain without change delta require less bits for pack ?
+         call    bitreq_02
+         push    edx             ; number of bits for pack non-optimized chain
+         xchg    ecx,eax         ; number of bytes of non-optimized chain -> CX
+                         ; number of bytes of chain without change delta -> AX
+         push    ebx
+         mov     ebx,dword [last_delta]  ; make EBX = EBX in last pack_02
+         call    bitreq_02       ; return EDX = number of bits for pack chain without change delta
+         pop     ebx
+
+         push    edx
+         push    eax
+         xor     eax,eax         ; simulate pack 1 byte first ( before chain without change delta )
+         call    bitreq_02
+         pop     eax
+         add     dword [esp+0*4],edx
+         pop     edx
+         xchg    ecx,eax         ; restore EAX = number of bytes of non-optimized chain
+         inc     ecx             ; number of bytes for pack optimized chain
+         cmp     eax,ecx
+         pop     ecx             ; number of bits for pack non-optimized chain
+         jc      near    pack_1_byte_look_better
+         cmp     edx,ecx
+         jc      near    pack_1_byte_look_better
+
+ try_next_optimalization:
+
+         cmp     eax,3
+         jc      try_old_optimalization
+         push    ebx
+         push    eax
+         inc     esi
+         inc     esi
+         call    scan002
+         call    scanincd
+         dec     esi
+         dec     esi
+         xchg    ecx,eax         ; number of bytes to ECX
+                                 ; XCHG don't change Carry !!!
+         pop     eax             ; POP don't change Carry !!!
+         pop     ebx
+         jc      try_old_optimalization
+ ; use chain without change delta require less bits for pack ?
+         call    bitreq_02
+         push    edx             ; number of bits for pack non-optimized chain
+         xchg    ecx,eax         ; number of bytes of non-optimized chain -> CX
+                         ; number of bytes of chain without change delta -> AX
+         push    ebx
+         mov     ebx,dword [last_delta]  ; make EBX = EBX in last pack_02
+         call    bitreq_02       ; return EDX = number of bits for pack chain without change delta
+         pop     ebx
+
+         push    edx
+         push    eax
+         xor     eax,eax         ; simulate pack 1 byte first ( before chain without change delta )
+         call    bitreq_02
+         pop     eax
+         add     dword [esp+0*4],edx
+         pop     edx
+         xchg    ecx,eax         ; restore EAX = number of bytes of non-optimized chain
+         inc     ecx
+         inc     ecx             ; number of bytes for pack optimized chain
+         cmp     eax,ecx
+         pop     ecx             ; number of bits for pack non-optimized chain
+         jc      near    pack_1_byte_look_better
+         cmp     edx,ecx
+         jc      near    pack_1_byte_look_better
+
+ try_old_optimalization:
+         push    esi
+         add     esi,eax
+         cmp     dword [konyc_dat],esi
+         pop     esi
+         jz      near    L_NO_0
+
+         call    bitreq_02
+
+         push    ebx
+         push    eax
+         push    edx
+         push    eax
+
+         push    esi
+         add     esi,eax
+         call    scan002
+         call    bitreq_02
+         pop     esi
+         add     dword [esp+0*4],eax
+         add     dword [esp+1*4],edx
+
+         xor     eax,eax
+         call    bitreq_02
+         push    edx
+         inc     esi
+         call    scan002
+         call    bitreq_02
+         dec     esi
+         add     dword [esp+0*4],edx
+         pop     edx             ; EDX=bits required by pack 1 byte first
+         inc     eax             ; EAX=bytes packed in 2 steps , pack 1 byte first
+
+         cmp     dword [esp+0*4],eax
+         jc      obnov_to
+ ;;;     clc
+         jnz     obnov_to
+         cmp     edx,dword [esp+1*4]
+ obnov_to:
+         pop     eax
+         pop     edx
+         pop     eax
+         pop     ebx
+         jc      near    pack_1_byte_look_better
+
+ A08_new_optimalization:
+         cmp     eax,3
+         jc      near    can_t_use_new_optimalization_08
+         push    esi
+         add     esi,eax
+         inc     esi
+         inc     esi
+         inc     esi             ; it's very unhappy idea fucking near the death
+                                 ; this isn't usefull for try code marked
+                                 ; DANGEROUS for last 3 bytes because this can be
+                                 ; unstable (data in f0b overleap)
+         cmp     dword [konyc_dat],esi
+         pop     esi
+         jbe     this_is_it
+         xchg    dword [last_delta],ebx
+         push    ebx
+         push    eax
+         push    esi
+         add     esi,eax
+         inc     esi             ; DANGEROUS , ESI+1
+         call    scan002
+         call    scanincd        ; DANGEROUS , must be ESI + 1 + EAX (where EAX > 1)
+         pop     esi             ; DEC instruction don't change Carry (=CF) !!!
+         pop     eax             ; POP instruction don't change Carry (=CF) !!!
+         pop     ebx
+         xchg    dword [last_delta],ebx  ; XCHG instruction don't change Carry (=CF) !!!
+         jnc     can_t_use_new_optimalization_08
+
+ this_is_it:
+         push    ebx
+         push    eax
+         push    edx     ;db     6Ah,0   ; push dword 0  ; bits count=0 but will be overwrited
+                                         ; first time because chain > 0 bytes
+                                         ; will be found
+         db      6Ah,0   ; push dword 0  ; chain lenght counter
+
+ new_optimalization_08_L0:
+         call    scan_lim                ; scan EAX chain lenght, return min. EBX
+         call    scanincd
+         jc      new_optimalization_08_L1
+         mov     ebx,dword [last_delta]
+ new_optimalization_08_L1:
+         call    bitreq_02
+         push    edx
+         push    eax
+         push    esi
+         xchg    dword [last_delta],ebx
+         push    ebx
+         add     esi,eax
+         call    scan002
+         call    bitreq_02
+         pop     ebx
+         xchg    dword [last_delta],ebx
+         pop     esi
+         add     eax,dword [esp+0*4]
+         xchg    ecx,eax
+         pop     eax
+         add     dword [esp+0*4],edx
+         pop     edx
+         cmp     dword [esp+0*4],ecx
+         jc      toto_bude_asy_lepseeeee
+         jnz     toto_bude_asy_horse
+         cmp     dword [esp+1*4],edx
+         jbe     toto_bude_asy_horse
+
+ toto_bude_asy_lepseeeee:
+ ;       mov     dword [esp+2*4],ax
+ ;       mov     dword [esp+3*4],bx
+ ;       mov     dword [esp+0*4],cx
+ ;       mov     dword [esp+1*4],dx
+         add     esp, byte 4*4
+         push    ebx
+         push    eax
+         push    edx
+         push    ecx
+ toto_bude_asy_horse:
+
+         dec     eax
+         cmp     eax,1
+         jnz     new_optimalization_08_L0
+
+         pop     eax
+         pop     eax
+         pop     eax
+         pop     ebx
+ can_t_use_new_optimalization_08:
+
+ L_NO_0:
+
+         cmp     eax,9           ; under 32 bit opcodes it's enough  for 1 MB
+                                 ; data block
+                                 ; 16 bit delta is less than 64 kB and require
+                                 ; max. 4 bytes for calculate it
+                                 ; Summa: Under DOS its enough use CMP AX,4
+                                 ;        because small value is fast algorithm
+                                 ;        Under 32 bit OS ( Linux, NT 4.0 ) use
+                                 ;        big value if big data block
+                                 ;        9 is enough for 4 GB of data block
+                                 ;        Who can produce 4 GB of ASM code ???
+         jnc     cant_optimize_002_L0
+ ; i have chain with AX <2,0Fh> and try pack 1 byte AX times
+         push    eax
+         db      6Ah,0   ;push   0000h           ; bits require counter
+         push    eax             ; pack 1 byte AX times
+ optimize_002_L2:
+         xor     eax,eax
+         call    bitreq_02       ; include procedure in bitreq02.inc
+         inc     esi
+         add     dword [esp+1*4],edx     ; bits require counter
+         dec     dword [esp+0*4] ; pack 1 byte EAX times
+         jnz     optimize_002_L2 ; simulate pack 1 byte EAX times
+         pop     eax             ; remove word from stack only
+         pop     ecx             ; ECX = required bits count for pack 1 byte EAX times
+         pop     eax             ; restore EAX
+         sub     esi,eax         ; restore ESI
+
+         call    bitreq_02       ; explore once-pack EAX bytes EBX delta bits count
+                                 ; return EDX=bits required
+         cmp     edx,ecx
+         jc      cant_optimize_002_L0
+ ; use JC for prefer pack 1 byte EAX times
+ ; use JBE for prefer once-pack EAX bytes with delta = EBX
+ ; JC is sometimes better because pack 1 byte don't change delta and it's
+ ; possibility pack without change delta ( call scanincd ) later
+ ; JC has better ratio in my experiments by aprox 1 byte per 1 kB of data but
+ ; this depend on data structure and sometimes JBE can be more rational if change
+ ; delta and later pack with this new delta without change delta
+
+ ; O.K. pack 1 byte now
+ pack_1_byte_look_better:
+         xor     eax,eax
+ ; now will be packed last 1 byte by call pack002 in a00.asm
+ ; EAX=0
+
+ cant_optimize_002_L0:
+
+         call    pack002
+
+         add     esi,eax
+         sub     dword [f0s],eax
+         pushfd
+         call    progress
+         popfd
+         jnz     near compress002        ; jnz don't handle error if packing more
+                                         ; bytes as bytes in f0buffer
+                                         ; jnbe is better
+         mov     ecx,progress_text
+         xor     edx,edx
+         inc     edx
+         mov     byte [ecx],0Ah
+         call    WS
+
+ terminate002:
+
+         call    putbit1
+         call    putbit1
+
+         xor     eax,eax
+         stosb
+
+         mov     ebx,dword [position]
+         stc
+         rcl     byte [ebx],1
+         jc      done_002
+
+ flush:  shl     byte [ebx],1
+         jnc     flush                   ; shift all control_bits and remove highest ( highest 
+ was put in MOV BYTE PTR DS:[DI],1 , INC DI )
+
+ done_002:
+
+ after_compress:
+
+ ; modifying data for fill pointer registers in output file
+
+ ; calculate boundary of moved data
+         mov     ecx,f1b
+         mov     eax,edi
+         sub     eax,f1b - 08048000h + 1
+         mov     dword [ecx+4Fh],eax     ; esi value
+
+         mov     eax,edi
+         sub     eax,f1b+4Ch+fuyi - 08048000h + 1
+         add     eax,dword [ecx+40h]
+         mov     dword [ecx+54h],eax     ; edi value
+
+ ; calculate size of moved data
+         mov     eax,edi
+         sub     eax,f1b+4Ch+fuyi
+         mov     dword [ecx+59h],eax     ; ecx value
+
+ ; calculate offset after uncompress_routine (esi)
+         mov     eax,dword [ecx+40h]
+         add     eax,08048000h + uncompress_routine_end - uncompress_moved
+         mov     dword [ecx+69h],eax     ; esi value
+
+ ; calculate offset of moved U13 (ebp)
+         sub     eax, byte (uncompress_routine_end - U13)
+         mov     dword [ecx+6Eh],eax     ; ebp value
+
+ ; calculate JUMP
+         mov     eax,dword [ecx+18h]
+         sub     eax,dword [ecx+40h]
+         sub     eax,08048000h + uncompress_routine_end - uncompress_moved
+         mov     dword [f1b+0D9h],eax    ;[ecx+0D9h],eax
+
+ ; modify data in a header
+         mov     dword [ecx+18h],0804804Ch       ; START
+
+         mov     eax,edi
+                                 ; ECX=f1b
+         sub     eax,ecx         ; sub   eax,f1b
+         mov     dword [ecx+3Ch],eax             ; filesize
+
+         sub     eax, byte ( fuyi + 4Ch + 1 )
+         add     dword [ecx+40h],eax             ; memorysize
+
+         mov     byte [ecx+44h],111b             ; Exec,Write,Read
+
+ ; O.K. going write output...
+         mov     ebx,dword [f1h]
+                         ; ECX=f1b
+ ;;;     mov     ecx,f1b
+         mov     edx,edi
+         sub     edx,ecx
+ ;       xor     eax,eax
+ ;       mov     al,4    ; sys_write
+         db      6Ah,4   ; push dword 4
+         pop     eax
+         int     80h
+         cmp     eax,edx
+         jz      OK_write
+         mov     ecx,MEWF
+ ;       xor     edx,edx
+ ;       mov     dl,MEWFS
+         db      6Ah,MEWFS       ; push dword MEWFS
+         pop     edx
+         call    WS
+ ex05:   jmp     short   exit
+ OK_write:
+
+         mov     esi,f0h
+
+         lodsd
+         xchg    ebx,eax
+ ;       xor     eax,eax
+ ;       mov     al,6    ; sys_close
+         db      6Ah,6   ; push dword 6
+         pop     eax
+         int     80h
+         lodsd
+         xchg    ebx,eax
+ ;       xor     eax,eax
+ ;       mov     al,6    ; sys_close
+         db      6Ah,6   ; push dword 6
+         pop     eax
+         int     80h
+
+ exit:
+         xor     ebx,ebx
+ ;       xor     eax,eax
+ ;       inc     eax
+         db      6Ah,1
+         pop     eax     ; this is better for compress as xor eax,eax inc eax ; sys_exit
+         int     80h
+
+ WS:     xor     ebx,ebx
+         inc     ebx     ; EBX=1 (STDOUT)
+ ;       xor     eax,eax
+ ;       mov     al,4    ; write
+         db      6Ah,4   ; push dword 4
+         pop     eax
+         int     80h
+         ret
+
+ ; -------
+
+ scan002:
+ ; input:  chain on ESI
+ ; return: EAX max. lenght ( 0 or 1 for chain not found ) , EBX delta
+
+         push    esi
+         push    edi
+         xor     edx,edx         ; chain lenght counter
+         mov     edi,f0b
+         mov     ecx,esi
+         sub     ecx,edi
+         lodsb
+ scan_L00:
+         jecxz   scan_L04
+         repnz scasb
+         jnz     scan_L04
+         push    eax
+         push    ecx
+         push    esi
+         push    edi
+         mov     eax,dword [konyc_dat]
+         sub     eax,esi
+         mov     ecx,eax
+         jecxz   scan_L03
+ scan_L01:
+         repz cmpsb
+         jnz     scan_L02
+         inc     eax             ; last byte is in chain and must be encountered
+ scan_L02:
+         sub     eax,ecx
+         cmp     eax,1           ; chain must be minimal 2 bytes long
+         jbe     scan_L03
+         cmp     eax,edx
+         jc      scan_L03
+         xchg    edx,eax
+         mov     ebx,esi
+         sub     ebx,edi         ; EBX=shift=deta
+ scan_L03:
+         pop     edi
+         pop     esi
+         pop     ecx
+         pop     eax
+         jmp     short   scan_L00
+ scan_L04:
+         pop     edi
+         pop     esi
+         xchg    edx,eax
+         ret
+
+ ; -------
+
+ scan_ncd:
+ ; input:  chain on ESI , EAX requested lenght with shift = [last_delta]
+ ; return: EAX max. lenght ( 0 or 1 for chain not found )
+         cmp     dword [last_delta], byte 0
+         jnz     mozno_aj_bude
+         xor     eax,eax
+         ret
+ mozno_aj_bude:
+         push    ecx
+         push    esi
+         push    edi
+         mov     edi,esi
+         sub     edi,dword [last_delta]
+         mov     ecx,eax
+         repz cmpsb
+         pop     edi
+         pop     esi
+         jnz     scan_ncd_0
+         inc     eax             ; last byte is in chain and must be encountered
+ scan_ncd_0:
+         sub     eax,ecx
+         pop     ecx
+         ret
+
+
+ scanincd:
+ ; input:  chain on ESI , EAX requested lenght with shift = [last_delta]
+ ; return: CLC ( Carry Flag = 0 ) if chain found , STC (CF=1) if not found
+         cmp     dword [last_delta], byte 0
+         jnz     mozno_aj_bude_0
+         stc
+         ret
+ mozno_aj_bude_0:
+         push    ecx
+         push    esi
+         push    edi
+         mov     edi,esi
+         sub     edi,dword [last_delta]
+         mov     ecx,eax
+         repz cmpsb
+         pop     edi
+         pop     esi
+         jnz     nebude_any_ket_sa_zesere_z_blbych_pocytov
+         jecxz   zeserau_sa_z_blbych_pocytov
+ nebude_any_ket_sa_zesere_z_blbych_pocytov:
+         stc
+         pop     ecx
+         ret
+ zeserau_sa_z_blbych_pocytov:
+         clc
+         pop     ecx
+         ret
+
+ ; -------
+
+ scan_lim:
+ ; input:  chain on ESI , EAX chain lenght , EAX > 1
+ ; return: EBX minimal delta
+ ; this procedure is usefull for call after call scan002 for scan shorter chains
+ ; on this some ESI
+ ; call scan_lim assume that on ESI is chain with {EAX} <3,max_register_limit>
+ ; call scan_lim with EAX = {EAX}-1, {EAX}-2, {EAX}-3, ... , 3, 2
+ ; {EAX} is value returned after call scan002
+         push    ecx
+         push    edi
+         mov     edi,esi
+ scan_lim_L00:
+         dec     edi
+ ;       cmp     edi,f0b         ; call scan_lim assume that longer chain was found
+ ;       jc      scan_lim_L00
+         mov     ecx,eax
+         push    esi
+         push    edi
+         repz cmpsb
+         pop     edi
+         pop     esi
+         jnz     scan_lim_L00
+         jecxz   scan_lim_L01
+         jmp     short   scan_lim_L00
+ scan_lim_L01:
+         mov     ebx,esi
+         sub     ebx,edi
+         pop     edi
+         pop     ecx
+         ret
+
+ ; -------
+
+ bitreq_02:
+ ; input  : EAX = number of bytes for pack request
+ ;          EBX = shift = delta ( if EAX = 2 or more )
+ ; output : EDX = number of bits required for pack
+ ; destroy: nothing
+
+         cmp     eax,1
+         jnbe    bitreq_more_bytes
+
+ bitreq_1_byte:
+
+         db      6Ah,7   ; push doubleword 7
+         pop     edx     ; make EDX=7
+
+ ; scan if can be used 7 bits for pack 1 byte = 00h or 1 byte with shift < 16
+ ; if this can't be used , pack by use 9 bits can be always used
+
+ ; byte for compress is = 00h ?
+         cmp     byte [esi],0
+         jz      bitreq_7_bits   ; 7 bits required ( sequence 1100000 )
+
+ bitreq_jak_skusas_co_skusas:
+ ; byte isn't = 00h but explore if found equal byte with shift < 16
+         push    eax
+         mov     al,byte [esi]
+         push    ecx
+ ;       xor     ecx,ecx
+ ;       mov     cl,15
+         db      6Ah,15
+         pop     ecx
+         push    edi
+         mov     edi,esi
+         sub     edi,ecx
+         cmp     edi,f0b
+         jnc     bitreq_pome_skusat
+         mov     edi,f0b
+         mov     ecx,esi
+         sub     ecx,edi
+ bitreq_pome_skusat:
+         repnz scasb
+         pop     edi
+         pop     ecx
+         pop     eax
+         jz      bitreq_7_bits
+
+ ; always can be used this mode but has bad pack ratio
+ ; pack 1 byte , use 9 bits ( 1 byte + 1 bit )
+         mov     dl,9
+ bitreq_7_bits:
+         mov     al,1            ; 1 byte packed EAX=1
+         ret
+
+ bitreq_more_bytes:
+
+         cmp     ebx,dword [last_delta]
+         jnz     bitreq_another_delta
+
+ bitreq_old_delta:
+         bsr     edx,eax         ; ( bits / 2 ) for calculate bytes count
+         lea     edx,[2*edx+4]   ; 4 bits sequence 1000 don't calculate new delta
+         ret
+
+ bitreq_another_delta:
+         cmp     ebx,byte 7Fh                            ; cmp ebx,7Fh require 3 bytes
+         jnbe    bitreq_big_delta_or_more_bytes
+         cmp     eax,4
+         jnc     bitreq_big_delta_or_more_bytes
+
+ ; pack 2 or 3 bytes with delta <+0001h,+007Fh>
+         db      6Ah,8+3
+         pop     edx     ;mov    edx,8+3                 ; 8 bit = 1 byte for MOV BL,[ESI]  INC ESI
+         ret                             ; 3 bit sequence 111 switch to this mode
+
+ bitreq_big_delta_or_more_bytes:
+ ; pack 4 or more bytes with delta <+0001h,maximal_delta)
+ ; pack 2 or more bytes with delta <+0080h,maximal_delta)
+         push    eax
+         push    ebx
+
+         cmp     ebx,byte 7Fh
+         jnbe    bitreq_high_delta
+         dec     eax
+         dec     eax             ; invert for 2x INC ECX in decompress
+
+ bitreq_high_delta:
+         bsr     eax,eax         ; (bits/2)  for calculate count
+
+         shr     ebx,8           ; remove BL part of delta
+         inc     ebx
+         inc     ebx
+         inc     ebx             ; invert for 3x DEC EBX in decompress
+         bsr     ebx,ebx         ; (bits/2) for calculate delta without BL
+
+         add     eax,ebx
+         lea     edx,[2*eax+2+8] ; 2 bit sequence for switch to this mode
+                                 ; 8 bit=1 byte for MOV BL,[ESI]   INC ESI
+         pop     ebx
+         pop     eax
+         ret
+
+ ; -------
+
+ pack002:
+ ; input :  EAX = number of bytes for pack request
+ ;          EBX = shift = delta ( if AX = 2 or more )
+ ; output : EAX = number of bytes packed
+         cmp     eax,1
+         jnbe    pack_more_bytes
+
+ pack_1_byte:
+
+ ; scan if can be used 7 bits for pack 1 byte = 00h or 1 byte with shift < 16
+ ; if this can't be used , pack by use 9 bits can be always used
+
+ ; byte for compress is = 00h ?
+         mov     al,byte [esi]
+         or      al,al
+         jz      common_7_bits   ; putbit sequence 1100000
+
+ jak_skusas_co_skusas:
+ ; byte isn't = 00h but explore if found equal byte with shift < 16
+         xor     ecx,ecx
+         mov     cl,15
+         push    edi
+         mov     edi,esi
+         sub     edi,ecx
+         cmp     edi,f0b
+         jnc     pome_skusat
+         mov     edi,f0b
+         mov     ecx,esi
+         sub     ecx,edi
+ pome_skusat:
+         repnz scasb
+         pop     edi
+         jnz     jerk_it_off_and_try_again
+         xchg    ecx,eax
+         inc     eax             ; EAX = shift (possitive value)
+
+ common_7_bits:
+
+         call    putbit1
+         call    putbit1
+         call    putbit0
+         mov     cl,4
+         shl     al,cl
+ pbimu7: shl     al,1
+         call    putbit
+         loop    pbimu7
+
+         jmp     short   pack_1_byte_common_end
+
+ jerk_it_off_and_try_again:
+ ; always can be used this mode but has bad pack ratio
+ ; pack 1 byte , use 9 bits ( 1 byte + 1 bit )
+         movsb
+         dec     esi             ; restore ESI to ESI before pack
+         call    putbit0
+
+ pack_1_byte_common_end:
+
+         xor     eax,eax
+         inc     eax             ; 1 byte packed EAX=1
+
+         ret
+
+ pack_more_bytes:
+
+         push    eax             ; store EAX for restore number of bytes packed
+                                 ; ( by POP EAX )
+         cmp     ebx,dword [last_delta]
+         jnz     another_delta
+
+ pack_with_old_delta:
+         call    putbit1
+         call    putbit0
+         call    putbit0
+         call    putbit0         ; sequence 1000 don't calculate new delta
+
+         mov     ecx,32
+ fdcd:   dec     ecx
+         shl     eax,1
+         jnc     fdcd            ; shift bits left and remove highest bit=1
+                                 ; this bit will be put by INC CX in decompress
+ mocd:   shl     eax,1
+         call    putbit
+         dec     ecx
+         jz      mwocd
+         call    putbit1
+         jmp     short   mocd
+ mwocd:  call    putbit0
+         pop     eax             ; packed EAX bytes from input buffer
+         ret
+
+ another_delta:
+         mov     dword [last_delta],ebx  ; all modes change last_delta
+ ;       cmp     ebx,80h                 ; cmp ebx,80h require 6 bytes
+ ;       jnc     big_delta_or_more_bytes
+         db      83h,0FBh,7Fh    ;cmp    ebx,7Fh                         ; cmp bx,7Fh require 3 bytes
+         jnbe    big_delta_or_more_bytes
+         cmp     eax,4
+         jnc     big_delta_or_more_bytes
+
+ ; pack 2 or 3 bytes with delta <+0001h,+007Fh>
+         call    putbit1
+         call    putbit1                 ; bit sequence 111 switch to this mode
+                                         ; third bit 1 will be passed at end of
+                                         ; packing before POP AX
+         sub     al,3                    ; value 2 -> CF=1, value 3 -> CF=0
+         adc     bl,bl
+         xchg    ebx,eax
+         stosb
+         call    putbit1                 ; put last control bit must be after
+                                         ; STOSB (for mov bl,[esi] , inc esi)
+                                         ; because when decompress , bits are
+                                         ; processed first and byte second ->
+                                         ; when compressing , byte must be
+                                         ; processed before last bit
+         pop     eax                     ; value 2 or 3
+                                         ;      -> this mode process 2 or 3 bytes
+         ret
+
+ big_delta_or_more_bytes:
+ ; pack 4 or more bytes with delta <+0001h,maximal_delta)
+ ; pack 2 or more bytes with delta <+0080h,maximal_delta)
+         call    putbit1
+         call    putbit0
+
+         db      83h,0FBh,7Fh    ;cmp    ebx,7Fh
+         jnbe    high_delta
+         dec     eax
+         dec     eax                     ; invert for 2x INC ECX in decompress
+ high_delta:
+
+         push    eax
+         xchg    ebx,eax
+         push    eax             ; push only for part in BL moved to AL
+         shr     eax,8           ; this destroy AL
+         inc     eax
+         inc     eax
+         inc     eax             ; invert for 3x DEC EBX
+
+         mov     ecx,32
+ fgfaad: dec     ecx
+         shl     eax,1
+         jnc     fgfaad
+
+ wetryw: shl     eax,1
+         call    putbit
+         dec     ecx
+         jz      shsdwd
+         call    putbit1
+         jmp     short   wetryw
+ shsdwd: call    putbit0
+         pop     ebx             ; pop only for BL
+         pop     eax             ; pop bytes count
+
+ calculate_count:
+         mov     ecx,32
+ fcdcd:  dec     ecx
+         shl     eax,1
+         jnc     fcdcd           ; shift all bits left and remove highest bit=1
+                                 ; this bit will be put by INC ECX in decompress
+ mwocdl: shl     eax,1
+         call    putbit
+         dec     ecx
+         jz      mwocdt
+         call    putbit1
+         jmp     short   mwocdl
+ mwocdt:
+         xchg    ebx,eax
+         stosb                   ; store AL (BL in decompress)
+                                 ; as well in delta <+0001h,+007Fh> , stored byte
+                                 ; must be before store last bit because
+                                 ; when decompress, bit will be processed
+                                 ; first and byte will be loaded later
+
+         call    putbit0         ; this bit will be processed in
+                                 ; decompress for calculate ECX ( JC U05 )
+
+         pop     eax             ; packed EAX bytes from input buffer
+         ret
+
+ ; -------
+
+ ; putbit input  :  Carry Flag (CF=0,CF=1)
+ ;        output :  bit 0. in [position], EDI+1 as need for store bit to [EDI]
+ ;        destroy:  nothing
+
+ putbit0:clc                             ; put bit=0
+         jmp     short putbit
+ putbit1:stc                             ; put bit=1
+ putbit: push    ebx
+         mov     ebx,dword [position]
+         rcl     byte [ebx],1
+         pop     ebx
+         jnc     o_C_1
+ o_C_0:  mov     byte [edi],1
+         mov     dword [position],edi
+         inc     edi
+ o_C_1:  ret
+
+ ; -------
+
+ progress:
+         pushad
+         mov     esi,f0s_2
+         mov     edi,progress_text+1
+         mov     ebp,w1hch
+
+         lodsd
+         push    eax
+         sub     eax,dword [esi]
+
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+
+         inc     edi
+         inc     edi
+         pop     eax
+
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+         rol     eax,4
+         call    ebp
+
+         mov     ecx,progress_text
+         xor     edx,edx
+         mov     dl,progress_text_size
+         call    WS
+         popad
+         ret
+
+ w1hch:  push    eax
+         and     al,00001111b
+         cmp     al,10
+         sbb     al,69h
+         das
+         stosb
+         pop     eax
+         ret
+
+ ; -------
+
+ uncompress_routine:
+         pushfd
+         pushad
+         mov     esi,0
+         mov     edi,0
+         mov     ecx,0
+         std
+         repz movsb
+         cld
+         xchg    esi,edi
+         inc     esi
+         db      83h,0EFh,fuyi - 1       ; sub edi,fuyi-1
+         push    esi
+         mov     esi,0
+         mov     ebp,0           ; U13
+         mov     dl,80h
+         ret
+
+ fuyi    equ     $ - uncompress_routine
+
+ uncompress_moved:
+         push    eax
+
+ U00:    movsb
+ U01:    call    ebp
+         jnc     U00
+
+         xor     ebx,ebx
+         call    ebp
+         inc     ecx
+         jnc     U03
+
+         call    ebp
+         jc      U06
+
+         mov     bl,10h
+ U02:    call    ebp
+         adc     bl,bl
+         jnc     U02
+
+         jnz     U10
+
+         xchg    ebx,eax
+         jmp     short U12
+
+ U03:    inc     ebx
+ U04:    call    ebp
+         adc     ebx,ebx
+         call    ebp
+         jc      U04
+
+ U05:    call    ebp
+         adc     ecx,ecx
+         call    ebp
+         jc      short U05
+
+         dec     ebx
+         dec     ebx
+         jz      short U09
+         dec     ebx
+         shl     ebx,8
+ ;;;;;;; clc             ; clc isn't needed because EBX < 01000000h before shift
+
+ U06:    mov     bl,byte [esi]
+         inc     esi
+         jnc     U07
+
+         shr     bl,1
+         jz      U15
+         sbb     cl,ch           ; equ SBB CL,BH because BH=CH=0
+
+ U07:    ;cmp    ebx,00007D00h   ; this is not implemented, yet
+         ;jnc    zvys_o_dve      ; i found this in WINCMD32.EXE v. 4.03
+         ;cmp    ebx,00000500h   ; packed with ASPACK
+         ;jnc    zvys_o_jennu
+                 ; isn't rational compress 3 bytes with shift > 7CFFh
+                 ; rational is at least 4 bytes
+                 ; isn't rational compress 2 bytes with shift > 4FFh
+                 ; rational is at least 3 bytes
+         cmp     ebx, byte 7Fh   ;db     83h,0FBh,7Fh
+         jnbe    U08
+
+ zvys_o_dve:
+         inc     ecx
+ zvys_o_jennu:
+         inc     ecx
+
+ U08:    pop     eax
+         db      0A8h            ; opcodes A8 5B = TEST AL,5B
+ U09:    pop     ebx             ; opcode 5B
+         push    ebx
+ U10:    neg     ebx
+
+ U11:    mov     al,byte [edi+ebx]
+ U12:    stosb
+         loop    U11
+         jmp     short U01
+
+ U13:    add     dl,dl           ; get highest bit from control_byte
+         jnz     U14     ; is it last non-zero bit ? = all 8 bits was processed ?
+         lodsb                   ; load control_byte
+         xchg    edx,eax         ; store control_byte to DL
+         adc     dl,dl           ; put last bit from last control_byte to bit 0. of new control_byte
+ U14:    ret
+
+ U15:    pop     eax
+         popad
+         popfd
+         db      0E9h            ; jump
+         dd      0
+
+ uncompress_routine_end:
+ uncompress_routine_size equ     $ - uncompress_routine
+
+ ; -------
+
+ MEOF            db      'ERROR OPEN file!',0Ah
+ MEOFS           equ     $ - MEOF
+ MECF            db      'ERROR CREAT file!',0Ah
+ MECFS           equ     $ - MECF
+ MSEEF           db      'ERROR SEEK to END of file!',0Ah
+ MSEEFS          equ     $ - MSEEF
+ MSEBF           db      'ERROR SEEK to BEGIN of file!',0Ah
+ MSEBFS          equ     $ - MSEBF
+ MERF            db      'ERROR READ file!',0Ah
+ MERFS           equ     $ - MERF
+ MEWF            db      'ERROR WRITE file!',0Ah
+ MEWFS           equ     $ - MEWF
+ usage           db      0Ah,'K0mprezz ELF ASM executab1e fy1e usyng OOO alg0rythm',0Ah
+                 db      0Ah,'usage: a00 '
+                 db      'filename_for_compress compressed_filename',0Ah,0Ah
+                 db      'ASM coding in LINUX by Feryno',0Ah
+                 db      'Feryno: ASSEMBLER-only and DISASSEMBLER-only wonderful'
+                 db      0Ah,0Ah
+ usagesize       equ     $ - usage
+ progress_text   db      0Dh,'00000000h/00000000h'
+ progress_text_size      equ     $ - progress_text
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                 ;;
+ filesize        equ     $ - $$  ;;
+                                 ;;
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ SECTION .bss
+ ALIGNB 4
+
+ f0h             resd    1       ; in_file handle
+ f1h             resd    1       ; out_file handle
+ f0s_2           resd    1       ; in_file size
+ f0s             resd    1       ; in_file size
+ position        resd    1       ; required by putbit procedures
+ konyc_dat       resd    1
+ last_delta      resd    1
+
+ fy1eObuffer     resb    4Ch             ; header of a file
+ f0b             resb    100000h         ; kode & data of a fy1e
+ f0b_size        equ     $ - fy1eObuffer
+
+ f1b_size        equ     200000h
+ f1b             resb    f1b_size
+
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                 ;;
+ bsssize         equ     $ - $$  ;;
+                                 ;;
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                                                 ;;
+ memsize         equ     filesize+bsssize        ;;
+                                                 ;;
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,0 +1,348 @@
+     Command Line in FreeBSD
+                                                    by G. Adam Stanislav
+
+ In my Issue 8 article I mentioned I did not know how command line parameters
+ (or arguments) were passed to programs under FreeBSD. I have received some
+ feedback, both from the FreeBSD community and APJ readers.
+
+ Thanks to that feedback, I can now pass this information on to you. Further,
+ this information should be valid, more or less, for all 386 based Unix
+ and Unix-like operating systems. At any rate, if your Unix variety does not
+ come with the information on its command line parameters, chances are that,
+ if you adjust my sample code to use the kernel interface of your OS, it will
+ work just fine.
+
+ Code startup
+ ------------
+
+ Unix is much more security-conscious than MS DOS and MS Windows. While
+ DOS/Windows assembly language programmers may be used to the operating
+ system loading their code and then CALLing it (so you can exit with a simple
+ RET, and possibly crash the system), Unix creates a new process for each
+ program. This process is separate from the kernel and from all other
+ processes. Hence, the system does not CALL your code, it JMPs to it. If you
+ issue a RET, you will crash your program, but Unix will continue running
+ unharmed. At least that's the theory. However, under FreeBSD it is the
+ practice as well: I tried it and can vouch for it.
+
+
+ The top of the stack
+ --------------------
+
+ Before the Unix system jumps to your code, it pushes some information on the
+ top of the stack: Your stack, that is, not system stack, so you can access
+ it all from your own code. Here is what the stack contains, starting at
+ the top:
+
+         number of arguments ("argc")
+         argument 0
+         argument 1
+         ...
+         argument n (n = argc - 1)
+         NULL pointer
+         environment 0
+         environment 1
+         ...
+         environment n
+         NULL pointer
+
+ Not all of these are necessarily there (e.g., if the program was called with
+ no arguments). However, the number of arguments, argument 0, and the two NULL
+ pointers are always present.
+
+ Argument 0 is not a command line parameter in the sense DOS programmers are
+ used to find. Instead, it is the name of the program. C programmers will find
+ it as the familiar argv[0].
+
+ Another important difference between DOS and Unix is that DOS programs just
+ give you the full command line, i.e., whatever appears after the name of the
+ program, including any leading and trailing blanks. It is then up to the
+ programmer to strip all extra blanks.
+
+ Compared to that, parsing the Unix command line is much simpler as the system
+ does some of the hard work for you. The individual arguments are separated,
+ and usually contain no leading/trailing blanks. When they do, they are there
+ because the program caller wanted them there.
+
+ Let me illustrate. Suppose the user has typed the following command:
+
+         ./args Hello, world. Here I come!
+
+ In that case, the top of the stack will look like this:
+
+         6
+         ./args
+         Hello,
+         world.
+         Here
+         I
+         come!
+         0
+         environment 0
+         environment 1
+         ...
+         environment n
+         0
+
+ The arguments are nicely separated and contain no blanks. Now, suppose the
+ user has typed:
+
+         ./args Hello, world. "Here I come!"
+
+ The top of the stack looks like this:
+
+         4
+         ./args
+         Hello,
+         world.
+         Here I come!
+         0
+         (etc)
+
+ This system, besides making it easier to parse, has a great advantage over the
+ DOS way: It has no practical limit on the size of the command line.
+
+ Accessing the information
+ -------------------------
+
+ Because your program runs in its own process space, the stack is yours to do
+ with as you please. You can simply save the information in some data
+ structure and leave the stack intact, or you can pop it off as you need it.
+
+ The C startup code uses the first approach: It saves the "argc" value in a
+ local variable, the argument 0 in another. It finds the start of the
+ environment variable list and stores it in a global variable. It then calls
+ main, passing that information to it, i.e. main(argc, *argv[], env);
+
+ The assembly language program can do that as well, but usually has no need to.
+ If you process the command line at the start of your code, and never need to
+ see it again, you can just pop it off the stack one by one, analyze it, set up
+ any flags or other variables, etc.
+
+ I have enclosed a simple assembly language program called args.asm below. All
+ it does is print all the information the FreeBSD system has passed to it. It
+ is useful as an example of one way of accessing the command line arguments
+ (and the environment) by simply popping it off one at a time.
+
+ It is also useful as a tool to study what format the arguments are in. For
+ example, running it will show you that the environment is passed to your
+ program in the form of name=value, where name is the name of the environment
+ variable, value is whatever text string is assigned to it.
+
+ You can assemble and link the program with NASM:
+
+         nasm -f elf args.asm
+         ld -o args args.o
+         strip args
+
+ Try running it with and without command line arguments. Try placing the
+ arguments in single and double quotes, try all the nifty things a Unix
+ shell will let you do, such as:
+
+         ./args $HOME
+         ./args `ls -la`
+         ./args "`ls -la`"
+         ./args '`ls -la`'
+         ./args
+         ./args Hello, world. Here I come!
+         ./args Hello, world. "Here I come!"
+         ./args '      Hello,    world.   Here    I   come !   '
+
+ ;----------------------------------------------------------------------------;
+ ; args.asm
+ ;
+ ; Print FreeBSD command line arguments and environment
+ ;
+ ; Copyright 2000 G. Adam Stanislav
+ ; All rights reserved
+ ;----------------------------------------------------------------------------;
+
+ section .data
+
+ prgmsg  db      'Program name:', 0Ah, 0Ah
+ tab     db      9
+ prglen  equ     $-prgmsg
+ argmsg  db      0Ah, 0Ah, 'Command line arguments:', 0Ah, 0Ah
+ arglen  equ     $-argmsg
+ envmsg  db      0Ah, 'Environment variables:', 0Ah, 0Ah
+ envlen  equ     $-envmsg
+ huhmsg  db      "Hmmm... Something's wrong here...", 0Ah
+ huhlen  equ     $-huhmsg
+
+ section .code
+
+ what.the.heck:
+         ; Print the huhmsg to stderr and abort.
+         push    dword huhlen
+         push    dword huhmsg
+         sub     eax, eax
+         mov     al, 2           ; stderr
+         push    eax
+         add     al, al          ; SYS_write
+         push    eax
+         int     80h
+         ; No need to clean up the stack since we're quitting now.
+
+         sub     eax, eax
+         inc     al              ; return 1 (failure), SYS_exit
+         push    eax
+         push    eax
+         int     80h
+
+ ; ELF programs always start at _start
+ global  _start
+ _start:
+         ; We come here with "argc" on the top of the stack. Its value
+         ; is at least 1. If not, something went seriously wrong.
+         pop     ecx             ; ECX = argc
+         jecxz   what.the.heck
+
+         ; Print the prgmsg
+         sub     eax, eax
+         push    dword prglen
+         push    dword prgmsg
+         inc     al              ; stdout
+         push    eax
+         push    eax
+         mov     al, 4           ;SYS_write
+         int     80h
+         add     esp, byte 16
+
+         ; Get argv[0], i.e., the program path
+         pop     ebx             ; EBX = argv[0]
+
+         ; argv[0] is a NUL-terminated string. We can find its
+         ; length by scanning for the NUL.
+         sub     eax, eax
+         sub     ecx, ecx
+         cld
+         dec     ecx
+         mov     edi, ebx
+ repne   scasb
+         not     ecx
+         dec     ecx
+
+         ; Print the string
+         push    ecx
+         push    ebx
+         inc     al                      ; stdout
+         push    eax
+         push    eax
+         mov     al, 4
+         int     80h
+         add     esp, byte 16
+
+         ; Print the argmsg
+         sub     eax, eax
+         push    dword arglen
+         push    dword argmsg
+         inc     al                      ; stdout
+         push    eax
+         push    eax
+         mov     al, 4                   ; SYS_write
+         int     80h
+         add     esp, byte 16
+
+         ; By now, we have no idea what the value of argc was.
+         ; We did not save it because we don't need it.
+         ; The top of the stack now contains pointers
+         ; to command line arguments (if any), followed
+         ; by a NULL pointer.
+         ;
+         ; We simply print everything before the NULL.
+
+ .argloop:
+         pop     ebx             ; next argument
+         or      ebx, ebx
+         je      .env            ; NULL pointer
+
+         ; Print a tab
+         sub     eax, eax
+         inc     al
+         push    eax
+         push    dword tab
+         push    eax             ; stdout
+         mov     al, 4           ; SYS_write
+         push    eax
+         int     80h
+         add     esp, byte 16
+
+         ; Find the length
+         sub     ecx, ecx
+         sub     eax, eax
+         dec     ecx
+         mov     edi, ebx
+ repne   scasb
+         not     ecx
+
+         ; Append a new line
+         mov     byte [edi-1], 0Ah
+
+         ; Print the string
+         push    ecx
+         push    ebx
+         inc     al              ; stdout
+         push    eax
+         mov     al, 4           ; SYS_write
+         push    eax
+         int     80h
+         add     esp, byte 16
+         jmp     short .argloop  ; next
+
+ .env:
+         ; Print the envmsg
+         sub     eax, eax
+         push    dword envlen
+         push    dword envmsg
+         inc     al              ; stdout
+         push    eax
+         push    eax
+         mov     al, 4           ; SYS_write
+         int     80h
+         add     esp, byte 16
+
+         ; The top of the stack now contains pointers to
+         ; environment variables, followed by a NULL pointer.
+         ; We do what we did for the arguments:
+
+ .envloop:
+         pop     ebx
+         or      ebx, ebx
+         je      .exit
+
+         sub     eax, eax
+         inc     al
+         push    eax
+         push    dword tab
+         push    eax
+         mov     al, 4
+         push    eax
+         int     80h
+         add     esp, byte 16
+
+         sub     ecx, ecx
+         sub     eax, eax
+         dec     ecx
+         mov     edi, ebx
+ repne   scasb
+         not     ecx
+         mov     byte [edi-1], 0Ah
+
+         push    ecx
+         push    ebx
+         inc     al
+         push    eax
+         mov     al, 4
+         push    eax
+         int     80h
+         add     esp, byte 16
+         jmp     short .envloop
+
+ .exit:
+         sub     eax, eax        ; return 0 (success)
+         push    eax
+         inc     al              ; SYS_exit
+         push    eax
+         int     80h
+
+ ;--- End of program ---------------------------------------------------------;

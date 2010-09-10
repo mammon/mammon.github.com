@@ -1,0 +1,399 @@
+How to write VxDs using NASM (revision 1, 07/30/00)
+----------------------------------------------------
+
+ I.   About the readers and article's files overview
+ II.  MASM vs NASM : Syntax overview
+ III. A skeleton VxD
+ IV.  More VxD examples
+ V.   FAQs
+ VI.  About the writer
+
+
+I. About the readers and article's files overview
+---------------------------------------------------
+
+ This article is aimed at the user that already does little Virtual Device
+ Driver (VxD) progamming using Microsoft's Macro Assembler (MASM). It will
+ only cover how to use the Net Wide Assembler (NASM) to write Virtual Device
+ Drivers and not how to learn VxD programming using NASM.
+ It is also suggested that the user be familiar with NASM or read NASM DOC
+
+
+ As for the files in this article:
+
+  NASMVXD.TXT      -   This article.
+  VXDN.INC         -   Contains VxD related definitions and macros for NASM
+  WINDDK.INC       -   This is used by VXDN.INC and should'nt be directly
+                       included by you. It contains VxD related EQU's and it
+                       also has VxD services covering VMM,Shell,Debug,...
+
+
+II. Overview about MASM & NASM
+-------------------------------
+
+
+  It is time to mention that NASM was never intended to produce VxD files
+  and you won't be able to produce any without the include files from this
+  package and without Microsoft's Incremental Linker (LINK.EXE).
+
+  Okay, now the syntax differences between MASM&NASM.
+
+  Processor Mode:
+  -----------------
+   To enable the use of 386+ protected mode instructions you used to put a
+   '.386p' in MASM, no need for that in NASM, however you have to explicitly
+   set the default bitness to 32 via the 'BITS 32' directive (and to 16 in
+   the real mode initialization segment).
+
+    MASM:    .386p
+    NASM:    BITS 32
+
+  Segments specification:
+  ------------------------- 
+   MASM has lot of segments declaration macros unlike
+   NASM in which you have to name the segment as you stated it
+   in the .DEF file.
+ 
+   The 5 basic segment definition macros are:
+  
+   MASM:                    NASM:            Description
+   ------                   ------           --------------
+   VxD_CODE_SEG/ENDS        segment _LTEXT   Protected mode code seg.
+   VxD_DATA_SEG/ENDS        segment _LDATA   Protected mode data seg.
+   VxD_ICODE_SEG/ENDS       segment _ITEXT   Protected mode initialization
+                                             code segment. (usually optional)
+   VxD_IDATA_SEG/ENDS       segment _IDATA   Protected mode initialization
+                                             data segment. (usually optional)
+   VxD_REAL_INIT_SEG/ENDS   segment _RTEXT   Real mode initialization
+                                             segment. (optional too)
+
+   Notice that NASM does not need a segment closing macro unlike MASM.
+
+   To start a new segment just declare it like 'segment _LTEXT'
+   and everything after that line will go to that segment.
+
+   Please do not use the intrinsic form of the segment macro (e.g.
+   [segment _LTEXT]) as certain VxD macros rely on saving/restoring
+   the current segment and they would fail should you use the
+   intrinsic form.
+
+   Check the FAQ for a brief segment overview or NASMDOC.TXT
+   for full overview.
+   
+  Virtual Device Desciptor Block (DDB) Declaration:
+  ---------------------------------------------------
+
+     MASM:
+     -------
+     Declare_Virtual_Device Name, MajorVer, MinorVer, CtrlProc, DeviceNum,
+                            InitOrder, V86Proc, PMProc, RefData
+
+     NASM:
+     ------
+     Due to the fact that NASM does not support string concatenation
+     in macros yet (there exist patched versions which do), the declaration
+     is a bit different:
+  
+     Declare_Virtual_Device Name, 'Name', MajorVer, MinorVer, CtrlProc,
+                            DeviceNum, InitOrder, V86Proc, PMProc, RefData
+  
+     Params 5 to 9 are optional, since most of the time they are generic (not
+     used).
+  
+     The extra parameter is 'Name' which will become the DDB_Name field
+     in the DDB (this is the name by which the VxD will be known to the VMM), Name
+     itself determines the name for the Control Procedure and the 
+     Service Table (if used).
+
+     The DDB must be declared inside the _LDATA segment.
+  
+      Example:
+        segment _LDATA
+        Declare_Virtual_Device SAMPVXD1, 'SAMPVXD1', 1, 0, SAMPVXD1_Control
+
+  Control Procedure Definition:
+  -------------------------------
+
+    MASM:
+    ------
+     Begin_Control_Dispatch NAME
+       Control_Dispatch Message,Proc
+     End_Control_Dispatch
+  
+    NASM:
+    ------
+    This will be a little new for you since you have to do it by hand
+    and not by similar macros:
+    
+    segment _LTEXT
+  
+    VXDNAME_Control:
+      cmp  eax,VM_INIT
+      je   OnVmInit
+
+      cmp  eax,W32_DEVICEIOCONTROL
+      je   OnDIOC
+      
+      cmp  eax,<system message>
+      je   <Desired Event handler proc>
+          
+      clc  ; At any time during initialization, a virtual device can set the
+           ; carry flag and return to the VMM to prevent the virtual device
+           ; from loading. This means that the carry flag must be cleared to
+           ; allow loading.
+  
+      retn
+   
+    OnVmInit:
+     ; Do some code
+     ret
+
+    OnDIOC: ; OnDeviceIoControl
+     ; ESI points to a DIOCParams struct
+     cmp   word [esi+DIOCParams.dwIoControlCode],MY_DIOC_CODE
+     je    domycode
+    
+     retn   ; Don't forget to put a return as you're used to put a
+            ; "EndProc procname"
+
+   Any Other procedure Definition
+   --------------------------------
+    Using NASM's normal procedure definition you can define a new proc
+    as usual: "procname :"
+    As for calling conventions you have to access the stack yourself
+    or use some other NASM macros
+
+
+   Using VxdCall and VMMCall
+   ----------------------------
+   in NASM you can call: VMMCall Service,param1,{param2},[ [{]param3[}] ],....
+
+
+III. A skeleton VxD
+--------------------
+
+  A skeleton VxD will be a very basic VxD enough to be loaded correctly
+  and do nothing more than taking up memory. =)
+
+  In NVXDSKEL.DEF you can specify if it will be a DYNAMIC 
+  or a STATIC VxD like:
+
+  VXD MYVXD DYNAMIC  ; dynamic vxd
+  VXD MYVXD          ; static vxd
+
+
+  NVXDSKEL.DEF
+  --------------
+    VXD NVXDSKEL DYNAMIC
+
+    SEGMENTS
+      _LTEXT      CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _LDATA      CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _TEXT       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _DATA       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      CONST       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _ITEXT      CLASS 'ICODE'   DISCARDABLE
+      _IDATA      CLASS 'ICODE'   DISCARDABLE
+      _PTEXT      CLASS 'PCODE'   NONDISCARDABLE
+      _PDATA      CLASS 'PDATA'   NONDISCARDABLE SHARED
+      _STEXT      CLASS 'SCODE'   RESIDENT
+      _SDATA      CLASS 'SCODE'   RESIDENT
+      _DBOSTART   CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _DBOCODE    CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _DBODATA    CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _RCODE      CLASS 'RCODE'
+    
+    EXPORTS
+      NVXDSKEL_DDB @1
+ 
+  NVXDSKEL.ASM
+  --------------
+
+   bits 32
+
+   %include "vxdn.inc"
+
+   segment _LDATA
+
+   Declare_Virtual_Device NVXDSKEL,'NVXDSKEL',1,0,NVXDSKEL_Control
+
+   segment _LTEXT
+
+   NVXDSKEL_Control:
+     clc
+     retn
+
+   Assembling and linking:
+   -------------------------
+    * To assemble you must have NASM v0.98+
+    NASM NVXDSKEL.ASM -f win32
+    LINK NVXDSKEL.OBJ /VXD /DEF:NVXDSKEL.DEF
+
+   That's it!
+
+
+IV.  More VxD examples
+------------------------
+   This example will show the use of VMMCall and VxDCall
+
+   VXDSAMP1.DEF
+   -------------
+    VXD VXDSAMP1 DYNAMIC
+
+    SEGMENTS
+      _LTEXT      CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _LDATA      CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _TEXT       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _DATA       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      CONST       CLASS 'LCODE'   PRELOAD NONDISCARDABLE
+      _ITEXT      CLASS 'ICODE'   DISCARDABLE
+      _IDATA      CLASS 'ICODE'   DISCARDABLE
+      _PTEXT      CLASS 'PCODE'   NONDISCARDABLE
+      _PDATA      CLASS 'PDATA'   NONDISCARDABLE SHARED
+      _STEXT      CLASS 'SCODE'   RESIDENT
+      _SDATA      CLASS 'SCODE'   RESIDENT
+      _DBOSTART   CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _DBOCODE    CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _DBODATA    CLASS 'DBOCODE' PRELOAD NONDISCARDABLE CONFORMING
+      _RCODE      CLASS 'RCODE'
+    
+    EXPORTS
+      VXDSAMP1_DDB @1
+
+   VXDSAMP1.ASM
+   -------------
+
+     bits 32
+
+     %include "vxdn.inc"
+
+     segment _LDATA
+
+     Declare_Virtual_Device VXDSAMP1,'VXDSAMP1',1,0,VXDSAMP1_Control
+
+     segment _LTEXT
+
+     VXDSAMP1_Control:
+       cmp  eax,W32_DEVICEIOCONTROL
+       je   OnDIOC
+
+       clc
+       retn
+
+     OnDIOC:
+       cmp  dword [esi+DIOCParams.dwIoControlCode],1
+       je   .1
+
+       xor  eax,eax
+       jmp  .ret
+       .1:
+
+       VMMCall Get_Sys_VM_Handle
+
+       xor   esi,esi ; no callback
+       xor   edx,edx ; no ref data for callback
+       mov   eax,0
+       mov   ecx,Msg
+       mov   edi,Title
+       VxDCall SHELL_Message
+
+      .ret:
+       retn
+
+     segment _LDATA
+     Msg   db 'Hello world!',0
+     Title db 'Title!',0
+
+     <EOF>
+
+   And another example that calls Int21/Ah=02,dl=7 to beep.
+   
+   VXDSAMP2.ASM
+   -------------
+ 
+     bits 32
+
+     %include "vxdn.inc"
+
+     segment _LDATA
+
+     Declare_Virtual_Device VXDSAMP2,'VXDSAMP2',1,0,VXDSAMP2_Control
+
+     segment _LTEXT
+
+     VXDSAMP2_Control:
+
+       cmp  eax,W32_DEVICEIOCONTROL
+       je   OnDIOC
+
+       clc
+       retn
+
+     OnDIOC:
+       cmp  dword [esi+DIOCParams.dwIoControlCode],1
+       je   .1
+
+       xor  eax,eax
+       jmp  .ret
+
+       .1:
+       VxDCall Begin_Nest_V86_Exec
+     
+       mov word [ebp+CRS.EAX],0x0200
+       mov word [ebp+CRS.EDX],0x0007
+       mov eax,0x21
+
+       VxDCall Exec_Int
+
+       VxDCall End_Nest_Exec
+
+      .ret:
+       retn
+    <EOF>
+
+    Use .DEF like previous example but change name to the new VxD name.
+
+    To test the last two examples, just open the VxD with CreateFileA()
+    and then issue a DeviceIoControl() with code 1.
+
+
+V. FAQs
+---------
+
+  Q) Where can i get NASM and LINK from?
+  A) As for NASM you can get it from:
+       http://www.web-sites.co.uk/nasm/
+     As for LINK.EXE you can get it from the DDK or just download the 
+     MASM Pack from http://win32asm.cjb.net
+
+  Q) How can i add new services and use them with NASM?
+  A) You can start by defining:
+
+     MyDevice_DeviceID equ 0x1234 ; must be word
+
+     and then define a service table like:
+
+     Begin_Service_Table MyDevice 
+        VMM_Service MyService0                 ; 0x0000 ord
+        VMM_Service MyService1                 ; 0x0001 ord
+        VMM_Service MyServiceN                 ; ord N
+     End_Service_Table MyDevice
+     
+
+VI.  About the writers
+-------------------------
+
+ Me as therain, would like to credit:
+
+  fOSSiL
+    &
+  The Owl  - For creating VXDN.INC and 
+             for showing how to write VxDs in NASM in the first place
+             by demonstrating it in IceDump (visit: http://icedump.tsx.org).
+             And for reviewing/editing this document.
+
+  Iczelion - For his awesome win32asm resource site and for his
+             good VxD tutorials. (visit: http://win32asm.cjb.net)
+
+  UKC Team - For their support.
+

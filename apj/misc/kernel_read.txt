@@ -1,0 +1,550 @@
+                     Reading Files into Linux Kernel Memory
+                                by mammon_
+
+
+While a kernel module is not exactly a user application, it is useful at times
+to be able to read an on-disk file such as a configuration file or the kernel
+mapfile. Since kernel modules were primarily intended to be service-oriented
+extensions with little or configuration necessary, such a facility has never
+been provided in the kernel. This paper demonstrates how use existing read
+routines to load the contents of on-disk files into kernel memory.
+
+
+
+A. Syscalls and the VFS
+_______________________________________________________________________________
+
+When a an application invokes the C library functions open() and read(), the
+library turns around and -- after wandering around lost for while, which 
+incidentally is same the feeling one gets when reading the glibc code -- invokes
+the system calls sys_open [ INT 80 function 5 ] and sys_read [ INT 80 function
+3 ]. What happens from here on is, to the application programmer, a complete
+mystery.
+
+
+The sys_open system call is defined in fs/open.c. It copies the filename from
+user space, creates a new file descriptor, and passes the filename, flags and
+mode to the filp_open() routine: 
+
+	asmlinkage long sys_open(const char * filename, int flags, int mode) {
+   	char * tmp;
+		struct file *f;
+   	int fd;
+
+   	tmp = getname(filename);									/* copy_from_user */
+   	fd = get_unused_fd();										/* get next fd */
+   	if (fd >= 0) {
+   		struct file *f = filp_open(tmp, flags, mode);	/* important bit */
+     	 fd_install(fd, f);											/* associate f w/ fd */
+   	}
+   	return fd;
+	}
+
+Since file descriptors are only significant when associated with a user process,
+and since the bulk of sys_open is dedicated to creating a file descriptor and
+to getting the filename from userspace, for kernel-mode purposes oly the call
+to filp_open is important. 
+
+In fact, filp_open returns a file pointer, which is the only file structure 
+that will be needed in the future. The file structure is defined in include/fs.h
+as:
+
+	struct file {
+   	struct list_head  		f_list;
+   	struct dentry     		*f_dentry;
+   	struct vfsmount         *f_vfsmnt;
+   	struct file_operations  *f_op;
+   	atomic_t    				f_count;
+   	unsigned int      		f_flags;
+   	mode_t         			f_mode;
+   	loff_t         			f_pos;
+   	unsigned long     		f_reada, f_ramax, f_raend, f_ralen, f_rawin;
+   	struct fown_struct   	f_owner;
+   	unsigned int      		f_uid, f_gid;
+   	int         				f_error;
+   	unsigned long     		f_version;
+   	void        				*private_data;
+};
+
+Of these, the structure members of special interest are f_dentry, the directory
+entry for the file [and a link to the inode structure]; f_op, the VFS function
+pointers for file operations; f_count, the usage count of the file; and f_pos,
+the current file offset [i.e., the read/write pointer].
+ 
+As it turns out, filp_open serves perfectly as a kernel_mode open(); likewise,
+filp_close() serves as a kernel mode close(). These functions are defined in
+fs/open.c, and prototyped in linux/fs.h as
+
+	struct file *filp_open(const char * filename, int flags, int mode);
+	int filp_close(struct file *filp, fl_owner_t id);
+
+...since they serve as standalone routines, nothing more will be said about
+them.
+
+
+Reading the file, however, is another story. The sys_read system call is 
+defined in fs/read_write.c :
+
+	asmlinkage ssize_t sys_read(unsigned int fd, char * buf, size_t count) {
+   	ssize_t (*read)(struct file *, char *, size_t, loff_t *);
+   	struct file * file;
+   	ssize_t ret = -EBADF;
+
+   	file = fget(fd);						/* get file structure, inc use count */
+   	if (file) {
+      	if (file->f_mode & FMODE_READ) {
+				/* check for mandatory locks to this area of the file */
+         	ret = locks_verify_area(FLOCK_VERIFY_READ, file->f_dentry->d_inode,
+                  						file, file->f_pos, count);
+         	if (!ret) {
+            	ret = -EINVAL;
+
+					/* Get pointer to read function from f_op */
+            	if (file->f_op && (read = file->f_op->read) != NULL)
+              		 ret = read(file, buf, count, &file->f_pos);
+         	}
+      	}
+      	if (ret > 0)
+				/* notify directory that a file has been accesses */
+         	inode_dir_notify(file->f_dentry->d_parent->d_inode,
+            						DN_ACCESS);
+      	fput(file);							/* dec use count */
+   	}
+   	return ret;
+	}
+
+This routine obtains a file structure from a file descriptor, checks for locks
+on the region of the file [based on f_pos and the sys_read() count argument],
+calls the read function for the filesystem driver which manages this file,
+and notifies the directory of the file access. At first it would seem that
+the read function could be called directly, except for two problems:  first,
+the reads are somewhat unreliable if locks_verify_area is not called, and 
+second, the 'buf' argument to sys_read that is passed to the filesystem read
+function is in userspace.
+
+
+
+II. Bypassing the need for a userland buffer
+_______________________________________________________________________________
+
+Clearly something must be done about the buffer; faking a userspace buffer in
+kernel mode is hackish and crude. The next link in the chain is the filesystem
+read function; ext2 uses the function generic_file_read which is defined in
+mm/filemap.c :
+
+	ssize_t generic_file_read(struct file *filp, char *buf, size_t count, 
+										loff_t *ppos) {
+      read_descriptor_t desc;
+   	ssize_t retval = -EFAULT;
+
+  	 	if (! access_ok(VERIFY_WRITE, buf, count)) 		return( retval );
+
+      if (count) {
+      	desc.written = 0;
+      	desc.count = count;
+      	desc.buf = buf;
+      	desc.error = 0;
+     		do_generic_file_read(filp, ppos, &desc, file_read_actor);
+      	retval = desc.written;
+      	if (!retval) 	retval = desc.error;
+      }
+   	return retval;
+	}
+
+Once again, buf is passed into an even more inner-level function; but 
+do_generic_file_read, which is defined in the same file, is a 200-line routine
+with a ton of gotos designed to handle every possibility of file presence on
+disk, in cache, etc. The do_generic_file_read routine does take an 'actor'
+argument:
+
+	void do_generic_file_read(struct file * filp, loff_t *ppos, 
+										read_descriptor_t * desc, read_actor_t actor);
+
+...and this actor is only called once:
+
+      nr = actor(desc, page, offset, nr);
+
+coincidentally, at the very location where the data from the file is intended
+to be copied into the userspace buffer.
+
+A closer look at file_read_actor [also in mm/filemap.c] shows that this is
+indeed the proper place for a change:
+
+	static int file_read_actor(read_descriptor_t * desc, struct page *page, 
+										unsigned long offset, unsigned long size) {
+   	char *kaddr;
+   	unsigned long left, count = desc->count;
+
+   	if (size > count)
+      	size = count;
+
+   	kaddr = kmap(page);
+   	left = __copy_to_user(desc->buf, kaddr + offset, size);
+   	kunmap(page);
+
+   	if (left) {
+      	size -= left;
+      	desc->error = -EFAULT;
+   	}
+   	desc->count = count - size;
+   	desc->written += size;
+   	desc->buf += size;
+   	return size;
+	}
+
+The glaringly obvious __copy_to_user must be replaced with a simple memcpy(),
+and that means replacing file_read_actor .... and generic_file_read.
+
+
+
+III.  Implementing kernel-mode read operations
+_______________________________________________________________________________
+
+It is clear that a few extraneous operations can be stripped from the 
+generic_file_read routine; in particular the user buffer no longer needs to
+be verified. This means that sys_read and generic_file_read can be combined
+into a local read function, which will call do_generic_file_read and pass a
+custom read actor as the final argument:
+
+	int local_read(struct file *f, char * buf, size_t count){
+   	read_descriptor_t desc;
+		ssize_t ret;
+
+		/* be a bit wary about bad pointers a zero-length reads */
+		if (! f || ! buf || ! count ) 	return -EBADF;
+
+		/* make sure that this fs driver actually uses generic_file_read */
+		if (! f->f_op || f->f_op->read != generic_file_read )		return -EINVAL;
+
+		if (f->f_mode & FMODE_READ) {
+			ret = locks_verify_area(FLOCK_VERIFY_READ, f->f_dentry->d_inode, f, 
+					                  f->f_pos, count);
+			if (!ret) {
+				desc.written = 0;
+				desc.count = count;
+				desc.buf = buf;
+				desc.error = 0;
+				do_generic_file_read(f, &f->f_pos, &desc, local_read_actor);
+				ret = ( desc.written ) ? desc.written : desc.error;
+			}
+		}
+   	return ret;
+	}
+
+That is simple enough; the only noteworthy point is the addition of a check
+to ensure that the filesystem driver for the file actually uses the 
+generic_file_read routine -- if not, the function returns -EINVAL.
+
+
+The next step is to write a local read actor; file_read actor is a very basic
+routine, but it does have a few strange areas:
+
+   kaddr = kmap(page);
+   left = __copy_to_user(desc->buf, kaddr + offset, size);
+   kunmap(page);
+
+The kmap and kunmap routines are defined in include/asm/highmem.h as follows:
+
+	static inline void *kmap( struct page *page ) {
+   	if ( in_interrupt() ) 		BUG();
+   	if ( page < highmem_start_page ) 		return page_address(page);
+   	return kmap_high( page );
+	}
+
+	static inline void kunmap( struct page *page ) {
+   	if ( in_interrupt() ) 		BUG();
+   	if ( page < highmem_start_page ) 	return;
+   	kunmap_high( page );
+	}
+
+The kmap_high and kunmap_high routines referred are defined in mm/highmem.c; 
+however, they are concerned with high-memory pages, which are only an issue
+if page->virtual is NULL, as can be seen in kmap_high :
+
+	void *kmap_high(struct page *page) {
+   	unsigned long vaddr;
+
+   	spin_lock(&kmap_lock);
+   	vaddr = (unsigned long) page->virtual;
+   	if (!vaddr)
+      	vaddr = map_new_virtual(page);
+   	pkmap_count[PKMAP_NR(vaddr)]++;
+   	if (pkmap_count[PKMAP_NR(vaddr)] < 2)
+      	BUG();
+   	spin_unlock(&kmap_lock);
+   	return (void*) vaddr;
+	}
+
+For simplicity's sake, and since kmap and kunmap will have to be added inline 
+to the local actor routine, most of this "play nice" code will have to be 
+jettisoned. Instead, kmap(page) can be replaced with page_address(page), which
+in turn can be replaced with page->virtual; kunmap(page) can be replaced with 
+an empty line. A test is added to make sure page->virtual is non-NULL, for the
+sake of not panicking the kernel:
+
+	static int local_read_actor(read_descriptor_t * desc, struct page *page, 
+										 unsigned long offset, unsigned long size) {
+   	char *kaddr;
+   	unsigned long left = 0, count = desc->count;
+
+   	if (size > count) 	size = count;
+
+   	kaddr = page->virtual;
+		if (! kaddr )		return(0);
+
+		memcpy( desc->buf, kaddr + offset, size);
+
+   	desc->count = count - size;
+   	desc->written += size;
+   	desc->buf += size;
+
+  	 	return(size);
+}
+
+Note that no attempt is made to call map_new_virtual or even to release the
+page; we know from do_generic_file_read that the page exists at this point,
+and thus we can leave well enough alone and let do_generic_file_read handle
+the page.
+
+
+As an implementation example, these routines have been incorporated into a
+kernel module which reads the addresses of given symbols from a mapfile
+specified with an insmod parameter. This routine can be easily incorporated --
+to say nothing of cleaned up -- into a more complex module which uses the 
+loading of symbol addresses from a specified mapfile as an initialization step.
+
+
+
+Appendix A: Resources
+_______________________________________________________________________________
+
+   'Understanding the Linux Kernel',
+         Daniel Bovet & Marco Cesati, O'Reilly 2001
+
+	/usr/src/linux-2.4.2/include/linux/fs.h
+
+	/usr/src/linux-2.4.2/include/asm/highmem.h
+
+	/usr/src/linux-2.4.2/fs/open.c
+
+	/usr/src/linux-2.4.2/mm/filemap.c
+
+	/usr/src/linux-2.4.2/mm/highmem.c
+
+
+
+Appendix B: C Implementation
+_______________________________________________________________________________
+
+/*  Mapfile Reading Module                  ::     code 2001 per mammon_
+ *
+ *    This just demonstrates how to read the values of given symbols from
+ *    a system mapfile while in kernel mode. The code is largely a quick
+ *    hack after an all-nighter, but is functional.
+ *
+ *    -- To compile:
+ *       gcc -I/usr/src/linux/include -Wall -c mapfile_read`.c
+ */
+#define __KERNEL__
+#define MODULE
+#define LINUX
+
+#if CONFIG_MODVERSIONS==1
+ #define MODVERSIONS
+ #include <linux/modversions.h>
+#endif
+#include <linux/kernel.h>		/* half of these might not even be needed */
+#include <linux/module.h> 
+#include <linux/init.h>  
+#include <linux/slab.h>
+#include <linux/unistd.h> 
+#include <linux/sched.h> 
+#include <linux/fs.h>
+#include <linux/file.h>	
+#include <linux/mm.h>
+
+
+
+/* ============================================================== SYS_READ */
+static int my_goddamn_read_actor(read_descriptor_t * desc, struct page *page, unsigned long offset, unsigned long size)
+{
+   char *kaddr;
+   unsigned long left = 0, count = desc->count;
+
+   if (size > count) 	size = count;
+
+   kaddr = page->virtual;
+	if (! kaddr )		return(0);
+	memcpy( desc->buf, kaddr + offset, size);
+   desc->count = count - size;
+   desc->written += size;
+   desc->buf += size;
+   return size;
+}
+
+int my_goddamn_read(struct file *f, char * buf, size_t count){
+	ssize_t ret;
+   read_descriptor_t desc;
+
+	if (! f || ! buf || ! count ) 	return -EBADF;
+	if (! f->f_op || f->f_op->read != generic_file_read )    return -EINVAL;
+
+	if (f->f_mode & FMODE_READ) {
+		ret = locks_verify_area(FLOCK_VERIFY_READ, f->f_dentry->d_inode, f, 
+				                  f->f_pos, count);
+		if (!ret) {
+			desc.written = 0;
+			desc.count = count;
+			desc.buf = buf;
+			desc.error = 0;
+			do_generic_file_read(f, &f->f_pos, &desc, my_goddamn_read_actor);
+			ret = ( desc.written ) ? desc.written : desc.error;
+		}
+	}
+   return ret;
+}
+
+
+/* ============================================================== SYMBOLS */
+char *symbols[] = {
+	"idt_table", "set_intr_gate", "set_trap_gate", "set_system_gate",
+	"set_call_gate", "do_exit", "access_process_vm", "ptrace_readdata",
+	"ptrace_writedata", "putreg", "getreg", "show_state", "show_task",
+	"error_code", "do_debug", "do_int3", "do_nmi", NULL
+};
+
+
+/* check if this is one of the desired symbols */
+int deal_with_symbol(char *name, unsigned long address) {
+	int x;	
+	for ( x = 0; symbols[x]; x++ ) {
+		/* find first match */
+		if (! strncmp( symbols[x], name, strlen(symbols[x]) )) {
+			printk("found %s at %08lx\n",name, address);
+			return(1);
+		}
+	}
+	return(0);
+}
+
+
+/* ============================================================== MAPFILE */
+/* fill 'name' and 'addr' with symbols from mapfile */
+int get_symbol_from_buf(unsigned char *buf, int len, char *name, 
+		                  unsigned long *addr) {
+	int x, start;
+	char addrbuf[12] = {0};
+
+	/* first 8 chars are address */
+	memcpy( addrbuf, buf, 8 );
+
+	*addr = simple_strtoul(addrbuf, NULL, 16); 
+	if (! *addr ) {
+		/* we have a problem: advance to next \n and exit */
+		for ( x = 0; x < len && buf[x] != '\n'; x++ )	
+			;
+		return(0); 
+	}
+	/* next 3 chars are pointless */
+	start = x = 11;
+
+	while( buf[x] != '\n' && buf[x] != 0 && x < len ) {
+		x++;
+	}
+	if ( buf[x] != '\n' ) {
+		/* we ran off the end of the buffer */
+		return(0);
+	}
+	memcpy( name, &buf[start], x - start );
+	return(x + 1);
+}
+
+#define MAPFILE_PAGE_SIZE 4096
+/* take page from mapfile, search for symbols, return # bytes read before
+ * final newline */
+int do_mapfile_page(char *buf, char *cache){
+	int x, last_n, tmpsize, pos = 0;
+	unsigned long address;
+	unsigned char name[64] = {0}, tmpbuf[128 + 64] = {0};
+
+	if (! buf || ! cache ) return(0);
+
+	if ( cache[0] ) {
+		/* find last incomplete line in cache */
+		for ( x = 0; x < 128; x++ )	
+			if (cache[x] == '\n' ) last_n = x;
+
+		tmpsize = 128 - last_n; 
+		/* copy last incomplete line and a good helping of the next buffer */
+		memcpy( tmpbuf, &cache[last_n + 1], tmpsize - 1 );
+		for ( x = 0; x < MAPFILE_PAGE_SIZE && buf[x] != '\n'; x++ )	
+			;
+		memcpy( &tmpbuf[tmpsize], buf, x + 1 );
+		tmpsize += x;
+
+		/* get first symbol from cache */
+		if ( get_symbol_from_buf( tmpbuf, tmpsize, name, &address ) ) {
+			deal_with_symbol(name, address);
+			memset(name, 0, 64);
+		} /* else I guess we just live with it :P */
+
+		/* ...and mark place in buf where we will start looking */
+		pos = x + 1;
+	}
+
+	while (  pos < MAPFILE_PAGE_SIZE && 
+			  (tmpsize = get_symbol_from_buf( &buf[pos], MAPFILE_PAGE_SIZE - pos, 
+														 name, &address))  )      {
+		/* compare against known symbols */
+		deal_with_symbol(name, address);
+		memset(name, 0, 64);
+		pos += tmpsize;
+	}
+	return(1);
+}
+
+int read_mapfile( char *path ) {
+	struct file *f;
+	char *buf, cache[128] = {0};
+	unsigned int size;
+
+	buf = kmalloc( MAPFILE_PAGE_SIZE, GFP_KERNEL );
+	if (! buf ) 	return(0);
+
+	f = filp_open(path, O_RDONLY, 0);
+	if ( f ) {
+		if ( f->f_op->read != generic_file_read ) {
+			filp_close(f, 0);	/* we have no locks, so need no owner param */
+			return(0);
+		}
+
+		size = f->f_dentry->d_inode->i_size;
+		while( my_goddamn_read(f, buf, MAPFILE_PAGE_SIZE) > 0 ) {
+			do_mapfile_page( buf, cache );
+
+			/* store the last 128 bytes of the buffer in cache */
+			memcpy( cache, &buf[MAPFILE_PAGE_SIZE - 128], 128);
+			memset( buf, 0, MAPFILE_PAGE_SIZE );
+		}
+		filp_close(f, 0);	/* we have no locks, so need no owner param */
+	}
+	kfree(buf);
+	return(1);
+}
+
+/* ========================================================== MODULE INIT */
+char *mapfile;
+MODULE_PARM(mapfile, "s");
+
+int __init init_dbg_mod(void){
+   EXPORT_NO_SYMBOLS;
+	
+	if (! mapfile) mapfile = "/boot/System.map";
+	read_mapfile( mapfile );
+
+	return(1);
+}
+
+module_init(init_dbg_mod);
+
+/* ================================================================== EOF */
