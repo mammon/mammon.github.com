@@ -1,0 +1,10 @@
+Red Plait maintains his own page [in Russian] at 
+    http://www.revers.forinfo.ru/
+The files that he has sent are of interest to the 
+linux reverse engineering community:
+
+crackme.tgz          A crackme using RedPlait's packer
+elf.rar              NASM patch to modify ELF file generation
+elf_comp.static.gz   An elf file compressor
+rpat-en.rar          A FLAIR preprocessor for linux libraries
+

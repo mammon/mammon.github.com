@@ -1,0 +1,318 @@
+<!doctype html public "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+   <!-- meta http-equiv="Content-Type" content="text/html; charset=windows-1251" -->
+   <meta name="GENERATOR" content="Hands">
+   <meta name="Author" content="Red Plait">
+   <meta name="Translator" content="Translated from russian by Sergey R., srytv@aha.ru">
+   <meta name="Description" content="Unix libraries pattern files maker for IDA Pro">
+   <title>UNIX libraries' preprocessor for IDA Pro</title>
+<!-- 
+  RP@ (RPat) - Unix libraries preprocessor for IDA Flair utilities
+  Version 0.1
+  Written by Red Plait (redplait@usa.net)
+  SEP 1999 - MAR 2000
+ -->
+</head>
+<body>
+
+<h2>
+UNIX libraries' preprocessor for IDA Pro</h2>
+<b>Red Plait</b>
+<table BORDER=0 WIDTH="100%" >
+<tr>
+<td WIDTH="60%">&nbsp;</td>
+
+<td><i>We should not wait a favour from Ilfak</i>
+<div align=right>(C) myself</div>
+</td>
+</tr>
+</table>
+
+<ul>
+ <li><a href="#requirements">Requirements</a></li>
+ <li><a href="#what">What does it do ?</a></li>
+ <li><a href="#how">How does it works ?</a></li>
+ <li><a href="#build">How can you build it by yourself</a></li>
+ <li><a href="#disclaim">Complaints and suggestions</a></li>
+</ul>
+
+<a NAME="requirements"></a>
+<h3>Requirements</h3>
+This time we will need some equipment.&nbsp; In the first place, as this
+program was designed for UNIX you should have the OS; second, you need
+some C-compiler; and lastly GNU <b>binutils</b> package is necessary for
+building my tool.&nbsp; I use binutils v.2.9.1 for FreeBSD - it is supplied
+together with source codes as a part of this fine operation system; but
+you always can get latest version of GNU from the nearest GNU-project mirror
+(and also read <a href="http://www.gnu.org/software/software.html#TOCHowToGetSoftware">this</a>
+document).&nbsp; Moreover, using the tool requires <b>Flair</b> package
+of IDA - one of the few add-ons distributed by Ilfak as freeware (either
+because of his own distraction or due to his mistake) - it can be got from
+its
+<a href="http://www.datarescue.com/idabase/idadown.htm">native site</a>
+(I used v.3.8).&nbsp; I hope that's all.
+
+<p><a NAME="what"></a>
+<h3>What does it do ?</h3>
+What the program was designed by this insane <a href="mailto:redplait@usa.net">Red
+Plait</a>?&nbsp; In short it is a UNIX libraries' preprocessor for creation
+<b>.PAT</b>-files,
+and its full name is "<b>R</b>ed
+<b>P</b>lait <b>.PAT</b> creator" (shifting
+bold characters left and some imagination gives <b>RPat</b>, or&nbsp; may
+be <b>RP@</b>. But this name is not the matter of the program).&nbsp; If
+you fall mad after reading the previous sentence, I'll try to illustrate
+it as simple as possible.
+<br>One of the advantages of IDA Pro is its capability to recognize functions
+of standard libraries.&nbsp; It is possible not due to the genius of its
+author (as erroneously the most part of users think), but by means of a
+special mechanism named <b>FLAIR</b> -- Fast Library Acquisition for Identification
+and Recognition (its author is Cristina Cifuentes - some of her works can
+be seen <a href="http://tempura.cs.uq.edu.au/personal/cristina/pubs.html">here</a>
+- but nothing has been said about her in any documentation either to IDA
+or to Flair).&nbsp; For this purpose signature files are used (similar
+to those which are being used in most of antivirus scanners).&nbsp; The
+first step to make a signature file is creation of a so-called pattern
+file.&nbsp; These are the files which my tool creates.&nbsp; The matter
+is that <b>Flair</b> has preprocessors for COFF and OMF libraries.&nbsp;
+Ilfak doesn't want to produce any other ones, may be because there is nobody
+who wants to pay him for it.&nbsp; But somebody can create a binary file (for
+example Linux) with statically linked C run-time library, which has ELF
+format ('-static' linker option).&nbsp; May be in consequence of some thoughtlessness
+this time Ilfak has described the <b>.PAT</b>-files format - see <b>pat.txt</b>
+document from <b>Flair</b>.&nbsp; (It's quite another matter than the use
+of this "documentation" is a bit complicated).&nbsp; And in theory, the
+similar tools should have been already created.&nbsp; But inasmuch as no
+case of these tools is available (or may it is due to unreasonable high
+price - I don't get a Belgian salary), I should make it by my own.
+<br>In view of the fact that I am too lazy to begin from the outset (but
+I think that laziness is the engine of any progress :-) and to design extractors
+for any UNIX format, I have used packet <b>binutils</b> from GNU.&nbsp;
+It is able to manipulate dozens files' formats and has very useful utilities
+like <b>nm</b> &amp; <b>objdump</b> (by the way some pieces of code were
+extracted from the last utility too :o).
+<br>I should call your attention to the fact, that it is already the second
+version of the tool.&nbsp; The first one was sent with its source codes
+to Ilfak just after it had been created (and nothing but disapproval has
+arrived in answer).&nbsp; In case he has already sold it to somebody, be
+aware of a big error in the program.&nbsp; It put the remains of function
+to the output file when it should put them just after the block to be used
+to calculate CRC (but Ilfak let me know nothing about this fact).
+
+<p><a NAME="how"></a>
+<h3>How does it works ?</h3>
+It works like all the <b>Flair</b> preprocessors.&nbsp; You run <b>rpat</b>
+with name of a library which you guess was statically linked to the file
+and the tool generates <b>.PAT</b>-file.&nbsp; The others details were
+described in the documentation for <b>Flair</b>.
+<br>The tool has some options:
+<ul>
+<li>
+<b>-C</b></li>
+
+<br>Makes demangling for C++ function names.
+<li>
+<b>-a</b></li>
+
+<br>Appends information to output file rather than creates a new one.
+<li>
+<b>-g</b></li>
+
+<br>Includes information not only about functions but all the global objects
+from the name table as well.&nbsp; It is very useful with BSDi and old
+versions BSD libraries where there is not any difference between variables
+and function names and where the compiler puts them all in a common table
+and assigns them as exportable (BSF_EXPORT).
+<li>
+<b>-o</b> <i>filename</i></li>
+
+<br>Specifies output file name.
+<li>
+<b>-p</b> <i>length</i></li>
+
+<br>Specifies the minimum function length (by default 32, like as <b>pcf.exe</b>).
+<li>
+<b>-r</b></li>
+
+<br>Doesn't include the list of names that were referred to by the function.&nbsp;
+As far as I understand, this list is used neither by <b>Flair</b> nor by
+IDA, so you can use this option without any hesitations - the output file would
+have smaller length.
+<li>
+<b>-v</b></li>
+
+<br>When this option is set, the tool produces a great many of useful (and
+not very) information about every function being processed, e.g. flags,
+size.&nbsp; It is helpful to the people who know the processed file format
+or to those who want to improve my tool :-).
+<li>
+<b>-z</b></li>
+
+<br>Under this option the tool tries to omit any leading and tail zeroes.&nbsp;&nbsp;
+For some reason FreeBSD &amp; SCO wares indicate the function length incorrectly,
+with the result that they add zeroes to the end of the function (is it
+quite possible that padding in symbol table is not considered ?).&nbsp;
+This option was designed for those who like adventures.</ul>
+
+<a NAME="build&quot;"></a>
+<h3>How can you build it by yourself</h3>
+This process is not as trivial as can be expected.&nbsp; The matter is
+that UNIX doesn't practice distributing binaries files because there are
+many versions of UNIX and they work with different types of processors.&nbsp;
+I don't distribute any binary files either and if you want to use this
+product of morbid imagination, you should compile it yourself.&nbsp;&nbsp;
+But I assure you that I have assembled the tool for the following platforms
+and processors:
+<ol>
+<li>FreeBSD 3.1 ( and 3.4 as well) with standard C compiler (gcc 2.7.2.1) and
+binutils distributed with source codes of this OS.
+</li>
+<li>RedHat Linux 5.1 with compiler gcc 2.7.2.3 and binutils 2.9
+ </li>
+<li>RedHat Linux 6.1 with compiler egcs 2.91.66 and binutils 2.9.1
+ </li>
+<li>SCO OpenDesktop 5.0.5 with my own builded compiler gcc 2.7.2.3 and binutils 2.9.1
+ </li>
+<li>SCO UnixWare 7.0 with my own builded compiler gcc 2.8.1 and binutils 2.9.1
+ </li>
+<li>SCO UnixWare 7.1 with egcs 1.1.1 (from SkunkWare) and binutils 2.9.1
+ </li>
+</ol>
+- and the tool was not only assembled but it is working (and working quite well
+with any OS :-) ! But it is no wonder because I have more than a five-year
+experience as software engineer and UNIX system administrator...
+<p>Begin with assembling <b>binutils</b>. The process is well described
+- <i>configure/make/make install.</i>&nbsp; The only interest point is
+that under FreeBSD &amp; others SCO products the configurator makes mistakes
+in recognizing some types files for this platform.&nbsp; In such case,
+I recommend you to run <i>bfd/configuration</i> with key <i>--enable-targets=all</i>.&nbsp;
+This will include in the <b>bfd</b>-library all types of files comprehended
+by OS.&nbsp; Here is an example of my version for UnixWare 7.0:
+<pre>
+- coff-i386
+- coff-a29k-big
+- a.out.adobe
+- a.out-mips-little
+- b.out.big
+- b.out.little
+- elf32-big
+- elf32-bigarc
+- elf32-bigmips
+- elf32-d10v
+- elf32-hppa
+- elf32-i386
+- elf32-i860
+- elf32-little
+- elf32-littlearc
+- elf32-littlemips
+- elf32-m32r
+- elf32-mn10200
+- elf32-mn10300
+- elf32-m68k
+- elf32-m88k
+- elf32-sparc
+- elf32-powerpc
+- elf32-powerpcle
+- elf32-v850
+- ecoff-bigmips
+- ecoff-littlemips
+- ecoff-biglittlemips
+- coff-h8300
+- coff-h8500
+- a.out-hp300hpux
+- a.out-i386
+- a.out-i386-bsd
+- coff-i386
+- a.out-i386-freebsd
+- coff-i860
+- pe-powerpc
+- pe-powerpcle
+- pei-powerpc
+- pei-powerpcle
+- coff-go32
+- coff-go32-exe
+- a.out-i386-lynx
+- coff-i386-lynx
+- msdos
+- a.out-i386-netbsd
+- i386os9k
+- pe-i386
+- pei-i386
+- coff-arm-little
+- coff-arm-big
+- pe-arm-little
+- pe-arm-big
+- pei-arm-little
+- pei-arm-big
+- coff-Intel-big
+- coff-Intel-little
+- ieee
+- coff-m68k
+- coff-m68k-un
+- a.out-m68k-lynx
+- coff-m68k-lynx
+- a.out-m68k-netbsd
+- coff-m68k-sysv
+- coff-m88kbcs
+- a.out-m88k-mach3
+- a.out-newsos3
+- nlm32-i386
+- nlm32-sparc
+- a.out-ns32k-netbsd
+- a.out-pc532-mach
+- aixcoff-rs6000
+- ppcboot
+- coff-sh
+- coff-shl
+- coff-sh-small
+- coff-shl-small
+- a.out-sparc-little
+- a.out-sparc-linux
+- a.out-sparc-lynx
+- coff-sparc-lynx
+- a.out-sparc-netbsd
+- a.out-sunos-big
+- a.out-zero-big
+- tekhex
+- a.out-tic30
+- coff-tic30
+- a.out-vax-netbsd
+- versados
+- coff-we32k
+- coff-z8k
+- srec
+- symbolsrec
+- tekhex
+- binary
+- ihex
+</pre>
+Is this impressive? The size of <b>libbfd.a</b> is more than 16MB!
+<p>Now let's consider that the smoke emitted by your hard disk has already
+disappeared and you have prepared <b>binutils</b> for your platform.&nbsp;
+But I should let your know that this precompiled packet is not completely
+ready for use because I use some object files from <b>binutils</b> subdirectory
+besides <b>libbfd.a</b> &amp; <b>libiberty</b> libraries, so don't hurry
+to execute <i>make clean</i>. Edit my <b>Makefile</b> - change variable
+<b>BFD_ROOT</b> to the subdirectory where <b>binutils</b> is disposed.
+And only then execute <i>make</i>.&nbsp;
+It should work well.&nbsp; In case if any problem arises...&nbsp; well,
+see the next section :-)
+
+<p>
+<a NAME="disclaim"></a>
+<h3>Complaints and suggestions</h3>
+Any complaint and propositions can be sent to the author by e-mail <a href="mailto:redplait@usa.net">redplait@usa.net</a>.&nbsp;
+I will not answer stupid questions like "Where can I get IDA Pro" or "What
+is UNIX".&nbsp; But If you'll find any bug, or you have some ideas or think
+that I am wrong in some part of my reasoning - I ready to contact you.&nbsp;
+There is another modest request, don't send me dozenmegabytes files (especially
+uncompressed) as an evidence of anything.&nbsp; And&nbsp; as usual, in
+no event will the author be liable to you for any consequences of his program
+execution...
+<p>And last if you want me to create any loader, plug-in or processor module
+for IDA Pro, don't hesitate to contact me...
+<pre>#include &lt;std_disclaim.h></pre>
+
+</body>
+</html>

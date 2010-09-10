@@ -1,0 +1,365 @@
+<html>
+<head><title>Case Study: Decompiling a string manipulation routine</title></head>
+<body>
+<center><h2>Case Study: Decompiling a string manipulation routine</h2></center>
+<P><BR><P>
+Decompiling specific routines within an executable is far easier than decompiling
+the entire program, especially when the work is being done by hand. For a single 
+routine, there is a basic process that can be repeated as necessary to produce 
+high-level code from a disassembled listing. Entire applications may bring 
+up issues of compression or encryption, OOP-style calls-by-reference, program 
+segments, application resources, and so on ... these tend to complicate the 
+decompilation process, if not obstruct it entirely. Whenever possible, it is
+better to narrow the scope of one's work to a handful of vital routines, rather 
+than on the executable as a whole.
+<P>
+The decompilation process in itself is simple:
+<LI> Prototype the routine
+<LI> Rewrite the internal calls
+<LI> Name the Parameters and Local Variables
+<LI> Eliminate useless or redundant registers
+<LI> Identify high-level Expressions
+<LI> Identify high-level Control Structures
+<LI> Repeat the last 3 steps as necessary
+<P><HR><P>
+Consider the following assembly routine:
+<PRE><code>
+0800A0C1 89 E5                                   mov     ebp, esp
+0800A0C3 57                                      push    edi
+0800A0C4 56                                      push    esi
+0800A0C5 53                                      push    ebx
+0800A0C6 8B 5D 08                                mov     ebx, [ebp+08h] 
+0800A0C9 8B 75 0C                                mov     esi, [ebp+0Ch] 
+0800A0CC 03 75 14                                add     esi, [ebp+14h] 
+0800A0CF 03 75 10                                add     esi, [ebp+10h] 
+0800A0D2 01 DE                                   add     esi, ebx
+0800A0D4 89 F0                                   mov     eax, esi
+0800A0D6 BF E8 03 00 00                          mov     edi, 3E8h
+0800A0DB 99                                      cdq
+0800A0DC F7 FF                                   idiv    edi
+0800A0DE 8D 72 07                                lea     esi, [edx+7]
+0800A0E1 81 FE 10 27 00 00                       cmp     esi, 2710h
+0800A0E7 76 0F                                   jbe     short 800A0F8
+0800A0E9 68 D5 5B 06 08                          push    offset str_WrongLicenseDate
+0800A0EE 6A 00                                   push    0
+0800A0F0 E8 5B 25 00 00                          call    fatalError
+0800A0F5 83 C4 08                                add     esp, 8
+0800A0F8 BA 07 00 00 00                          mov     edx, 7
+0800A0FD 8B 4D 18                                mov     ecx, [ebp+18h]
+0800A100 80 39 00                                cmp     byte ptr [ecx], 0
+0800A103 74 11                                   jz      short 800A116
+0800A105 90                                      nop
+0800A106 90                                      nop
+0800A107 90                                      nop
+0800A108 8D 14 52                                lea     edx, [edx+edx*2]
+0800A10B 0F BE 01                                movsx   eax, byte ptr [ecx]
+0800A10E 01 C2                                   add     edx, eax
+0800A110 41                                      inc     ecx
+0800A111 80 39 00                                cmp     byte ptr [ecx], 0
+0800A114 75 F2                                   jnz     short 800A108
+0800A116 31 C9                                   xor     ecx, ecx
+0800A118 39 F1                                   cmp     ecx, esi
+0800A11A 7D 1C                                   jge     short 800A138
+0800A11C 8D 04 52                                lea     eax, [edx+edx*2]
+0800A11F 8B 55 0C                                mov     edx, [ebp+0Ch]
+0800A122 01 C2                                   add     edx, eax
+0800A124 8D 04 5B                                lea     eax, [ebx+ebx*2]
+0800A127 8D 04 43                                lea     eax, [ebx+eax*2]
+0800A12A 34 F0                                   xor     al, 0F0h
+0800A12C 8D 1C 45 03 00 00 00                    lea     ebx, ds:3[eax*2]
+0800A133 41                                      inc     ecx
+0800A134 39 F1                                   cmp     ecx, esi
+0800A136 7C E4                                   jl      short 800A11C
+0800A138 53                                      push    ebx
+0800A139 52                                      push    edx
+0800A13A 68 E8 5B 06 08                          push    offset str_%x%x 
+0800A13F 68 98 77 08 08                          push    offset cBuffer
+0800A144 E8 47 B4 03 00                          call    sprintf
+0800A149 B8 98 77 08 08                          mov     eax, offset cBuffer
+0800A14E 8D 65 F4                                lea     esp, [ebp-0Ch]
+0800A151 5B                                      pop     ebx
+0800A152 5E                                      pop     esi
+0800A153 5F                                      pop     edi
+0800A154 89 EC                                   mov     esp, ebp
+0800A156 5D                                      pop     ebp
+0800A157 C3                                      retn 			
+</PRE></code>
+<P><BR><P>
+
+<b>Function Prototype</b><P>
+The first order of business is to determine the calling convention of 
+the routine. The invoking code looks as follows:
+<pre><code>
+0800A207                 push    esi			
+0800A208                 mov     eax, [year]
+0800A20E                 push    eax			
+0800A20F                 mov     eax, [day]
+0800A215                 push    eax
+0800A216                 mov     eax, [month]
+0800A21C                 push    eax
+0800A21D                 mov     eax, [num]
+0800A223                 push    eax
+0800A224                 call    0800A0C1
+0800A229                 push    eax
+0800A22A                 push    ebx
+0800A22B                 call    strcmp
+0800A230                 add     esp, 1Ch
+</PRE></code>
+
+Notice that 0800A230 adjusts the stack for 7 DWORDs, representing the 
+parameters for the strcmp call and the call of the target routine inclusive.
+Since the calling function is responsible for cleaning up the stack, we
+can assume that the routine uses the C calling convention. 
+<P>
+The next step is to provide a basic C function declaration in place of the 
+stack frame. In the disassembly, the stack frame appears as follows:
+<pre><code>
+0800A0C1 89 E5             mov     ebp, esp		; enter subroutine
+0800A0C3 57                push    edi 			; preserve registers
+0800A0C4 56                push    esi
+0800A0C5 53                push    ebx
+ ...
+0800A149 B8 98 77 08 08    mov     eax, offset cBuffer ;load return value
+0800A14E 8D 65 F4          lea     esp, [ebp-0Ch]      ;cleanup stack
+0800A151 5B                pop     ebx 			;restore registers
+0800A152 5E                pop     esi
+0800A153 5F                pop     edi
+0800A154 89 EC             mov     esp, ebp		;leave subroutine
+0800A156 5D                pop     ebp 
+0800A157 C3                retn						;return from call
+</pre></code>
+
+This can be replaced with
+<pre><code>
+
+*char stringMunch( num, month, day, year, reg_ESI ){
+	...
+	return(Buffer);
+}
+</pre></code>
+<P><BR><P>
+<b>Reformatting Calls</b><P>
+The code can be tightened up a bit more by rewriting the calls in the routine
+using proper C syntax; this will clear up a few PUSHes, as well as the ADD ESP 
+cleanup after each one. The two calls
+<PRE><code>
+0800A0E9 68 D5 5B 06 08     push    offset str_WrongLicenseDate
+0800A0EE 6A 00              push    0
+0800A0F0 E8 5B 25 00 00     call    fatalError
+0800A0F5 83 C4 08           add     esp, 8
+
+0800A138 53                 push    ebx
+0800A139 52                 push    edx
+0800A13A 68 E8 5B 06 08     push    offset str_%x%x 
+0800A13F 68 98 77 08 08     push    offset cBuffer
+0800A144 E8 47 B4 03 00     call    sprintf
+</pre></code>
+can be rewritten as
+<pre><code>
+	fatalError( NULL, *str_WrongLicenseDate );
+	
+	sprintf( *Buffer, "%x%x", reg_EDX, reg_EBX);
+</pre></code>
+... the register values will be taken care of later.
+<P><BR><P>
+
+<b>Naming Parameters</b><P>
+Once the calling convention is known, and preliminary names chosen for 
+the passed parameters, the [ebp+##] values can be replaced with the chosen
+parameter names. In this case, 
+<LI>[ebp+08h] =  num
+<LI>[ebp+0Ch] =  month
+<LI>[ebp+10h] =  day
+<LI>[ebp+14h] =  year
+<LI>[ebp+18h] =  param_reg_ESI
+<P><BR><P>
+
+ 
+<b>Register Elimination</b><P>
+The constant shuffling of values to and from registers is one of
+the most confusing aspects of assembly language; it is important 
+to constantly clean up unused or 'dead' registers while decompiling, 
+in order to simplify the job of translating assembly language to C.
+<P>
+Quite often this invloves creating higher-level expressions out of 
+assembly language; the code fragment
+<PRE><code>
+0800A0C6 8B 5D 08                                mov     ebx, num 
+0800A0C9 8B 75 0C                                mov     esi, month 
+0800A0CC 03 75 14                                add     esi, day 
+0800A0CF 03 75 10                                add     esi, year 
+0800A0D2 01 DE                                   add     esi, ebx
+0800A0D4 89 F0                                   mov     eax, esi
+</pre></code>
+can be converted to
+<PRE><CODE>
+	reg_EAX = ( month + day + year + num );
+</pre></code>
+Thus eliminating [at the moment] the need for the ESI and EBX registers.
+<P><BR><P>
+
+<b>Creating High-level Expressions</b><P>
+Translating asm instructions into higher-level expressions is what the 
+majority of decompiling work consists of; the rest of the program consists
+of execution flow control and data shuffling. There are three types of expressions recognized by higher-level languages: 
+<i>assignment</i>, <i>logical</i>, and <i>mathematical</i> expressions.
+<P>
+Assignment expressions are represented with '=' in C; in assembly, they 
+generally consist of MOV and LEA instructions.
+<P>
+Logical expressions consist of AND, OR, NEG, and XOR; in C these are
+represented by '&', '|', '~', and '^'. The left-shift and right-shift 
+instructions are represented by '<<' and '>>' in C, though they are 
+usually indicative of multiplication.
+<P>
+Mathematical expressions are more varied in assembler; however in C they 
+all resolved to one of '+', '-', '*', '/', and '%'.
+<P>
+<pre><code>
+0800A0D4                	reg_EAX = ( month + day + year + num );
+0800A0D6 BF E8 03 00 00    mov     edi, 3E8h
+0800A0DB 99                cdq
+0800A0DC F7 FF             idiv    edi
+0800A0DE 8D 72 07          lea     esi, [edx+7]
+</pre></code>
+The CDQ serves only to facilitate the QWORD division handled by 
+the IDIV instruction; after this code has executed, EAX will contain
+the quotient and edx the remainder. Since only EDX is used, the IDIV 
+can be recoded in C as a modulus expression:
+<pre><code>
+	reg_ESI = ((day + opt + month + year) % 1000 )+ 7
+</pre></code>
+Notice that the redundant EAX assignment has been removed from the expression. 
+Also, the LEA instruction is used as a mathematical instruction rather than 
+as an assignment; this is a compiler optimization that will recur frequently 
+in the target routine.<P>
+After converting much of the assembler to assignment and mathematical 
+expressions, we have the following tightened-up code:
+<pre><code>
+*char stringMunch( num, month, day, year, reg_ESI ){
+	reg_EBX = year
+	reg_ESI = ((day + opt + month + year) % 1000 )+ 7
+		cmp     reg_ESI, 2710h
+		jbe     short 800A0F8
+	fatalError( NULL, *str_WrongLicenseDate );
+	800A0F8:
+		reg_EDX = 7
+		reg_ECX = param_reg_ESI
+		cmp reg_ECX, 0
+		jz      short 800A116
+	800A108:
+		reg_EDX *= 3
+		reg_EDX += reg_ECX
+		reg_ECX++
+      cmp reg_ECX, 0
+		jnz     short 800A108
+	800A116
+		reg_ECX = 0
+		cmp     reg_ECX, REG_ESI
+		jge     short 800A138
+	800A11C:
+		reg_EAX = reg_EDX*3
+		reg_EDX = month
+		reg_EDX += reg_EAX
+		reg_EAX = reg_EBX * 7
+		xor     al, 0F0h
+		reg_EBX = (reg_EAX *2) + 3
+		reg_ECX++
+		cmp     ecx, esi
+		jl      short 800A11C
+	800A138:
+   sprintf( *Buffer, "%x%x", reg_EDX, reg_EBX);
+	return(Buffer);
+}
+</pre></code>
+For clarity, the registers can be cleaned up a bit to yield
+<pre><code>
+	800A0F8:
+		reg_EDX = 7;
+		cmp param_reg_ESI, 0
+		jz      short 800A116
+	800A108:
+		reg_EDX = (reg_EDX * 3) + param_reg_ESI;
+		param_reg_ESI++;
+		cmp param_reg_ESI, 0
+		jnz     short 800A108
+	800A116
+		param_reg_ES = 0;
+		cmp     param_reg_ESI, REG_ESI
+		jge     short 800A138
+	800A11C:
+		reg_EDX = (reg_EDX * 3) + month
+      year = (((year * 7)^ 0F0h) *2) + 3
+		param_reg_ESI++
+		cmp     param_reg_ESI, REG_ESI
+		jl      short 800A11C
+</pre></code>
+<P><BR><P>
+<b>Reconstruct Control Structures</b><P>
+By now the code is abstracted enough that the underlying logic is 
+apparent. The first construct is obviously an IF statement:
+<PRE><CODE>
+	reg_ESI = ((day + opt + month + year) % 1000 )+ 7;
+	if ( reg_ESI > 10,000){
+		fatalError( NULL, *str_WrongLicenseDate );
+	}
+</pre></code>
+Immediately following this is a WHILE loop, evidenced by the 
+"is param_reg_ESI = 0" check. ESI is typically used as an index
+into an array [and therefore a string]; since in C strings are 
+null terminated, this code translates to a "while NOT end-of-string" 
+loop. For convenience, we "change param_reg_ESI" to "ptrString":
+<PRE><CODE>
+	reg_EDX = 7;
+	while ( *ptrString > 0 ) {
+		reg_EDX = (reg_EDX * 3) + *ptrString;
+		ptrString++;
+	}
+</pre></code>
+After this comes one more while loop, using the current value of ESI:
+<PRE><CODE>
+	ptrString = 0;
+	while (ptrString < reg_ESI )
+	{
+		reg_EDX = (reg_EDX * 3) + month;
+		year = (((year * 7)^ 0F0h) *2) + 3;
+		ptrString++;
+	}
+</pre></code>
+The ESI register is put to use here as a 'magic number', part of the 
+mathematical black box of this number crunching routine. The EDX 
+register is used to house the key that will later be written, along 
+with a manipulation of the year, to a global string using sprintf().
+<P><HR><P>
+<b>Wrapping it up</b><P>
+At this point the routine is completely rewritten in C; it can be 
+incorporated into a source code recovery effort for the entire 
+program, or used in another program entirely in order to duplicate 
+the registration process of the target.
+<pre><code>
+/* global data */
+char[] Buffer;
+
+/* RegInfo Number Cruncher Routine */
+char* stringMunch( num, month, day, year, reg_ESI ){
+	long magic = ((day + opt + month + year) % 1000 )+ 7;
+	if ( magic > 10,000){
+		fatalError( NULL, *str_WrongLicenseDate );
+	}
+	key = 7;
+	while ( *ptrString > 0 ) {
+		key = (key * 3) + *ptrString;
+		ptrString++;
+	}
+	ptrString = 0;
+	while (ptrString < magic ){
+		key = (key * 3) + month;
+		year = (((year * 7)^ 0F0h) *2) + 3;
+		ptrString++	
+	}		
+	sprintf( *Buffer, "%x%x", key, year );
+	return( Buffer );
+}
+</pre></code>
+
+</body></html>
