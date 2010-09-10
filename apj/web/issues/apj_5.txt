@@ -1,0 +1,4033 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                               July-Sep  99
+:::\_____\::::::::::.                                              Issue      5
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"COM in Assembly Part II"...................................Bill.Tyler
+
+"How to use DirectDraw in ASM"...............................X-Calibre
+
+"Writing Boot Sectors To Disk"...........................Jan.Verhoeven
+
+"Dumping Memory to Disk".................................Jan.Verhoeven
+
+"Formatted Numeric Output"..............................Laura.Fairhead
+
+"Linked Lists in ASM"..........................................mammon_
+
+Column: Win32 Assembly Programming
+    "Structured Exception Handling under Win32"...........Chris.Dragan
+    "Child Window Controls"...................................Iczelion
+    "Dialog Box as Main Window"...............................Iczelion
+    "Standardizing Win32 Callback Procedures"............Jeremy.Gordon
+
+Column: The Unix World
+    "Fire Demo ported to Linux SVGAlib".................Jan.Wagemakers
+
+Column: Assembly Language Snippets
+    "Abs".................................................Chris.Dragan
+    "Min".................................................Chris.Dragan
+    "Max".................................................Chris.Dragan
+    "OBJECT"...................................................mammon_
+
+Column: Issue Solution
+    "Binary to ASCII"....................................Jan.Verhoeven
+
+----------------------------------------------------------------------
+       ++++++++++++++++++Issue  Challenge+++++++++++++++++
+         Convert a bit value to ACIII less than 10 bytes
+----------------------------------------------------------------------
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+I suppose I should start with the good news. A week or so ago Hiroshimator
+emailed me for the nth time asking if I needed help with the journal as I have
+yet to get one out on time. I relented and asked if he knew any listservers;
+one hour later he had an account for APJ set up at e-groups, specifically:
+             http://www.egroups.com/group/apj-announce
+One of the greatest obstacles to putting out these issues -- processing the
+300 or so subscription requests that rack up between issues -- is now out of
+the way for good.
+
+The articles this month have somewhat of a high-level focus; with the COM and
+Direct Draw by Bill Tyler and X-Caliber, respectively, as well as Chris
+Dragan's classic work on exception handling and Jeremy Gordon's treatment of
+windows callbacks, this issue is heavily weighed towards high-level win32
+coding. Add to this Iczelion's two tutorials and my own win32-biased
+linked list example, and it appears the DOS/Unix camp is losing ground.
+
+To shore up the Unix front line, Jan Wagemakers has provided a port of last
+month's fire demo to linux [GAS]. In addition, there are A86 articles by Jan
+Verhoeven and a general assembly routine by Laura Fairhead to prove that not
+all assembly has to be 32-bit.
+
+And, finally, I am looking for a good 'challenge' columnist: someone to write
+the monthly APJ challenges [and their solutions] so that I can start
+announcing next month's challenge sooner than next month...
+
+Now at last I can sleep ;)
+
+_m
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                        COM in Assembly Part II
+						        by Bill Tyler
+
+
+My previous atricle described how to use COM objects in your assembly
+language programs.  It described only how to call COM methods, but not how to
+create your own COM objects.  This article will describe how to do that.
+
+This article will describe implementing COM Objects, using MASM syntax.  TASM
+or NASM assemblers will not be considered, however the methods can be easily
+applied to any assembler.
+
+This article will also not describe some of the more advanced features of COM
+such as reuse, threading, servers/clients, and so on.  These will presented
+in future articles.
+
+
+COM Interfaces Review
+------------------------------------------------------------------------------
+An interface definition specifies the interface's methods, their return types,
+the number and types of their parameters, and what the methods must do.  Here
+is a sample interface definition:
+
+IInterface struct
+    lpVtbl  dd  ?
+IInterface ends
+
+IInterfaceVtbl struct
+    ; IUnknown methods
+    STDMETHOD       QueryInterface, :DWORD, :DWORD, :DWORD
+    STDMETHOD       AddRef, :DWORD
+    STDMETHOD       Release, :DWORD
+    ; IInterface methods
+    STDMETHOD       Method1, :DWORD
+    STDMETHOD       Method2, :DWORD
+IInterfaceVtbl ends
+
+STDMETHOD is used to simplify the interface declaration, and is defined as:
+
+STDMETHOD MACRO name, argl :VARARG
+    LOCAL @tmp_a
+    LOCAL @tmp_b
+    @tmp_a TYPEDEF PROTO argl
+    @tmp_b TYPEDEF PTR @tmp_a
+    name @tmp_b ?
+ENDM
+
+This macro is used to greatly simplify interface declarations, and so that the
+MASM invoke syntax can be used. (Macro originally by Ewald :)
+
+Access to the interface's methods occurs through a pointer.  This pointer
+points to a table of function pointers, called a vtable. Here is a sample
+method call:
+
+mov     eax, [lpif]                            ; lpif is the interface pointer
+mov     eax, [eax]                             ; get the address of the vtable
+invoke  (IInterfaceVtbl [eax]).Method1, [lpif] ; indirect call to the function
+- or -
+invoke  [eax][IInterfaceVtbl.Method2], [lpif]  ; alternate notation
+
+Two different styles of addressing the members are shown.  Both notations
+produce equivalent code, so the method used is a matter of personal
+preference.
+
+All interfaces must inherit from the IUnknown interface.  This means that the
+first 3 methods of the vtable must be QueryInterface, AddRef, and Release.
+The purpose and implementation of these methods will be discussed later.
+
+
+GUIDS
+------------------------------------------------------------------------------
+A GUID is a Globally Unique ID.  A GUID is a 16-byte number, that is unique
+to an interface.  COM uses GUID's to identify different interfaces from one
+another.  Using this method prevents name clashing as well as version
+clashing.  To get a GUID, you use a generator utility that is included with
+most win32 development packages.
+
+A GUID is represented by the following structure:
+
+GUID STRUCT
+    Data1   dd ?
+    Data2   dw ?
+    Data3   dw ?
+    Data4   db 8 dup(?)
+GUID ENDS
+
+A GUID is then defined in the data section:
+MyGUID GUID <3F2504E0h, 4f89h, 11D3h, <9Ah, 0C3h, 0h, 0h, 0E8h, 2Ch, 3h, 1h>>
+
+Once a GUID is assigned to an interface and published, no furthur changes to
+the interface definition are allowed.  Note, that this does mean that the
+interface implementation may not change, only the definition.  For changes
+to the interface definition, a new GUID must be assigned.
+
+
+COM Objects
+------------------------------------------------------------------------------
+A COM object is simply an implementation of an interface.  Implementation
+details are not covered by the COM standard, so we are free to implement our
+objects as we choose, so long as they satisfy all the requirements of the
+interface definition.
+
+A typical object will contain pointers to the various interfaces it supports,
+a reference count, and any other data that the object needs.  Here is a sample
+object definition, implemented as a structure:
+
+Object struct
+    interface   IInterface  <?>     ; pointer to an IInterface
+    nRefCount   dd          ?       ; reference count
+    nValue      dd          ?       ; private object data
+Object ends
+
+We also have to define the vtable's we are going to be using.  These tables
+must be static, and cannot change during run-time.  Each member of the vtable
+is a pointer to a method.  Following is a method for defining the vtable.
+
+@@IInterface segment dword
+vtblIInterface:
+    dd      offset IInterface@QueryInterface
+    dd      offset IInterface@AddRef
+    dd      offset IInterface@Release
+    dd      offset IInterface@GetValue
+    dd      offset IInterface@SetValue
+@@IInterface ends
+
+
+Reference Counting
+------------------------------------------------------------------------------
+COM object manage their lifetimes through reference counting.  Each object
+maintains a reference count that keeps track of how many instances of the
+interface pointer have been created.  The object is required to keep a
+counter that supports 2^32 instances, meaning the reference count must be a
+DWORD.
+
+When the reference count drops to zero, the object is no longer in use, and
+it destroys itself.  The 2 IUnknown methods AddRef and Release handle the
+reference counting for a COM object.
+
+
+QueryInterface
+------------------------------------------------------------------------------
+The QueryInterface method is used by a COM object to determine if the object
+supports a given interface, and then if supported, to get the interface
+pointer.  There are 3 rules to implementing the QueryInterface method:
+
+    1. Objects must have an identity - a call to QueryInterface must always
+       return the same pointer value.
+    2. The set of interfaces of an object must never change - for example, if
+       a call to QueryInterface with on IID succeeds once, it must succeed
+       always.  Likewise, if it fails once, it must fail always.
+    3. It must be possible to successfully query an interface of an object
+       from any other interface.
+
+QueryInterface returns a pointer to a specified interface on an object to
+which a client currently holds an interface pointer. This function must call
+the AddRef method on the pointer it returns.
+
+Following are the QueryInterface parameters:
+    pif  : [in] a pointer to the calling interface
+    riid : [in] pointer to the IID of the interface being queried
+    ppv  : [out] pointer to the pointer of the interface that is to be set.
+           If the interface is not supported, the pointed to value is set to 0
+
+QueryInterface returns the following:
+   S_OK if the interface is supported
+   E_NOINTERFACE if not supported
+
+Here is a simple assembly implementation of QueryInterface:
+
+IInterface@QueryInterface proc uses ebx pif:DWORD, riid:DWORD, ppv:DWORD
+    ; The following compares the requested IID with the available ones.
+    ; In this case, because IInterface inherits from IUnknown, the IInterface
+    ; interface is prefixed with the IUnknown methods, and these 2 interfaces
+    ; share the same interface pointer.
+    invoke  IsEqualGUID, [riid], addr IID_IInterface
+    or      eax,eax
+    jnz     @1
+    invoke  IsEqualGUID, [riid], addr IID_IUnknown
+    or      eax,eax
+    jnz     @1
+    jmp     @NoInterface
+
+@1:
+    ; GETOBJECTPOINTER is a macro that will put the object pointer into eax,
+    ; when given the name of the object, the name of the interface, and the
+    ; interface pointer.
+    GETOBJECTPOINTER    Object, interface, pif
+
+    ; now get the pointer to the requested interface
+    lea     eax, (Object ptr [eax]).interface
+
+    ; set *ppv with this interface pointer
+    mov     ebx, [ppv]
+    mov     dword ptr [ebx], eax
+
+    ; increment the reference count by calling AddRef
+    GETOBJECTPOINTER    Object, interface, pif
+    mov     eax, (Object ptr [eax]).interface
+    invoke  (IInterfaceVtbl ptr [eax]).AddRef, pif
+
+    ; return S_OK
+    mov     eax, S_OK
+    jmp     return
+
+@NoInterface:
+    ; interface not supported, so set *ppv to zero
+    mov     eax, [ppv]
+    mov     dword ptr [eax], 0
+
+    ; return E_NOINTERFACE
+    mov     eax, E_NOINTERFACE
+
+return:
+    ret
+IInterface@QueryInterface endp
+
+
+AddRef
+------------------------------------------------------------------------------
+The AddRef method is used to increment the reference count for an interface
+of an object.  It should be called for every new copy of an interface pointer
+to an object.
+
+AddRef takes no parameters, other than the interface pointer required for all
+methods.  AddRef should return the new reference count.  However, this value
+is to be used by callers only for testing purposes, as it may be unstable in
+certain situations.
+
+Following is a simple implementation of the AddRef method:
+
+IInterface@AddRef proc pif:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+    ; increment the reference count
+    inc     [(Object ptr [eax]).nRefCount]
+    ; now return the count
+    mov     eax, [(Object ptr [eax]).nRefCount]
+    ret
+IInterface@AddRef endp
+
+
+Release
+------------------------------------------------------------------------------
+Release decrements the reference count for the calling interface on a object.
+If the reference count on the object is decrememnted to 0, then the object is
+freed from memory.  This function should be called when you no longer need to
+use an interface pointer
+
+Like AddRef, Release takes only one parameter - the interface pointer.  It
+also returns the current value of the reference count, which, similarly, is to
+be used for testing purposess only
+
+Here is a simple implementation of Release:
+
+IInterface@Release proc pif:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+
+    ; decrement the reference count
+    dec     [(Object ptr [eax]).nRefCount]
+
+    ; check to see if the reference count is zero.  If it is, then destroy
+    ; the object.
+    mov     eax, [(Object ptr [eax]).nRefCount]
+    or      eax, eax
+    jnz     @1
+
+    ; free the object: here we have assumed the object was allocated with
+    ; LocalAlloc and with LMEM_FIXED option
+    GETOBJECTPOINTER    Object, interface, pif
+    invoke  LocalFree, eax
+@1:
+    ret
+IInterface@Release endp
+
+
+Creating a COM object
+------------------------------------------------------------------------------
+Creating an object consists basically of allocating the memory for the
+object, and then initializing its data members.  Typically, the vtable
+pointer is initialized and the reference count is zeroed.  QueryInterface
+could then be called to get the interface pointer.
+
+Other methods exist for creating objects, such as using CoCreateInstance, and
+using class factories.  These methods will not be discussed, and may be a
+topic for a future article.
+
+
+COM implementatiion sample application
+------------------------------------------------------------------------------
+Here follows a sample implementation and usage of a COM object.  It shows how
+to create the object, call its methods, then free it.  It would probably be
+very educational to assemble this and run it through a debugger.  This and
+other examples can be found at http://asm.tsx.org.
+
+
+.386
+.model flat,stdcall
+
+include windows.inc
+include kernel32.inc
+include user32.inc
+
+includelib kernel32.lib
+includelib user32.lib
+includelib uuid.lib
+
+;-----------------------------------------------------------------------------
+; Macro to simply interface declarations
+; Borrowed from Ewald, http://here.is/diamond/
+STDMETHOD   MACRO   name, argl :VARARG
+LOCAL @tmp_a
+LOCAL @tmp_b
+@tmp_a  TYPEDEF PROTO argl
+@tmp_b  TYPEDEF PTR @tmp_a
+name    @tmp_b      ?
+ENDM
+
+; Macro that takes an interface pointer and returns the implementation
+; pointer in eax
+GETOBJECTPOINTER MACRO Object, Interface, pif
+    mov     eax, pif
+    IF (Object.Interface)
+        sub     eax, Object.Interface
+    ENDIF
+ENDM
+
+;-----------------------------------------------------------------------------
+IInterface@QueryInterface   proto :DWORD, :DWORD, :DWORD
+IInterface@AddRef           proto :DWORD
+IInterface@Release          proto :DWORD
+IInterface@Get              proto :DWORD
+IInterface@Set              proto :DWORD, :DWORD
+
+CreateObject                proto :DWORD
+IsEqualGUID                 proto :DWORD, :DWORD
+
+externdef                   IID_IUnknown:GUID
+
+;-----------------------------------------------------------------------------
+; declare the interface prototype
+IInterface struct
+    lpVtbl  dd  ?
+IInterface ends
+
+IInterfaceVtbl struct
+    ; IUnknown methods
+    STDMETHOD       QueryInterface, pif:DWORD, riid:DWORD, ppv:DWORD
+    STDMETHOD       AddRef, pif:DWORD
+    STDMETHOD       Release, pif:DWORD
+    ; IInterface methods
+    STDMETHOD       GetValue, pif:DWORD
+    STDMETHOD       SetValue, pif:DWORD, val:DWORD
+IInterfaceVtbl ends
+
+
+; declare the object structure
+Object struct
+    ; interface object
+    interface   IInterface  <?>
+
+    ; object data
+    nRefCount   dd          ?
+    nValue      dd          ?
+Object ends
+
+;-----------------------------------------------------------------------------
+.data
+; define the vtable
+@@IInterface segment dword
+vtblIInterface:
+    dd      offset IInterface@QueryInterface
+    dd      offset IInterface@AddRef
+    dd      offset IInterface@Release
+    dd      offset IInterface@GetValue
+    dd      offset IInterface@SetValue
+@@IInterface ends
+
+; define the interface's IID
+; {CF2504E0-4F89-11d3-9AC3-0000E82C0301}
+IID_IInterface GUID <0cf2504e0h, 04f89h, 011d3h, <09ah, 0c3h, 00h, 00h,
+                      0e8h, 02ch, 03h, 01h>>
+
+;-----------------------------------------------------------------------------
+.code
+start:
+StartProc proc
+    LOCAL   pif:DWORD       ; interface pointer
+
+    ; create the object
+    invoke  CreateObject, addr [pif]
+    or      eax,eax
+    js      exit
+
+    ; call the SetValue method
+    mov     eax, [pif]
+    mov     eax, [eax]
+    invoke  (IInterfaceVtbl ptr [eax]).SetValue, [pif], 12345h
+
+    ; call the GetValue method
+    mov     eax, [pif]
+    mov     eax, [eax]
+    invoke  (IInterfaceVtbl ptr [eax]).GetValue, [pif]
+
+    ; release the object
+    mov     eax, [pif]
+    mov     eax, [eax]
+    invoke  (IInterfaceVtbl ptr [eax]).Release, [pif]
+
+exit:
+    ret
+StartProc endp
+
+;-----------------------------------------------------------------------------
+IInterface@QueryInterface proc uses ebx pif:DWORD, riid:DWORD, ppv:DWORD
+    invoke  IsEqualGUID, [riid], addr IID_IInterface
+    test    eax,eax
+    jnz     @F
+    invoke  IsEqualGUID, [riid], addr IID_IUnknown
+    test    eax,eax
+    jnz     @F
+    jmp     @Error
+
+@@:
+    GETOBJECTPOINTER    Object, interface, pif
+    lea     eax, (Object ptr [eax]).interface
+
+    ; set *ppv
+    mov     ebx, [ppv]
+    mov     dword ptr [ebx], eax
+
+    ; increment the reference count
+    GETOBJECTPOINTER    Object, interface, pif
+    mov     eax, (Object ptr [eax]).interface
+    invoke  (IInterfaceVtbl ptr [eax]).AddRef, [pif]
+
+    ; return S_OK
+    mov     eax, S_OK
+    jmp     return
+
+@Error:
+    ; error, interface not supported
+    mov     eax, [ppv]
+    mov     dword ptr [eax], 0
+    mov     eax, E_NOINTERFACE
+
+return:
+    ret
+IInterface@QueryInterface endp
+
+
+IInterface@AddRef proc pif:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+    inc     [(Object ptr [eax]).nRefCount]
+    mov     eax, [(Object ptr [eax]).nRefCount]
+    ret
+IInterface@AddRef endp
+
+
+IInterface@Release proc pif:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+    dec     [(Object ptr [eax]).nRefCount]
+    mov     eax, [(Object ptr [eax]).nRefCount]
+    or      eax, eax
+    jnz     @1
+    ; free object
+    mov     eax, [pif]
+    mov     eax, [eax]
+    invoke  LocalFree, eax
+@1:
+    ret
+IInterface@Release endp
+
+
+IInterface@GetValue proc pif:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+    mov     eax, (Object ptr [eax]).nValue
+    ret
+IInterface@GetValue endp
+
+
+IInterface@SetValue proc uses ebx pif:DWORD, val:DWORD
+    GETOBJECTPOINTER    Object, interface, pif
+    mov     ebx, eax
+    mov     eax, [val]
+    mov     (Object ptr [ebx]).nValue, eax
+    ret
+IInterface@SetValue endp
+
+;-----------------------------------------------------------------------------
+CreateObject proc uses ebx ecx pobj:DWORD
+    ; set *ppv to 0
+    mov     eax, pobj
+    mov     dword ptr [eax], 0
+
+    ; allocate object
+    invoke  LocalAlloc, LMEM_FIXED, sizeof Object
+    or      eax, eax
+    jnz     @1
+    ; alloc failed, so return
+    mov     eax, E_OUTOFMEMORY
+    jmp     return
+@1:
+
+    mov     ebx, eax
+    mov     (Object ptr [ebx]).interface.lpVtbl, offset vtblIInterface
+    mov     (Object ptr [ebx]).nRefCount, 0
+    mov     (Object ptr [ebx]).nValue, 0
+
+    ; Query the interface
+    lea     ecx, (Object ptr [ebx]).interface
+    mov     eax, (Object ptr [ebx]).interface.lpVtbl
+    invoke  (IInterfaceVtbl ptr [eax]).QueryInterface,
+            ecx,
+            addr IID_IInterface,
+            [pobj]
+    cmp     eax, S_OK
+    je      return
+
+    ; error in QueryInterface, so free memory
+    push    eax
+    invoke  LocalFree, ebx
+    pop     eax
+
+return:
+    ret
+CreateObject endp
+
+;-----------------------------------------------------------------------------
+IsEqualGUID proc rguid1:DWORD, rguid2:DWORD
+    cld
+    mov     esi, [rguid1]
+    mov     edi, [rguid2]
+    mov     ecx, sizeof GUID / 4
+    repe    cmpsd
+    xor     eax, eax
+    or      ecx, ecx
+    setz    al
+    ret
+IsEqualGUID endp
+
+end start
+
+
+Conclusion
+------------------------------------------------------------------------------
+We have (hopefully) seen how to implement a COM object.  We can see that it
+is a bit messy to do, and adds quite some overhead to our programs.  However,
+it can also add great flexibility and power to our programs.
+
+Remember that COM defines only interfaces, and implementation is left to the
+programmer.  This article presents only one possible implementation.  This is
+not the only method, nor is it the best one.  The reader should feel free to
+experiment with other methods.
+
+                Copyright (C) 1999 Bill Tyler  (billasm@usa.net)
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..........................................FEATURE.ARTICLE
+                                                  How to use DirectDraw in ASM
+                                                  by X-Calibre [Diamond]
+
+
+Well, there has been quite a large demand for this essay, so I finally started
+writing it. This essay will show you how to use C++ objects and COM interface
+in Win32ASM, using DirectDraw as an example.
+
+Well, in this part of the Win32 API, you will soon find out how important it
+is to know C and C++ when you want to use an API written in these languages.
+Judging from the demand for this essay, I think it will be necessary to
+explain a bit of how objects work in C++. I will not go too deep, but only
+show the things you need to know in Win32ASM.
+
+What are objects really?
+
+Actually a structure is an object of which all fields are public. We will look
+at it the other way around. So the public fields in an object make up a
+structure. The other fields in an object are private and are not reachable
+from the outside. So they are not interesting to us.
+
+A special thing about objects is that they can contain pointers to functions.
+Normally, when using C or ASM, this would be possible, but a bit error-prone.
+It can be seen as 'dirty' programming. That's why you probably haven't seen it
+before.
+
+When using C++ with a compiler, there will be no errors, as long as the
+compiler does its job. So here you can use this technique with no chance of
+errors, and it gives you some nice new programming options.
+
+C++ goes even further with this 'structure of functions' idea. With
+inheritance, you can also overwrite functions of the base class in the
+inherited class. You can also create 'virtual' functions, which are defined in
+the base class, but the actual code is only in inherited classes.
+
+This is of course interesting for DirectX, where you want to have standard
+functions, but with different code, depending on the hardware on which it is
+running. So in DirectX, all functions are defined as virtual, and the base
+class is inherited by hardware-specific drivers which supply hardware-specific
+code. And the beauty of this is, that it's all transparent to the programmer.
+The function pointers can change at runtime because of this system, so the C++
+designers had to think of a way to keep the pointers to the functions
+available to the program at all time.
+
+What this all boils down to is that there is a table with pointers to the
+functions. It's called the Virtual Function Table. I will call this the
+vtable from now on.
+
+So we need to get this table, in order to call functions from our object.
+Lucky for you, Z-Nith has already made a C program to 'capture' the table,
+and converted the resulting header file to an include file for use with MASM.
+So I'll just explain how you should use this table, and you can get going
+soon.
+
+Well, actually it's quite simple. The DirectX objects are defined like this:
+
+IDirectDraw        STRUC
+    lpVtbl DWORD ?
+IDirectDraw        ENDS
+
+IDirectDrawPalette STRUC
+    lpVtbl DWORD ?
+IDirectDrawPalette ENDS
+
+IDirectDrawClipper STRUC
+    lpVtbl DWORD ?
+IDirectDrawClipper ENDS
+
+IDirectDrawSurface STRUC
+    lpVtbl DWORD ?
+IDirectDrawSurface ENDS
+
+So these structs are actually just a pointer to the vtables, and don't contain
+any other values. Well, this makes it all very easy for us then.
+I'll give you a small example:
+
+Say we have an IDirectDraw object called lpDD. And we want to call the
+RestoreDisplayMode function.
+Then we need to do 2 things:
+
+1. Get the vtable.
+2. Get the address of the function, using the vtable.
+
+The first part is simple. All the struct contains, is the pointer to the
+vtable. So we can just do this:
+
+    mov  eax, [lpDD]
+    mov  eax, [eax]
+
+Simple, isn't it? And the next part isn't really much harder. The vtable is
+put into a structure called IDirectDrawVtbl in DDRAW.INC. We now have the
+address of the structure in eax. All we have to do now, is get the correct
+member of that structure, to get the address of the function we want to call.
+You would have guessed by now, that this will do the trick:
+
+    call [IDirectDrawVtbl.RestoreDisplayMode][eax]
+
+That is not a bad guess...
+But there's one more thing, which is very important: this function needs to be
+invoked on the IDirectDraw object. We may only see the vtable in the structure,
+but there are also private members inside the object. So there's more than
+meets the eye here. What it comes down to is that the call needs the object
+as an argument. And this will be done by stack as always. So we just need to
+push lpDD before we call. The complete call will look like this:
+
+    push [lpDD]
+    call [IDirectDrawVtbl.RestoreDisplayMode][eax]
+
+Simple, was it not? And calls with arguments are not much harder.
+Let's set the displaymode to 320x200 in 32 bits next.
+This call requires 3 arguments:
+
+SetDisplayMode( width, height, bpp );
+
+Well, the extra arguments work just like normal API calls: just push them onto
+the stack in backward order.
+So it will look like this:
+
+    push 32
+    push 200
+    push 320
+    mov  eax, [lpDD]
+    push eax
+    mov  eax, [eax]
+    call [IDirectDrawVtbl.SetDisplayMode][eax]
+
+And that's all there is to it.
+
+To make life easier, we have included some MASM macros in DDRAW.INC, for use
+with the IDirectDraw and IDirectDrawSurface objects:
+
+DDINVOKE  MACRO   func, this, arglist :VARARG
+    mov  eax, [this]
+    mov  eax, [eax]
+
+    IFB <arglist>
+        INVOKE [IDirectDrawVtbl. func][eax], this
+    ELSE
+        INVOKE [IDirectDrawVtbl. func][eax], this, arglist
+    ENDIF
+ENDM
+
+DDSINVOKE MACRO   func, this, arglist :VARARG
+    mov  eax, [this]
+    mov  eax,  [eax]
+
+    IFB <arglist>
+        INVOKE [IDirectDrawSurfaceVtbl. func][eax], this
+    ELSE
+        INVOKE [IDirectDrawSurfaceVtbl. func][eax], this, arglist
+    ENDIF
+ENDM
+
+With these macros, our 2 example calls will look as simple as this:
+
+    DDINVOKE RestoreDisplayMode, lpDD
+
+    DDINVOKE SetDisplayMode, lpDD, 320, 200, 32
+
+
+Well, that's basically all there is to know about using objects, COM and
+DirectX in Win32ASM. Have fun with it!
+
+And remember:
+
+C and C++ knowledge is power!
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                   Writing Boot Sectors To Disk
+                                                   by Jan Verhoeven
+
+
+Introduction.
+-------------
+In my previous article I showed how to make a private non-bootable
+bootsector for 1.44 Mb floppy disks. Unfortunately, there was no way yet to
+write that non-bootsector to a floppy disk....
+
+Enter this code. It is the accompanying bootsector writer for floppy disks.
+It assumes that your A: drive is the 1.44 Mb floppy disk drive and I dare
+say that this will be true in the majority of cases.
+
+
+The assembler used
+------------------
+As usual, I have written this code in A86 format. Until now, not many
+aspects of the A86 extensions have been used, but, believe me, in future
+articles this will be done.
+
+A86 is particularly useful for people that make syntax errors. It will
+insert the errormessages into the sourcefile so that you can easily find
+them back. In the next assembler run the error messages are removed again.
+
+To fully use this aspect of A86 programming, I made a small batchfile that
+will let me choose between several options while writing the code. Below
+you can see the file. After an error, I choose to go back into the editor.
+When there are no errors, I might decided to do a trial run. Or to quit to
+DOS.
+
+This is all done by means of the WACHT command which waits for a keypress.
+It returns (in errorlevel) the indexed position in the command tail table
+of th key which was pressed.
+
+
+Rapid assembly prototyping.
+---------------------------
+For easy processing and running sourcefiles I use a small batchfile, which
+looks like:
+
+----------- Run.Bat --------------------------------------- Start ---------
+@echo off
+if "%1" == "" goto leave
+
+:start
+   ed %1.a86
+   a86 %1.a86 %2 %3 %4 %5 %6
+
+:menu
+   Echo *
+   Echo Options:
+   Echo *Escape = stop
+   Echo *     L = LIST
+   echo *  ;-() = back to the editor
+   echo * space = test-run of %1.com
+   echo *Period = debugger-run with %1.com/sym
+
+   wacht  .\=-[]';-()/":?><{}|+_LCE
+
+if errorlevel 27 goto start
+if errorlevel 26 goto screen
+if errorlevel 25 goto list
+if errorlevel  4 goto start
+if errorlevel  3 goto debugger
+if errorlevel  2 goto execute
+if errorlevel  1 exit
+goto menu
+
+:execute
+  %1
+  if errorlevel 9 echo Errorlevel = 9+
+  if errorlevel 8 echo Errorlevel = 8
+  if errorlevel 7 echo Errorlevel = 7
+  if errorlevel 6 echo Errorlevel = 6
+  if errorlevel 5 echo Errorlevel = 5
+  if errorlevel 4 echo Errorlevel = 4
+  if errorlevel 3 echo Errorlevel = 3
+  if errorlevel 2 echo Errorlevel = 2
+  if errorlevel 1 echo Errorlevel = 1
+  goto menu
+
+:debugger
+  vgamode 3
+  d86 %1
+  goto menu
+
+:list
+  list
+  goto menu
+
+:screen
+  vgamode 3
+  goto menu
+
+:leave
+  echo No file specified
+----------- Run.Bat ---------------------------------------- End ----------
+
+This BAT file relies heavily on my computer system. For one, I use DR-DOS 6
+which means that I can use the EXIT word to get out of a Batchfile.
+
+Also, I switch videomodes back to Mode 3 with "Vgamode 3" and you will have
+to use another command for that, like "Mode co80" or using the utillity
+that came with your videocard.
+
+The program "List" is Vernon Buerg's file lister which I use to track down
+errors in all kinds of files.
+
+
+How to write a sector to disk.
+------------------------------
+Globally there are three methods. The first would be to program the floppy
+disk controller, but that is just downright difficult. A second approach
+would be to use INT 026, the way DOS does things.
+
+I chose for the BIOS method. For non-partitioned diskstructures this is the
+easiest way. Just select track, head and side and write data to the sectors
+on that disk.
+
+The bootsector is the very first sector on a disk. For a floppy disk this
+boils down to track 0, head 0 and sector 1 (sectors are counted from 1, not
+from 0!).
+
+The code is very straightforward. What it does is:
+
+ - reset disk drive controller
+ - open the file to transfer to the bootsector
+ - read file into internal buffer
+ - close the file
+ - repeat 5 times:
+ -   try to tranfer buffer to bootsector of drive A:
+ - shut down and return to DOS.
+ - if an error occurs, the user is informed about it.
+
+That's all there's to it.
+
+
+The Source.
+-----------
+Below is the sourcecode for this short utillity. I have commented just
+about any line I thought fit for it.
+
+----------- Wrs.A86 --------------------------------------- Start ---------
+name     wrs
+title    WRite Sector
+page     80, 120
+
+stdout   =  1                       ; the "standard" equates
+lf       = 10
+cr       = 13
+
+  DATA segment                      ; define the volatile data area
+
+buffer   db    512 dup (?)          ; this is enough for one sector
+
+         EVEN                       ; make sure WORD starts at an even address
+Handle   dw    ?                    ; handle number of file to write
+; ----------------------
+  CODE segment                      ; start of the actualk code
+                                    ; no ORG, so we start at offset 0100
+         jmp   main                 ; jump forward to entry point
+
+         db    'VeRsIoN=0.2', 0
+         db    'CoPyRiGhT=CopyLeft 1999, Jan Verhoeven, '
+         db    'jverhoeven@bigfoot.com', 0
+; ----------------------
+filename db    'BootLoad.bin', 0        ; name of file to send to disk
+
+Mess001  db    'Cannot open file BootLoad.bin. '
+         db    'Operation aborted.', cr, lf
+Len001 = $ - Mess001
+
+Mess002  db    'Something went wrong while writing to disk.', cr, lf
+Len002 = $ - Mess002
+
+Mess003  db    'The floppy disk subsytem reported an error. '
+         db    'Trying once more.', cr, lf
+Len003 = $ - Mess003
+
+Mess004  db    cr, lf, 'Bootsector written. '
+         db            'Thank you for using this software.'
+         db    cr, lf, 'This program is GNU GPL free software and you use '
+         db            'it at your won risk.'
+         db    cr, lf, 'Please study the GNU '
+         db            'General Public License for more details.', cr, lf
+Len004 = $ - Mess004
+; ----------------------
+Error1:  mov   dx, offset mess001   ; process "cannot open file"
+         mov   cx, len001
+         mov   bx, stdout
+         mov   ah, 040
+         int   021                  ; print via DOS
+
+         mov   ax, 04C01            ; exit with errorcode = 1
+         int   021
+; ----------------------
+Error2:  mov   dx, offset mess002   ; process "disk error"
+         mov   cx, len002
+         mov   bx, stdout
+         mov   ah, 040
+         int   021                  ; via DOS
+
+         mov   ax, 04C02            ; exit with errorcode = 2
+         int   021
+; ----------------------
+Error2a: push  ax, bx, cx, dx       ; process "Disk not ready"
+         mov   dx, offset mess003   ; point to message
+         mov   cx, len003           ; this many bytes
+         mov   bx, stdout           ; to the console
+         mov   ah, 040              ; do a write
+         int   021                  ; via DOS
+         pop   dx, cx, bx, ax       ; restore state of machine
+         ret                        ; and return to caller
+; ----------------------
+main:    mov   dl, 0                ; choose drive A:
+         mov   ah, 0                ; select funtion 0 ...
+         int   013                  ; ... reset diskdrives
+
+         mov   dx, offset filename  ; point to name of file
+         mov   ax, 03D00            ; to open
+         int   021                  ; via DOS
+         jc    Error1               ; if error, take action
+
+         mov   [Handle], ax         ; no error, => ax = handle
+         mov   dx, offset buffer    ; setup pointer, ...
+         mov   cx, 512              ; ... byte count, ...
+         mov   bx, ax               ; ... and handle
+         mov   ah, 03F              ; to read data from file
+         int   021                  ; via DOS
+
+         mov   bx, [Handle]
+         mov   ah, 03E
+         int   021                  ; close this file
+
+         mov   cx, 5                ; prepare for a five times LOOP
+L0:      push  cx
+         mov   bx, offset buffer
+         mov   es, ds               ; es:bx = buffer to read from
+         mov   dx, 0000             ; drive A:, head 0
+         mov   cx, 0001             ; Track 0, Sector 1
+         mov   ax, 0301             ; Write sectors, 1 sector
+         int   013                  ; via BIOS
+         jnc   >L1                  ; if no error, jump forward
+         pop   cx                   ; Houston, we have an error!
+         call  error2a              ; inform the user
+         loop  L0                   ; and try again
+         jc    error2               ; after five times still no go....
+
+L1:      mov   dx, offset Mess004   ; Signal that we're successful
+         mov   cx, Len004
+         mov   bx, stdout           ; to the console
+         mov   ah, 040
+         int   021                  ; via DOS (so it can be redirected)
+         mov   ax, 04C00            ; mention that there were no errors
+         int   021                  ; and return to DOS
+
+----------- Wrs.A86 ---------------------------------------- End ----------
+
+Have fun experimenting with bootsectors. But take care that this will NOT
+work on a hard disk.
+
+
+Hard disk structure.
+--------------------
+A hard disk uses another layout for it's structure. The very first sector
+of a HDD is the MBR (Master BootRecord). It is the only sensible sector in
+the first track of a normal HDD. The rest is just empty.
+
+Each partition starts at a cylinder boundary, so the first one starts at
+cylinder 1 (track 1, side 0, sector 1). The very first sector of a bootable
+partition is the bootsector.
+
+The MBR contains the partition table, indicating where partitions start and
+end and whether they are bootable or not. Plus some code to interpret that
+table and to find the bootsector that was selected.
+
+
+If you write a floppy disk bootsector to the very first sector of a HDD,
+you wipe out the MBR and hence make inaccesable all data on that disk. The
+data will still be there, but the system will not be able anymore to find
+or use it.
+
+So please take care that this software is NOT used for drive (DL=) 080.
+
+jverhoeven@bigfoot.com
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                         Dumping Memory To Disk
+                                                         by Jan Verhoeven
+
+
+This piece of code allows you to make a memory dump of any region of
+conventional memory (i.e. below 1 Mb) to a diskfile.
+
+
+The program itself.
+-------------------
+The source is documented so it speaks for itself. At points of
+interest I have insterted "break" and "restart" lines with space for
+additional remarks.
+
+So just read the source and read the remarks. This way, the text is
+where the code is, and you don't need to go back and forth in the
+text. I think this will easier to read than explanation afterwards.
+
+
+--- Mem2File ------------------------------------------------- Start ---
+
+name     mem2file
+title    Send an area of memory to a diskfile.
+page     80, 120
+
+; version 1.0 : Had to be compiled for each area/filename   OK: 01-01-1991
+; version 1.1 : Same as above, for A86 format               OK: 01-01-1999
+; version 1.2 : Make it commandline driven                  OK: 01-02-1999
+; version 1.3 : Make it reliable                            OK: 02-02-1999
+; ----------------------
+stdout   =  1
+tab      =  9
+lf       = 10
+cr       = 13
+
+clr MACRO               ; macro called CLeaR
+    mov  #1, 0          ; move it with zero
+    #EM                 ; and get outa here
+
+Dum1   STRUC            ; a structure definition
+OffVal   dw    ?
+SegVal   dw    ?
+       ENDS
+; ----------------------
+  DATA segment          ; this is where the volatile data lives
+
+ByteF = $
+dummy    db    ?        ; just to fool D86....
+                        ; if this dummy variable is not here, D86 will
+                        ; reference variable "Start" as "ByteF".
+         even
+Start    dw    ?, ?     ; segment:address to start
+Stop     dw    ?, ?     ; segment:address to stop
+Blocks   dw    ?        ; number of 16K chucks to save
+Rest     dw    ?        ; remaining part to save
+ArgNum   dw    ?        ; nr of bytes in this argument
+OldClp   dw    ?        ; current pointer into command line
+Handle   dw    ?
+Length   dw    ?, ?
+
+FileName:                       ; this storage is used twice....
+Argument db     80 dup (?)      ; storage for next argument from command-line
+Output   db    16K dup (?)      ; buffered output
+
+--- Mem2File ------------------------------------------------- Break ---
+
+An A86 enhancement: if you need 16K elements of data, just ask for it.
+No need to remember that 16 Kb is 16.384 bytes. The "K" will do.
+
+No big deal, just a nice feature.
+
+Also, if you need to process large binary numbers you may group them
+into sub-units separated by underscores. So the number:
+
+        1000100100111101
+
+is hard to read back. But if we insert "_" markers like:
+
+        1000_1001_0011_1101
+
+the grouping of bits makes them easier to understand. Not that it is a
+matter of life and death, but it can come in handy once in a while.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+Bytes = $ - ByteF               ; number of volatile databytes
+; ----------------------
+  CODE segment                  ; no ORG, so we start at 0100
+
+         jmp   main
+
+HexTable db    '0123456789ABCDEF', 0
+
+         db    'VeRsIoN=Mem2File 1.3', 0
+         db    'CoPyRiGhT=CopyLeft Jan Verhoeven, jverhoeven@bigfoot.com', 0
+
+Mess001  db    'Mem2File collects a part of conventional memory and '
+         db    'sends it to a file.', cr, lf, lf
+         db    'The syntax is:', cr, lf, lf
+         db    tab, 'Mem2File  segm1:offs1 [-] segm2:offs2 '
+         db    '<path>file.ext.', cr, lf, lf
+         db    'Mem2File is GNU GPL style FREE software. ', cr, lf
+         db    'Please read the GNU GPL if you are in doubt.', cr, lf, lf
+
+Mess002  db    'Mem2File was made by Jan Verhoeven, NL-5012 GH 272, '
+         db    'The Netherlands', cr, lf
+         db    'E-mail address : jverhoeven@bigfoot.com', cr, lf, lf
+Len001 = $ - Mess001
+Len002 = $ - Mess002
+
+Mess004  db    7, 'Error! All numbers are expected to be hexadecimal.'
+         db    cr, lf
+Len004 = $ - Mess004
+;------------------------
+InitMem: mov   di, ByteF        ; Init volatile memory with zero's.
+         mov   cx, Bytes        ; saves a lot of strange problems.
+         mov   al, 0
+         rep   stosb
+         ret
+;------------------------
+--- Mem2File ------------------------------------------------- Break ---
+
+I use volatile data to store data that does not need initialising. This
+saves a lot of diskspace and it loads a lot faster. Drawback of volatile
+data can be that any rubbish left there by other programs can make your
+software go berzerk if you yourself forget to initialise the data.
+
+Therefore I -always- prime the volatile data memory with zero's. Just to
+have a well defined starting position.
+
+It should not be necessary, but, on the other hand, how much overhead
+and extra execution time is such an initialisation routine?
+
+--- Mem2File ------------------------------------------------ Restart --
+
+L0:      mov   b [di], 0        ; terminate argument string
+         mov   [OldClp], si     ; done, => clean up.
+         clc                    ; indicate "No Error"
+L3:      pop   di, si, ax       ; restore registers, ...
+         ret                    ; ... and leave.
+
+GetArg:  push  ax, si, di       ; get next argument from command-line in ASCIIZ
+format
+         mov   si, [OldClp]     ; now, where did we leave last time?
+         cmp   si, 0            ; Have we ever used this routine?
+         IF  E mov  si, 081             ; if not, prime SI, ...
+         mov   di, offset Argument      ; ... DI and ...
+         mov   [ArgNum], 0              ; ... nr of chars in argument.
+L1:      lodsb                  ; get byte
+         cmp   al, ' '          ; skip over spaces, ...
+         je    L1
+         cmp   al, tab          ; ... and tabs.
+         je    L1
+         cmp   al, 1            ; ONLY if AL is 0, we get a carry
+         jc    L3               ; if CARRY, we're done
+
+--- Mem2File ------------------------------------------------- Break ---
+
+This construction is what I particularly like. I want to check if AL is
+Zero. Normally you can code
+
+         cmp   al, 0
+         jz    L3
+
+but L3 is the error-exit and needs the carrybit to be set as an error
+flag. Normally you would enter a
+
+         stc
+
+instruction to fullfill the specification. But that is poor programming.
+It is better to let the software do this for us.
+
+AL can have any value between 020 and 0FF, plus 00, tab, lf and cr. 01
+is not an option. So the sequence
+
+         cmp   al, 1            ; ONLY if AL is 0, we get a carry
+         jc    L3               ; if CARRY, we're done
+
+will send us to the errorexit WITH the carryflag set, all in one,
+without explicitly having to set the carry flag.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+L2:      stosb                  ; else store char in Arguments array
+         inc   [ArgNum]         ; adjust counter
+         lodsb                  ; and get next char
+         cmp   al, ' '          ; is it a delimiting space?
+         je    L0
+         cmp   al, tab          ; or a tab?
+         je    L0
+         cmp   al, ':'          ; or a colon?
+         je    L0
+         cmp   al, 0            ; or an end-of-line?
+         jne   L2               ; if not, loop back,
+         mov   si, 0FFFF        ; else make SI ridiculously high, ...
+         stc                    ; ... set carry flag, ...
+         jmp   L0               ; and get out.
+
+--- Mem2File ------------------------------------------------- Break ---
+
+Ok, ok, ok. I was influenced to make this function by a compiler. No, it
+wasn't C. It was Modula-2.
+
+GetArg (if necessary A86 can operate in a case sensitive mode!) extracts
+the next argument from the command tail. It puts it in a seperate buffer
+at address "Arument" which can hold 80 bytes. Shoyuld be more than
+enough for one word or expression.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+;------------------------
+L1:      stc                    ; byte not in table!
+         pop   dx               ; we came here with carry set!
+         ret                    ; exit
+
+L2:      sub   bx, dx           ; calculate position in table
+         pop   dx
+         clc                    ; make sure carry is cleared
+         ret
+
+--- Mem2File ------------------------------------------------- Break ---
+
+This is a typical A86 construction. The subroutine is called TableFind
+and it starts in the next line and ends in the previous one!
+
+This is done to have the local labels declared for when they are needed
+in the main functionbody. All jumps are "backward". For the CPU there's
+no big influence, but for the assembler there is. No guessing about
+labels.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+TableFind:                      ; find AL in ASCIIZ table [BX] ...
+         push  dx               ; ... and report position
+         mov   dx, bx           ; keep value of SI
+L0:      cmp   b [bx], 0        ; is it end of table?
+         je    L1               ; if so, jump out
+         cmp   al, [bx]         ; compare byte with table
+         je    L2               ; if same, jump out
+         inc   bx               ; else increment pointer
+         jmp   L0               ; and loop back
+;------------------------
+MakeUpper:
+         cmp   al, 'a'          ; too low?
+         jb    ret
+
+--- Mem2File ------------------------------------------------- Break ---
+
+An A86 enhancement: a conditional return instruction. All sensible CPU's
+have conditional CALL and RET instructions. Not the 80x86 line. This CPU
+was meant to be structured.
+
+So you have to put a conditional jump before the call, and introduce yet
+another silly labelname for the next instruction.
+
+The  "Jcc   ret"  is a good way to circumvent this ommission. What it
+does is the same as what, on a Z-80, would be done with a  "RET  cc"
+instruction.
+
+There is one catch, however: there must be a RET instruction within
+reach PRIOR to the "Jcc   Ret" (internal) macro.
+
+If that is a problem, you could also use the line:
+
+        IF cc  Ret
+
+So either way you, the programmer, win.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         cmp   al, 'z'          ; if in range, ...
+         ja    ret
+         and   al, not bit 5    ; ... make uppercase
+
+--- Mem2File ------------------------------------------------- Break ---
+
+A86 is very programmer-oriented and allows us to write down what and how
+we think. So if I need to set bit 0 of register Ax, I will simply write
+
+         or    ax, bit 0
+
+Any value between 0 and 15 is valid in A86 (0 - 31 for A386) to refer to
+the respective bit in the respective source.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         ret
+;------------------------
+BadNumber:                      ; hey typo, you made a dumbo!
+         mov   dx, offset Mess004
+         mov   cx, Len004
+         mov   bx, StdOut
+         mov   ah, 040
+         int   021
+
+         mov   ax, 04C02        ; and exit with errorcode 2
+         int   021
+;------------------------
+SyntErr: mov   dx, offset Mess001
+         mov   cx, Len001
+         mov   bx, StdOut
+         mov   ah, 040          ; print out "help" screen and ...
+         int   021
+
+         mov   ax, 04C01        ; ... exit with errorcode 1
+         int   021
+;------------------------
+L8:      mov   ax, dx           ; Convert has result in DX, that's why.
+         pop   dx, bx
+         ret
+
+Convert: push  bx, dx           ; convert ASCII to Hex.
+         mov   si, offset Argument
+         clr   dx               ; dx will contain result
+
+--- Mem2File ------------------------------------------------- Break ---
+
+Here the macro is invoked. It is used to load the DX register with
+zero. If later you decide to change the way in which you want to clear
+registers, just change the macro.
+
+In LST files (the assembler listings) the expansions are controlled by
+means of the +L switch. If you issue the option "+L35" macro's will not
+be expanded in the listings file.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+L1:      lodsb                  ; get first character
+         cmp   al, 0            ; end of string?
+         je    L8
+         call  MakeUpper                ; if not, make uppercase
+         mov   bx, offset HexTable
+         call  TableFind                ; and lookup in table
+         jc    BadNumber
+         shl   dx, 4            ; multiply DX by 16
+
+--- Mem2File ------------------------------------------------- Break ---
+
+This is another A86 goody. I coded a  "SHL  DX, 4" instruction, although
+I do not know what the target processor will be.
+
+No problem with A86. It will find out with which CPU you are assembling
+and use that. If your CPU supports this function, it is implemented as
+such. If it doesn't this instruction is expanded as a macro into the
+following:
+
+         shl   dx, 1
+         shl   dx, 1
+         shl   dx, 1
+         shl   dx, 1
+
+More code in the executable, but it makes programming easier.
+
+If on a modern CPU, you can force A86 to act as if the CPU were a
+vintage 88 with the commandline switch +P65.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         or    dl, bl           ; bx = index into table
+         jmp   L1               ; repeat until done
+;------------------------
+Credits: mov   dx, offset Mess002
+         mov   cx, Len002
+         mov   bx, stdout
+         mov   ah, 040
+         int   021              ; print some egotripping data
+         ret
+;------------------------
+
+main:    call  InitMem          ; prime volatile data
+         mov   al, [080]        ; get tail length
+         cbw                    ; make 16 bits long
+         mov   si, 081          ; point to start of tail
+         add   si, ax           ; point to end of tail
+         mov   [si], ah         ; make commandtail ASCIIZ
+         call  GetArg           ; get argument from command tail
+         jc    SyntErr          ; if error, get out
+         call  Convert                  ; convert text to hex
+         mov   [Start.SegVal], ax       ; store it
+         call  GetArg                   ; etcetera
+         jc    SyntErr
+         call  Convert
+         mov   [Start.OffVal], ax
+
+L0:      call  GetArg
+         jc    SyntErr
+         cmp   b [Argument], '-'        ; single '-' character?
+         je    L0                       ; if so, ignore it
+         call  Convert
+         mov   [Stop.SegVal], ax
+         call  GetArg
+         jc    SyntErr
+         call  Convert
+         mov   [Stop.OffVal], ax
+
+         call  GetArg
+         IF  C jmp  SyntErr
+
+--- Mem2File ------------------------------------------------- Break ---
+
+This is one of the A86 enhancements. This IF construct prevents that you
+have to make up all kinds of ridiculous labelnames like jmp_001F in a
+construct as follows:
+
+         call  GetArg
+         jnc   jmp_01F
+         jmp   SyntErr
+jmp_01F: ...
+
+The IF construct (not to be confused with the "#IF" construct which is
+for conditional assemblies) enables you to just make a fast jump by
+stating the reverse condition in the IF statement and acting further
+like a high level language:
+
+         IF  C jmp  SyntErr
+
+Neat, isn't it?
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         mov   si, offset Argument
+         add   si, [ArgNum]
+         mov   b [si], 0                ; make it ASCIIZ
+
+         mov   dx, offset FileName      ; same as Argument buffer....
+         mov   cx, 0
+         mov   ah, 03C
+         int   021                      ; create the file
+         IF  C jmp  SyntErr
+
+--- Mem2File ------------------------------------------------- Break ---
+
+See how powerful the IF construct can be? It is a very convenient way to
+circumvent the foolish conditional instructions of the x86 architecture.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         mov   [Handle], ax
+
+         mov   ax, [Stop.SegVal]
+         mov   dx, 0                    ; prime DX
+         mov   cx, 4
+L0:      shl   ax, 1
+         rcl   dx, 1
+         loop  L0                       ; shift upper 4 bits of address into DX
+         add   ax, [Stop.OffVal]
+         adc   dx, 0                    ; now, dx:ax = linear address to stop at
+         mov   [Stop.SegVal], dx
+         mov   [Stop.OffVal], ax        ; store linear address STOP
+
+         mov   ax, [Start.SegVal]
+         mov   dx, 0                    ; prime DX
+         mov   cx, 4
+L0:      shl   ax, 1
+         rcl   dx, 1
+         loop  L0                       ; shift upper 4 bits of address into DX
+         add   ax, [Start.OffVal]
+         adc   dx, 0                    ; now, dx:ax = linear address to start
+from
+         mov   [Start.SegVal], dx
+         mov   [Start.OffVal], ax       ; store linear address START
+
+         cmp   dx, [Stop.SegVal]        ; start > stop?
+         ja    >L1                      ; fix it!
+         jb    >L2
+
+--- Mem2File ------------------------------------------------- Break ---
+
+A86 likes to have as much as possible labels declared before they are
+referenced. That's why many times there is code "before" the subroutine
+name is declared.
+
+For local labels (i.e. labels that consist of 1 letter and the rest
+decimal digits) it is a MUST that they are defined before being
+referenced.
+
+If, for some reason, you do not want to put a label backwards in memory,
+you can forward reference a local label by prefixing it with a ">" sign.
+A86 now knows that the local label still has to come. Not a luxury since
+many A86 programmers can do with 4 or 5 local labels in over 2000 lines
+of code.... Especially L0 is always very well available.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         cmp   ax, [Stop.OffVal]        ; start > stop?
+         jbe   >L2                      ; if not, OK
+L1:      push  [Stop.SegVal]
+         push  [Stop.OffVal]            ; swap start and stop addresses
+         mov   [Stop.SegVal], dx
+         mov   [Stop.OffVal], ax
+         pop   [Start.OffVal]
+         pop   [Start.SegVal]
+
+L2:      mov   dx, [Stop.SegVal]
+         mov   ax, [Stop.OffVal]
+         add   ax, 1
+         adc   dx, 0                    ; limits are INCLUSIVE
+         sub   ax, [Start.OffVal]
+         sbb   dx, [Start.SegVal]       ; dx:ax = bytes to move
+
+         shl   ax, 1
+         rcl   dx, 1
+         shl   ax, 1
+         rcl   dx, 1                    ; dx = nr of 16 Kb blocks to move
+         mov   [Blocks], dx             ; store it
+         shr   ax, 2                    ; ax = remainder to move
+         mov   [Rest], ax               ; save it
+
+         mov   ax, [Start.SegVal]       ; end of linear addressing, we're going
+to DOS!
+         mov   cl, 12
+         shl   ax, cl
+         mov   [Start.SegVal], ax
+
+         mov   es, ds           ; use es to refer to data
+         mov   bx, [Handle]
+         lds   dx, d [Start]
+
+--- Mem2File ------------------------------------------------- Break ---
+
+Normally this instruction would require a secretary with 100 letters per
+minute typing rate:
+
+         lds   dx, dword ptr [Start]
+
+But the "ptr" argument is always the same, so it is only there to please
+the assembler and humiliate the programmer: entering data that nobody
+needs.
+
+Therefore A86 only needs the first letter of such prose. In our case:
+the "dword ptr" is abbreviated to a "d". "Byte ptr" is a "b". "Word Ptr"
+is a "w". Simple as that.
+
+So if your coding skills outweigh your typing speed, you should consider
+switching to the superior assembler. :)
+
+--- Mem2File ------------------------------------------------ Restart --
+
+      es cmp   [Blocks], 0      ; if less than 16 Kb, skip this one.
+
+--- Mem2File ------------------------------------------------- Break ---
+
+For people who still remember that  "Seg  ES"  is a legal instruction
+(used for a segment override) this might bring back memories.
+
+A86 allows the user to put the segmentation override before the actual
+instruction. This way, the operand field looks neater. And it is also
+the way in which D86 shows segmentation overrides.
+
+--- Mem2File ------------------------------------------------ Restart --
+
+         je    >S0
+         mov   cx, 16K
+L0:      mov   ah, 040
+         int   021
+         mov   ax, ds           ; store ds into ax
+         add   dx, 04000        ; next buffer to load data from
+         IF  C add  ax, 01000   ; if carry, inc ds
+         mov   ds, ax           ; ds:dx now ready for next bufferfull of data
+
+      es dec   [Blocks]
+         jnz   L0
+
+S0:   es cmp   [Rest], 0
+         je    >L1
+         mov   ah, 040
+      es mov   cx, [Rest]
+         int   021
+L1:      mov   ds, es
+
+         mov   bx, [Handle]
+         mov   ah, 03E
+         int   021              ; close file
+
+         call  Credits          ; show my ego
+         mov   ax, 04C00
+         int   021              ; exit to DOS
+
+--- Mem2File -------------------------------------------------- End ----
+
+That's it.
+
+jverhoeven@bigfoot.com
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                       Formatted Numeric Output
+		                                       by Laura Fairhead
+
+
+   Here I am going to present you with a very useful routine for numeric
+output. I have been using it myself for sometime and now I think it is
+almost perfect.
+
+   It consists of 2 basic API's. The first (nuconvs), you call when you
+want to change the parameters of the main routine (nuconv). You simply call
+it with one DWORD in EAX, this specifies the following:
+
+  EAX = SSFFPPRR           (hexadecimal value of course)
+  SS    size    size of the datum you will be calling the main routine with,
+                only 3 values are valid:
+                        0=byte
+                        1=word
+                        2=dword
+  FF    field   size of a field in which to right-justify the number,
+                if this is = 0 then there is no right-justification you
+                only get the number
+  PP    pad     the ASCII value of the character to use to right-justify
+                the number in the field of output
+  RR    radix   the radix to output the number in
+
+   Once you've set the control parameters you can call the main routine
+(nuconv) freely to do the work. You call the main routine with ES:DI set
+to where the output is to be stored, and the value to be output in AL or
+AX or EAX (depending on what data size you set).
+
+   I use the word 'output' here which might conjure up images of the screen,
+but in fact what we are doing here is writing all the ASCII to memory.
+This is much more powerful than incorporating all that OS/application
+specific nonsense, and it really doesn't cost much overhead at all (in
+fact this is the way C does it and even though I **HATE** C, here it is
+right on the mark;)
+
+   Here is the code:
+
+================START OF CODE==============================================
+;
+;nuconvs- set control parameters for 'nuconv'
+;
+;     !!  this must be called at least once before calling nuconv
+;
+;entry:   EAX=SSFFPPRR  (hex digits)
+;
+;         where:  SS=data size (0=byte,1=word,2=dword)
+;                 FF=field size (0=none)
+;                 PP=pad char
+;                 RR=radix (2-16)
+;
+;     !!  these parameters must be set correctly by the application
+;     !!  they are not validated in anyway and invalid parameters
+;     !!  will cause undefined operation
+;
+;exit:    (all registers preserved)
+;
+
+nuconvs PROC NEAR
+        MOV DWORD PTR CS:[nuradix],EAX
+        RET
+nuconvs ENDP
+
+;
+;control parameters
+;
+;   !!  these absolutely must be in the below order due to the way the above
+;       routine works
+;
+
+nuradix DB ?            ;output radix
+nupad   DB ?            ;pad character
+nufld   DB ?            ;field size
+nudsiz  DB ?            ;data size
+
+;
+;nuconv- output value in accumalator -> ES:DI
+;
+;     !! see 'nuconvs' header for more information
+;
+;entry:  AL|AX|EAX=value to output
+;        ES:DI=address to write output data
+;
+;        size of accumulator that is used depends on what the current data
+;        size is ( as specified by a previous call to 'nuconvs' )
+;
+;
+;exit:   DI=updated to offset of last character + 1
+;
+;        (all other registers preserved)
+;
+
+nuconv  PROC NEAR
+;
+;all registers are going to be preserved
+;
+        PUSH DS
+        PUSH EAX
+        PUSH EBX
+        PUSH CX
+        PUSH EDX
+;
+;save some CS: overrides
+;
+        PUSH CS
+        POP DS
+;
+;initialise
+;
+; set EBX =radix
+;     CX  =fieldsize
+;
+; also we zero pad out the datum passed so it fills EAX
+;
+        XOR EBX,EBX
+
+        CMP BL,BYTE PTR DS:[nudsiz]
+        JNP SHORT ko1
+        JS SHORT ko0
+        MOV AH,0
+ko0:    DEC BX
+        AND EAX,EBX
+        INC BX
+ko1:
+
+        MOV BL,BYTE PTR DS:[nuradix]
+        MOV CH,0
+        MOV CL,BYTE PTR DS:[nufld]
+;
+;calculate digits and push to stack
+;
+;  EAX is divided and modulus taken which is the standard way,
+;  loop exits when it reaches 0 or the field size is hit
+;  notice that if CX=0 on entry to this then the field size
+;  will be effectively unbounded
+;
+nulop0: XOR EDX,EDX
+        DIV EBX
+        PUSH DX
+        AND EAX,EAX
+        LOOPNZ nulop0
+;
+;'output' the field padding
+;
+;  the number of padding characters is normally the value
+;  now in CX (ie: fieldsize - digits ). however no pad chars
+;  should be output if field size = 0. i think the check here
+;  for this is nice and tight (read the code...)
+;
+        MOV BX,CX
+        NEG BX
+        JNS SHORT ko
+        MOV AL,BYTE PTR DS:[nupad]
+        REP STOSB
+ko:
+;
+;'output' all the digits
+;
+;  CX is set to the number of digits on the stack we have to output
+;  ie: fieldsize - ( fieldsize - digits )
+;
+        MOV CH,0
+        MOV CL,BYTE PTR DS:[nufld]
+        ADD CX,BX
+;
+;  now we pop off those #CX digits translating into ASCII using a nice
+;  variation of the traditional speed method
+;
+        MOV BX,OFFSET nudat
+
+nulop1: POP AX
+        XLAT
+        STOSB
+        LOOP nulop1
+;
+;  restore all registers and exit (in case it wasn't obvious!)
+;
+        POP EDX
+        POP CX
+        POP EBX
+        POP EAX
+        POP DS
+        RET
+;
+nudat   DB "0123456789ABCDEF"
+;
+nuconv  ENDP
+
+==================END OF CODE==============================================
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                            Linked Lists in ASM
+                                                            by mammon_
+
+
+Assembly language is notorious for being low-level; to wit, it lacks many of
+the features in higher-level languages which make programming easier. In the
+course of my work in the visasm project I have put quite a bit of time into
+working on exactly which higher language features are important and which, in a
+nutshell, are swill.
+
+One of the areas in which assembly language is lacking is the use of dynamic
+structures. Pointer manipulation in asm is simple and clear for up to one
+level of redirection; further redirection causes the code to quickly become a
+confusion of register juggling and indirect addressing. As a result,
+implementing even a simple linked list in assembly language can be tedious
+enough to make one rewrite the project in C.
+
+In this article I have undertaken an implementation of a linked list in NASM;
+the implementation is generic enough to support more complex data structures,
+and should port to other assemblers with few changes.
+
+To begin with, one must define the memory allocation routines for use in the
+application; I have chosen Win32 for convenience. The routines defined below
+are for local heap allocation and for the Win32 console interface to allow the
+use of STDOUT on the console.
+;=========================================================Win32 API Definitions
+STD_INPUT_HANDLE     EQU        -10     ;nStdHandle types
+STD_OUTPUT_HANDLE    EQU        -11
+STD_ERROR_HANDLE     EQU  	-12
+
+EXTERN AllocConsole                     ;BOOL AllocConsole()
+EXTERN GetStdHandle                     ;HANDLE GetStdHandle( nStdHandle )
+EXTERN WriteConsoleA  ;HANDLE hConsole, lpBuffer, Num2Write, lpWritten,NULL
+EXTERN ExitProcess    ;UINT ExitCode
+EXTERN GetProcessHeap ;
+EXTERN HeapAlloc      ;HANDLE hHeap,DWORD dwFlags, DWORD dwBytes:ret ptr
+EXTERN HeapFree       ;HANDLE hHeap,DWORD dwFlags, LPVOID lpMem
+EXTERN HeapReAlloc    ;HANDLE hHeap,DWORD dwFlags,LPVOID lpMem,DWORD dwBytes
+EXTERN HeapDestroy    ;HANDLE hHeap
+%define HEAP_NO_SERIALIZE               0x00000001
+%define HEAP_GROWABLE                   0x00000002
+%define HEAP_GENERATE_EXCEPTIONS        0x00000004
+%define HEAP_ZERO_MEMORY                0x00000008
+%define HEAP_REALLOC_IN_PLACE_ONLY      0x00000010
+%define HEAP_TAIL_CHECKING_ENABLED      0x00000020
+%define HEAP_FREE_CHECKING_ENABLED      0x00000040
+%define HEAP_DISABLE_COALESCE_ON_FREE   0x00000080
+%define HEAP_CREATE_ALIGN_16            0x00010000
+%define HEAP_CREATE_ENABLE_TRACING      0x00020000
+%define HEAP_MAXIMUM_TAG                0x0FFF
+%define HEAP_PSEUDO_TAG_FLAG            0x8000
+%define HEAP_TAG_SHIFT                  16
+;===========================================================End API Definitions
+
+
+In addition, it is useful to define a few common routines for use later:
+;==============================================================Utility Routines
+[section data class=DATA use32]             ;set up the segments early
+%macro STRING 2+
+%1:      db %2
+.end:
+%define %1.length  %1.end - %1
+%endmacro
+[section code class=CODE use32]
+
+GetConsole:
+;GetConsole()
+[section data]
+hConsole        DD      0
+[section code]
+        call AllocConsole
+	push dword STD_OUTPUT_HANDLE
+	call GetStdHandle
+        mov [hConsole], eax
+        xor eax, eax
+        ret
+
+puts:
+;puts( ptrString, NumBytes )
+[section data]
+NumWrote        DD 0
+[section code]
+%define _ptrString ebp + 8
+%define _strlen ebp + 12
+        push ebp
+        mov ebp,esp
+        push eax
+        push dword 0
+	push dword NumWrote
+        mov eax, [ _strlen ]
+        push dword eax
+        mov eax, [ _ptrString ]
+        push dword eax
+        push dword [hConsole]
+        call WriteConsoleA
+        pop eax
+	mov esp, ebp
+	pop ebp
+        ret 8
+;==========================================================End Utility Routines
+The STRING macro is particular interesting; it allows one to define a string
+in the data segment as
+        STRING label, 'contents of string',0Dh,0Ah
+while defining the constant label.length as the total length of the string.
+This will come in handy during the many calls to puts, which is used to write
+to the Win32 console. Puts has the syntax
+        puts( lpString, strLength )
+and returns the result of WriteConsole, a BOOL value. GetConsole is a routine
+provided to move the Win32 console allocation code out of the main program; it
+takes no parameters and defines the hConsole handle.
+
+The linked list implementation has been designed to be extendable; the routine
+names are prefaced with underscores to avoid filling up the namespace of the
+linked list application, and the routines themselves are generic enough to be
+called from higher-level Stack, Queue, and List implementations. The Linked
+List interface is as follows:
+        ptrHead    _create_list( hHeap, NodeSize )
+        void       _delete_list( hHeap, ptrHead)
+        ptrNode    _add_node( hHeap, ptrPrev, NodeSize )
+        void       _delete_node( hHeap, ptrPrev, ptrNode )
+        void       _set_node_data( ptrNode, NodeOffset, data )
+        DWORD data _get_node_data( ptrNode, NodeOffset )
+The names of the routines should make their intent apparent; note however that
+NodeSize is assumed to be the size of a LISTSTRUCT structure.
+;====================================================Linked List Implementation
+[section data]
+;Define .next as offset Zero for use in generic functions
+    struc _llist
+     .next:      resd 1                         ;this is basically a constant
+    endstruc
+
+;Macro to ensure that .next is always at offset zero in user-defined lists
+%macro LISTSTRUCT 1
+  struc %1
+  .next:        resd 1
+%endmacro
+%macro END_LISTSTRUCT 0
+  endstruc
+%endmacro
+
+[section code]
+;Note that these assume an LISTSTRUCT base type
+_create_list:
+; ptrHead_create_list( hHeap, NodeSize )
+%define _hHeap ebp + 8
+%define _ListSize ebp + 12
+        ENTER 0 , 0
+        push dword [_ListSize]                  ;size of LISTSTRUCT
+        push dword HEAP_ZERO_MEMORY             ;FLAG for HeapAlloc
+        push dword [_hHeap]                     ;Heap being used
+	call HeapAlloc
+        test eax, eax
+        jz .Error                               ;Alloc failed!
+        mov [eax + _llist.next], dword 0        ;.next pointer = NULL
+.Exit:  LEAVE                                   ;eax = ptrHead
+        ret 8
+.Error: xor eax, eax                            ;error = return NULL
+        jmp .Exit
+
+_delete_list:
+; _delete_list( hHeap, ptrHead)
+%define _hHeap ebp + 8
+%define _ptrHead ebp + 12
+        ENTER 0, 0
+        push eax
+        push ebx                                ;save registers
+        mov eax, [_ptrHead]                     ;eax = addr of list head node
+.DelNode:
+        mov ebx, [eax + _llist.next]            ;ebx = [eax].next
+        push eax                                ;free addr in eax
+        push dword 0                            ;FLAG
+        push  dword [_hHeap]                    ;local heap
+        call HeapFree
+        test ebx, ebx                           ;is [eax].next == NULL?
+        jz .Exit                                ;if yes then done
+        mov eax, ebx                            ;loop until done
+        jmp .DelNode
+.Exit:  pop ebx
+        pop eax
+        LEAVE
+        ret 8
+
+_add_node:
+; ptrNode _add_node( hHeap, ptrPrev, NodeSize )
+%define _hHeap ebp + 8
+%define _ptrPrev ebp + 12
+%define _ListSize ebp + 16
+        ENTER 0, 0
+        push edx                                ;HeapAlloc kills edx!!
+        push ebx
+        push ecx                                ;save registers
+        mov ebx, [_ptrPrev]                     ;ebx = node to add after
+        push dword [_ListSize]                  ;size of node
+        push dword HEAP_ZERO_MEMORY             ;FLAG
+        push dword [_hHeap]                     ;local heap
+	call HeapAlloc
+	test eax, eax
+        jz .Error                               ;alloc failed!
+        mov ecx, eax                            ;note -- eax = ptrNew
+        add ecx, _llist.next                    ;ecx = ptrNew.next
+        mov [ecx], ebx                          ;ptrNew.next = ptrPrev.next
+        add ebx, _llist.next                    ;note -- ebx = ptrPrev
+        mov [ebx], eax                          ;ptrPrev.next = ptrNew
+.Exit:  pop ecx
+        pop ebx
+        pop edx
+        LEAVE
+        ret 12
+.Error: xor eax, eax                            ;return NULL on failure
+        jmp .Exit
+
+_delete_node:
+; _delete_node( hHeap, ptrPrev, ptrNode )
+%define _hHeap ebp + 8
+%define _ptrPrev ebp + 12
+%define _ptrNode ebp + 16
+        ENTER 0, 0
+        push ebx
+        mov eax, [_ptrNode + _llist.next]       ;eax = ptrNode.next
+        mov ebx, [_ptrPrev]                     ;
+        mov [ebx + _llist.next], eax            ;ptrPrev.next = ptrNode.next
+        push dword [_ptrNode]                   ;free ptrNode
+        push dword 0                            ;FLAG
+        push dword [_hHeap]                     ;local heap
+        call HeapFree
+        pop ebx
+        LEAVE
+        ret 12
+
+_set_node_data:
+; _set_node_data( ptrNode, NodeOffset, data )
+%define _ptrNode ebp + 8
+%define _off ebp + 12
+%define _data ebp + 16
+        ENTER 0, 0
+        push eax
+        push ebx
+        mov eax, [_ptrNode]                     ;eax = ptrNode
+        add eax, [ _off ]                       ;eax = ptrNode.offset
+        mov ebx, [_data]                        ;ebd = data
+        mov [eax], ebx                          ;ptrNode.offset = data
+        pop ebx
+        pop eax
+        LEAVE
+        ret 12
+
+_get_node_data:
+; DWORD data _get_node_data( ptrNode, NodeOffset )
+%define _ptrNode ebp + 8
+%define _off ebp + 12
+        ENTER 0, 0
+        mov eax, [_ptrNode]                     ;eax = ptrNode
+        add eax, [_off]                         ;eax = ptrNode.offset
+        mov eax, [eax]                          ;return [ptrNode.offset]
+        LEAVE
+        ret 8
+;===============================================================End Linked List
+The LISTSTRUCT structure is perhaps the most crucial part of this implemen-
+tation. In NASM, a structure is simply a starting address with local labels
+defined as constants which equal the offset of the local label from the start
+of the structure. Thus, in the structure
+   struc MyStruc
+     .MyVar   resd 1
+     .MyVar2  resd 1
+     .MyVar3  resd 1
+     .MyByte  resb 1
+   endstruc
+the constant MyStruc.MyVar has a value of 0 [0 bytes from the start of the
+structure], MyStruc.MyVar2 has a value of 4, MyStruc.MyVar3 has a value of 8,
+MyStruc.MyByte has a value of 12, and MyStruc_size [defined as the offset of
+the "endstruc" directive] has a value of 13. Note that in NASM, the name of a
+structure instance determines the address in memory of the instance [i.e., it
+is a simple code label], while the constants defined in the structure
+definition allow access to offsets from that address.
+
+What this means is that structures in NASM can be defined and never instant-
+iated, allowing the convenient use of the structure constants for dynamic
+memory structures such as classes and linked list nodes. The above code uses
+the LISTSTRUCT macro to force all linked list nodes to have a ".next" member;
+this also allows the use of the constant "_llist.next" in the linked list
+routines to avoid  having to pass the offset of the ".next" member for a node.
+
+The implementation routines should be pretty straight forward. _create_list
+allocates memory from the local heap of the size of one list node [determined
+by the parameter NodeSize passed to _create_list] and returns the address of
+the allocated memory; since this node is assumed to be the list "head", the
+.next member is set to NULL. _delete_list is passed the address of the head
+node of the list; it saves the address in the .next member of the node and
+then frees the memory allocated to the node, repeating this with each .next
+link until the .next member is NULL [indicating an end of list].
+
+_add_node is used to insert a node into an existing list; it is passed the
+address of the node after which the new node is to be inserted. The .next
+member of this node is moved into the .next member of the new node, and
+replaced with the address of the new node. Thus, if before insertion the list
+had the structure
+      .next [Node1] --> .next [Node2] --> .next [NULL]
+      .data NULL        .data Node1       .data Node2
+then it would have the following structure after insertion following Node1:
+      .next [Node1] --> .next [NewNode] --> .next [Node2] --> .next [NULL]
+      .data NULL        .data Node1         .data NewNode     .data Node2
+_del_node does the opposite of _add_node; it moves the .next member of the
+node to be deleted into the .next member of the preceding node, then frees the
+specified node.
+
+Note that both _del_node and _add_node are designed to be as generic as
+possible and make no assumptions regarding the linked list structure; thus in
+a double linked list of the format
+     struc DLLIST
+      .next
+      .prev
+      .data
+     endstruc
+one could front-end the Delete function as follows:
+DelNode:
+        push dword eax                   ;eax = Node to delete
+        push dword [eax + DLLIST.prev]
+        push hHeap
+        call _del_node
+        ret 8
+The other linked list routines can be provided with similar front-ends to take
+care of common heap handles, list sizes, and member assignments.
+
+Both the _set_node_data and the _get_node_data routines are basic pointer
+manipulations added for code clarity. Each could be rewritten inline; for
+example, the _get_node_data routine can be implemented as
+        add ebx, offset
+        mov eax, [ebx]
+assuming ebx holds the node to be accessed and "offset" is the offset [or
+constant] of the node member to be accessed.
+
+Below is a simple program which makes a four-node linked list of the format
+        .next Node1 --> .next Node2 --> .next Node3 --> .next NULL
+        .prev NULL  <-- .prev Head  <-- .prev Node1 <-- .prev Node2
+        .data NULL      .data 'node1'   .data 'node2'   .data 'node3'
+Note the use of the NewNode routine, which provides a front-end to _add_node
+which sets the .prev member for the new node. One brief caveat, the example
+does not delete the list, as the Win32 heap is deallocated on program
+termination; neither is there any substantial error checking in the sample.
+
+;=======================================================Linked List Application
+[section data]
+hHeap    dd 0
+ptrHead	 dd 0
+STRING strData1, 'node 1',0Dh,0Ah
+STRING strData2, 'node 2',0Dh,0Ah
+STRING strData3, 'node 3',0Dh,0Ah
+STRING strStart, 'Creating List',0Dh,0Ah
+STRING strDone, 'Finished!',0Dh,0AH,'Printing Data...',0Dh,0Ah
+STRING strErr, 'Error!',0Dh, 0AH
+
+LISTSTRUCT llist
+.prev   resd 0
+.data   resd 0
+END_LISTSTRUCT
+
+[section code]
+Error:
+        push dword strErr.length
+        push dword strErr
+	call puts
+        jmp Exit
+
+..start:
+	call GetProcessHeap
+        mov [hHeap], eax
+        call GetConsole
+
+        push dword strStart.length
+        push dword strStart
+	call puts
+
+CreateList:
+        push dword llist_size
+        push dword [hHeap]
+        call _create_list
+        test eax, eax
+        jz Error
+        mov [ptrHead], eax
+        push dword 0
+        push dword llist.data
+        push eax
+        call _set_node_data             ;set ptrHead.data to NULL
+        push dword 0
+        push dword llist.prev
+        push eax
+        call _set_node_data             ;set ptrHead.prev to NULL
+
+        call NewNode                    ;create Node1
+        test eax, eax
+        jz ListDone
+        push dword strData1
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node1.data to 'node1'
+
+        call NewNode                   ;create Node2
+        test eax, eax
+        jz ListDone
+        push dword strData2
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node2.data to 'node2'
+
+        call NewNode                   ;create Node3
+        test eax, eax
+        jz ListDone
+        push dword strData3
+        push dword llist.data
+        push eax
+        call _set_node_data            ;set Node3.data to 'node3'
+
+ListDone:
+        push dword strDone.length
+        push dword strDone
+        call puts
+
+        mov ebx, [ptrHead]
+PrintList:
+        push dword _llist.next
+        push ebx
+        call _get_node_data             ;could have been mov eax,[ebx]
+
+        test eax, eax                   ;if ptrCurrent.next == NULL exit
+        jz Exit                         ; [end of list]
+        mov ebx, eax                    ;save ptrNode
+        push dword strData1.length      ;push length for call to puts
+        push dword llist.data
+        push ebx
+        call _get_node_data             ;get ptrNode.data
+        push dword eax                  ;push string for call to puts
+        call puts
+        jmp PrintList                   ;loop
+
+Exit:
+	push dword 0
+        call ExitProcess
+
+NewNode:
+        ENTER 0, 0
+        push edx
+        mov edx, eax                    ;save previous node
+        push dword llist_size
+        push dword eax
+        push dword [hHeap]
+        call _add_node
+        test eax, eax
+        jz .Done
+        push dword eax
+        push dword llist.next
+        push dword edx
+        call _set_node_data             ;set ptrPrev.next to ptrNew
+        push edx
+        push dword llist.prev
+        push eax
+        call _set_node_data             ;set ptrNew.prev to ptrPrev
+        push dword 0
+        push dword llist.next
+        push eax
+        call _set_node_data             ;set PtrNew.next to  NULL
+.Done   pop edx
+        LEAVE                           ;eax is still set to ptrNew
+        ret
+;==========================================================================EOF
+As mentioned earlier, this is a generic implementation of dynamic structures
+designed with linked lists in mind. The macros and routines may be included in
+a header file such as llist.h and used to automate the creation of dynamic
+memory structures in future projects. In addition, further macros and routines
+can be added to provide specific implementations of Single Linked Lists,
+Double Linked Lists, Circular Lists, Stacks, Queues, and Deques.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                     Structured Exception Handling under Win32
+				     by Chris Dragan
+
+
+   Structured Exception  Handling is a powerful feature of all Win32 platforms
+that allows  a program to recover from any  critical errors like BOUND, divide
+overflow, page missing or general protection fault. It is documented  only for
+C-level usage (try-except/finally  syntax), and no documentation for low level
+languages exists. Therefore I will try to show how to use it.
+
+   The starting point  for Structured Exception Handling,  SEH,  is the Thread
+Info Block. TIB, as  almost all the other structures, is described  in winnt.h
+file that comes with PlatformSDK.
+
+struc	NT_TIB
+	ExceptionList		dd ?	; Used by SEH
+	StackBase		dd ?	; Used by functions to check for
+	StackLimit		dd ?	;  stack overflow
+	SubSystemTib		dd ?	; ?
+	FiberDataOrVersion	dd ?	; ?
+	ArbitraryUserPointer	dd ?	; ?
+	Self			dd ?	; Linear address of the TIB
+ends
+
+TIB is accessible at address fs:0. NT_TIB.Self contains linear address of TIB,
+base of FS segment.
+
+   When an exception occurs, the system uses (dword)fs:0, NT_TIB.ExceptionList
+to find an exception handler and execute it. The exception  list entry is very
+simple:
+
+struc	E_L_ENTRY
+	Next			dd ?	; Points to next entry in the list
+	ExceptionHandler	dd ?	; User callback - exception hook
+	Optional		db X dup (?) ; Exception Handler data
+	EntryTerminator 	dd -1	; Optional
+ends
+
+C compilers  usually keep  some additional  information  in E_L_ENTRY.Optional
+field of varying size  and usually terminated  with (dword)-1.	Both .Optional
+and .EntryTerminator fields are not required.
+
+   Before  calling   an  exception   handler,  the  exception  manager	pushes
+ExceptionRecord and ContextRecord onto the stack. These structures identify an
+exception and  processor state before it. The exception manager  adds also its
+own entry to the exception list.
+
+   Exception  handler  is  in  fact  a typical	callback. It  is  not  however
+installed  by any API function, but appended  in E_L_ENTRY into  the exception
+list.
+
+EXCEPTION_DISPOSITION __cdecl _except_handler (
+    struct _EXCEPTION_RECORD *ExceptionRecord,
+    void * EstablisherFrame,
+    struct _CONTEXT *ContextRecord,
+    void * DispatcherContext
+    );
+
+The exception  handler uses C-style  calling convention, it  does not  release
+arguments while returning. The	most important parameters  are ExceptionRecord
+and ContextRecord, described at the end of this text, that point to the pushed
+corresponding  structures. I do not  have yet any  idea what is the purpose of
+EstablisherFrame and DispatcherContext.
+
+struc	EXCEPTION_RECORD
+	ExceptionCode		dd ?	; See at the end of this text
+	ExceptionFlags		dd ?
+	ExceptionRecord 	dd ?	; ?
+	ExceptionAddress	dd ?	; Linear address of faulty instruction
+	NumberParameters	dd ?	; Corresponds to the field below
+	ExceptionInformation	dd 15 dup (?) ; ?
+ends
+
+Exception flags are:
+
+EXCEPTION_NONCONTINUABLE	= 1
+EXCEPTION_UNWINDING		= 2
+EXCEPTION_UNWINDING_FOR_EXIT	= 4
+
+   The exception handler has two possible ways of proceeding. It can return to
+the exception manager, or it can unwind the stack and continue the program. In
+the first case it has to return one of the following values:
+
+enum	EXCEPTION_DISPOSITION \
+	ExceptionContinueExecution  = 0,\
+	ExceptionContinueSearch     = 1,\
+	ExceptionNestedException    = 2,\
+	ExceptionCollidedUnwind     = 3
+
+The  value  of	zero  forces  the exception  manager  to continue  the program
+at saved in context cs:eip, which may be altered by the exception handler. The
+value of 1 causes  the exception manager to call another exception handler  in
+the exception list. Values 2 and 3 inform  the exception manager that an error
+occured - an exception-in-exception happened, or the handler  wanted to unwind
+the stack  during another handler of higher  instance was  doing this already.
+The   other  case   can   be   determined   if	 one   of  .ExceptionFlags  is
+EXCEPTION_UNWINDING or EXCEPTION_UNWINDING_FOR_EXIT.
+
+   While  appending  a new exception handler  to  the exception list, a common
+practice is to push new E_L_ENTRY onto the stack. This way unwinding the stack
+can be done simply by skipping the exception manager's entry and restoring the
+stack pointer.
+
+Here is an example of exception handling.
+
+----Start-of-file-------------------------------------------------------------
+
+ideal
+p686n
+model flat, stdcall
+
+  O	equ <offset>
+
+  struc EXCEPTION_RECORD
+	ExceptionCode		dd ?
+	ExceptionFlags		dd ?
+	ExceptionRecord 	dd ?
+	ExceptionAddress	dd ?
+	NumberParameters	dd ?
+	ExceptionInformation	dd 15 dup (?)
+  ends
+
+  procdesc wsprintfA c :dword, :dword, :dword:?
+  procdesc MessageBoxA :dword, :dword, :dword, :dword
+  procdesc ExitProcess :dword
+
+udataseg
+
+  ExCode	dd ?
+  szCode	db 12 dup (?)
+
+dataseg
+
+  szWindowTitle db 'Exception code', 0
+  szFormat	db '%0X', 0
+
+codeseg
+
+proc	main
+		; Install exception handler
+			push	O ExceptionHandler
+			push	[dword fs:0]	; E_L_ENTRY.Next
+			mov	[fs:0], esp	; Append new E_L_ENTRY
+
+		; Cause Invalid Opcode exception
+			ud2
+
+		; Display exception code and quit
+_Continue:		call	wsprintfA, O szCode, O szFormat, [ExCode]
+			call	MessageBoxA, 0, O szCode, O szWindowTitle, 0
+			call	ExitProcess, 0
+endp
+
+proc	ExceptionHandler c ExceptionRecord, EF, ContextRecord, DC
+		; Save exception code
+			mov	eax, [ExceptionRecord]
+			mov	ecx, [(EXCEPTION_RECORD eax).ExceptionCode]
+			mov	[ExCode], ecx
+
+		; Unwind the stack
+			mov	eax, [fs:0]	; Exception Manager's entry
+			mov	esp, [eax]	; Our entry
+			pop	[dword fs:0]	; Restore fs:0
+			add	esp, 4		; Skip ExHandler address
+			jmp	_Continue
+endp
+
+end main
+
+----End-of-file---------------------------------------------------------------
+
+The above source should be compiled with TASM 5.0r or later like this:
+  tasm32 /ml except.asm
+  tlink32 /x /Tpe /aa /c /V4.0 except.obj,,, LIBPATH\import32.lib
+
+   And here  are other	important  constants  and  structures, all  defined in
+winnt.h PlatformSDK file.
+
+Exception codes:
+----------------
+
+STATUS_SEGMENT_NOTIFICATION	= 040000005h
+STATUS_GUARD_PAGE_VIOLATION	= 080000001h
+STATUS_DATATYPE_MISALIGNMENT	= 080000002h
+STATUS_BREAKPOINT		= 080000003h
+STATUS_SINGLE_STEP		= 080000004h
+STATUS_ACCESS_VIOLATION 	= 0C0000005h
+STATUS_IN_PAGE_ERROR		= 0C0000006h
+STATUS_INVALID_HANDLE		= 0C0000008h
+STATUS_NO_MEMORY		= 0C0000017h
+STATUS_ILLEGAL_INSTRUCTION	= 0C000001Dh
+STATUS_NONCONTINUABLE_EXCEPTION = 0C0000025h
+STATUS_INVALID_DISPOSITION	= 0C0000026h
+STATUS_ARRAY_BOUNDS_EXCEEDED	= 0C000008Ch
+STATUS_FLOAT_DENORMAL_OPERAND	= 0C000008Dh
+STATUS_FLOAT_DIVIDE_BY_ZERO	= 0C000008Eh
+STATUS_FLOAT_INEXACT_RESULT	= 0C000008Fh
+STATUS_FLOAT_INVALID_OPERATION	= 0C0000090h
+STATUS_FLOAT_OVERFLOW		= 0C0000091h
+STATUS_FLOAT_STACK_CHECK	= 0C0000092h
+STATUS_FLOAT_UNDERFLOW		= 0C0000093h
+STATUS_INTEGER_DIVIDE_BY_ZERO	= 0C0000094h
+STATUS_INTEGER_OVERFLOW 	= 0C0000095h
+STATUS_PRIVILEGED_INSTRUCTION	= 0C0000096h
+STATUS_STACK_OVERFLOW		= 0C00000FDh
+STATUS_CONTROL_C_EXIT		= 0C000013Ah
+STATUS_FLOAT_MULTIPLE_FAULTS	= 0C00002B4h
+STATUS_FLOAT_MULTIPLE_TRAPS	= 0C00002B5h
+STATUS_ILLEGAL_VLM_REFERENCE	= 0C00002C0h
+
+Context flags:
+--------------
+
+CONTEXT_i386			= 000010000h
+CONTEXT_i486			= 000010000h
+
+CONTEXT_CONTROL 	   = (CONTEXT_i386 or 1) ; SS:ESP, CS:EIP, EFLAGS, EBP
+CONTEXT_INTEGER 	   = (CONTEXT_i386 or 2) ; EAX, EBX,..., ESI, EDI
+CONTEXT_SEGMENTS	   = (CONTEXT_i386 or 4) ; DS, ES, FS, GS
+CONTEXT_FLOATING_POINT	   = (CONTEXT_i386 or 8) ; 387 state
+CONTEXT_DEBUG_REGISTERS    = (CONTEXT_i386 or 16); DB 0-3,6,7
+CONTEXT_EXTENDED_REGISTERS = (CONTEXT_i386 or 32); cpu specific extensions
+
+CONTEXT_FULL		   = (CONTEXT_CONTROL or CONTEXT_INTEGER or\
+			      CONTEXT_SEGMENTS)
+
+Context structure:
+------------------
+
+struc	CONTEXT
+	ContextFlags		dd ?		; CONTEXT_??? flags
+
+	Dr0			dd ?		; Debug registers
+	Dr1			dd ?
+	Dr2			dd ?
+	Dr3			dd ?
+	Dr6			dd ?
+	Dr7			dd ?
+
+	ControlWord		dd ?		; FPU context
+	StatusWord		dd ?
+	TagWord 		dd ?
+	ErrorOffset		dd ?
+	ErrorSelector		dd ?
+	DataOffset		dd ?
+	DataSelector		dd ?
+	RegisterArea		dt 8 dup (?)
+	Cr0NpxState		dd ?
+
+	SegGs			dd ?		; Segment registers
+	SegFs			dd ?
+	SegEs			dd ?
+	SegDs			dd ?
+
+	Edi			dd ?		; Integer registers
+	Esi			dd ?
+	Ebx			dd ?
+	Edx			dd ?
+	Ecx			dd ?
+	Eax			dd ?
+
+	Ebp			dd ?		; Control registers
+	Eip			dd ?
+	SegCs			dd ?
+	EFlags			dd ?
+	Esp			dd ?
+	SegSs			dd ?
+
+	ExtendedRegisters	db 512 dup (?)
+ends
+
+Additional word
+---------------
+This article was posted on comp.lang.asm.x86.
+Especially thanks to Michael Tippach for pointing out some exception flags.
+My web page is at http://ams.ampr.org/cdragan/
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                          Child Window Controls
+                                                          by Iczelion
+
+
+In this tutorial, we will explore child window controls which are very
+important input and output devices of our programs.
+
+Theory
+------
+Windows provides several predefined window classes which we can readily use
+in our own programs. Most of the time we use them as components of a dialog
+box so they're usually called child window controls. The child window
+controls process their own mouse and keyboard messages and notify the
+parent window when their states have changed. They relieve the burden from
+programmers enormously so you should use them as much as possible. In this
+tutorial, I put them on a normal window just to demonstrate how you can
+create and use them but in reality you should put them in a dialog box.
+Examples of predefined window classes are button, listbox, checkbox, radio
+button,edit etc.
+
+In order to use a child window control, you must create it with
+CreateWindow or CreateWindowEx. Note that you don't have to register the
+window class since it's registered for you by Windows. The class name
+parameter MUST be the predefined class name. Say, if you want to create a
+button, you must specify "button" as the class name in CreateWindowEx. The
+other parameters you must fill in are the parent window handle and the
+control ID. The control ID must be unique among the controls. The control
+ID is the ID of that control. You use it to differentiate between the
+controls.
+
+After the control was created, it will send messages notifying the parent
+window when its state has changed. Normally, you create the child windows
+during WM_CREATE message of the parent window. The child window sends
+WM_COMMAND messages to the parent window with its control ID in the low
+word of wParam,  the notification code in the high word of wParam, and its
+window handle in lParam. Each child window control has different
+notification codes, refer to your Win32 API reference for more information.
+
+
+The parent window can send commands to the child windows too, by calling
+SendMessage function. SendMessage function sends the specified message with
+accompanying values in wParam and lParam to the window specified by the
+window handle. It's an extremely useful function since it can send messages
+to any window provided you know its window handle.
+So, after creating the child windows, the parent window must process
+WM_COMMAND messages to be able to receive notification codes from the child
+windows.
+
+Application
+-----------
+We will create a window which contains an edit control and a pushbutton.
+When you click the button, a message box will appear showing the text you
+typed in the edit box. There is also a menu with 4 menu items:
+
+  1. Say Hello  -- Put a text string into the edit box
+  2. Clear Edit Box -- Clear the content of the edit box
+  3. Get Text -- Display a message box with the text in the edit box
+  4. Exit -- Close the program.
+
+.386
+.model flat,stdcall
+option casemap:none
+
+WinMain proto :DWORD,:DWORD,:DWORD,:DWORD
+
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+
+.data
+ClassName db "SimpleWinClass",0
+AppName  db "Our First Window",0
+MenuName db "FirstMenu",0
+ButtonClassName db "button",0
+ButtonText db "My First Button",0
+EditClassName db "edit",0
+TestString db "Wow! I'm in an edit box now",0
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+hwndButton HWND ?
+hwndEdit HWND ?
+buffer db 512 dup(?)                    ; buffer to store the text
+retrieved from the edit box
+
+.const
+ButtonID equ 1                                ; The control ID of the
+button control
+EditID equ 2                                    ; The control ID of the
+edit control
+IDM_HELLO equ 1
+IDM_CLEAR equ 2
+IDM_GETTEXT equ 3
+IDM_EXIT equ 4
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInst
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_BTNFACE+1
+    mov   wc.lpszMenuName,OFFSET MenuName
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,eax
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateWindowEx,WS_EX_CLIENTEDGE,ADDR ClassName, \
+                        ADDR AppName, WS_OVERLAPPEDWINDOW,\
+                        CW_USEDEFAULT, CW_USEDEFAULT,\
+                        300,200,NULL,NULL, hInst,NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,SW_SHOWNORMAL
+    invoke UpdateWindow, hwnd
+    .WHILE TRUE
+        invoke GetMessage, ADDR msg,NULL,0,0
+        .BREAK .IF (!eax)
+        invoke TranslateMessage, ADDR msg
+        invoke DispatchMessage, ADDR msg
+    .ENDW
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    .IF uMsg==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF uMsg==WM_CREATE
+        invoke CreateWindowEx,WS_EX_CLIENTEDGE, ADDR EditClassName,NULL,\
+                        WS_CHILD or WS_VISIBLE or WS_BORDER or ES_LEFT or\
+                        ES_AUTOHSCROLL,\
+                        50,35,200,25,hWnd,8,hInstance,NULL
+        mov  hwndEdit,eax
+        invoke SetFocus, hwndEdit
+        invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText,\
+                        WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
+                        75,70,140,25,hWnd,ButtonID,hInstance,NULL
+        mov  hwndButton,eax
+    .ELSEIF uMsg==WM_COMMAND
+        mov eax,wParam
+        .IF lParam==0
+            .IF ax==IDM_HELLO
+                invoke SetWindowText,hwndEdit,ADDR TestString
+            .ELSEIF ax==IDM_CLEAR
+                invoke SetWindowText,hwndEdit,NULL
+            .ELSEIF  ax==IDM_GETTEXT
+                invoke GetWindowText,hwndEdit,ADDR buffer,512
+                invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
+            .ELSE
+                invoke DestroyWindow,hWnd
+            .ENDIF
+        .ELSE
+            .IF ax==ButtonID
+                shr eax,16
+                .IF ax==BN_CLICKED
+                    invoke SendMessage,hWnd,WM_COMMAND,IDM_GETTEXT,0
+                .ENDIF
+            .ENDIF
+        .ENDIF
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+     xor    eax,eax
+    ret
+WndProc endp
+end start
+
+Analysis:
+
+Let's analyze the program.
+
+         .ELSEIF uMsg==WM_CREATE
+             invoke CreateWindowEx,WS_EX_CLIENTEDGE, \
+                             ADDR EditClassName,NULL,\
+                             WS_CHILD or WS_VISIBLE or WS_BORDER or
+     ES_LEFT\
+                             or ES_AUTOHSCROLL,\
+                             50,35,200,25,hWnd,EditID,hInstance,NULL
+             mov  hwndEdit,eax
+             invoke SetFocus, hwndEdit
+             invoke CreateWindowEx,NULL, ADDR ButtonClassName,\
+                             ADDR ButtonText,\
+                             WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
+                             75,70,140,25,hWnd,ButtonID,hInstance,NULL
+             mov  hwndButton,eax
+
+We create the controls during processing of WM_CREATE message. We call
+CreateWindowEx with an extra window style, WS_EX_CLIENTEDGE, which makes
+the client area look sunken. The name of each control is a predefined one,
+"edit" for edit control, "button" for button control. Next we specify the
+child window's styles. Each control has extra styles in addition to the
+normal window styles. For example, the button styles are prefixed with
+"BS_" for "button style", edit styles are prefixed with "ES_" for "edit
+style". You have to look these styles up in a Win32 API reference. Note
+that you put a control ID in place of the menu handle. This doesn't cause
+any harm since a child window control cannot have a menu.
+
+After creating each control, we keep its handle in a variable for future
+use.
+
+SetFocus is called to give input focus to the edit box so the user can type
+the text into it immediately.
+
+Now comes the really exciting part. Every child window control sends
+notification to its parent window with WM_COMMAND.
+
+    .ELSEIF uMsg==WM_COMMAND
+        mov eax,wParam
+        .IF lParam==0
+
+Recall that a menu also sends WM_COMMAND messages to notify the window
+about its state too. How can you differentiate between WM_COMMAND messages
+originated from a menu or a control? Below is the answer
+
+         Low word of wParam   High word of wParam    lParam
+ Menu    Menu ID              0                      0
+ Control Control ID           Notification code      Child Window Handle
+
+You can see that you should check lParam. If it's zero, the current
+WM_COMMAND message is from a menu. You cannot use wParam to differentiate
+between a menu and a control since the menu ID and control ID may be
+identical and the notification code may be zero.
+
+            .IF ax==IDM_HELLO
+                invoke SetWindowText,hwndEdit,ADDR TestString
+            .ELSEIF ax==IDM_CLEAR
+                invoke SetWindowText,hwndEdit,NULL
+            .ELSEIF  ax==IDM_GETTEXT
+                invoke GetWindowText,hwndEdit,ADDR buffer,512
+                invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
+
+
+You can put a text string into an edit box by calling SetWindowText. You
+clear the content of an edit box by calling SetWindowText with NULL.
+SetWindowText is a general purpose API function. You can use SetWindowText
+to change the caption of a window or the text on a button.
+To get the text in an edit box, you use GetWindowText.
+
+            .IF ax==ButtonID
+                shr eax,16
+                .IF ax==BN_CLICKED
+                    invoke SendMessage,hWnd,WM_COMMAND,IDM_GETTEXT,0
+                .ENDIF
+            .ENDIF
+
+The above code snippet deals with the condition when the user presses the
+button. First, it checks the low word of wParam to see if the control ID
+matches that of the button. If it is, it checks the high word of wParam to
+see if it is the notification code BN_CLICKED which is sent when the button
+is clicked.
+
+The interesting part is after it's certain that the notification code is
+BN_CLICKED. We want to get the text from the edit box and display it in a
+message box. We can duplicate the code in the IDM_GETTEXT section above but
+it doesn't make sense. If we can somehow send a WM_COMMAND message with the
+low word of wParam containing the value IDM_GETTEXT to our own window
+procedure, we can avoid code duplication and simplify our program.
+
+SendMessage function is the answer. This function sends any message to any
+window with any wParam and lParam we want. So instead of duplicating the
+code, we call SendMessage with the parent window handle, WM_COMMAND,
+IDM_GETTEXT, and 0. This has identical effect to selecting "Get Text" menu
+item from the menu. The window procedure doesn't perceive any difference
+between the two.
+
+You should use this technique as much as possible to make your code more
+organized.
+
+Last but not least, do not forget the TranslateMessage function in the
+message loop. Since you must type in some text into the edit box, your
+program must translate raw keyboard input into readable text. If you omit
+this function, you will not be able to type anything into your edit box.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                      Dialog Box as Main Window
+                                                      by Iczelion
+
+
+Now comes the really interesting part about GUI, the dialog box. In this
+tutorial (and the next), we will learn how to use a dialog box as our main
+window.
+
+Theory
+------
+If you play with the examples in the previous tutorial long enough, you 'll
+find out that you cannot change input focus from one child window control
+to another with Tab key. The only way you can do that is by clicking the
+control you want it to gain input focus. This situation is rather
+cumbersome. Another thing you might notice is that I changed the background
+color of the parent window to gray instead of normal white as in previous
+examples. This is done so that the color of the child window controls can
+blend seamlessly with the color of the client area of the parent window.
+There is a way to get around this problem but it's not easy. You have to
+subclass all child window controls in your parent window.
+
+The reason why such inconvenience exists is that child window controls are
+originally designed to work with a dialog box, not a normal window. The
+default color of child window controls such as a button is gray because the
+client area of a dialog box is normally gray so they blend into each other
+without any sweat on the programmer's part.
+
+Before we get deep into the detail, we should know first what a dialog box
+is. A dialog box is nothing more than a normal window which is designed to
+work with child window controls. Windows also provides internal "dialog box
+manager" which is responsible for most of the keyboard logic such as
+shifting input focus when the user presses Tab, pressing the default
+pushbutton if Enter key is pressed, etc so programmers can deal with higher
+level tasks. Dialog boxes are primarily used as input/output devices. As
+such a dialog box can be considered as an input/output "black box" meaning
+that you don't have to know how a dialog box works internally in order to
+be able to use it, you only have to know how to interact with it. That's a
+principle of object oriented programming (OOP) called information hiding.
+If the black box is *perfectly* designed, the user can make use of it
+without any knowledge on how it operates. The catch is that the black box
+must be perfect, that's hard to achieve in the real world. Win32 API is
+also designed as a black box too.
+
+Well, it seems we stray from our path. Let's get back to our subject.
+Dialog boxes are designed to reduce workload of a programmer. Normally if
+you put child window controls on a normal window, you have to subclass them
+and write keyboard logic yourself. But if you put them on a dialog box, it
+will handle the logic for you. You only have to know how to get the user
+input from the dialog box or how to send commands to it.
+
+A dialog box is defined as a resource much the same way as a menu. You
+write a dialog box template describing the characteristics of the dialog
+box and its controls and then compile the resource script with a resource
+editor.
+
+Note that all resources are put together in the same resource script file.
+You can use any text editor to write a dialog box template but I don't
+recommend it. You should use a resource editor to do the job visually since
+arranging child window controls on a dialog box is hard to do manually.
+Several excellent resource editors are available. Most of the major
+compiler suites include their own resource editors. You can use them to
+create a resource script for your program and then cut out irrelevant lines
+such as those related to MFC.
+
+There are two main types of dialog box: modal and modeless. A modeless
+dialog box lets you change input focus to other window. The example is the
+Find dialog of MS Word. There are two subtypes of modal dialog box:
+application modal and system modal. An application modal dialog box doesn't
+let you change input focus to other window in the same application but you
+can change the input focus to the window of OTHER application. A system
+modal dialog box doesn't allow you to change input focus to any other
+window until you respond to it first.
+
+A modeless dialog box is created by calling CreateDialogParam API function.
+A modal dialog box is created by calling DialogBoxParam. The only
+distinction between an application modal dialog box and a system modal one
+is the DS_SYSMODAL style. If you include DS_SYSMODAL style in a dialog box
+template, that dialog box will be a system modal one.
+
+You can communicate with any child window control on a dialog box by using
+SendDlgItemMessage function. Its syntax is like this:
+
+
+     SendDlgItemMessage proto hwndDlg:DWORD,\
+                              idControl:DWORD,\
+                              uMsg:DWORD,\
+                              wParam:DWORD,\
+                              lParam:DWORD
+
+
+This API call is immensely useful for interacting with a child window
+control. For example, if you want to get the text from an edit control, you
+can do this:
+
+     call SendDlgItemMessage, hDlg, ID_EDITBOX, WM_GETTEXT, 256, ADDR
+     text_buffer
+
+In order to know which message to send, you should consult your Win32 API
+reference.
+
+Windows also provides several control-specific API functions to get and set
+data quickly, for example, GetDlgItemText, CheckDlgButton etc. These
+control-specific functions are provided for programmer's convenience so he
+doesn't have to look up the meanings of wParam and lParam for each message.
+Normally, you should use control-specific API calls when they're available
+since they make source code maintenance easier. Resort to
+SendDlgItemMessage only if no control-specific API calls are available.
+The Windows dialog box manager sends some messages to a specialized
+callback function called a dialog box procedure which has the following
+format:
+
+     DlgProc  proto hDlg:DWORD ,\
+                    iMsg:DWORD ,\
+                    wParam:DWORD ,\
+                    lParam:DWORD
+
+The dialog box procedure is very similar to a window procedure except for
+the type of return value which is TRUE/FALSE instead of LRESULT. The
+internal dialog box manager inside Windows IS the true window procedure for
+the dialog box. It calls our dialog box procedure with some messages that
+it received. So the general rule of thumb is that: if our dialog box
+procedure processes a message,it MUST return TRUE in eax and if it does not
+process the message, it must return FALSE in eax. Note that a dialog box
+procedure doesn't pass the messages it does not process to the
+DefWindowProc call since it's not a real window procedure.
+
+
+There are two distinct uses of a dialog box. You can use it as the main
+window of your application or use it as an input device. We 'll examine the
+first approach in this tutorial.
+
+"Using a dialog box as main window" can be interpreted in two different
+senses.
+
+  1. You can use the dialog box template as a class template which you
+     register with RegisterClassEx call. In this case, the dialog box
+     behaves like a "normal" window: it receives messages via a window
+     procedure referred to by lpfnWndProc member of the window class, not
+     via a dialog box procedure. The benefit of this approach is that you
+     don't have to create child window controls yourself, Windows creates
+     them for you when the dialog box is created. Also Windows handles the
+     keyboard logic for you such as Tab order etc. Plus you can specify the
+     cursor and icon of your window in the window class structure.
+     Your program just creates the dialog box without creating any parent
+     window. This approach makes a message loop unnecessary since the
+     messages are sent directly to the dialog box procedure. You don't even
+     have to register a window class!
+
+This tutorial is going to be a long one. I'll present the first approach
+followed by the second.
+
+Application
+-----------
+
+  ------------------------------------------------------------------------
+                                 dialog.asm
+  ------------------------------------------------------------------------
+
+.386
+.model flat,stdcall
+option casemap:none
+WinMain proto :DWORD,:DWORD,:DWORD,:DWORD
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+
+.data
+ClassName db "DLGCLASS",0
+MenuName db "MyMenu",0
+DlgName db "MyDialog",0
+AppName db "Our First Dialog Box",0
+TestString db "Wow! I'm in an edit box now",0
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+buffer db 512 dup(?)
+
+.const
+IDC_EDIT        equ 3000
+IDC_BUTTON      equ 3001
+IDC_EXIT        equ 3002
+IDM_GETTEXT     equ 32000
+IDM_CLEAR       equ 32001
+IDM_EXIT        equ 32002
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hDlg:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,DLGWINDOWEXTRA
+    push  hInst
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_BTNFACE+1
+    mov   wc.lpszMenuName,OFFSET MenuName
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,eax
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateDialogParam,hInstance,ADDR DlgName,NULL,NULL,NULL
+    mov   hDlg,eax
+    invoke ShowWindow, hDlg,SW_SHOWNORMAL
+    invoke UpdateWindow, hDlg
+    invoke GetDlgItem,hDlg,IDC_EDIT
+    invoke SetFocus,eax
+    .WHILE TRUE
+        invoke GetMessage, ADDR msg,NULL,0,0
+        .BREAK .IF (!eax)
+       invoke IsDialogMessage, hDlg, ADDR msg
+        .IF eax ==FALSE
+            invoke TranslateMessage, ADDR msg
+            invoke DispatchMessage, ADDR msg
+        .ENDIF
+    .ENDW
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    .IF uMsg==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF uMsg==WM_COMMAND
+        mov eax,wParam
+        .IF lParam==0
+            .IF ax==IDM_GETTEXT
+                invoke GetDlgItemText,hWnd,IDC_EDIT,ADDR buffer,512
+                invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
+            .ELSEIF ax==IDM_CLEAR
+                invoke SetDlgItemText,hWnd,IDC_EDIT,NULL
+            .ELSE
+                invoke DestroyWindow,hWnd
+            .ENDIF
+        .ELSE
+            mov edx,wParam
+            shr edx,16
+            .IF dx==BN_CLICKED
+                .IF ax==IDC_BUTTON
+                    invoke SetDlgItemText,hWnd,IDC_EDIT,ADDR TestString
+                .ELSEIF ax==IDC_EXIT
+                    invoke SendMessage,hWnd,WM_COMMAND,IDM_EXIT,0
+                .ENDIF
+            .ENDIF
+        .ENDIF
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+    xor    eax,eax
+    ret
+WndProc endp
+end start
+  ------------------------------------------------------------------------
+                                 Dialog.rc
+  ------------------------------------------------------------------------
+
+#include "resource.h"
+
+#define IDC_EDIT                                       3000
+#define IDC_BUTTON                                3001
+#define IDC_EXIT                                       3002
+
+#define IDM_GETTEXT                             32000
+#define IDM_CLEAR                                  32001
+#define IDM_EXIT                                      32003
+
+
+MyDialog DIALOG 10, 10, 205, 60
+STYLE 0x0004 | DS_CENTER | WS_CAPTION | WS_MINIMIZEBOX |
+WS_SYSMENU | WS_VISIBLE | WS_OVERLAPPED | DS_MODALFRAME | DS_3DLOOK
+CAPTION "Our First Dialog Box"
+CLASS "DLGCLASS"
+BEGIN
+    EDITTEXT         IDC_EDIT,   15,17,111,13, ES_AUTOHSCROLL | ES_LEFT
+    DEFPUSHBUTTON   "Say Hello", IDC_BUTTON,    141,10,52,13
+    PUSHBUTTON      "E&xit", IDC_EXIT,  141,26,52,13, WS_GROUP
+END
+
+
+MyMenu  MENU
+BEGIN
+    POPUP "Test Controls"
+    BEGIN
+        MENUITEM "Get Text", IDM_GETTEXT
+        MENUITEM "Clear Text", IDM_CLEAR
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "E&xit", IDM_EXIT
+    END
+END
+
+Analysis
+--------
+
+Let's analyze this first example.
+This example shows how to register a dialog template as a window class and
+create a "window" from that class. It simplifies your program since you
+don't have to create the child window controls yourself.
+Let's first analyze the dialog template.
+
+MyDialog DIALOG 10, 10, 205, 60
+
+Declare the name of a dialog, in this case, "MyDialog" followed by the
+keyword "DIALOG". The following four numbers are: x, y , width, and height
+of the dialog box in dialog box units (not the same as pixels).
+
+STYLE 0x0004 | DS_CENTER | WS_CAPTION | WS_MINIMIZEBOX |
+WS_SYSMENU | WS_VISIBLE | WS_OVERLAPPED | DS_MODALFRAME | DS_3DLOOK
+
+Declare the styles of the dialog box.
+
+CAPTION "Our First Dialog Box"
+
+This is the text that will appear in the dialog box's title bar.
+
+CLASS "DLGCLASS"
+
+This line is crucial. It's this CLASS keyword that allows us to use the
+dialog box template as a window class. Following the keyword is the name of
+the "window class"
+
+BEGIN
+    EDITTEXT         IDC_EDIT,   15,17,111,13, ES_AUTOHSCROLL | ES_LEFT
+    DEFPUSHBUTTON   "Say Hello", IDC_BUTTON,    141,10,52,13
+    PUSHBUTTON      "E&xit", IDC_EXIT,  141,26,52,13
+END
+
+The above block defines the child window controls in the dialog box.
+They're defined between BEGIN and END keywords. Generally the syntax is as
+follows:
+
+     control-type  "text"   ,controlID, x, y, width, height [,styles]
+
+control-types are resource compiler's constants so you have to consult the
+manual.
+
+Now we go to the assembly source code. The interesting part is in the
+window class structure:
+
+     mov   wc.cbWndExtra,DLGWINDOWEXTRA
+     mov   wc.lpszClassName,OFFSET ClassName
+
+Normally, this member is left NULL, but if we want to register a dialog box
+template as a window class, we must set this member to the value
+DLGWINDOWEXTRA. Note that the name of the class must be identical to the
+one following the CLASS keyword in the dialog box template. The remaining
+members are initialized as usual. After you fill the window class
+structure, register it with RegisterClassEx. Seems familiar? This is the
+same routine you have to do in order to register a normal window class.
+
+     invoke CreateDialogParam,hInstance,ADDR DlgName,NULL,NULL,NULL
+
+After registering the "window class", we create our dialog box. In this
+example, I create it as a modeless dialog box with CreateDialogParam
+function. This function takes 5 parameters but you only have to fill in the
+first two: the instance handle and the pointer to the name of the dialog
+box template. Note that the 2nd parameter is not a pointer to the class
+name.
+
+At this point, the dialog box and its child window controls are created by
+Windows. Your window procedure will receive WM_CREATE message as usual.
+
+     invoke GetDlgItem,hDlg,IDC_EDIT
+     invoke SetFocus,eax
+
+After the dialog box is created, I want to set the input focus to the edit
+control. If I put these codes in WM_CREATE section, GetDlgItem call will
+fail since at that time, the child window controls are not created yet. The
+only way you can do this is to call it after the dialog box and all its
+child window controls are created. So I put these two lines after the
+UpdateWindow call. GetDlgItem function gets the control ID and returns the
+associated control's window handle. This is how you can get a window handle
+if you know its control ID.
+
+       invoke IsDialogMessage, hDlg, ADDR msg
+        .IF eax ==FALSE
+            invoke TranslateMessage, ADDR msg
+            invoke DispatchMessage, ADDR msg
+        .ENDIF
+
+The program enters the message loop and before we translate and dispatch
+messages, we call IsDialogMessage function to let the dialog box manager
+handles the keyboard logic of our dialog box for us. If this function
+returns TRUE , it means the message is intended for the dialog box and is
+processed by the dialog box manager. Note another difference from the
+previous tutorial. When the window procedure wants to get the text from the
+edit control, it calls GetDlgItemText function instead of GetWindowText.
+GetDlgItemText accepts a control ID instead of a window handle. That makes
+the call easier in the case you use a dialog box.
+  ------------------------------------------------------------------------
+
+Now let's go to the second approach to using a dialog box as a main window.
+In the next example, I 'll create an application modal dialog box. You'll
+not find a message loop or a window procedure because they're not
+necessary!
+  ------------------------------------------------------------------------
+                            dialog.asm (part 2)
+  ------------------------------------------------------------------------
+
+.386
+.model flat,stdcall
+option casemap:none
+
+DlgProc proto :DWORD,:DWORD,:DWORD,:DWORD
+
+include \masm32\include\windows.inc
+include \masm32\include\user32.inc
+include \masm32\include\kernel32.inc
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\kernel32.lib
+
+.data
+DlgName db "MyDialog",0
+AppName db "Our Second Dialog Box",0
+TestString db "Wow! I'm in an edit box now",0
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+buffer db 512 dup(?)
+
+.const
+IDC_EDIT            equ 3000
+IDC_BUTTON     equ 3001
+IDC_EXIT            equ 3002
+IDM_GETTEXT  equ 32000
+IDM_CLEAR       equ 32001
+IDM_EXIT           equ 32002
+
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke DialogBoxParam, hInstance, ADDR DlgName,NULL, addr DlgProc, NULL
+
+    invoke ExitProcess,eax
+
+DlgProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    .IF uMsg==WM_INITDIALOG
+        invoke GetDlgItem, hWnd,IDC_EDIT
+        invoke SetFocus,eax
+    .ELSEIF uMsg==WM_CLOSE
+        invoke SendMessage,hWnd,WM_COMMAND,IDM_EXIT,0
+    .ELSEIF uMsg==WM_COMMAND
+        mov eax,wParam
+        .IF lParam==0
+            .IF ax==IDM_GETTEXT
+                invoke GetDlgItemText,hWnd,IDC_EDIT,ADDR buffer,512
+                invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
+            .ELSEIF ax==IDM_CLEAR
+                invoke SetDlgItemText,hWnd,IDC_EDIT,NULL
+            .ELSEIF ax==IDM_EXIT
+                invoke EndDialog, hWnd,NULL
+            .ENDIF
+        .ELSE
+            mov edx,wParam
+            shr edx,16
+            .if dx==BN_CLICKED
+                .IF ax==IDC_BUTTON
+                    invoke SetDlgItemText,hWnd,IDC_EDIT,ADDR TestString
+                .ELSEIF ax==IDC_EXIT
+                    invoke SendMessage,hWnd,WM_COMMAND,IDM_EXIT,0
+                .ENDIF
+            .ENDIF
+        .ENDIF
+    .ELSE
+        mov eax,FALSE
+        ret
+    .ENDIF
+    mov eax,TRUE
+    ret
+DlgProc endp
+end start
+  ------------------------------------------------------------------------
+                             dialog.rc (part 2)
+  ------------------------------------------------------------------------
+
+#include "resource.h"
+
+#define IDC_EDIT                                       3000
+#define IDC_BUTTON                                3001
+#define IDC_EXIT                                       3002
+
+#define IDR_MENU1                                  3003
+
+#define IDM_GETTEXT                              32000
+#define IDM_CLEAR                                   32001
+#define IDM_EXIT                                       32003
+
+
+MyDialog DIALOG 10, 10, 205, 60
+STYLE 0x0004 | DS_CENTER | WS_CAPTION | WS_MINIMIZEBOX |
+WS_SYSMENU | WS_VISIBLE | WS_OVERLAPPED | DS_MODALFRAME | DS_3DLOOK
+CAPTION "Our Second Dialog Box"
+MENU IDR_MENU1
+BEGIN
+    EDITTEXT         IDC_EDIT,   15,17,111,13, ES_AUTOHSCROLL | ES_LEFT
+    DEFPUSHBUTTON   "Say Hello", IDC_BUTTON,    141,10,52,13
+    PUSHBUTTON      "E&xit", IDC_EXIT,  141,26,52,13
+END
+
+
+IDR_MENU1  MENU
+BEGIN
+    POPUP "Test Controls"
+    BEGIN
+        MENUITEM "Get Text", IDM_GETTEXT
+        MENUITEM "Clear Text", IDM_CLEAR
+        MENUITEM "", , 0x0800 /*MFT_SEPARATOR*/
+        MENUITEM "E&xit", IDM_EXIT
+    END
+END
+
+  ------------------------------------------------------------------------
+
+The analysis follows:
+
+    DlgProc proto :DWORD,:DWORD,:DWORD,:DWORD
+
+We declare the function prototype for DlgProc so we can refer to it with
+addr operator in the line below:
+
+    invoke DialogBoxParam, hInstance, ADDR DlgName,NULL, addr DlgProc, NULL
+
+The above line calls DialogBoxParam function which takes 5 parameters: the
+instance handle, the name of the dialog box template, the parent window
+handle, the address of the dialog box procedure, and the dialog-specific
+data. DialogBoxParam creates a modal dialog box. It will not return until
+the dialog box is destroyed.
+
+    .IF uMsg==WM_INITDIALOG
+        invoke GetDlgItem, hWnd,IDC_EDIT
+        invoke SetFocus,eax
+    .ELSEIF uMsg==WM_CLOSE
+        invoke SendMessage,hWnd,WM_COMMAND,IDM_EXIT,0
+
+The dialog box procedure looks like a window procedure except that it
+doesn't receive WM_CREATE message. The first message it receives is
+WM_INITDIALOG. Normally you can put the initialization code here. Note that
+you must return the value TRUE in eax if you process the message.
+The internal dialog box manager doesn't send our dialog box procedure the
+WM_DESTROY message by default when WM_CLOSE is sent to our dialog box. So
+if we want to react when the user presses the close button on our dialog
+box, we must process WM_CLOSE message. In our example, we send WM_COMMAND
+message with the value IDM_EXIT in wParam. This has the same effect as when
+the user selects Exit menu item. EndDialog is called in response to
+IDM_EXIT.
+
+The processing of WM_COMMAND messages remains the same.
+When you want to destroy the dialog box, the only way is to call EndDialog
+function. Do not try DestroyWindow! EndDialog doesn't destroy the dialog
+box immediately. It only sets a flag for the internal dialog box manager
+and continues to execute the next instructions.
+
+Now let's examine the resource file. The notable change is that instead of
+using a text string as menu name we use a value, IDR_MENU1. This is
+necessary if you want to attach a menu to a dialog box created with
+DialogBoxParam. Note that in the dialog box template, you have to add the
+keyword MENU followed by the menu resource ID.
+
+A difference between the two examples in this tutorial that you can readily
+observe is the lack of an icon in the latter example. However, you can set
+the icon by sending the message WM_SETICON to the dialog box during
+WM_INITDIALOG.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                        Standardizing Win32 Callback Procedures
+                                        by Jeremy Gordon
+
+
+This short article describes my preferred method for coding CALLBACK procedures
+in a large assembler program for Windows 32.  First I describe what Win32
+callback procedures are, and then get down to some code.
+
+At run time the Win32 system will call your program on a regular and frequent
+basis.  The procedures you supply for the system to call are called CALLBACK
+procedures.  Here are examples of when these are used:-
+1. To manage a window you created.  In this case the system will send many
+   messages to the Window Procedure for the window.  The Window Procedure is
+   the code label you provide when you register your window class (by calling
+   RegisterClass).  For example the message WM_SIZE is sent by the system
+   when the window is resized.
+2. To inform the owner of a child window of events in the child window.  For
+   example WM_PARENTNOTIFY (with a notify code) is sent to the Window
+   Procedure of the owner of a window when the child window is being created
+   or destroyed, or if the user clicks a mouse button while the cursor is
+   over the child window.
+3. To inform the owner of a common control of events in the control.  For
+   example if you create a button owned by your window the Window Procedure
+   for that window receives BN_CLICKED messages if the button is clicked.
+4. Messages sent to a dialog you have created.  These are messages relating
+   to the creation of the dialog and of the various controls.  The dialog
+   procedure is informed of events in the controls.
+5. If you "Superclass" or "Subclass" a common control, you receive messages
+   for that common control like a hook procedure but your window procedure
+   has the responsibility of passing them on to the control.
+6. If you create "Hook" procedures you can intercept messages about to be sent
+   to other windows.  The system will call your hook procedure and will pass
+   the message on only when your hook procedure returns.
+7. You can ask the system to provide your program with information to be sent
+   to a CALLBACK procedure.  Examples are EnumWindows (enumerate all top-level
+   windows) or EnumFonts (enumerate all available fonts).
+
+In cases 1 to 5 above, just before the system calls the CALLBACK procedure,
+it PUSHES 4 dwords on the stack (ie. 4 "parameters").  Traditionally the
+names given to these parameters are:-
+       hWnd = handle of window being called
+       uMsg = message number
+       wParam = a parameter sent with the message
+       lParam = another parameter sent with the message.
+
+The number of parameters sent to hook procedures and emumeration
+callbacks varies - see the Window SDK.
+
+Since your Window (or Dialog) procedure will need to react in a certain
+way depending on the message being sent, your code will need to divert
+execution to the correct place for a particular message.
+
+"C" programmers have the advantage of being able to code this simply,
+using "switch" and "case".
+
+Assembler programmers use various techniques.  Perhaps the worst if there are
+a lot of messages to handle is the chain of compares, eg. (in A386 format):-
+       MOV EAX,[EBP+0Ch]        ;get message number
+       CMP EAX,1h               ;see if WM_CREATE
+       JNZ >L2                  ;no
+       XOR EAX,EAX              ;ensure eax is zero on exit
+       JMP >L32                 ;finish
+       L2:
+       CMP EAX,116h             ;see if WM_INITMENU
+       JNZ >L4                  ;no
+       CALL INITIALISE_MENU
+       JMP >L30                 ;correct exit code
+       L4:
+       CMP EAX,47h              ;see if WM_WINDOWPOSCHANGED
+       JNZ >L8
+       and so on ........
+
+To avoid these long chains, assembler programmers have developed various
+techniques.  You will have seen many of these in sample code around Win32
+assembler web sites and in the asm journal, using conditional jumps, macros
+or table scans.  I do not wish to compare these various methods, merely to put
+forward my own current favourite, which I believe has these advantages:-
+1. It works on all assemblers
+2. It is modular, ie. the code for each window can be concentrated in a
+   particular part of your source code
+3. It is easy to follow from the source code what message causes what result
+4. The same function can easily be called from within different window
+   procedures
+
+My method results in a very simple Window Procedure as follows (A386 format):-
+
+       WndProc:
+       MOV EDX,OFFSET MAINMESSAGES
+       CALL GENERAL_WNDPROC
+       RET 10h
+
+where the messages and functions (specific to this particular window
+procedure) are set out in a table such as this:-
+
+;----------------------------------------------------------
+DATA SEGMENT FLAT             ;assembler to put following in data section
+;--------------------------- WNDPROC message functions
+MAINMESSAGES DD ENDOF_MAINMESSAGES-$                ;=number to be done
+       DD  312h,HOTKEY,116h,INITMENU,117h,INITMENUPOPUP,11Fh,MENUSELECT
+       DD  1h,CREATE,2h,DESTROY, 410h,OWN410,411h,OWN411
+       DD  231h,ENTERSIZEMOVE,47h,WINDOWPOSCHANGED,24h,GETMINMAXINFO
+       DD  1Ah,SETTINGCHANGE,214h,SIZING,46h,WINDOWPOSCHANGING
+       DD  2Bh,DRAWITEM,0Fh,PAINT,113h,TIMER,111h,COMMAND
+       DD  104h,SYSKEYDOWN,100h,KEYDOWN,112h,SYSCOMMAND
+       DD  201h,LBUTTONDOWN,202h,LBUTTONUP,115h,SCROLLMESS
+       DD  204h,RBUTTONDOWNUP,205h,RBUTTONDOWNUP
+       DD  200h,MOUSEMOVE,0A0h,NCMOUSEMOVE,20h,SETCURSORM
+       DD  4Eh,NOTIFY,210h,PARENTNOTIFY,86h,NCACTIVATE,6h,ACTIVATE
+       DD  1Ch,ACTIVATEAPP
+ENDOF_MAINMESSAGES:           ;label used to work out how many messages
+;----------------------------------------------------------
+_TEXT SEGMENT FLAT            ;assembler to put following in code section
+;----------------------------------------------------------
+
+and where each of the functions here are procedures, for example:-
+
+       CREATE:
+       XOR EAX,EAX             ;ensure zero and nc return
+       RET
+
+and where GENERAL_WINDPROC is as follows:-
+
+       GENERAL_WNDPROC:
+       PUSH EBP
+       MOV EBP,[ESP+10h]       ;get uMsg in ebp
+       MOV ECX,[EDX]           ;get number of messages to do * 8 (+4)
+       SHR ECX,3               ;get number of messages to do
+       ADD EDX,4               ;jump over size dword
+       L33:
+       DEC ECX
+       JS >L46                 ;s=message not found
+       CMP [EDX+ECX*8],EBP     ;see if its the correct message
+       JNZ L33                 ;no
+       MOV EBP,ESP
+       PUSH ESP,EBX,EDI,ESI    ;save registers as required by Windows
+       ADD EBP,4               ;allow for the extra call to here
+       ;now [EBP+8]=hWnd,[EBP+0Ch]=uMsg,[EBP+10h]=wParam,[EBP+14h]=lParam
+       CALL [EDX+ECX*8+4]      ;call correct procedure for the message
+       POP ESI,EDI,EBX,ESP
+       JNC >L48                ;nc=don't call DefWindowProc eax=exit code
+       L46:
+       PUSH [ESP+18h],[ESP+18h],[ESP+18h],[ESP+18h]  ;ESP changes on push
+       CALL DefWindowProcA
+       L48:
+       POP EBP
+       RET
+
+
+NOTES:
+-------------------------------------------------------------------------------
+1. Instead of giving the actual message value, you can, of course, give
+   the name of an EQUATE.  For example
+           WM_CREATE EQU 1h
+   enables you to use WM_CREATE,CREATE instead of 1h,CREATE if you wish.
+2. It is tempting to keep the message table in the CODE SECTION.  This is
+   perfectly possible because the only difference to the Win32 system between
+   the code section and the data section is that the code section area of
+   memory is marked read only, whereas the data section is read/write.
+   However, you may well get some loss of performance if you do this because
+   most processors will read data more quickly from the data section.
+   I performed some tests on this and found that having the table in the code
+   section rather than the data section could slow the code considerably:-
+         486 processor - 22% to 36% slower
+         Pentium processor - 94% to 161% slower
+         AMD-K6-3D processor - 78% to 193% slower
+         (but Pentium Pro - from 7% faster to 9% slower)
+         (and Pentium II - from 29% faster to 5% slower)
+   These tests were carried out on a table of 60 messages and the range of
+   results is because tests were carried out varying the number of scans
+   required before a find and also testing a no-find.
+3. The procedure names must not be the names of API imports to avoid
+   confusion!  For example change SETCURSOR slightly to avoid confusion
+   with the API SetCursor.
+4. If a function returns c (carry flag set) the window procedure will call
+   DefWindowProc.  An nc return (carry flag not set) will merely return to
+   the system with the return code in eax.  (Some messages must be dealt with
+   in this way).
+5. You can send a parameter of your own to GENERAL_WNDPROC using EAX.
+   This is useful if you wish to identify a particular window.
+   For example:-
+       SpecialWndProc:
+       MOV EAX,OFFSET hSpecialWnd
+       MOV EDX,OFFSET SPECIALWND_MESSAGES
+       CALL GENERAL_WNDPROC
+       RET 10h
+6. The ADD EBP,4 just before the call to the function is to ensure that
+   EBP points to the parameters the stack in the same way as if the window
+   procedure had been entered normally.  This is intended to ensure that
+   the function will be compatible if called by an ordinary window procedure
+   written in assembler, for example:-
+       WndProc:
+       PUSH EBP
+       MOV EBP,ESP
+       ;now [EBP+8]=hWnd,[EBP+0Ch]=uMsg,[EBP+10h]=wParam,[EBP+14h]=lParam
+7. A standardized procedure for dealing with messages to a dialog procedure
+   can also be created in the same way, except that it should return TRUE
+   (eax=1) if the message is processed and FALSE (eax=0) if it is not, without
+   calling DefWindowProc. The same coding method can be applied to hooks and
+   to enumerator CALLBACKS although these will vary.
+
+                             jorgon@compuserve.com
+                http://ourworld.compuserve.com/homepages/jorgon
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                              Fire Demo ported to Linux SVGAlib
+                                              by Jan Wagemakers
+
+
+ In APJ4 there was a little nice fire demo written in DOS assembly language.
+ I have ported this program to Linux assembly language. It is written in the
+ AT&T-syntax (GNU assembler) and makes use of SVGAlib.
+
+ My main goal of porting this program to Linux was to show that it can be
+ done. So, I have not optimized this program. For example, things like 'call
+ ioperm' can also be done by making use of int 0x80; quite possibly making use
+ of int 0x80 will make the program smaller. More information about int 0x80 is
+ available at Konstantin Boldyshev's webpage [http://lightning.voshod.com/asm].
+
+ With SVGALib you can access the screen memory directly, just like you
+ would write to A000:0000 in a DOS asm-program.
+
+ I like to thank 'paranoya' for his explanation about how to make use of
+ SVGAlib. Anyway, enough blablabla, here is the source ;-)
+
+# fire.s : fire.asm of apj 4 ported to Linux/SVGAlib ==========================
+# gcc -o fire fire.s -lvga
+ .globl main
+        .type    main,@function
+main:
+        pushl %ebp
+        movl %esp,%ebp
+
+        call vga_init           # Init vga
+        pushl $5
+        call vga_setmode        # set mode to 5 = 320x200x256
+        addl $4,%esp
+        pushl $0
+        call vga_setpage        # Point to page 0 (There is only 1 page)
+        addl $4,%esp
+
+        pushl $0x3c8            # Get IOpermission, starting from 3c8h
+        pushl $2                # to 3c9h
+        pushl $1                # Turn On value
+        call ioperm
+        addl $12,%esp
+
+        pushl $0x60             # Get IOpermission, for 60h : keyboard
+        pushl $1
+        Pushl $1
+        call ioperm
+        addl $12,%esp
+
+        inb $0x60,%al           # Read current value of keyboard
+        movb %al,key
+
+        movw $0x3c8,%dx
+        movw $0,%ax
+        outb %al,%dx
+        incw %dx
+lus:
+        outb %al,%dx
+        outb %al,%dx
+        outb %al,%dx
+        incw %ax
+        jnz lus
+
+        movl graph_mem,%ebx
+
+Mainloop:
+        movl $1280,%esi         # mov si,1280 ;
+        movl $0x5d00,%ecx       # mov ch,5dh  ; y-pos, the less the faster demo
+        pushl %esi              # push    si
+        pushl %ecx              # push    cx
+Sloop:
+        movb (%ebx,%esi),%al    # lodsb
+        incl %esi               #
+
+
+        addb (%ebx,%esi),%al    # al,[si]                 ; pick color and
+        addb 320(%ebx,%esi),%al # add     al,[si+320]     ; pick one more and
+        shrb $2,%al             # shr     al,2
+
+        movb %al,-960(%ebx,%esi) # mov     [si-960],al     ; put color
+
+        loop Sloop
+
+        popl %edi               # pop di
+        popl %ecx               # pop cx
+
+Randoml:
+        mulw 1(%ebx,%edi)       # mul     word ptr [di+1] ; 'random' routine.
+        incw %ax
+        movw %ax,(%ebx,%edi)    #stosw
+        incl %edi
+        incl %edi
+        loop Randoml
+
+        inb $0x60,%al
+        cmpb key,%al
+        jz Mainloop
+
+        pushl $0
+        call exit
+        addl $4,%esp
+
+        movl %ebp,%esp
+        popl %ebp
+        ret
+
+.data
+key:
+        .byte   0
+# =============================================================================
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................ASSEMBLY.LANGUAGE.SNIPPETS
+							       Abs
+							       by Chris Dragan
+
+;Summary:       Calculates absolute value of a signed integer in eax.
+;Compatibility: 386+
+;Notes: 	9 bytes, 4 clocks (P5), destroys ecx
+	mov	ecx, eax	; Duplicate value
+	shr	ecx, 31 	; Fill ecx with its sign
+	xor	eax, ecx	; Do 'not eax' if negative
+	sub	eax, ecx	; Do 'inc eax' if negative
+
+; For comparison, the standard way (2-8 clocks on P5 and 1-17 on P6):
+;        or      eax, eax
+;        js      @@1
+;        neg     eax
+;@@1:
+
+							       Min
+							       by Chris Dragan
+
+;Summary:       eax = min (eax, ecx) (both eax and ecx unsigned)
+;Compatibility: 386+
+;Notes: 	8 bytes, 4 clocks (P5), destroys ecx and edx
+	sub	ecx, eax	; ecx = n2 - n1
+	sbb	edx, edx	; edx = (n1 > n2) ? -1 : 0
+	and	ecx, edx	; ecx = (n1 > n2) ? (n2 - n1) : 0
+	add	eax, ecx	; eax += (n1 > n2) ? (n2 - n1) : 0
+; Standard cmp/jbe/mov takes 2-8 clocks on P5 and 1-17 on P6
+
+							       Max
+							       by Chris Dragan
+
+;Summary:       eax = max (eax, ecx) (both eax and ecx unsigned)
+;Compatibility: 386+
+;Notes: 	9 bytes, 5 clocks (P5), destroys ecx and edx
+	sub	ecx, eax	; ecx = n2 - n1
+	cmc			; cf = n1 <= n2
+	sbb	edx, edx	; edx = (n1 > n2) ? 0 : -1
+	and	ecx, edx	; ecx = (n1 > n2) ? 0 : (n2 - n1)
+	add	eax, ecx	; eax += (n1 > n2) ? 0 : (n2 - n1)
+; Standard cmp/jae/mov takes 2-8 clocks on P5 and 1-17 on P6
+
+                                                                    OBJECT
+                                                                    by mammon_
+;Summary:       Primitive for defining dynamic objects
+;Compatibility: NASM
+;Notes:         The basic building block for classes in NASM; part of
+;               an ongoing project of mine. Note that .this can be
+;               filled with the instance pointer, and additional
+;               routines such as .%1 [constructor] and .~  can be added.
+        %macro OBJECT 1
+                struc %1
+                 .this:       resd 1
+        %endmacro
+        %macro END_OBJECT 0
+                endstruc
+        %endmacro
+
+    ;_Sample:________________________________________________________________
+    ;OBJECT MSGBOX
+    ;  .hWnd:        resd 1
+    ;  .lpText:      resd 1
+    ;  .lpCapt:      resd 1
+    ;  .uInt:        resd 1
+    ;  .show:        resd 1
+    ;END_OBJECT
+    ;;MyMBox is a pointer to a location in memory or in an istruc; its members
+    ;;are filled in an init routine ['new'] with "show" being "DD _show"
+    ;_show:             ;MSGBOX class display routine
+    ;        push dword [MyMbox + MSGBOX.uInt]
+    ;        push dword [MyMbox + MSGBOX.lpCapt]
+    ;        push dword [MyMbox + MSGBOX.lpText]
+    ;        push dword [MyMbox + MSGBOX.hWnd]
+    ;        call MessageBoxA
+    ;        ret
+    ;..start:
+    ;        call [MyMbox + MSGBOX.show]
+    ;        ret
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                                                Binary-to-ASCII
+                                                               by Jan Verhoeven
+
+
+The Challenge
+-------------
+Write a routine to convert the value of a bit to ASCII in under 10 bytes, with
+no conditional jumps.
+
+The Solution
+------------
+Load the number into the AX register and shift through the bits. If a bit is
+cleared [0], you want to print a "0" character; if a bit is set [1], you want
+to print a "1".
+
+Prime the BL register with the ASCII character "0"; if the next bit in AX is
+set, carry will be set after the SHL and BL will thus be incremented to an
+ASCII "1". The key, as you will see, is the ADC [AddWithCarry] instruction:
+
+L0: B330          MOV     BL,30   ; try with al = ZERO
+    D1E0          SHL     AX,1    ; ... but if bit = set, ...
+    80D300        ADC     BL,00   ; ... make it a ONE,
+
+7 bytes all told; with a loop and mov instruction for storing each value in
+BL to the location of your choice, you will have a full-fledged binary-to-
+ascii converter in a handful of bytes.
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN

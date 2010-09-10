@@ -1,0 +1,4666 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                              Dec 98/Jan 99
+:::\_____\::::::::::.                                             Issue       2
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"Keygen Coding Competition".................................Ghiribizzo
+
+"How to Use A86 for Beginners".................................Linuxjr
+
+"Using the Gnu AS Assembler"...................................mammon_
+
+"A Guide to NASM for TASM Coders"..................................Gij
+
+"Tips on saving bytes in ASM programs"...................Larry Hammick
+
+Column: Win32 Assembly Programming
+    "A Simple Window".........................................Iczelion
+    "Painting with Text"......................................Iczelion
+
+Column: The C Standard Library in Assembly
+    "The _Xprintf functions"....................................Xbios2
+
+Column: The Unix World
+    "X-Windows in Assembly Language: Part I"...................mammon_
+
+Column: Assembly Language Snippets
+    "IsASCII?"............................................Troy Benoist
+    "ENUM, CallTable"..........................................mammon_
+
+Column: Issue Solution
+    "PE Solution"...............................................Xbios2
+----------------------------------------------------------------------
+      +++++++++++++++++++++++Issue Challenge++++++++++++++++++++
+ Write the smallest possible PE program that outputs its command line
+----------------------------------------------------------------------
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+Wow! This issue is huge. More than twice the size of the last; maybe it is time
+to go monthly...
+
+This issue has as its theme --such as it were-- the use of popular free- and 
+shareware assemblers. It began with my needing to write a GAS intro to 
+accompany my X-Windows article; shortly thereafter, Linuxjr emailed me the 
+benefits of his university training with his A86 tutorial (beginners: this is 
+for you! Linuxjr explains *everything*). I then appealed to Gij to allow me to 
+incorporate his Nasm 'Quick-Start' guiide, which I have used often...he posted 
+the condition that I edit it heavily ;)
+
+I would like to draw your attention first to our new column: Assembly Language 
+Snippets. Originally this was an idea which I and a few others had; however, I 
+never received any contributions for the 'Snippets' section. Then I received an
+email from  Troy with the first one... I pulled the rest out of my various asm 
+sources and voila, a new column was born. This is something that is fully open 
+to contributions; asm snippets --and we will need lots-- may be emailed to 
+asmjournal@mailcity.com or mammon_@hotmail.com, or they may be posted to the 
+Message Board at http://pluto.beseen.com/boardroom/q/19784/
+Basic format should be:
+;Name:                Name to title you with
+;Routine Title:       Name to title the snippet with
+;Summary:             One-Line Description
+;Comaptibility        Specific Assemblers or OSes this works with
+;Notes:               Any extra notes you have
+--Code--
+
+
+I should point out here that freeservers.com is not very reliable; thus the 
+APJ home page is inaccessible more often than not. For this reason I have set 
+up a mirror on my own page, at http://www.eccentrica.org/Mammon/APJ/index.html
+
+As for this issue's articles, we once again have two fine Win32 asm tutorials 
+by Iczelion, who maintains an excellent page at http://iczelion.cjb.net (with 
+a Win32 asm message board!). Ghirribizzo has supplied his fun Key Generator 
+Competition results (I can't say I was surprised when I saw the winner ;).  
+
+Larry Hammick --who also maintains an excellent, smoking-enabled page at 
+http://www3.bc.sympatico.ca/hammick/-- has contributed a fantastic piece on asm
+optimization. XBios2 has this time gone above and beyond, not only with the C 
+Language in Assembly but with his Issue Challenge as well... asm coders and
+reverse engineers alike should read this.
+
+As for the issue challenge, XBios2 did not provide me with one for next issue, 
+so I used one from a text I found on the Internet somewhere... he has been 
+emailed the text and can try to beat it ;) Also, I am going to be setting up a 
+page for reader responses to the Issue Challenges -- readers can anticipate the 
+solutions before each issue comes out, or try and best the solution afterwards. 
+Submissions can be sent to the same places as the Snippets. 
+
+Author Bio's? I know mainstream mags do this-- if you want one, send one. I'll 
+tack it onto the end of the article ... anything within reason: URL, email, 
+hobbies, perversions, favorite drink, favorite linux distro, etc.
+
+Next Issue: How many articles on Code Optimization can I get? That would make a
+great theme (with the foundation laid this issue)--anything from code theory to 
+PentiumII-specific optimizations would be welcome. Prospective articles, send 
+to me or post on the MB...no topic is unacceptable unless you can in no way 
+possible relate it to assembly language.
+
+Enjoy the ish, 
+_m
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                      Keygen Coding Competition
+                                                      by Ghiribizzo
+
+
+Introduction
+------------
+The competition was to write the smallest key generator for the simple serial 
+scheme I wrote as a trainer for newbies. I had a few reasons for starting this 
+competition:
+· To give the newbies a chance to participate in a competition
+· To give old hands the chance to brush up on their assembly skills
+· To promote tight assembly coding
+· To demonstrate the various different methods used to improve efficiency in 
+  coding
+
+Well, I'm back from my short European jaunt and the competition is now closed. 
+I have greatly enjoyed the entire competition, from the coding of the crackme 
+and the chats with various crackers on IRC through to deciding the winner and 
+writing this document.
+
+Analysis of the Serial Scheme
+-----------------------------
+The serial scheme was kept deliberately simple as it was written for newbies to 
+train with. The scheme took a name of up to 16 bytes long and required a 16 
+byte serial number. There was a 256 byte lookup table that was indexed directly 
+with the ASCII values of the name field. The name was padded to a length of 16 
+(if necessary) using values hardcoded into the scheme. The 256 byte lookup 
+table was created using eight maximal 8 bit linear feedback shift registers 
+(LFSRs) in parallel i.e. producing one output byte per 'clock'. The LFSRs were 
+initialised to produce 'Ghir_OCU' as the first 8 output bytes. The table was 
+precomputed and it was not expected that the cracker recognise the nature of 
+the lookup table - although a post I made to the cracking forum about LFSRs
+might have tipped the more astute crackers!
+
+The rules of the competition required that some standard interface text be 
+included which strongly urged the use of service 9 interrupt 21h - though this 
+would probably be used in any case - and discouraged blank screens and other 
+unfriendly UIs from being used to save bytes. Also, the rules specified a range 
+of input to be handled smaller than the possible 256 maximum. Due to the simple 
+nature of the serial scheme, this meant that the lookup table could immediately 
+be stripped down to the input range.
+
+I envisioned that there would be 3 ‘fights’. One to reduce the original 
+algorithm, second to reduce the packed table lookup algorithm and the last to 
+reduce the LFSR algorithm. As it turned it, everyone seemed to go for the
+packed table option.
+
+The Entrants
+------------
+The following entrants have been included because they illustrate the different 
+ideas and methods used to reach the common goal of reducing code size. I didn't 
+realise that so many crackers would use the precomputed table method. Perhaps 
+word got out during IRC chats and everybody started using them? In any case, 
+this didn’t reduce the size cutting war as precomputation had its own routines 
+that needed to be optimised.
+
+Ghiribizzo Alpha (223 bytes)
+----------------------------
+This was not an entrant as it would hardly be fair for me to enter the 
+competition knowing how the lookup table was generated! This keygen was 
+basically converted from the crackme and improved 'on-the-fly' by generating 
+the lookup table in code and tidying up routines where they were obviously 
+inefficient. No great thought went into this and the code size was just to give 
+myself an idea of what crackers would be aiming for. Aside from generating the 
+lookup table, the only other unusual feature of this keygen was the use of the 
+XLAT command instead of the standard indexing used in the crackme. I didn't 
+stop to check whether this used less space or not, but included it as newbies 
+may not be familiar with the XLAT instruction. As it happened, the  XLAT 
+instruction was used in Spyder’s keygen.
+
+From the size I got from this keygen, I tried to guess a required key input 
+range to put this size between thestraight table precomputation and the packed 
+table precomputation.
+
+One thing to note is how I ended the program. I was quite surprised by the fact 
+that nobody else seemed to know that you could quit com programs with a ret 
+instruction. Further size savings can be made by using Bb’s trick of keeping DH 
+and also by tweaking the generator to fix some of the bitstreams produced to 
+give us the bits we need and save later processing.
+
+Cruehead Alpha (244 bytes)
+--------------------------
+I got this from Cruehead on IRC when I asked to see what he had managed so far. 
+Although this version is unfinished it is still impressive. The keygen relies 
+on precomputing the whole table and reducing the keygen to a single table 
+lookup.
+
+The coding is very simple - almost seems as if Cruehead was typing the steps 
+going through his head straight onto the keyboard (perhaps he was?) the 
+resulting code is consequently very easy to understand and follow.
+
+Bb #10 (230 bytes)
+------------------
+Bb has written an excellent keygen. He has put some serious hard work into this 
+including taking the time to calculate the dx offsets manually instead of just 
+using the ‘offset’ feature that the compiler provides. It has been fun watching 
+Bb’s keygen progress as the first one I received was version 5 which was 256 
+bytes long. The keygen presented here is version 10. There are other nice bits 
+and bobs throughout this code. This makes it quite frustrating as in various 
+places so much space is blatantly wasted. Just take a look at the last 6 lines 
+of code! There shouldn’t even be 6 lines there! I’m sure Bb will learn a lot 
+from seeing some of the other keygens here and I’m sure he will do very well 
+should he enter the next competition.
+
+Spyder (211 bytes)
+------------------
+Tidy, compact and elegantly coded. A little sparse in commenting (it seems like 
+Spyder coerced IDA to write the keygen for him ;-p). The table lookup is an 
+interesting piece of code.
+
+VoidLord (247 bytes)
+--------------------
+Another keygen using the idea of a packed precomputed table. VoidLord’s first 
+keygen. Let’s hope we see more!
+
+Honourable Mentions
+-------------------
+Special mention given to Trykka who managed to deduce how the look-up table was 
+created - but never sent in an entry!
+
+The Winner
+----------
+Well it looks like Spyder is the winner by quite a large margin. Incidentally, 
+I have just made a quick check that the keygens work. You might be able to bump 
+yourself up on the scale by picking holes in the other keygens :-)
+
+Rankings
+--------
+
+  __Keygen______Size________Author______
+    kgen.com    211         Spyder
+    kg.com      224         Ghiribizzo (alpha)
+    kg10.com    230         Bb
+    kg9.com     233         Bb
+    kg6.com     239         Bb
+    kgvoid.com  247         VoidLord
+    kgcrue.com  255         Cruehead (alpha)
+    kg5.com     256         Bb
+    kgt.com     529         Serial Scheme
+
+Final Words
+-----------
+There have been some excellent ideas in the keygens. However, none of the 
+keygens are as small as they could be. They all have some scope for improvement. 
+By combining some of the ideas given in the above keygens, we could create a 
+new smaller keygen. It will be interesting to see what the smallest possible 
+keygen would look like.
+
+I hope that everyone who has taken part in the competition, or who has followed 
+it, has gained something from it. I hope that there will be more entries for 
+the next competition!
+
+The Source Codes
+----------------
+
+; Ghiribizzo’s Keygen =========================================================
+.model tiny
+.386
+.code
+.startup
+; The first part of the code is the table generator
+; Note that we can actually do some ‘precomputing’ by
+; fixing some of the bits in the generator to produce
+; the bits that we need. This will save some bytes
+; in the serial section. I have not bothered to do this.
+    mov ax, 5547h
+    mov bx, 6869h
+    mov cx, 725fh
+    mov dx, 4f43h
+    mov di, offset PRD
+    mov si, offset PRD + 0ffh
+LFSR:
+    stosb
+    ;Save MSB
+    mov bp,ax
+    mov al,ah
+    and ax,0ffh
+    xchg ax,bp
+    ;Tap
+    xor ah,bl
+    xor ah,ch
+    xor ah,al
+    ;Shift
+    mov al,bh
+    mov bh,bl
+    mov bl,ch
+    mov ch,cl
+    mov cl,dh
+    mov dh,dl
+    ;Store MSB
+    and dx,0ff00h
+    or dx,bp
+    cmp di,si
+    jle LFSR
+;-----------------------------------------------------------------
+    mov ah,9
+    mov dx,offset startMsg
+    int 21h
+    mov ah,10
+    mov dx,offset NameInput
+    int 21h
+;-----------------------------------------------------------------
+    mov si,offset NameBuffer
+    mov di,offset NameHash
+    mov bx,offset Table1
+MakeSerial:
+    lodsb
+    xlat
+    and al,3fh
+    or al,30h
+byteOK:
+    cmp al,39h
+    jle keepit
+    add al,7
+keepit:
+    stosb
+    cmp di,offset stopbyte
+    jl MakeSerial
+;-----------------------------------------------------------------
+    mov dx,offset NH2
+printMsg:
+    mov ah,9
+    int 21h
+exit:
+    ret
+StartMsg    db      0dh,0ah,'OCU Keggen #1 ',0feh,' Ghiribizzo 1998 ',0dh,0ah
+            db      0dh,0ah,'Enter Name : $'
+NameInput   db      17
+NameRead    db      ?
+NameBuffer  db      'mk3 "![]ns)%3x#0Z'
+nh2         db      0dh,0ah,'Serial Number: '
+NameHash    db      16 dup('y')
+stopbyte    db      0dh,0ah,'$'
+Table1:
+PRD:
+END
+
+; Cruehead’s Keygen ===========================================================
+.model tiny
+.386
+.stack
+.data
+StartMsg    db      0dh,0ah,'OCU Keggen #1 ',0feh,' Cruehead 1998 ',0dh,0ah
+            db      0dh,0ah,'Enter Name : $'
+SerialMsg   db      0dh,0ah,'Serial Number: '
+NameVar     db      011h,0h,06Bh,06bh,033h,020h,022h,021h,05bh,05dh,06eh
+            db      073h,029h,025h,033h,078h,023h,030h,'$'
+Table       db      037h,035h,034h,031h,036h,032h,046h,044h,046h,044h,044h
+            db      031h,035h,035h,038h,035h,036h,046h,032h,045h,036h,030h
+            db      031h,039h,033h,034h,030h,046h,031h,042h,044h,030h,043h
+            db      036h,043h,035h,039h,045h,039h,033h,036h,043h,037h,035h
+            db      036h,044h,045h,036h,032h,044h,031h,037h,039h,030h,031h
+            db      042h,046h,043h,034h,032h,031h,035h,037h,034h,044h,032h
+            db      032h,032h,030h,043h,034h,030h,044h,044h,033h,039h,044h
+            db      043h,038h,036h,031h,038h,041h,037h,034h,046h,045h,041h
+            db      036h,044h,043h,041h,041h,039h,043h,037h
+.code
+.startup
+    mov ah,09h
+    lea dx,StartMsg
+    int 21h
+    mov ah,0ah
+    lea dx,NameVar
+    int 21h
+OnceAgain:
+    mov bl,NameVar[di+4]
+    cmp bl,0dh
+    jne noprob
+    mov bl,02bh
+noprob:
+    mov al,table[bx-020h]
+    mov NameVar[di+2],al
+    inc di
+    cmp di,0Eh
+    jne OnceAgain
+    mov word ptr NameVar[16],00a0dh
+    mov ah,09h
+    lea dx,SerialMsg
+    int 21h
+.exit
+end
+
+; Bb’s Keygen =================================================================
+; KG10 - Ghiribizzo KeyGen
+; written by bb 12Sep98 1:30AM
+; next revision 13Sep98 5:00PM
+; yet more changes - 26Sep98 - late late night
+; eat 3 more bytes 28Sep98
+;
+; comments where the evils lay
+;
+; I just knew that I HAD to make this thing 256 bytes of less. Beware: This
+; is NOT an example of good coding practice! I almost wish I could do a
+; "bytes saved" comparison for all the little hacks.
+;
+; I've gotten this to assemble under TASM. It MUST assemble as a 16-bit COM file,
+; and even then I can't guarantee that the offsets will remain stable between
+; various assemblers. Let me restate that: I CAN guarantee that this won't
+; work for you when you try and assemble it yourself. :)
+;
+P8086
+MODEL TINY
+DATASEG
+OffsetStartMsg      EQU     52h
+OffsetMySerial      EQU     7fh
+OffsetSerialMsg     EQU     91h
+OffsetMyName        EQU     0a3h
+StartMsg    db  0dh,0ah,'OCU Keggen #1 ',0feh,' ----- bb ----- 1998',0dh,0ah
+; There's no reason not to re-use this section of the StartMsg, since it fits 
+; perfectly though code had to be added to affix a linefeed
+MySerial    db  0dh,0ah,'Enter Name : $'
+SerialMsg   db  0dh,0ah,'Serial Number: $'
+; previous change to MyName not needed anymore
+MyName      db  11h, 0h, 6Dh, 6Bh, 33h, 20h, 22h, 21h, 5Bh, 5Dh, 6Eh, 73h, 29h, 
+            db  25h, 33h, 78h, 23h, 30h, 5Ah
+; Not only does the full table not need to be used, but since it's basically a 
+; substitution cypher we can fit everything into these 96 or so bytes
+; Also, the trailing commented-out 37h saves us one byte. It's the substitution for 7Fh,
+; but since 7Fh is a DELETE when using 0a/int21h, it never gets accepted by KGT.COM or by
+; this keygen. Therefore, it's useless and unneeded.
+; NewTable db '754162FDFDD155856F2E6019340F1BD0C6C59E936C756DE62D17901BFC421574
+; D2220C40DD39DC8618A74FEA6DCAA9C';, 37h
+; and I missed the fact that it also only uses characters 0-9 and A-F
+; which can be expressed in 4 bits, cutting the 96 byte table in half
+
+NewTable    db      75h, 41h, 62h, 0FDh, 0FDh, 0D1h, 55h, 85h
+            db      6Fh, 2Eh, 60h, 19h, 34h, 0Fh, 1Bh, 0D0h
+            db      0C6h, 0C5h, 9Eh, 93h, 6Ch, 75h, 6Dh, 0E6h
+            db      2Dh, 17h, 90h, 1Bh, 0FCh, 42h, 15h, 74h
+            db      0D2h, 22h, 0Ch, 40h, 0DDh, 39h, 0DCh, 86h
+            db      18h, 0A7h, 4Fh, 0EAh, 6Dh, 0CAh, 0A9h, 0C7h
+CODESEG
+STARTUPCODE
+; A note here: We're at <256 bytes and we fit snugly between 0100h-0200h in memory.
+; Therefore, any offset to text that we need is going to have a constant value for
+; DH, namely 01h. By initializing DH once at this next line of code, we never need
+; to change DH again, only DL. We'll save a few bytes here and there because of it,
+; though it's more work to find the offsets manually after assembly, and then hard-
+;coding them in and re-assembling. I suppose there might be some construct like
+; offset ( MyName AND 00ffh ), but I didn't really look into it. EQU will work.
+    mov dx, offset StartMsg
+    mov ah,09h
+    int 21h
+    ; save a byte
+    mov dl, OffsetMyName
+    mov ah,0ah
+; Now that we're through with the StartMsg, we can adjust MySerial to print a linefeed.
+; I can save a byte here by using the AH register instead of a 0AH immediate value,
+; since AH is now set to 0AH for the int21 get-string-from-keyboard.
+    mov [MySerial+10h], ah
+    int 21h
+    ; 2 into DL for a division during the main loop
+    mov dl, 2
+; We start at the END of MyName and work our way backwards, because we can avoid the CMP
+; and simply check for the Signed flag when BP rolls over. We save a couple of bytes.
+    mov bp, 0fh
+; Also, I shaved a few bytes out of this by using BP in place of BX, avoiding the PUSH/POPs
+; which I shouldn't have done anyway since I didn't define a new stack for the application.
+loop1: 
+    xor ah, ah ; need to clear ah and bh, unfortunately.
+    xor bh, bh
+    mov al, [bp+MyName+2]
+    sub al,20h ; if the sub sets carry, then we're probably the carriage return
+    jnc skipcr ; so we'll set ourselves = to something that has the same table
+    mov al, 03h ; lookup value as the carriage return.
+skipcr:
+    div dl ;after the DIV, AL will be two table values, and AH will decide which
+           ; one we should use
+    mov bl, al ; we need table lookup through bx, not al
+    mov al,[bx+NewTable]
+    test ah, dh ;since dh always=1,test ah,dh will save us a byte over test ah,01
+    jne skipshift ; if AH=0, use least significant nibble
+    ; if AH=1, use most significant nibble by shifting MSN into LSN
+    ; TASM assembles shr al, 4 as shr al, 1 four times.. we don't want that.
+    db 0c0h, 0e8h, 4 ; shr al, 4
+skipshift:
+    and al, 0Fh ; strip off high nibble
+    add al, 30h ; and turn into printable [0-9A-F] character
+    cmp al, 39h
+    jle numnum
+    add al, 7
+numnum:
+    mov [MySerial+bp],al
+    dec bp
+    jns loop1 ; loop until bp flips
+    ; save another "offset" byte
+    mov dl, OffsetSerialMsg
+    mov ah, 9
+    int 21h
+    ; save another byte
+    mov dl, OffsetMySerial
+    ; AH should already == 9, no need to specify it here.
+    int 21h
+    ; End of the line
+    mov ah,4ch
+    int 21h
+END
+
+; Spyder’s Keygen==============================================================
+; Ghiribizzo's Key Generator Competition entry by Spyder
+; Sheesh you get assembler source and you want comments?
+; Only one nibble of each byte in the original key table holds useful
+; information. Only key table entries in the range 20..0x7F and 0x0D are
+; needed - those 60 nibbles are packed into a 30 byte table, 0x0D is handled
+; as a special case.
+; The rest is just space concious assembler with a few wrinkles to save
+; bytes. I worry I may have missed some pattern in the key table, could it
+; be generated or derived? Otherwise I'm pretty happy with the result.
+.286
+seg000 segment byte public 'CODE'
+assume cs:seg000
+org 100h
+assume es:nothing, ss:nothing, ds:seg000
+public start
+start proc near
+    mov ah, 9
+    mov dx, offset StartMsg
+    int 21h ; Sign on
+    mov ah, 0Ah
+    mov dx, offset Buffer
+    int 21h ; Get name
+    mov si, offset BufferCont ; Set up for loop
+    mov di, offset Serial
+    mov bx, offset Key - 10h
+    xor ax,ax
+    mov cx,10h
+loop1: 
+    lodsb
+    ; cmp al,0dh ; don't need this because we arranged the data
+    ; jnz skip0 ; before the key table to give the right code
+    ; mov al,'p' ; for this out of range case
+skip0: 
+    sar al,1
+    xlat
+    jc skip1
+    sar al,4
+skip1: 
+    and al,0fh
+    add al,'0'
+    cmp al,'9'
+    jle skip2
+    add al,7
+skip2: 
+    stosb
+    loop loop1
+    movsw
+    movsb
+    mov ah,9
+    mov dx,offset SerialMsg
+    int 21h
+    int 20h
+start endp
+Buffer      db  11h ;
+            db  0 ;
+BufferCont  db 'm'
+            db 'k'
+            db '3'
+            db ' '
+            db '"'
+            db '!'
+            db '['
+            db ']'
+            db 'n'
+            db 's'
+            db ')'
+            db '%'
+            db '3'
+            db 'x'
+            db '#'
+            db '0'
+            db 0dh, 0ah, '$'
+StartMsg    db 0dh,0ah,'OCU Keggen #1 ',0feh,' ----- spyder ----- 1998',0dh,0ah
+            db 0dh,0ah,'Enter Name : $'
+            db 0 ; A crucial spacer
+Key         db 075h, 041h, 062h, 0FDh, 0FDh, 0D1h, 055h, 085h
+            db 06Fh, 02Eh, 060h, 019h, 034h, 00Fh, 01Bh, 0D0h
+            db 0C6h, 0C5h, 09Eh, 093h, 06Ch, 075h, 06Dh, 0E6h
+            db 02Dh, 017h, 090h, 01Bh, 0FCh, 042h, 015h, 074h
+            db 0D2h, 022h, 00Ch, 040h, 0DDh, 039h, 0DCh, 086h
+            db 018h, 0A7h, 04Fh, 0EAh, 06Dh, 0CAh, 0A9h, 0C7h
+SerialMsg   db 0dh,0ah,'Serial Number: '
+Serial:
+seg000 ends
+end start
+
+; VoidLord’s Keygen============================================================
+; OCU Keygen #1 | VoidLord 1998
+; Category: newbie (this is my first keygen)
+; Solution:
+; for the every possible input char (20h-7fh) the "serial" char is stored in the 
+; Table. Since the output chars can only be 0-9 and A-F, we can store two chars 
+; in one byte, reducing the table size to 48 bytes.
+seg000 segment byte public 'CODE'
+assume cs:seg000
+org 100h
+assume es:nothing, ss:nothing, ds:seg000
+start proc near
+    mov ah, 9 ; DOS - Write starting message
+    lea dx, StartMsg
+    int 21h
+    mov ah, 0ah ; DOS - read Name
+    lea dx, Serial
+    int 21h
+    xor ax, ax
+    xor bx, bx
+loop1: 
+    mov al, [Serial2+bx] ; the output will be in the same buffer
+    cmp al, 0dh ; end of input string (odh) ?
+    jne no_cr
+    mov [Serial2+bx], '1' ; the output char will be '1'
+    jmp finish ; the remaining chars are OK already
+no_cr: 
+    push bx ; now we should translate the namechar
+    sub al, 20h ; to the serial number char, using the
+    mov bx,ax ; lookup Table
+    shr bx,1 ; we have two chars in one byte in the Table
+    and al, 1
+    jnz odd ; is this char "even or odd" ?
+    mov al, [Table1+bx]
+    and al, 0fh ; if even, use the lower 4 bits
+    jmp end_l
+odd: 
+    mov al, [Table1+bx]
+    mov cl, 4
+    shr al, cl ; if odd, use the higher 4 bits
+end_l: 
+    pop bx ; translate the number to the hex char
+    cmp al, 10 ; is it digit 0-9 or letter A-F
+    jl digit
+    add al, 7 ; if letter, add 7
+digit: 
+    add al, '0' ; if digit, just add '0'
+    mov [Serial2+bx], al
+    inc bx ; process next input char
+    cmp bx, 10h
+    jl loop1
+finish: 
+    mov Serial, ':' ; complete the output string
+    mov Serial+1,' '
+    mov ah, 9 ; DOS - Print solution
+    lea dx, SerialMsg
+    int 21h
+    mov ah, 4Ch ; DOS - QUIT with EXIT
+    int 21h
+start endp
+StartMsg        db      0dh,0ah,'OCU Keygen #1 ',0feh
+                db      ' ----- VoidLord ----- 1998'
+                db      0dh, 0ah, 0dh,0ah,'Enter Name : $'
+SerialMsg       db      0dh,0ah,'Serial Number'
+Serial          db      11h, 0
+Serial2         db      67, 57, 69, 55, 52, 53, 50, 53, 56, 55
+                db      68, 50, 69, 54, 49, 54, 0dh, 0ah, '$'
+Table1          db      87, 20, 38, 223, 223, 29, 85, 88, 246, 226
+                db      6, 145, 67, 240, 177, 13, 108, 92, 233, 57
+                db      198, 87, 214, 110, 210, 113, 9, 177, 207, 36
+                db      81, 71, 45, 34, 192, 4, 221, 147, 205, 104
+                db      129, 122, 244, 174, 214, 172, 154, 124
+seg000 ends
+end start
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                   How to Use A86 for Beginners
+                                                   by Linuxjr
+
+
+Requirements:
+-Basic Dos knowledge like copying and renaming files and such
+
+I am writing this paper for I find plenty of tutorials and books all about
+assembly and how to write programs and how to do loops, if/else statments,
+etc... But one thing I did not see plenty of is tutorials on how to set up the
+assembler of choice that you grow fond of, for instance nasm, a86, tasm, masm
+GAS, etc. 
+
+So I am writing about a86 and I'm using my college notes and experience I 
+learned from my Assembly class. I hope this will help you enjoy a86 and
+encourage you to learn how to manage up to x286 opcodes and 16-bit code
+before you start tackling with 32bit and Windows programming in assembler. 
+This is a sort of warning that you will only be able to write DOS programs
+but you have to learn how to crawl before you can walk, and you have to learn
+how to walk before you can run. I hope to show you how to set up a86, how
+to write a few simple programs with the template I use, and how to do some
+basic stuff in assembler.
+
+I took a college course on Assembly a couple of months ago, and I was happy to
+learn the internals of the system and how to manipulate the registers for some
+awesome results. The assembler that we used was a86 by Eric Isaacson. This
+is a shareware program, meaning you get to play with it before buying it. To 
+get this assembler go to - http://www.eji.com/a86/ - and you will see where to
+download the programs. It is in a zip file and you just unzip it with your
+favorite program like winzip or pkunzip. You should also download d86, the
+debugger, for use with your a86 programs. Once you downloaded them, unzip the
+files to a directory such as c:\a86, or even put on a floppy disk if you are
+worried about space.
+
+
+Getting Started
+---------------
+Let's get into it: you've got the assembler and the debugger, what next? First
+of all, we have to make a text file since all asm source code is nothing but a 
+plain text code that has a bunch of operands and functions to do what you want 
+your program to do. 
+
+I start all my a86 programming by opening up my template.asm, which what I 
+got from school; it is a useful template and it makes a good dos .EXE when you
+compile it with the supplied batch file. Cut the following code and save it in 
+a text file called template.asm:
+
+X--------Begin Cutting here--------------------------------------------
+
+; PROGRAM             : 
+;
+; AUTHOR              : 
+;
+; PURPOSE             : 
+;                       
+; PROGRAM OUTLINE     : 
+;                       
+;============================== EXTERN ===============================
+
+;=========================== STACK SEGMENT ===========================
+sseg   segment      para stack 'STACK'
+			      
+	db      100H dup ( ? )        ; allow 256 bytes of memory for
+                                  ; use by our program stack.
+sseg   ends
+
+;============================ DATA SEGMENT ============================
+dseg    segment     para 'DATA'
+
+dseg    ends
+
+;============================ CODE SEGMENT ============================
+cseg    segment     para 'CODE'
+; Begin the Code segment containing executable machine code
+
+program proc    far             ; Actual program code is completely
+                                ; contained in the FAR procedure 
+                                ; named PROGRAM 
+
+	assume  cs:cseg, ds:dseg, ss:sseg
+; Set Data Segment Register to point to the Data Segment of this program
+	mov     ax,dseg
+	mov     ds,ax
+
+;=============== Rest of MAIN PROGRAM code goes here ==================
+exit:
+	mov     ax,4c00h              ; terminate program execution and
+	int     21h                   ; transfer control to DOS
+
+program endp                          ; end of the procedure program
+
+;============================ PROCEDURES ==============================
+cseg    ends                    ; End of the code segment containing
+                                ; executable program.
+
+	end     program         ; The final End statement signals the
+                            ; end of this program source file, and
+                            ; gives the starting address of the
+                            ; executable program
+
+X--------Stop Cutting here--------------------------------------------
+
+Now we have a template to use, and this is just one out of many templates you
+can make for your assembly programs. Now let's begin to have fun. These few
+programs will get us going for a basic feel of how to set up a basic hello
+program.
+
+What we will learn from this example is:
+1) The basic mechanics of editing the template file to get an ASM source code
+   file, assembling and linking it, and possibly fixing syntax errors.
+2) Nearly all of the programs have loops in them, having different formats.
+3) The operation of several INT 21H functions: 01H, 02H and 08H
+  (character input and output), 09H(string output), and 4CH(program termination)
+4) The operation of the DOSIOLT procedures: inhex16 and outhex16, and how to
+   assemble and link a program that uses them.
+5) Both string and numeric variables will be demonstrated.
+
+
+Creating an ASM file for the Message Program
+--------------------------------------------
+To become familiar with the process of creating an assembly program, you will
+create a simple program that prints a one line message. As with most
+programming languages, Assembly programming starts with a plain text file
+containing the program instructions to execute. Ordinarily, a programmer would
+have to type in the entire source file from scratch. But 8086 assembler
+program files contain a large number of setup directives and declarations
+which are essentially the same for every program. It will be easier to start
+with a file that has all the necessary directives and declarations already in
+it, and just add to it the actual program parts.
+
+The file template.asm is that a template which contains all the necessary
+pieces of a program, except for the actual program itself. Make a copy of the
+template.asm file, and name it something appropriate: message.asm is a good
+choice. The file extension must be ASM. You will edit the new file to create
+your first program. DO NOT EDIT template.asm itself!!!! You will use this
+template file as the start of your assembly programs so it should not be 
+alterated(until you get advanced enough to play around with it ;-).
+
+We will be using EDIT in a dos box as our editor, though you can use notepad or
+Ultraedit to edit your assembly files as well.
+
+The Comments 
+All of the progras that you will write should have a descriptive set of header 
+comments at the top. Any text AFTER a semicolon is considered a comment. The 
+top of your new program file should already have the basic outline for this 
+comment. Edit in your message.asm file to have something like this :
+
+; PROGRAM             :  Message Program
+;
+; AUTHOR              :  Your Name here
+;
+; PURPOSE             : This program simply prints a one line message
+;                       to the screen
+; PROGRAM OUTLINE     : Use INT 21H Function 09H to print the message.
+
+This is just an example to help you know what you want to do, and to have a
+reference if you were to walk away from a project for a year or so...the header
+will make a nice reminder of what you were trying to get this program to do.
+
+The Ram Variable
+The program that you will creat in this part requires a variable. You will 
+create a string of characters labeled message. The part of the file where all 
+data is placed is the Data Segment. Look in your ASM file for the following 
+lines:
+
+dseg    segment     para 'DATA'
+
+dseg    ends
+
+Change this part of the code so that the message to be printed is defined.
+The result will look like:
+
+dseg    segment     para 'DATA'
+
+message   db  0DH, 0AH, "WHOPPEEEE!!! My first Message.", 0DH, 0AH, "$"
+
+dseg    ends
+
+The HEX values are the two-byte sequence for a DOS newline(CR-LF). The first
+characters of "0DH" and "0AH" is ZERO, no capital O. Note that there is NO
+semicolon before "message". Do not allow this part to break over two lines.
+
+THE Code - 
+Now locate the part of the code where the program code goes. It should look 
+like this:
+
+ ;========================Main Program================================
+ ;
+ program proc    far             ; Actual program code is completely
+                                 ; contained in the FAR procedure 
+                                 ; named PROGRAM 
+
+	assume  cs:cseg, ds:dseg, ss:sseg
+; Set Data Segment Register to point to the Data Segment of this program
+    mov     ax,dseg
+    mov     ds,ax
+
+;=============== Rest of MAIN PROGRAM code goes here ==================
+
+exit:
+ mov     ax,4c00h              ; terminate program execution and
+ int     21h                   ; transfer control to DOS
+
+program endp                          ; end of the procedure program
+
+;============================ PROCEDURES ==============================
+
+
+cseg    ends                    ; End of the code segment containing
+    ; executable program.
+
+ end     program         ; The final End statement signals the
+    ; end of this program source file, and
+    ; gives the starting address of the
+    ; executable program
+
+All of the code for your program Should REPLACE the comment: 
+"Rest of Main Program code goes here".
+ 
+Here is the code you will use to print out the message:
+
+ ;Print the message
+ mov dx, offset message
+ mov     ah, 09H
+ int 21H
+ 
+This code just calls the DOS Interrupt used to print strings to the screen.
+Interrupt 21H is a general starting point for many useful DOS calls. The
+sub-function used to print strings is Function 09H; this value must be loaded
+into the AH register before calling. Also, Int 21H Function 09H requires the
+address of the message be placed in the DX register. The above code performs
+these two initialization tasks, and then calls the interrupt.
+
+Take careful note of the semicolons which start the comments. Also, do not
+alter any of the other part of the code.
+
+These were the only two changes you needed to make.
+
+Assembling with asm86.bat
+-------------------------
+Now we have written our first asm file. To assemble with a86 you could try to
+use the switches from the manual that is included with the a86 package, or
+you can make things easy by using this batch file, which is designed for 
+programs that use the template file. Here is the batch file:
+
+:------------------------------ASM86-----------------------------------
+@echo off
+REM This is a simple batch file to use a86 and link:       
+if exist %1.asm GOTO FOUND
+                echo %0 ERROR : %1.asm -- FILE NOT FOUND
+                echo Usage: %0 file [link-file]
+                GOTO STOP
+        : FOUND
+        :-- Assemble the program
+        echo a86 +O +S +E %1.asm
+        a86 +O +S +E %1.asm
+::-- IF THERE WAS AN ERROR, STOP
+        IF ERRORLEVEL 1 GOTO STOP
+::-- IF there is a second file name, assume it is a OBJ file,
+::-- and link it to the %1 name.
+        IF X%2 == X GOTO ELSELINK
+                ECHO link %1+%2;
+                link %1+%2;
+                GOTO ENDIFLINK
+        :ELSELINK
+                echo link %1;
+                link %1;
+        :ENDIFLINK
+:STOP
+
+and save this as asm86.bat.
+
+All this does is  1) create an object file (+O), 2) suppress the creation of 
+the symbol table .sym(+S), and 3) copy the errors to a the filename.err instead 
+of writing in your file(+E).
+
+To assemble the message.asm with the batch file,  type
+  asm86 message
+
+If there were any errors, you will have to edit the asm file to fix them. The
+error messages displayed by the assembler should indicate the line number and
+cause of the problem. Since you are just copying pregenerated code, any errors
+will simply be typos.
+
+Once all of the errors have been corrected, a pair of files will have been
+created. The will have the same base name as the original asm file, but will
+have different extensions:
+
+OBJ- Object file. Contains the basic machine code, but does not have any
+references to external procedures. This is, effectively, an intermediate file
+which is used by the linker to produce the final executable file.
+
+EXE- Executable file. All external references resolved. Completely runable.
+
+To run the program just type Message and you will see the line appear on the
+screen.
+
+This was a simple Hello program. What you probably want is another example or 
+two to try out, and that is what we shall do. The next Program that won't be as 
+long but will have plenty of info.
+
+
+CharLoop Program
+----------------
+In this part, you will create a simple program that asks the user to enter a
+character, and prints it out again. It does this repeatedly, until the user
+hits the ESC key. Dos funtions 01H and 02H are introduced with this program,
+and it is the first program containing a comparison loop.
+
+Again you should start by copying template.asm to a file called charloop.asm.
+Edit the charloop.asm template so that it has the following changes:
+
+Create two messages by adding the following lines to the Data Segment part of
+the program (see the message program instructions, if you don't remember how
+to do this):
+
+prompt    db    0DH, 0AH,"Enter a Character: $"
+outmsg    db    0DH, 0AH, "You Entered:   $"
+
+Now add the code which will put the following "pseudocode" into effect:
+        Repeat
+                prompt for and read a character
+                Print the character back out with a message
+        While the character read is not esc
+
+Which will turn out to be the following assembly code:
+
+char_loop:
+        ;Print the prompt
+        mov     dx, offset prompt
+        mov     ah, 09H
+        int     21H
+        ;Read a character into AL
+        mov     ah, 01H   ;(01H - with echo; 08H - no echo)
+        int     21H
+        mov     bl, al    ;save character in BL
+        ;Print the final message
+        mov     dx, offset outmsg
+        mov     ah, 09H
+        int     21H
+        ;Write the character to the screen
+        mov     dl, bl  ;put character in dl
+        mov     ah, 02H
+        int     21H
+        ;Loop back, only if the character was not esc (1BH)
+        cmp     bl, 1BH
+        jne     char_loop
+        ;End Repeat
+
+Note how the two new DOS interrupts are called. The Function number is always
+placed in AH before calling, and the INT 21H instruction is used to invoke the
+interrupt. For Function 1H, which reads a character to the screen, the DL
+register must be initialized with the appropiate value.
+
+Note also that the character must be stored somewhere throughout the whole
+loop, and it can NOT be stored either AL or DL -- AL is modified by Function
+02H, and DL is modified when DX is set to the address of teh strings. So BL is
+used to store the character, and the value must be transferred between AL, BL
+and DL during processing. This kind of juggling happens often in assembly
+programming. Get this program running to watch another good program going ;-).
+
+
+CharLoop Program without Echo
+-----------------------------
+In CharLoop program above. Function 01H was used to read a character from the
+keyboard. It does more than just read a character, it also echoes it back to 
+the screen. This way, when you type something, you get visual feedback of what 
+you have done.
+
+Function 08H works exactly the same as Function 01H, except for this echo
+feature: Function 08H does NOT echo the character after reading it.
+
+Create a new program which is exactly the same as CHARLOOP, except it should
+use Function 08H to read the characters, instead of Function 01H. Write and
+run the program to see how it works.
+
+
+NumLoop Program
+---------------
+This program will work in a similar fashion to the Charloop program above, but
+it will read and print numbers. Since there is no DOS interrupt to convert
+ASCII characters to numbers, your code will have to do this. Fortunately,
+there are already procedures to do this. A few extra steps must be taken to
+use them, but it will be much easier than writing the code from scratch. See
+the info about DOSIOLT for details on how to use thes procedures.
+
+                        DOSIOLT Procedures
+Here is a description of the DOSIOLT procedures:
+
+inhex16
+This procedure reads a HEX number in character format from the standard input, 
+and converts it to a word. Spaces or Tabs may precede or follow then number. 
+DOS int 21H-0AH is used to read the input string, so it must be terminated by a 
+RETURN. Both upper and lower case letters A-F may be used. If the number typed 
+is larger than FFFH, the upper bits are lost. If anything unpredictable is 
+typed(like non-HEX chars) the function will return junk.
+Inputs:   None
+Outputs:  AX- the word-sized number read.
+Modifies: AX, flags
+
+outhex16
+This simple routine prints the four 'nibbles' of AX as ASCII digits.
+Four digits are always printed.
+Input: AX- the number to be printed
+Outputs: None
+Modifies: Flags
+
+outHex8
+This simple routine prints the two 'nibbles' of AL as ASCII digits. Two digits 
+are always Printed.
+Input: AL-the number to be printed
+OUTPUT: NoneModifies: Flags
+
+Call
+Each of these procedures is invoked with the CALL instruction. Any
+inputs(registers) must be initialized before the call; any outputs(also
+registers) are set by the procedure, and contain the appropriate value after
+the call.
+
+For example, to print the 1-byte value "2F" to the screen:
+        mov al, 2FH
+        call outhex8  ;Prints: 2F
+To Print "2AC5"
+        mov ax, 2AC5H
+        call outhex16 ; print 2AC5
+To read a number from the keyboard:
+        call inhex16 ;The ax register now contains the number read
+
+Extern
+Since the code for these functions does NOT appear in your ASM file, two
+special steps must be taken in creating your executable file. The first is to
+declare the names of the procedures as external procedures. This informs the
+assembler that the code has been written elsewhere, and you didn't just forget
+to write it.
+
+The extern declaration should come someplace early in the ASM file. Although
+it doesn't matter greatly where it goes, most programmers will put these
+declarations outside of all of the segments. The template file given has a
+spot for externals, marked with a commment.
+
+The format for the declaration(in this case) is:  
+  extern   procedure_name:far
+        
+        A86 USERS: The A86 Assembler uses the older version of the extern
+        declaration, which is spelled extrn. If you are using the a86
+        assembler(asm86.bat), make sure you spell the name of the instruction
+        extrn.
+
+procedure_name is the name of the procedure that you will use in the program.
+The name only needs to be declared once in this way, no matter how many times
+it is used. But if two or more DOSIOLT procedures are to be used, each must
+have a separate declaration.
+
+You should NOT place these extern declarations in your code unless you are
+actually using the routines. The linker may place the code for the procedure
+in your final executable even if it is never called.
+
+LINKING
+A special step must be taken in linking (the second half of the compilation
+phase done by asm86.bat) to link the code in DOSIOLT. Fortunately, asm86.bat
+can handle the extra file fairly automatically. Just include the DOSIOLT on
+the command line, after your asm file name.
+
+Example: assuming you have written a program in a file called "calc.asm" which
+contains calls to the DOSIOLT procedures. To assemble and link the program:
+  A:\> asm86 calc dosiolt
+If you get an "Undefined Symbol" error, it is because you mistyped, or
+forgot, the extern declarations for the DOSIOLT procedures. Make sure
+these are correct.
+
+If you get an "Unresolved External" error, it is because you forgot to put
+"DOSIOLT" as the second file name; i.e. you typed: asm86 calc instead of
+asm86 calc dosiolt.
+
+This program will illustrate the use of two of the DOSIOLT procedures, and also
+the use of variables, rather than registers, as places to store information.
+The outline of the program is as follows:
+         Loop forever
+                Prompt for, and read a number into the variable NUMBER
+                IF number = 0, then break out of the loop
+                print Number, with an appropriate announcement.
+         End Loop
+
+Your program will need a prompt string, a response string and a word-sized
+variable in the Data Segment:
+
+prompt1   db   0DH, 0AH, "Enter a number:  $"
+response  db   0DH, 0AH, "You Entered:    $"
+number    dw   ?
+
+Number has been declared as a word-sized variable, with no initial value. The
+Code can now use the name "Number" just like a register name( in most cases).
+
+The code for the program is:
+
+number_loop:
+        ;Print the first prompt
+        mov     dx, offset prompt1        mov
+     ah, 09H
+        int     21H
+
+        ;Read a number into AX and put it in NUMBER
+        call    inhex16        mov     number, ax
+
+        ;If number = 0 the exit the loop
+        cmp    number, 0H
+        je     end_number_loop
+
+        ;Print The second prompt.
+        mov     dx, offset response
+        mov     ah, 09H
+        int     21H
+        ;Print the number
+        mov     ax, number
+        call    outhex16
+        jmp     number_loop
+end_number_loop:
+
+Note that the inhex16 reads a number into AX, and outhex16 prints the number
+AX, yet this code went through all the trouble of storing the number in the
+variable, rather than just leaving it in AX throughout the loop. WHY?!?
+Because AX was needed in between the reading and printing of the code. Again,
+this kind of juggling between registers and variables occurs often in assembly
+programming.
+
+Since two DOSIOLT procedures are being used, they must be declared. At the top
+you will find the EXTERN part of your program template; add these lines to the
+section:
+;===============================Extern======================================
+extrn  inhex16:far
+extrn  outhex16:far
+
+Those are all the changes needed.
+Don't forget to include the DOSIOLT file on the command line when compiling, 
+which will be --- asm86 numloop dosiolt
+
+I do apologize for the length of this but I got to excited when I was messing
+with these old files and playing with these procedures in dosiolt.obj file.
+
+If you want to try to use these files, you can email me at 
+  linuxjr@hotmail.com
+and request the dosiolt.obj to use with the numloop;  I will be more than happy
+to send it.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                     Using the Gnu AS Assembler
+                                                     by mammon_
+
+
+Using the Gnu AS Assembler
+mammon_
+
+GAS is the GNU project port of the Unix AS assembler; it is available as part
+of the binutils package which is included with any of the GNU compilers (for
+example, GCC). GAS support is built into the various GNU compilers, and so GAS
+can be invoked by invoking the compiler on a .S (asm source) file; however it
+can also be run on any source file (for example, .asm files) by using the 'as'
+command.
+
+The GAS documentation is available on Linux installations in info (.gz) format,
+and is viewed using the command 'info as' or 'info -f as.info'. For the
+novice, a crash course in info: Info files are designed in a tree structure,
+with each page or section being considered a 'node'; h gets help, q quits
+info, SPACE scrolls down the screen, DEL scrolls up the screen, b jumps to the
+beginning of the node, e jumps to the end of the node, n jumps to the next
+node, p jumps to the previous node, g jumps to a specified node, m jumps to a
+specified menu item, s searches the info file, and l steps back 1 node.
+
+The sections of the most interest in the manual will be the Directives 
+('g Pseudo Ops'), Symbols ('g Symbols'), Constants ('g Constants'), and 
+Sections ('g Sections') nodes. For more immediate references, the Intel 386-
+specific topics can be consulted: 'g i386-Syntax', 'g i386-Opcodes', 
+'g i386-Regs', 'g i386-prefixes', 'g i386-Memory', 'g i386-jumps'.
+
+
+The AT&T Syntax
+---------------
+GAS uses the AT&T syntax, which is known to be confusing for those used to the 
+Intel assembler syntax. It has been said that the AT&T syntax is less ambiguous 
+than the Intel, and thus it has its own appeal.
+
+Registers
+One of the most obvious differences in syntax is that the registers in the AT&T
+syntax are prefixed with %. Thus, 'eax ax al ah' would be written '%eax %ax %al
+%ah' for GAS.
+
+Opcode Format and Order
+Unlike the Intel syntax which uses the format 'opcode dest, src', AT&T syntax 
+uses the format 'opcode src, dest'; thus the command 'mov eax, ebx' in Intel 
+would be 'mov %ebx, %eax' in AT&T. In addition, the opcodes in AT&T syntax all 
+take suffixes to specify the size of the operand (note that these suffixes can 
+be ignored usually, as GAS will guess the operand size by the size of the 
+register being accessed)-- thus one would add 'w' to an opcode to specify a 
+word operand, 'b' to specify a byte operand, and 'l' to specify a long operand. 
+The Intel 'mov' opcode would then be specified in AT&T syntax by using 'movb', 
+'movw', or 'movl' as circumstances warrant. Note that this carries over into 
+far calls; as the 'FAR" keyword is not present in GAS, one must prefix (not 
+suffix) the call or jump with "l": thus a 'far call' becomes 'lcall', 'far 
+jmp' becomes 'ljmp', and 'ret far' becomes 'lret'.
+
+Immediate and Absolute values
+Immediate values are prefixed with a $ in the AT&T syntax, while in the Intel 
+syntax they are unmarked. Thus a 'push 4' statement becomes a 'push $4' in 
+AT$T. Also, an absolute value is prefixed by a *, while in Intel it would be 
+unmarked.
+
+Memory Referencing
+This is the part that is most likely to cause trouble for those used to the
+Intel syntax. Intel uses the following syntax for memory references:
+SECTION:[BASE + INDEX*SCALE + DISP]
+where BASE is the register used as a base in the reference, INDEX is a register 
+used to calculate an offset, SCALE is the multiplier used to calculate the 
+offset from the INDEX register, and DISP is the displacement from the BASE or 
+INDEX register. Some examples from the GAS manual:
+[ebp - 4]       [BASE DISP]     (Note: DISP is -4)
+[foo + eax*4]   [DISP + INDEX*SCALE] 
+[foo]           [DISP]          (Value pointed to by 'foo')
+gs:foo          SECTION:DISP    (Contents of variable 'foo')
+AT&T syntax uses the following syntax for memoory references:
+SECTION:DISP(BASE, INDEX, SCALE)
+As with the Intel syntax, all of these are optional (and it appears that BASE 
+and INDEX are rarely used together). The GAS manual provides the following 
+examples equivalent to the above Intel examples:
+-4(%ebp)        DISP(BASE)
+foo(,%eax,4)    DISP(,INDEX,SCALE)
+foo(,1)         DISP(,SCALE)        (Note: the single comma is intentional)
+%gs:foo         SECTION:DISP
+Note that you must provide commas within the parentheses whenever you skip an 
+element (e.g., if you do not use BASE).
+
+To illustrate, here are some examples of memory references mixed in with asm
+opcodes (from http://www.castle.net/~avly/djasm.html):
+        __AT&T______________________    __Intel_________________________
+        movl 4(%ebp), %eax               mov eax, [ebp+4])
+        addl (%eax,%eax,4), %ecx         add ecx, [eax + eax*4])
+        movb $4, %fs:(%eax)              mov fs:eax, 4
+        movl _array(,%eax,4), %eax       mov eax, [4*eax + array])
+        movw _array(%ebx,%eax,4), %cx    mov cx, [ebx + 4*eax + array])
+
+
+Labels & Symbols
+Labels in GAS are the same as in other assemblers: the name of the label 
+followed by a colon. All symbol names must begin with a letter, a period, or an 
+underscore. Local symbols are defined using the digits 0-9 followed by a colon,
+and are referred to using that digit followed by a b (for a backward reference) 
+or f (for a forward reference); note that this allows only 10 local symbols. A 
+symbol can be assigned a value using the equals sign (e.g. 'TRUE = 1') or by 
+using the .set or .equ directives.
+
+
+Directives
+----------
+GAS allows most of the standard assembler directives; what follows are the most 
+commonly used.
+
+.align
+Pad the section to a specified alignment (e.g. 4 bytes); this directive takes 
+as an argument the alignment sized, as well as an optional argument specifying 
+the byte used to fill the pad areas (default is 00).
+
+.ascii, .asciz, .string
+Each of these directives takes one or more strings separated by commas; in the 
+.ascii directive, the strings are not terminated, in the .asciz and .string 
+directives the strings are zero-terminated.
+
+.byte, .double, .int, .word
+Each of these directives takes as an argument an expression (for example, 
+value1 + value2) and defines the specified number of bytes (byte, int, word, 
+etc) at the current location to the result of the expression.
+
+.data, .section, .text 
+The .section directive allows segments or sections of the target program to be 
+defined for the linker. The .section directive takes a section name, as well as
+section flags (b = bss, w = writable, d = data, r = read-only, x = executable 
+for COFF files; a = allocatable, w = writable, x = executable, @progbits =  
+data, @nobits = no data for ELF files). The .data and .text directives are 
+pre-defined .section directives for data and code sections.
+ 
+.equ, .set 
+Each of these sets the first argument (a symbol) with the result of the second 
+argument (an expression), for example
+.equ TRUE 1
+sets the Symbol TRUE to the value 1.
+
+.extern 
+The traditional EXTERN directive is available but ignored; GAS treats all 
+undefined symbols as externs.
+
+.global, .globl
+These directives define global (exported) symbols; each takes as an argument 
+the symbol to be made global.
+
+.if /.endif
+GAS provides the usual IF...ENDIF directives for conditional assembly; the .if 
+directive is followed by an expression, and all code between the .if and the 
+.endif directive is assembled only if that expression returns non-zero.
+ 
+.include 
+This directive includes a file at the current location; it takes as an argument 
+the name of the file in quotes, for example
+.include "stdio.inc"
+
+
+Assembling a Program
+--------------------
+A GAS program can ge assembled by invoking GCC with the O2 (optimize: level 2) 
+option. Note that all GAS programs must have a .text section and a global 
+"main" label.
+
+Here is an example of a 'hello world'-style program in GAS:
+; gashello.S ==========================================================
+.text
+message:
+.ascii "Helloooo, nurse!\0"
+.globl main
+main:
+	pushl $message
+	call puts
+	popl %eax
+	ret
+; EOF =================================================================
+This can be compiled with the command
+gcc -02 gashello.S -o ghello
+or with
+as gashello.S -o gashello.o
+ld -o gashello gashello.o -lc -s -defsym _start=main
+Note that it is much easier to use GCC than to use AS, as you will have to 
+explicitly specify the librarys to link to (hence the -lc parameter) when you 
+call LD.
+
+The Int80 "pid.asm" program from last month's Liux article would be written for 
+GAS as follows:
+;pid.S====================================================================
+.global main
+.text
+szText1:
+.asciz "Getting Current Process ID..." 
+szDone:
+.asciz "Done!"
+szError:
+.asciz "Error in int 80!"
+szOutput:
+.string "%d\n"
+
+main:
+	pushl $szText1
+	call puts
+	popl %ecx
+	mov $20, %eax
+	int $128
+	cmp $0, %eax
+	je Error
+	pushl %eax
+ 	pushl $szOutput
+	call printf
+	popl %ecx
+	popl %ecx
+	pushl $szDone
+	call puts
+	jmp Exit
+Error:
+	pushl $szError
+	call puts
+Exit:
+	popl %ecx
+    ret
+; EOF ====================================================================
+This can be compiled in the same manner as the previous example; note, though, 
+the need to use decimal numbers when calling interrupts (the 0x?? syntax for 
+specifying a hexadecimal integer causes the opcode to not be recognized by the 
+assembler).
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                A Guide to NASM for TASM Coders
+                                                by Gij
+
+
+Generalities
+------------
+The basic function of any assembler it to turn asm into the equivalent binary 
+code file; that's true for TASM, NASM, and any other assembler.
+
+The differences arise in the special features each assembler offers you. For 
+example, the MODEL directive exists in TASM, making it easier for the coder to 
+reference data variables in other segments. NASM does not have an equivalent 
+directive, so you have to keep track of the segment registers yourself, and put 
+segment overrides where they are needed. This does not mean that NASM doesn't 
+have good SEGMENT or GROUP support; in fact it has both, though they are not 
+quite the same as in TASM.
+
+It's a different way of coding, and it may seem to require more work, but after 
+you get used to it it's easier, because you know exactly what's going on in 
+your code. NASM actually gives you the closest possible idea of what your asm 
+source code will become once it's compiled.
+
+TASM is chock-full of directives; looking at a small reference for TASM 4.0,
+there are at least a few dozen directives TASM uses, and you have to know
+quite a bit of them by heart. NASM on the other hand has very few directives. 
+Actually, you can write an asm file that will assemble just fine without using 
+a single directive, although I doubt it will be useful in most cases.
+
+NASM is also less ambivalent towards syntax, which leaves less room for
+software bugs, but makes it more strict when assembling. I actually think NASM 
+is easier to learn then TASM since it's much more straight-forward.
+
+Your NASM Bible is of course the accompanying docs, you can get them in a 
+separate package from the same place you got the binaries for NASM. All in all 
+I think you will find NASM to be just as capable as TASM if not more so. 
+Although it's missing some features TASM has, you can always mail the author 
+and ask for a feature, and you just might get lucky when the new version comes out.
+
+ASM code is usually the same in any assembler ( AT&T syntax is an exception )
+but there are a few subtleties that TASM coders should look out for. The docs 
+that accompany NASM have a nice list of them, and I'll mention the most 
+significant ones here.
+
+
+DATA offset vs DATA contents
+----------------------------
+TASM uses this syntax to move
+	mov esi, offset MyVar
+   OR
+	lea esi, MyVar
+LEA is used to load complex offsets like "[esi*4+ebx]" into a register. TASM
+supports LEA even when used with a simple offset like "Myvar".
+
+NASM on the other hand only supports one way of loading a simple offset into a
+register (the LEA form is only valid when using complex offsets):
+	mov esi, MyVar
+This ALWAYS means move the offest of MyVar into esi.
+
+On the other hand, This:
+	mov eax, [MyVar]
+Will always mean move the contents of MyVar into eax.
+
+However, using LEA to load a complex offset is valid in both TASM and NASM:
+	lea edi,[esi*4+EBX]	; valid in both assemblers
+
+NASM also support a SEG keyword:
+	mov ax,SEG MyVar
+This moves the segment of the variable into ax.
+
+
+Segment Overrides
+-----------------
+TASM is more lax in it's syntax, so both of these are valid code:
+	mov ax,ds:[si]
+AND
+	mov ax,[ds:si]
+
+NASM doesn't allow this--if you specify a variable inside the square brackets
+all of the specifiers should be inside the square brackets.
+So this is the only valid option:
+	mov ax,[ds:si]
+
+
+Specifying operand size
+-----------------------
+TASM coders usually have lexical difficulties with NASM because it lacks the 
+"ptr" keyword used extensively in TASM.
+
+TASM uses this:
+	mov al,  byte ptr [ds:si]
+OR
+	mov ax,  word ptr [ds:si]
+OR
+	mov eax, dword ptr [ds:si]
+
+For NASM This simply translates into:
+	mov al,  byte [ds:si]
+OR
+	mov ax,  word [ds:si]
+OR
+	mov eax, dword [ds:si]
+
+NASM allows these size keywords in many places, and thus gives you a lot of 
+control over the generated opcodes in a uniform way. For example, the following 
+are all valid:
+	push dword 123
+	jmp  [ds: word 1234]   ; these both specify the size of the offset
+	jmp  [ds: dword 1234]  ; for tricky code when interfacing 32bit and
+                           ; 16bit segments
+
+It can get pretty hairy with operand size being this final, but the important 
+thing to remember is you can have all the control you need, when you want it.
+
+
+Functions
+---------
+TASM has special directives for declaring a procedure and ending it. Why?
+A procedure is just another code label you CALL instead of JMP--NASM got it
+right.
+
+TASM uses:
+ProcName PROC
+	xor ax,ax
+	ret
+ProcName ENDP
+
+while NASM just uses:
+Procname:
+	xor ax,ax
+	ret
+
+To declare a procedure PUBLIC, just use the GLOBAL directive:
+GLOBAL Procname
+Procname:
+	xor ax,ax
+    ret
+
+
+Local Labels
+------------
+Those of you that know C also know that a member of a struct can be referenced
+as StructInstance.MemberName. This is rather similar to the way NASM allows
+you to use local labels. A Local Label is denoted by prefixing a dot to the 
+label name:
+
+Label1:
+	nop
+.local:
+	nop
+Label2:
+	nop
+.local:
+	nop
+
+This won't give you an error on multiple definitions of label, but you can
+still jmp to a certain label like this:
+	jmp Label2.local
+...so it's local, and in a way it's also a global label.
+
+
+ORG Directive
+--------------
+NASM supports the org directive, so if you are coding a COM file you can start 
+with:
+	org 0x100h
+OR
+	org 100h
+(NASM allows both the asm and c methods of specifying hex, so both of the
+above are valid.)
+
+
+Reserving Space
+---------------
+Once again, here NASM uses a different syntax then that of TASM.
+
+In TASM you would declare a 100 bytes of uninitialized space like this:
+	Array1: db 100 dup (?)
+
+NASM uses its own keywords to do this; these are RESB, RESW and RESD,
+standing for REServeByte, REServeWord, and REServeDword, respectively.
+To reserve 10 bytes, you would use RES? keywords like this:
+	Array1: RESB 100
+OR
+	Array1: RESW 100/2
+OR
+	Array1: RESD 100/4
+
+Declaring initialized space is much like TASM, but arrays are different.
+In TASM:
+	Array1: db 100 dup (1)
+In NASM:
+	Array1: TIMES 100 db 1
+
+TIMES is a handy little directive, it instructs NASM to preform an action
+a specified number of times, in the example above I preform "db 1" a 100
+times. TIMES can be used for virtually anything; for example:
+	TIMES 69 nop
+will put 69 nops at the current point in the file.
+
+The $ (current location) symbol is supported by NASM, and can be used to 
+specify the 'count' operand to TIMES, so this is valid:
+ label1:
+	mov ax,1
+	xor ax,ax
+ label2:
+  	TIMES $-label1 nop
+This expands to TIMES (label2 - label1), and will put as many one-byte nops 
+after label2, as the byte count between label1 and label2.
+
+
+Making Structs
+--------------
+I fought long and hard to get structs going, the docs were a bit vague, and
+it took a while to get it, here it is.
+
+Using a struct is divided into 2 parts, declaring the prototype, and making an
+instance. A simple, 2-member structure would be defined as follows:
+    struc st
+        stLong resd 1
+        stWord resw 1
+    endstruc
+
+this declares a prototype struct named st, with 2 members, stLong which is a
+DWORD, and stWord which is a word. It uses the reserve directives because it's 
+a prototype, not a real struct. You can use istruc to make a real instance that
+you can reference as data in your code:
+
+mystruc:
+    istruc st
+        at stLong, dd 1
+        at stWord, dw 1
+    iend
+*Note: it's important to put the label on a different line.
+
+This creates a struct named mystruc of type st; the "at" keyword is used to 
+assign initial values to the members of the struc (i.e., at the reserverd bytes 
+of memory).
+
+The notation for referencing members is not like in C. This is because of the
+way structures are implemented; in NASM, each member is assigned an offset 
+relative to the beginning of the struct:
+
+mystruc:
+    istruc st
+        at stLong, dd 1  ; offset 0
+        at stWord, dw 1  ; offset 4
+    iend
+
+The notation for referencing a member is therefore:
+    mov eax, [mystruc+stLong]
+
+This is because mystruc is a constant base, and the member is a relative offset
+to it. It's similar to referencing a data array.
+
+One thing I should mention: If you declare structs prototypes as above, the
+member names/labels will be global, so you will get collisions if you use the
+same member name in your code or in another struct prototype. To avoid this, 
+precede the member names with a dot '.', and then reference them in relation to 
+the prototype's name in the instance declaration. For example:
+
+    struc st
+        .stLong resd 1
+        .stWord resw 1
+    endstruc
+mystruc:
+    istruc st
+        at st.stLong, dd 1
+        at st.stWord, dw 1
+    iend
+
+And this is how you reference the members in code:
+	mov eax,[mystruc+st.stWord]
+
+This may seem confusing; you should understand that "mystruc" is the base of a
+particular instance, and "st.stLong" is an offset relative to the start of the
+struct, so in pseudo-code it translates into:
+	mov eax,[offset mystruc + (offset stWord-offset start_of_proto]
+or
+	mov eax,[offset mystruc + 4]
+...which gives you the correct offset for the stWord member of the "mystruc"
+struct instance.
+
+
+Using Macros
+------------
+This is a large part of the nasm docs, and a bit too much to get into in depth
+here. I'll try and cover the major issues.
+
+There are 2 types of macros, one-line and multi-line, all macro keywords are
+preceeded with a '%' character.
+
+An example of a single-line macro:
+  %define mul(a,b) (a*b)
+
+...which would be reference in the source code as follows:
+	mov eax,mul(2,3)
+
+This will be converted into:
+	mov eax,6
+
+You can invoke other macros from within a macro:
+%define fancymul(a,b) ( a * triple_mul(4) )
+%define triple_mul(a) (a*3)
+	mov eax,fancymul(2,3)
+
+This becomes:
+	mov eax, ( 2 * ( 3 * 4 ) )
+
+These are not very useful examples, but i'm sure you can see the potential.
+
+Multi-Line macros are much the same as single-line macros, but the syntax
+is a bit different:
+  %macro name number_of_args
+     <body of macro>
+  %endmacro
+
+So, for example, if you wanted to make a small asm effort-saver you could write
+the following macro:
+ %macro prologue 1
+	push ebp
+	mov ebp,esp
+	sub esp,%1
+ %endmacro
+...and then you can use it in your code like this:
+
+DemoFunc:
+	prologue 4*2
+	<body of function>
+
+This would set up a stack frame and reserve room for 2 DWORD local variables.
+You'll notice that args supplied to the macro can be referenced as %1....%n, 
+similar to DOS and Unix shell/batch programming.
+
+This is just a quick taste, there's more to be learned about NASM macros: the 
+docs are your friends.
+
+
+Includes
+--------
+Including files is easy, If you want to include .inc's into your asm file
+you can use:
+	%include "win32.inc"
+
+If you wish to include binary files, you must use a different keyword:
+	INCBIN	 "data.bin"
+
+
+Conditional Assembly
+--------------------
+NASM also has support for conditional assembly:
+%define INCLUDE_WIN32_INCS
+%ifdef  INCLUDE_WIN32_INCS
+	%include "win32.inc"
+	%include "toolhelp.inc"
+	%include "messages.inc"
+%endif
+
+This way you can control the inclusion of files defining on the command line:
+	"nasmw -dINCLUDE_WIN32_INC"
+or by commenting out the %define line. The body of the %ifdef will be processed
+only if a macro/define named INCLUDE_WIN32_INCS is defined.
+
+
+Externs, Globals and Commons
+-----------------------------
+When Coding a multi-source-files project,  writing a dll, or calling API
+functions you need to declare various symbols/data/functions a certain type
+to make them available to the Assembler and you.
+
+There are 3 types of symbols in NASM: EXTERN, GLOBAL and COMMON. Their 
+invocation is all the same:
+    EXTERN symbol_name      ; use this to define API calls for use
+    GLOBAL symbol_name
+    COMMON symbol_name
+
+They all must appear before the actual symbol is defined/referenced. If you 
+have experience in asm/c, their use should be clear -- EXTERN declares an 
+external reference ofr the linker to resolve (an "import"), GLOBAL declares a 
+symbol to be globally/publicly available (an "export"), and COMMON declares a 
+variable to be of Common data type (i.e., all instances of a COMMON variable 
+are merged into a single instance during compilation).
+
+NASM 0.97 also has IMPORT/EXPORT extensions to the .obj format, for writing 
+DLL's; read the docs for more info.
+
+
+Specifying Segment Type
+-----------------------
+You can declare segments much the same as you would in TASM:
+	segment .data use32 CLASS=data
+or
+	segment .text use32 CLASS=code
+or
+	segment Gij use16 CLASS=code
+
+This is a good way to set segments straight for linking. Note that Nasm does 
+not require certain segments to be present: you have full control over the 
+segmentation of the program.
+
+
+Output Formats
+--------------
+Nasm supports a plethora of output formats; depending on what you are trying
+to accomplish, you should read the docs for special extensions to each type.
+The output format is chosen using "nasm -f type" on the command line, where 
+type can be bin, obj, win32 and others.
+
+Each linker likes different formats--tlink likes obj for example, while 
+LCC-WIN32 likes the win32 format...investigate on your own to find the best 
+output format for your linker.
+
+*tip: when assembling into the "obj" type, make sure and use the special
+      "..start:" symbol to specify the entry point for the file.
+
+
+In Closing
+----------
+That's all for now. This is intended to be a 'quick-start' guide for TASM 
+coders who want --or need-- to move into NASM; it is not a substitute for the 
+NASM documentation. If you need to reach me, my e-mail is gij <at> bigfoot.com
+Enjoy NASM!
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                           Tips on Saving Bytes in ASM Programs
+                                           by Larry Hammick
+
+
+The programmer's word for craftsmanship is "optimization". This term refers to 
+conservation, either of program size or execution time. It's time includes not 
+just CPU clocks, but the time consumed by peripherals (e.g. disks, at load 
+time) and by the operating system calls. This article is concerned with the 
+conservation of size, or bytes. Size may refer either to the program file size, 
+or to the size of the memory the program uses. The two are not always identical.
+
+In all the illustrations, we assume that 16-bit code segments are involved. The 
+syntax we use is that of MASM 5.1; the difference from other assemblers is 
+slight.
+
+
+1. Avoid uninitialized data.
+---------------------------
+An instruction like this:
+	OutputHandle dw ?
+is usually a waste of space. Depending on the memory model (i.e. depending on 
+whether we have CS=DS, and the like), there are several ways to omit these two 
+bytes from the program file and the memory image.
+
+If DS is the PSP segment, use:
+	OutputHandle equ word ptr ds:[5Ch]
+or similar, for a value other than 5Ch. Any program may safely use any part of 
+the PSP from 3Ch to 07Fh, plus the word at 2Ch (environment segment). When the 
+program is finished with the command tail (bytes 80h-0FFh), it can reuse that 
+area as well. Other parts of the PSP should not be modified, because they may 
+be needed by DOS when the program exits. However, in the case of a TSR, the 
+stay-resident part of the code (e.g. an interrupt handler) may use any part of 
+the PSP after the TSR exit has been executed. In such cases, the PSP makes a 
+handy buffer of 100h bytes with ORG 0.
+
+If DS=CS, you can define uninitialized variables like this:
+    OutputHandle    dw  ?
+    InputHandle     dw  ?
+    ORG             OutputHandle
+	Go: mov ah,30h
+        int 21h
+        ...
+        mov OutputHandle,ax
+        ...
+	END Go
+
+or, equivalently:
+    OutputHandle    equ     word ptr ds:[Go]
+    InputHandle     equ     word ptr ds:[Go+2].
+
+If DS is a dynamically allocated segment, or if it is part of the stack, there 
+is this trick:
+    OutputHandle    equ     word ptr ds:[0]
+    InputHandle     equ     word ptr ds:[2].
+
+Allocating file and memory space just for uninitialized variables wastes a few 
+bytes here and there. Much worse, for file size, is to put whole buffers and 
+stacks in the file:
+    ReadBuffer      db  1000h   dup (0)
+    Stack           db  40h     dup ("--Stack!--")
+Examine a few commercial programs under a hex editor or debugger to see how 
+common this practice is. Worldwide, the quantity of disk space thus wasted must 
+be astronomical. Moreover, such "data" gets copied from disk every time the 
+program is loaded, even though it has no meaning! Perhaps assemblers and 
+linkers will someday be smart enough to avoid this. For now, we do have EXE 
+packers such as PKLite to compress blank data blocks, but the latter can be 
+avoided entirely as follows.
+
+If DS is a dynamic segment or part of the stack:
+    BufferSize      equ     1000h
+    ReadBuffer      equ     0
+    WriteBuffer     equ     ReadBuffer+BufferSize
+	...
+        mov dx,ReadBuff ;rather than mov dx,offset ReadBuff
+        mov ah,3Fh
+        int 21h
+	...
+
+If the program will be small enough for the code and all data to fit in one 
+segment, it is desirable to have CS=DS. Then you can do:
+    ReadBuffer      equ     offset EndOfCode
+    WriteBuffer     equ     ReadBuffer+BufferSize
+	Go:
+        ...     ;code instructions
+        mov ah,4Ch
+        int 21h     ;exit
+	EndOfCode label byte
+	END Go
+
+This practice is not quite safe for a COM program, because DOS will load a COM 
+file into less than 64K if no larger block is available or if memory is 
+fragmented. For an EXE, the EXE header can be adjusted to prevent the program 
+from loading into too little memory.
+
+
+2. Put related data together.
+----------------------------
+An example:
+    CursorPosition  label   word
+    CursorColumn    db      0Eh
+    CursorRow       db      8
+
+You will be able to load or save both variables with one instruction:
+	mov dx,CursorPosition
+
+Another benefit:
+	and CursorPosition,0FF00h
+	jnz NotAtTop
+
+The AND instruction sets one byte and tests another, at the same time.
+
+
+3. Avoid forward references.
+---------------------------
+Forward references in source can result in worthless NOP's getting assebled. 
+This is another illustration of the principle that assemblers are pretty dumb. 
+
+Consider:
+	mov cx,MsgSize		;(1)
+	...
+    Msg         db      "Hello",0Dh,0Ah
+    MsgSize     equ     $-offset Msg
+
+MsgSize is a constant word. But MASM doen't know that when it assembles the 
+instruction (1). So it provides 3 bytes for MsgSize, and later fills in the 
+constant word followed by a NOP byte. One solution:
+            db      0B9h     ;opcode for mov cx,immed
+            dw      MsgSize
+	...
+    Msg     db      "Hello",0Dh,0Ah
+    MsgSize equ     $-offset Msg
+
+
+4. Use cheap opcodes.
+--------------------
+
+4.1 XCHG AX,Reg16
+These 8 instructions are each just 1 byte. Don't use either MOV AX,CX or 
+MOV CX,AX unless you need the same value in both registers. AX is special in 
+this respect; instructions such as XCHG BX,CX or XCHG SI,DI are two bytes. 
+XCHG EAX,Reg32 is two bytes (in 16-bit code segments), whereas MOV EAX,ECX etc. 
+is three.
+
+4.2 CBW, CDW, CDQ
+To put AH=0, the instructions
+	xor ah,ah
+	sub ah,ah
+	mov ah,0
+occupy two bytes each. But if you know that AL > 0, the instruction CBW has the 
+same effect (except that it leaves the flags unchanged) and is only one byte. 
+Likewise, CWD can save over XOR DX,DX. CDQ is a 2-byte opcode but still better 
+than XOR EDX,EDX, which is 3 bytes.
+
+4.3 JCXZ
+This instruction does not require a preliminary flag-setting instruction. So, 
+you might prefer
+	xchg ax,cx
+	jcxz Mylabel
+to
+	or ax,ax
+	jz MyLabel,
+saving one byte. Be aware that JCXZ is a relatively slow opcode.
+
+4.4 INC Reg16 and DEC Reg16
+These 16 opcodes are just one byte each. The opcodes INC Reg8 and DEC Reg8 are 
+2-byte. So use INC CX instead of INC CL if there is no possibility of carry 
+from CL into CH. If CX is known to be 0, INC CX saves a byte vs. MOV CL,1, and 
+2 bytes vs. MOV CX,1. Similar tricks apply to going from -1 to 0, to decrement-
+ing from 1 to 0 or from 0 to -1.
+
+4.5 Prefer the accumulator to other registers.
+The following opcodes, among others, are cheaper for AX or EAX than for other 
+general registers.
+	MOV reg,mem
+	MOV mem,reg
+	ADD reg,mem
+
+
+5. Be flexible on flow control.
+------------------------------
+Block-structuring is very sensible in high-level languages, but in ASM it is 
+little more than a pedantic habit. In ASM, a routine may have more than one 
+entry point and more than one exit (RETN, RETF, or IRET). Several routines may 
+share exit code or entry code. A routine need not return at all. A few examples 
+of how this can save bytes:
+
+5.1 Discard return addresses that won't be needed.
+This sort of thing appears often:
+    Mysub:  cmp al,3
+            ja StcRet
+            ...
+            ret
+	StcRet: stc
+            ret
+
+            ...
+            call MySub
+            jc Ret1
+            ...
+    Ret1:   ret
+
+Better is:
+    Mysub:   cmp al,3
+             ja DontRet
+             ...
+             ret
+	DontRet: pop ax	;discard return address into some unneeded register
+             ret
+             ...
+             call MySub  ;returns only if input is okay
+             ...
+
+5.2 Reuse exit code.
+If you see this more than once in your source:
+	pop bx
+	pop dx
+	pop ax
+	retn,
+make a label at POP BX, and use a jump to that label from each other occurrence.
+If this happens more than once:
+	push ax
+	push cx
+	push dx
+	push bx
+consider a subroutine:
+	SaveRegs: pop si		;store return address in an unneeded register
+              push ax
+              push cx
+              push dx
+              push bx
+              jmp si
+
+5.3. Consider CALL instead of JMP.
+The CALL instruction can be used instead of JMP to pass a near address at 
+almost no cost.
+                 mov ah,30h
+                 int 21h
+                 cmp al,5
+                 jae EnoughDOS
+                 call ErrExit
+                 db "This program requires DOS 5+",13,10,0
+	EnoughDOS:
+	...
+    ErrExit:     pop si ;"Return address" actually points at data.
+	ErrExitLoop: lodsb
+                 or al,al
+                 jz Exit
+                 int 29h
+                 jmp short ErrExitLoop
+    Exit:        mov ax,4CFFh
+                 int 21h
+
+In the above example, the routine ErrExit writes an ASCIIZ string from CS:SI, 
+then exits.
+
+The offset of a jump table can sometimes be passed in the same way.
+	call SmartJump	;does not return
+    db      3
+    dw      Handle3  ;Handle3 and Handle7 are near code addresses
+    db      7
+    dw      Handle7
+    db      0        ;terminator for the table
+
+	SmartJump:	;input is a jump table index AL.
+                   pop di   ;"return address" actually points at the jump table
+	SmartJumpLoop: cmp byte ptr[di],0
+                   je NotFound
+                   scasb
+                   je Found
+                   scasw       ;cheaper than incrementing di twice
+                   jmp short SmartJumpLoop
+    Found:         jmp word ptr es:[di]
+	NotFound: ...
+The above example assumes ES=CS.
+
+5.4 Short jumps are cheaper than near jumps.
+You can often save a few bytes by arranging your source so that jumps are short 
+rather than near.
+
+If this occurs:
+        cmp al,5
+        jne Not5
+        jmp CantRun
+	Not5:
+        ...
+        jmp CantRun
+        ...
+and CantRun is not reachable by a short jump in either instance, you might 
+still save a byte like so:
+                cmp al,5
+                jne Not5
+	JmpCantRun: jmp CantRun
+	Not5:
+                ...
+                jmp short JmpCantRun    ;2-step jump
+                ...
+
+
+6. Registers are cheaper than constants.
+---------------------------------------
+You should never write this (6 bytes):
+	mov si,StringSite		;a 16-bit constant
+	mov di,StringSite
+
+Instead (5 bytes):
+	mov si,StringSite
+	mov di,si.
+
+Another illustration:
+	MyByte db 11h
+	...
+	mov MyByte,0		;a 5-byte instruction
+	mov MyByte,bh		;4 bytes, and equivalent if bh is known to be 0
+	mov MyByte,al		;only 3 bytes.
+
+
+7. Code can be used as data.
+---------------------------
+Here are two examples of a slick technique known as self-modifying code.
+	ErrExit: call WriteMessage
+               db   0B8h     ;code for MOV AX,Immed16
+    ReturnCode db   ?,4Ch
+             int 21h     ;exit from program
+
+The label ErrExit can be reached by JMP's from several points in the program. 
+Before jumping, the code pokes in a suitable value of ReturnCode, depending on 
+the type of error condition encountered. The above example uses part of the 
+instruction MOV AX,4Cxxh as a variable, saving bytes.
+
+              mov ax,252Fh        ;get INT 2Fh vector as ES:BX
+              int 21h
+              mov OldInt2F,bx     ;this example assumes CS=DS at this point
+              mov OldInt2F[2],es
+              mov dx,offset OurInt2F
+              mov ax,252Fh        ;set INT 2Fh vector to DS:DX
+              ...
+	OurInt2F: cmp ax,1211h	;a function that we want to control
+              jne short JmpOldInt2F
+              ... (handle this function)
+              iret
+    JmpOldInt2F: db     0eah    ;opcode for jump to immediate far address
+    OldInt2F     dw     ?,?
+This manoeuvre saves bytes versus JMP DWORD PTR OldInt2F; again, the method is 
+by putting the variable (OldInt2F) right inside the code. Device drivers and 
+other TSR's should use this trick, but I don't know of a single one which does 
+(except my own, naturally).
+
+Safe use of self-modifying code requires some awareness of on-chip instruction 
+caches. It's no good to modify code in memory if what will get executed is 
+already on the CPU. The following trick, however, is quite safe. Instead of:
+	ErrExit2: mov al,2
+              jmp short ErrExit
+	ErrExit3: mov al,3
+              jmp short ErrExit
+	ErrExit5: mov al,5
+	ErrExit: mov ah,4Ch
+             int 21h
+
+write:
+	ErrExit2: mov al,2
+              db 3Dh      ;opcode for CMP AX,immed, to disable the following                           
+    ErrExit3: mov al,3    ;2-byte instruction
+              db 3Dh
+	ErrExit5: mov al,5
+    ErrExit:  mov ah,4Ch
+              int 21h
+
+
+8. Miscellaneous byte-savers.
+----------------------------
+Since the instruction sets of the x86 CPU's are so elaborate, there are many 
+more ad hoc ways to reduce, reuse, and recycle bytes. The following are only a 
+few.
+
+8.1 After a loop, CX is 0. Thus
+            mov cx,1234h
+	MyLoop: ...
+            ...
+            loop MyLoop
+            mov cx,56h
+            ...
+is wasteful. The last instruction should be
+	mov cl,56h.
+
+8.2 Use conditional MOV's.
+
+                    cmp VideoMode,7
+                    je BlackAndWhite
+                    mov dx,0B800h
+                    jmp short Either
+    BlackAndWhite:  mov dx, 0B000h
+	Either:
+	...
+The above code wastes bytes. Better is:
+                mov dx, 0B800h
+                cmp VideoMode,7
+                jne GotVideoBase
+                mov dh,0B0h
+	GotVideoBase:
+                ...
+The improved version has one jump instruction instead of two, and in this 
+example saves an additional byte by resetting only DH, not DX.
+
+With the Pentium, Intel introduced a useful set of conditional mov's right into 
+the instruction set.
+
+8.3 To test the high bit of a register, avoid the constants 80h and 8000h.
+For example,
+	test dh,80h
+	jnz MyLabel
+is 5 bytes, but
+	or dh,dh
+	js MyLabel
+is 4. The latter instruction also leaves more information in the flags. 
+TEST DH,DH or AND DH,DH have the same effect as OR DH,DH.
+
+8.4 To determine if several variables of the same size are all 0, OR them 
+together, and the zero flag will tell you. To determine if they are all -1, 
+AND them together and increment the result.
+
+
+9. Postlude
+-----------
+Intel makes their excellent CPU documentation available free, from:
+	http://developer.intel.com/design/litcentr/index.htm
+It is in Adobe PDF format; you will need the Acrobat Reader, also free, from:
+	http://www.adobe.com/prodindex/acrobat/readstep.html
+
+If all else fails, you can try to wake me up at:
+	hammick@bc.sympatico.ca
+Regards from Vancouver,
+Larry
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     A Simple Window
+                                                     by Iczelion
+
+
+In this tutorial, we will build a Windows program that displays a fully 
+functional window on the desktop.
+
+
+Download the example file here.
+http://203.148.211.201/iczelion/files/tut03.zip
+
+Preliminary:
+
+Windows programs rely heavily on API functions for their GUI. This approach 
+benefits both users and programmers. For users, they don't have to learn how to 
+navigate the GUI of each new programs, the GUI of Windows programs are alike. 
+For programmers, the GUI codes are already there,tested, and ready for use. The 
+downside for programmers is the increased complexity involved. In order to 
+create or manipulate any GUI objects such as windows, menu or icons, 
+programmers must follow a strict recipe. But that can be overcome by modular
+programming or OOP paradigm.
+
+I'll outline the steps required to create a window on the desktop below:
+
+  1.Get the instance handle of your program (required)
+  2.Get the command line (not required unless your program receives command 
+    line)
+  3.Register window class (required ,unless you use predefined window types, eg.
+     MessageBox)
+  4.Create the window (required)
+  5.Show the window on the desktop (required unless you don't want to show the 
+    window immediately)
+  6.Refresh the client area of the window
+  7.Enter an infinite loop, checking for message from Windows
+  8.If messages arrive, they are processed by a specialized function that is 
+    responsible for the window
+  9.Quit program if the user closes the window
+
+As you can see, the structure of a Windows program is rather complex compared 
+to a DOS program. But the world of Windows is drastically different from the 
+world of DOS. Windows programs must be able to coexist peacefully with each 
+other. They must follow stricter rules. You, as a programmer, must also be more 
+strict with your programming style and habit.
+
+Content:
+
+Below is the source code of our simple window program. Before jumping into the 
+gory details of Win32 ASM programming, I'll point out some fine points which'll 
+ease your programming.
+
+You should put all Windows constants, structures and function prototypes in an 
+include file and include it at the beginning of your .asm file. It'll save you 
+a lot of effort and avoid typing errors. Most of the time, you can use  include 
+file from some Win32 asm examples. I have used windows.inc from Steve Gibson's 
+Small Is Beautiful exampleand made some additions of my own.
+
+Use IncludeLib directive to specify the import library used in your program. 
+For example, if your program calls MessageBoxA, you should put the line:
+               IncludeLib user32.lib
+at the beginning of your .asm file. This directive tells MASM that your program 
+will make usesof functions in that import library. If your program calls 
+functions in more than one library, just add an includelib for each library you 
+use. Using IncludeLib directive, you don't have to worry about import libraries 
+at link time. You can use the /LIBPATH linker switch to tell Link where all the 
+libs are. 
+
+When declaring  API function prototypes, structures, or constants in 
+your include file, try to stick to the original names used in Windows include 
+files, including case. This will save you a lot of headache when looking up 
+some item in Win32 API reference. 
+
+Use makefile to automate your assembling process. This will save you a lot of 
+typing.
+
+; =============================================================================
+include windows.inc                       ; .386 and .model are already
+declared in windows.inc
+includelib user32.lib                     ; calls to functions in
+user32.lib and kernel32.lib
+includelib kernel32.lib
+
+.DATA                                     ; initialized data
+    ClassName db "SimpleWinClass",0       ; the name of our window class
+    AppName  db "Our First Window",0      ; the name of our window
+
+.DATA?                                    ; Uninitialized data
+hInstance HINSTANCE ?                     ; Instance handle of our program
+CommandLine LPSTR ?
+
+.CODE                                     ; Here begins our code
+ start:
+     invoke GetModuleHandle, NULL         ; get the instance handle of our program.
+                                          ; Under Win32, hmodule==hinstance
+     mov    hInstance,eax
+     invoke GetCommandLine                ; get the command line. 
+     mov    CommandLine,eax
+     invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT  ; call  Winmain
+     invoke ExitProcess,eax               ; quit our program. The exit code is
+                                          ; returned in eax from WinMain.
+
+WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+    LOCAL wc:WNDCLASSEX                    ; create local variables on stack
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+
+    mov   wc.cbSize,SIZEOF WNDCLASSEX      ; fill values in members of wc
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,NULL
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc       ; register our window class
+
+    invoke CreateWindowEx,NULL,\
+                ADDR ClassName,\
+                ADDR AppName,\
+                WS_OVERLAPPEDWINDOW,\
+                CW_USEDEFAULT,\
+                CW_USEDEFAULT,\
+                CW_USEDEFAULT,\
+                CW_USEDEFAULT,\
+                NULL,\
+                NULL,\
+                hInst,\
+                NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,CmdShow       ; display our window on desktop
+    invoke UpdateWindow, hwnd             ; refresh the client area
+
+    .WHILE TRUE                           ; Enter message loop
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke TranslateMessage, ADDR msg
+                invoke DispatchMessage, ADDR msg
+   .ENDW
+    mov     eax,msg.wParam                ; return exit code in  eax
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    mov   eax,uMsg                       ; put the window message in eax 
+    .IF eax==WM_DESTROY                  ; if the user closes our window
+        invoke PostQuitMessage,NULL      ; quit our application
+        xor eax,eax
+    .ELSE                                ; Default message processing
+       invoke DefWindowProc,hWnd,uMsg,wParam,lParam 
+    .ENDIF
+ ret
+WndProc endp
+
+end start
+
+You may be taken aback that a simple Windows program requires so much coding. 
+But most of these codes are just *template* codes that you can copy from one 
+source code to another. Or, if you prefer, you could assemble some of these 
+codes into a library to be used as prologue and epilogue codes. You can write 
+only the codes in WinMain function. In fact, this is what C compilers do. They 
+let you write WinMain codes without worrying about other housekeeping chores. 
+The only catch is that you must have a function named WinMain else C compilers 
+will not be able to combine your codes with the prologue and epilogue. You do 
+not have such restriction with assembly language. You can use any function name 
+instead of WinMain or no function at all.
+
+Prepare yourself. This is going to be a long, long tutorial. Let's analyze this 
+program to death!
+
+     include windows.inc
+     includelib user32.lib
+     includelib kernel32.lib
+
+We must include windows.inc at the beginning of the source code. It contains 
+important API function prototypes, structures and constants that are used by 
+our program. The include file , windows.inc, is just a text file. You can open 
+it with any text editor. The first two lines are .386 and .model directives, so 
+you don't have to specify these two lines at the beginning of the source code. 
+
+Next are several macros that its author (Steve Gibson) frequently uses. The 
+remaining of the file contains important structures, constants and function 
+prototypes. Please note that windows.inc does not contain all structures,
+constants, and function prototypes of Windows. It just holds the most 
+frequently used ones. You can add in new items if they are not in the file.
+
+Our program calls API functions that reside in user32.dll (CreateWindowEx,
+RegisterWindowClassEx, for example) and kernel32.dll (ExitProcess), so we must 
+link our program to those two import libraries. The next question : how can I 
+know which import library should be linked to my program? The answer: You must 
+know where the API functions called by your program reside. For example, if you 
+call an API function in gdi32.dll, you must link with gdi32.lib.
+
+This is the approach of MASM. TASM 's way of import library linking is much 
+more simpler: just link to one and only one file: import32.lib.
+
+     .DATA
+         ClassName db "SimpleWinClass",0
+         AppName  db "Our First Window",0
+
+     .DATA?
+     hInstance HINSTANCE ?
+     CommandLine LPSTR ?
+
+Next are the "DATA" sections.
+In .DATA, we declare two zero-terminated strings(ASCIIZ strings): ClassName 
+which is the name of our window class and AppName which is the name of our 
+window. Note that the two variables are initialized.
+
+In .DATA?, three variables are declared: hInstance (instance handle of our 
+program), CommandLine (command line of our program), and CommandShow (state of 
+our window on first appearance). The unfamiliar data types, HINSTANCE and LPSTR, 
+are really new names for DWORD. You can look them up in windows.inc. Note that 
+all variables in .DATA? section are not initialized, that is, they don't have 
+to hold any specific value on startup, but we want to reserve the space for 
+future use.
+
+     .CODE
+      start:
+          invoke GetModuleHandle, NULL
+          mov    hInstance,eax
+          invoke GetCommandLine
+          mov    CommandLine,eax
+          invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+          invoke ExitProcess,eax
+          .....
+     end start
+
+.CODE contains all your instructions. Your codes must reside between <starting 
+label>: and end <starting label>. The name of the label is unimportant. You can 
+name it anything you like so long as it doesn't violate the naming convention 
+of MASM.
+
+Our first instruction is the call to GetModuleHandle to retrieve the instance 
+handle of our program. Under Win32, instance handle and module handle are one 
+and the same. You can think of instance handle as the ID of your program. It is 
+used as parameter to several API functions our program must call, so it's 
+generally a good idea to retrieve it at the beginning of our program.
+
+Upon return from a Win32 function, the function return value, if any, can be 
+found in eax. All other values are returned through variables passed in the 
+function parameter list you defined for the call.
+
+A Win32 function that you call will always preserve the segment registers and 
+the ebx, edi, esi and ebp registers. Conversely, ecx and edx are considered 
+scratch registers and are always undefined upon return from a Win32 function.
+The bottom line is that: when calling an API function, expect return value in 
+eax. If any of your function will be called by Windows, you must also play by 
+the rule: preserve and restore the values of the segment registers, ebx, edi, 
+esi and ebp upon function return else your program will crash very shortly.
+
+The GetCommandLine call is unnecessary if your program doesn't process a 
+command line. In this example, I show you how to call it in case you need it in 
+your program.
+
+Next is the WinMain() call. Here it receives four parameters: the instance 
+handle of our program, the instance handle of the previous instance of our 
+program, the command line and window state at first appearance. Under Win32, 
+there's NO previous instance. Each program is alone in its address space, so 
+the value of hPrevInst is always 0. This is a lefover from the day of Win16.
+
+Note: You don't have to declare the function name as WinMain. In fact, you have 
+complete freedom in this regard. You don't have to use any WinMain-equivalent 
+function at all. You can paste the codes in WinMain next to GetCommandLine and 
+your program will still be able to function perfectly. 
+
+Upon return from WinMain, eax is filled with exit code. We pass that exit code 
+as parameter to ExitProcess which terminates our application.
+
+WinMain proc Inst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+
+The above line is the function declaration of WinMain. Note the parameter:type 
+pairs that follow PROC directive. They are parameters that WinMain receives 
+from the caller. You can refer to these parameters by name instead of by stack 
+manipulation. In addition, MASM will generate the prologue and epilogue codes 
+for the function. So we don't have to concern ourselves with stack frame on 
+function enter and exit.
+
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+
+LOCAL directive allocates memory from the stack for local variables used in the 
+function. The LOCAL directive is immediately followed by <the name of local 
+variable>:<variable type>.
+
+So LOCAL wc:WNDCLASSEX tells MASM to allocate memory from the stack the size of 
+WNDCLASSEX structure for the variable named wc. We can refer to wc in our codes 
+without any difficulty involved in stack manipulation. That's really a godsend, 
+I think. The downside  is that local variables cannot be used outside the 
+function they're created and will be automatically destroyed when the function 
+returns to the caller. Another drawback is that you cannot initialize local 
+variables automatically because they're just stack memory allocated dynamically 
+on function start. You have to manually assign them with desired values after 
+LOCAL directives.
+
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,NULL
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc        
+                ; register our window class
+
+The inimidating lines above are really simple in concept. It just takes several 
+lines of instruction to accomplish. The concept behind all these lines is 
+window class. A window class is nothing more than a blueprint or specification 
+of a window. It defines several important characteristics of a window such as 
+its icon, its cursor, the function responsible for it, its color etc. You 
+create a window from a window class. This is some sort of object oriented 
+concept. If you want to create more than one window with the same character-
+istics, it stands to reason to store all these characteristics in only one 
+place and refer to them when needed. This scheme will save lots of memory by 
+avoiding duplication of information.
+
+Remember, Windows is designed in the past when memory chips are prohibitive and
+most computers have 1 MB of memory. Windows must be very efficient in using the 
+scarce memory resource. The point is: if you define your own window, you must 
+fill the desired characteristics of your window in a WNDCLASS or WNDCLASSEX 
+structure and call RegisterClass or RegisterClassEx before you're able to 
+create your window. You only have to register the window class once for each 
+window type you want to create a window from.
+
+Windows have several predefined Window classes, such as button and edit box. 
+For these windows (or controls), you don't have to register a window class, 
+just call CreateWindowEx with the predefined class name.
+
+The single most important member in the WNDCLASSEX is lpfnWndProc. lpfn stands 
+for long pointer to function. Under Win32, there's no "near" or "far" pointer, 
+just pointer because of the new FLAT memory model. But this is again a lefover 
+from the day of Win16. Each window class must be associated with a function 
+called window procedure. The window procedure is responsible for message 
+handling of all windows created from the associated window class.
+
+Windows will send messages to the window procedure to notify it of important 
+events concerning the windows it 's responsible for,such as user keyboard or 
+mouse input. It's up to the window procedure to respond intelligently to each 
+window message it receives. You will spend most of your time writing event 
+handlers in window procedure.
+
+I'll describe each member of WNDCLASSEX below:
+
+typedef struct tagWNDCLASSEX {
+    UINT                cbSize;
+    UINT                style;
+    WNDPROC     lpfnWndProc;
+    int                     cbClsExtra;
+    int                     cbWndExtra;
+    HINSTANCE   hInstance;
+    HICON             hIcon;
+    HCURSOR       hCursor;
+    HBRUSH          hbrBackground;
+    LPCSTR           lpszMenuName;
+    LPCSTR           lpszClassName;
+    HICON             hIconSm;
+} WNDCLASSEX;
+
+cbSize: The size of WNDCLASSEX structure in bytes. We can use SIZEOF operator 
+to get the value.
+
+style: The style of windows created from this class. You can combine several 
+styles together using "or" operator.
+
+lpfnWndProc: The address of the window procedure responsible for windows 
+created from this class.
+
+cbClsExtra: Specifies the number of extra bytes to allocate following the 
+window-classstructure. The operating system initializes the bytes to zero.
+
+cbWndExtra: Specifies the number of extra bytes to allocate following the window 
+instance. The operating system initializes the bytes to zero. If an application 
+uses the WNDCLASS structure to register a dialog box created by using the CLASS 
+directive in the resource file, it must set this member to DLGWINDOWEXTRA.
+
+hInstance: Instance handle of the module.
+
+hIcon: Handle to the icon. Get it from LoadIcon call.
+
+hCursor: Handle to the cursor. Get it from LoadCursor call.
+
+hbrBackground: Background color of windows created from the class.
+
+lpszMenuName: Default menu handle for windows created from the class.
+
+lpszClassName: The name of this window class.
+
+hIconSm: Handle to a small icon that is associated with the window class. If 
+this member is NULL, the system searches the icon resource specified by the 
+hIcon member for an icon of the appropriate size to use as the small icon.
+    invoke CreateWindowEx, NULL,\
+                                                ADDR ClassName,\
+                                                ADDR AppName,\
+                                                WS_OVERLAPPEDWINDOW,\
+                                                CW_USEDEFAULT,\
+                                                CW_USEDEFAULT,\
+                                                CW_USEDEFAULT,\
+                                                CW_USEDEFAULT,\
+                                                NULL,\
+                                                NULL,\
+                                                hInst,\
+                                                NULL
+
+After registering the window class, we can call CreateWindowEx to create our 
+window based on the submitted window class. Notice that there're 12 parameters 
+to this function. C function prototype of CreateWindowEx is below:
+HWND
+WINAPI
+CreateWindowExA(
+    DWORD dwExStyle,
+    LPCSTR lpClassName,
+    LPCSTR lpWindowName,
+    DWORD dwStyle,
+    int X,
+    int Y,
+    int nWidth,
+    int nHeight,
+    HWND hWndParent ,
+    HMENU hMenu,
+    HINSTANCE hInstance,
+    LPVOID lpParam);
+
+Let's see detailed description of each parameter:
+dwExStyle: Extra window styles. This is the new parameter that is added to the 
+old CreateWindow. You can put new window styles for Windows 95 & NT here. You 
+can specify your ordinary window style in dwStyle but if you want some special 
+styles such as topmost window, you must specify them here. You can use NULL if 
+you don't want extra window styles.
+
+lpClassName: (Required). Address of the ASCIIZ string containing the name of 
+window class you want to use as template for this window. The Class can be your 
+own registered class or predefined window class. As stated above, every window 
+you created must be based on a window class.
+
+lpWindowName: Address of the ASCIIZ string containing the name of the window. 
+It'll be shown on the title bar of the window. If this parameter is NULL, the 
+title bar of the window will be blank.
+
+dwStyle:  Styles of the window. You can specify the appearance of the window 
+here. Passing NULL  is ok but the window will have no system menu box, no 
+minimize-maximize buttons, and no close-window button. The window would not be 
+of much use at all. You will need to press Alt+F4 to close it. The most common 
+window style is WS_OVERLAPPEDWINDOW. A window style is only a bit flag. Thus 
+you can combine several window styles by "or" operator to achieve the desired 
+appearance of the window. WS_OVERLAPPEDWINDOW style is actually a combination 
+of the most common window styles by this method.
+
+X,Y: The coordinate of the upper left corner of the window. Normally this 
+values should be CW_USEDEFAULT, that is, you want Windows to decide for you 
+where to put the window on the desktop.
+
+nWidth, nHeight: The width and height of the window in pixels. You can also use
+CW_USEDEFAULT to let Windows choose the appropriate width and height for you.
+
+hWndParent: A handle to the window's parent window (if exists). This parameter 
+tells Windows whether this window is a child (subordinate) of some other window 
+and, if it is, which window is the parent. Note that this is not the parent-
+child relationship of multiple document interface (MDI). Child windows are not 
+bound to the client area of the parent window. This relationship is 
+specifically for Windows internal use. If the parent window is destroyed, all 
+child windows will be destroyed automatically. It's really that simple. Since
+in our example, there's only one window, we specify this parameter as NULL.
+
+hMenu: A handle to the window's menu. NULL if the class menu is to be used. 
+Look back at the a member of WNDCLASSEX structure, lpszMenuName. lpszMenuName 
+specifies *default* menu for the window class. Every window created from this 
+window class will have the same menu by default. Unless you specify an 
+*overriding* menu for a specific window via its hMenu parameter. hMenu is 
+actually a dual-purpose parameter. In case the window you want to create
+is of a predefined window type (ie. control), such control cannot own a menu. 
+hMenu is used as that control's ID instead. Windows can decide whether hMenu is 
+really a menu handle or a control ID by looking at lpClassName parameter. If 
+it's the name of a predefined window class, hMenu is a control ID. If it's not, 
+then it's a handle to the window's menu.
+
+hInstance: The instance handle for the program module creating the window.
+
+lpParam: Optional pointer to a data structure passed to the window. This is 
+used by MDI window to pass the CLIENTCREATESTRUCT data. Normally, this value is 
+set to NULL, meaning that no data is passed via CreateWindow(). The window can 
+retrieve the value of this parameter by the call to GetWindowLong function.
+
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,CmdShow
+    invoke UpdateWindow, hwnd
+
+After successful return from CreateWindowEx, the window handle is stored in eax. 
+We must keep this value for future use. The window we just created is not 
+automatically displayed. You must call ShowWindow with the window handle and 
+the desired *display state* of the window to make it display on the screen. 
+Next you can call UpdateWindow to order your window to repaint its client area. 
+This function is useful when you want to update the content of the client area. 
+You can omit this call though.
+
+    .WHILE TRUE
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke TranslateMessage, ADDR msg
+                invoke DispatchMessage, ADDR msg
+   .ENDW
+
+At this time, our window is up on the screen. But it cannot receive input from 
+the world. So we have to *inform* it of relevant events. We accomplish this 
+with a message loop. There's only one message loop for each module. This 
+message loop continually checks for messages from Windows with GetMessage call. 
+GetMessage passes a pointer to a MSG structure to Windows. This MSG structure 
+will be filled with information about the message that Windows want to send to 
+a window in the module. GetMessage function will not return until there's a
+message for a window in the module. During that time, Windows can give control 
+to other programs. This is what forms the cooperative multitasking scheme of 
+Win16 platform. GetMessage returns FALSE if WM_QUIT message is received which, 
+in the message loop, will terminate the loop and exit the program.
+
+TranslateMessage is a utility function that takes raw keyboard input and 
+generates a new message (WM_CHAR) that is placed on the message queue. The 
+message with WM_CHAR contains the ASCII value for the key pressed, which is 
+easier to deal with than the raw keyboard scan codes. You can omit this call if 
+your program doesn't process keystrokes. DispatchMessage sends the message data 
+to the window procedure responsible for the specific window the message is for.
+
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+If the message loop terminates, the exit code is stored in wParam member of the 
+MSG structure. You can store this exit code into eax to return it to Windows. 
+At the present time, Windows do not make use of the return value, but it's 
+better to be on the safe side and plays by the rule.
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+
+This is our window procedure. You don't have to name it WndProc. The first 
+parameter, hWnd, is the window handle of the window that the message is destined. 
+uMsg is the message. Note that uMsg is not a MSG structure. It's just a number, 
+really. Windows define hundreds of messages, most of which your programs will 
+not be interested in. Windows will send an appropriate message to a window in 
+case something relevant to that window happens. Thew indow procedure receives 
+the message and react to it intelligently. wParam and lParam are just extra 
+parameters for use by some message. Some message does send accompanying data in
+addition to the message itself. Those data are passed to the window procedure 
+by means of lParam and wParam.
+
+mov   eax,uMsg
+    .IF eax==WM_DESTROY
+        invoke PostQuitMessage,NULL
+        xor eax,eax
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+    .ENDIF
+ ret
+WndProc endp
+
+Here comes the crucial part. This is where most of your program's intelligence
+resides. The code that responds to each Windows message are in the window 
+procedure. Your code must check  the Windows message to see if it's a message 
+it's interested in. If it is, do anything you want to do in response to that 
+message and then return with zero in eax. If it's not, you MUST pass ALL 
+parameters for default processing by DefWindowProc. This DefWindowProc is an
+API function that processes the messages your program is not interested in.
+
+The only message that you MUST respond to is WM_DESTROY. This message is sent 
+to your window procedure whenever your window is closed. At the time your 
+window procedure receives this message, your window is removed from the screen. 
+This is just a notification that your window is now destroyed, you should 
+prepare yourself to return to Windows. In response to this, you can perform 
+housekeeping prior to return to Windows. You have no choice but to quit when it 
+comes to this state. If you want to have a chance to stop the user from closing
+your window, you should process WM_CLOSE message. Now back to WM_DESTROY, after 
+performing  housekeeping chores, you must call PostQuitMessage which will post 
+WM_QUIT back to your module. WM_QUIT will make GetMessage return with zero 
+value in eax, which in turn, terminates the message loop and quits to Windows. 
+You can send WM_DESTROY message to your own window procedure by calling 
+DestroyWindow function.
+
+      [Reprinted With permission from Iczelion's Win32 Assembly HomePage]
+                   http://203.148.211.201/iczelion/index.html
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     Painting with Text
+                                                     by Iczelion
+
+
+In this tutorial, we will learn how to "paint" text in the client area of a 
+window. We'll also learn about device context.
+
+You can download the source code here.
+http://203.148.211.201/iczelion/files/tut04.zip
+
+Preliminary
+-----------
+Text in Windows is a type of GUI object.  Each character is composed of 
+numerous pixels that are lumped together into a distinct pattern. That's why 
+it's called "painting" instead of "writing". Normally, you paint text in your 
+own client area (actually, you can paint outside client area but that's another 
+story).  
+
+Putting text on screen in Windows is drastically different from DOS. In DOS, 
+you can think of the screen in 80x25 dimension. But in Windows, the screen are 
+shared by several programs. Some rules must be enforced to avoid programs 
+writing over each other screen data. Windows ensures this by limiting painting 
+area of each window to its own client area only. The size of client area of a 
+window is not constant. The user can change the size anytime. So you must 
+determine the dimension of client area dynamically, at runtime.
+
+Before you can paint something on the client area, you must ask for permission 
+from Windows. That's right, you don't have absolute control of the screen as 
+you were in DOS.  You must ask Windows for permission to paint your own client 
+area. Windows will determine the size of your client area, font, colors and 
+other GDI attributes and send a handle to device context back to your program. 
+You can then use the device context as a passport to painting on your client 
+area.
+
+What is a device context? It's just a data structure maintained internally by 
+Windows. A device context is associated with a particular device, such as a 
+printer or video display. For a video display, a device context is usually 
+associated with a particular window on the display.
+
+Some of the values in the device context are graphic attributes such as colors, 
+font etc. These are default values which you can change at will. They exist to 
+help reduce the load from having to specify these attributes in every GDI 
+function calls.
+
+When a program need to paint, it must obtain a handle to a device context. 
+Normally, there's two ways to accomplish this.
+     call BeginPaint in response to WM_PAINT message.
+     call GetDC in response to other messages.
+
+One thing you must remember, after you're through with the device context 
+handle, you must release it during the processing of a single message. Don't 
+obtain the handle in response to one message and release it in response to 
+another.
+
+Windows posts WM_PAINT messages to a window to notify that it's now time to 
+repaint its client area. Windows does not save the content of client area of a 
+window.  Instead, when a situation occurs that warrants a repaint of client 
+area (such as when a window was covered by another and is just brought back in 
+front), Windows put WM_PAINT message in that window's message queue. It's the 
+responsibility of that window to repaint its own client area. You must gather 
+all information about how to repaint your client area in the WM_PAINT section 
+of your window procedure, so the window procudure can repaint the client area 
+when WM_PAINT message arrives.
+
+Another concept you must come to terms with is the invalid rectangle. Windows 
+defines an invalid rectangle as the smallest rectangular area in the client 
+area that needs to be repainted. When Windows detects an invalid rectangle in
+the client area of a window , it posts WM_PAINT message to that window. In 
+response to WM_PAINT message, the window can obtain a paintstruct structure 
+which contains, among others, the coordinate of the invalid rectangle. 
+You call BeginPaint in response to WM_PAINT message to validate the invalid
+rectangle. If you don't process WM_PAINT message, at the very least you must 
+call DefWindowProc or ValidateRect to validate the invalid rectangle else 
+Windows will repeatedly send you WM_PAINT message.
+
+Here's the steps you perform in response to a WM_PAINT message:
+
+     Get a handle to device context with BeginPaint.
+     Paint the client area.
+     Release the handle to device context with EndPaint
+
+Note that you don't have to explicitly validate the invalid rectangle. It's 
+automatically done by the BeginPaint call. Between BeginPaint-Endpaint pair, 
+you can call any GDI functions to paint your client area. Nearly everyone of 
+them requires a handle to device context as a parameter.
+
+Content:
+
+We will write a program that display a text string "Win32 assembly is great 
+and easy!" in the center of the client area.
+
+
+     include windows.inc
+     includelib user32.lib
+     includelib kernel32.lib
+
+     .DATA
+     ClassName db "SimpleWinClass",0
+     AppName  db "Our First Window",0
+     OurText  db "Win32 assembly is great and easy!",0
+
+     .DATA?
+     hInstance HINSTANCE ?
+     CommandLine LPSTR ?
+
+     .CODE
+             start:
+      invoke GetModuleHandle, NULL
+      mov    hInstance,eax
+      invoke GetCommandLine
+      invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+      invoke ExitProcess,eax
+
+WinMain proc hinst:HINSTANCE, hPrevInst:HINSTANCE, CmdLine:LPSTR, CmdShow:SDWORD
+         LOCAL wc:WNDCLASSEX
+         LOCAL msg:MSG
+         LOCAL hwnd:HWND
+         mov   wc.cbSize,SIZEOF WNDCLASSEX
+         mov   wc.style, CS_HREDRAW or CS_VREDRAW
+         mov   wc.lpfnWndProc, OFFSET WndProc
+         mov   wc.cbClsExtra,NULL
+         mov   wc.cbWndExtra,NULL
+         push  hInstance
+         pop   wc.hInstance
+         mov   wc.hbrBackground,COLOR_WINDOW+1
+         mov   wc.lpszMenuName,NULL
+         mov   wc.lpszClassName,OFFSET ClassName
+         invoke LoadIcon,NULL,IDI_APPLICATION
+         mov   wc.hIcon,eax
+         mov   wc.hIconSm,0
+         invoke LoadCursor,NULL,IDC_ARROW
+         mov   wc.hCursor,eax
+         invoke RegisterClassEx, addr wc
+         invoke CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+                WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+                CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+                hInst,NULL
+         mov   hwnd,eax
+         invoke ShowWindow, hwnd,SW_SHOWNORMAL
+         invoke UpdateWindow, hwnd
+             .WHILE TRUE
+                     invoke GetMessage, ADDR msg,NULL,0,0
+                     .BREAK .IF (!eax)
+                     invoke TranslateMessage, ADDR msg
+                     invoke DispatchMessage, ADDR msg
+             .ENDW
+             mov     eax,msg.wParam
+             ret
+     WinMain endp
+
+     WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+         LOCAL hdc:HDC
+         LOCAL ps:PAINTSTRUCT
+         LOCAL rect:RECT
+         mov   eax,uMsg
+         .IF eax==WM_DESTROY
+             invoke PostQuitMessage,NULL
+         .ELSEIF eax==WM_PAINT
+             invoke BeginPaint,hWnd, ADDR ps
+             mov    hdc,eax
+             invoke GetClientRect,hWnd, ADDR rect
+             invoke DrawText, hdc,ADDR OurText,-1, ADDR rect, \
+                     DT_SINGLELINE or DT_CENTER or DT_VCENTER
+             invoke EndPaint,hWnd, ADDR ps
+         .ELSE
+             invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+             ret
+         .ENDIF
+         xor   eax, eax
+         ret
+     WndProc endp
+     end start
+
+
+
+The majority of the code is the same as the example in tutorial 3. I'll explain 
+only the important changes.
+
+    LOCAL hdc:HDC
+    LOCAL ps:PAINTSTRUCT
+    LOCAL rect:RECT
+
+These are local variables that are used by GDI functions in our WM_PAINT 
+section. hdc is used to store the handle to device context returned from 
+BeginPaint call. ps is a PAINTSTRUCT structure. Normally you don't use the 
+values in ps. It's passed to BeginPaint function and Windows fills it with 
+appropriate values. You then pass ps to EndPaint function when you finish 
+painting the client area. rect is a RECT structure defined as follows:
+
+
+     RECT Struct
+         left           LONG ?
+         top           LONG ?
+         right        LONG ?
+         bottom    LONG ?
+     RECT ends
+
+Left and top are the coordinates of the upper left corner of a rectangle Right 
+and bottom are the coordinates of the lower right corner. One thing to remember: 
+The origin of the x-y axes is at the upper left corner of the client area. So 
+the point y=10 is BELOW the point y=0.
+
+        invoke BeginPaint,hWnd, ADDR ps
+        mov    hdc,eax
+        invoke GetClientRect,hWnd, ADDR rect
+        invoke DrawText, hdc,ADDR OurText,-1, ADDR rect, \
+                DT_SINGLELINE or DT_CENTER or DT_VCENTER
+        invoke EndPaint,hWnd, ADDR ps
+
+In response to WM_PAINT message, you call BeginPaint with handle to the window 
+you want to paint and an uninitialized PAINTSTRUCT structure as parameters. 
+After successful call, eax contains the handle to device context. Next you call 
+GetClientRect to retrieve the dimension of the client area. The dimension is 
+returned in rect variable which you pass to DrawText as one of its parameter. 
+DrawText's syntax is:
+
+int WINAPI DrawText(HDC hdc,
+                                    LPCSTR lpString,
+                                    int nCount,
+                                    LPRECT lpRect,
+                                    UNIT uFormat);
+
+DrawText is a high-level text output API function. It handles some gory details 
+such as word wrap, centering etc. so you could concentrate on the string you 
+want to paint. Its low-level brother, TextOut, will be examined in the next 
+tutorial. DrawText formats a text string to fit within the bounds of a 
+rectangle. It uses the currently selected font,color and background (in the 
+device context) to draw the text.Lines are wrapped to fit within the bounds of 
+the rectangle. It returns the height of the output text in device units, in our
+case, pixels. Let's see its parameters:
+
+     hdc  handle to device context
+
+     lpString  A pointer to the string you want to draw in the rectangle. 
+     The string must be null-terminated else you would have to specify its 
+     length in the next parameter, nCount.
+    
+     nCount  The number of characters to output. If the string is null-
+     terminated, nCount must be -1. Otherwise nCount must contain the number of 
+     characters in the string you want to draw.
+
+     lpRect  A pointer to the rectangle (a structure of type RECT) you want to 
+     draw the string in. Note that this rectangle is also a clipping rectangle, 
+     that is, you could not draw the string outside this rectangle.
+
+     uFormat The value that specifies how the string is displayed in the 
+     rectangle. We use three values combined by "or" operator:
+          DT_SINGLELINE  specifies a single line of text
+          DT_CENTER  centers the text horizontally.
+          DT_VCENTER centers the text vertically. Must be used with 
+                     DT_SINGLELINE.
+
+After you finish painting the client area, you must call EndPaint function to 
+release the handle to device context.
+
+That's it. We can summarize the salient points here:
+
+     * You call BeginPaint-EndPaint pair in response to WM_PAINT message.
+     * Do anything you like with the client area between the calls to 
+       BeginPaint and EndPaint.
+     * If you want to repaint your client area in response to other messages, 
+       you have two choices:
+          Use GetDC-ReleaseDC pair and do your painting between these calls
+          Call InvalidateRect or UpdateWindow  to invalidate the entire client 
+          area, forcing Windows to put WM_PAINT message in the message queue of
+          your window and do your painting in WM_PAINT section
+
+      [Reprinted With permission from Iczelion's Win32 Assembly HomePage]
+                   http://203.148.211.201/iczelion/index.html
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::........................THE.C.STANDARD.LIBRARY.IN.ASSEMBLY
+                                                         The _Xprintf functions
+                                                         by Xbios2
+
+
+I. INTRODUCTION
+---------------
+This is the second article I write on the C standard library, and perhaps some 
+ask: "Why should this interest us?" or, more gently, "What's the philosophy 
+behind these articles?". Well, here is why I write these articles:
+
+- For C programmers that want to know what happens behind the HLL 'curtain'
+- For asm programmers who wish to get ideas
+- For asm programmers who need a C command but want to keep their code 'slim'
+  (actually the code section is intended more as source to compile and use than
+   source to read and understand, that's why it's not always well-commented in 
+   a tutorial-like manner)
+- For me, to better understand reverse-engineering and assembly coding.
+
+Ok, now go for it....
+
+
+II. WHAT C DOES
+---------------
+How the various _printf functions (_Xprintf) work:
+
+The _Xprintf functions call the ___vprinter function, with four parameters:
+1. output function address
+2. output function parameter
+3. pointer to format string
+4. pointer to arguments list
+
+Parameter 1 is a pointer to a function that outputs the resulting string (to a 
+file, stdout or to memory).
+Parameter 2 is passed to the function pointed at by parameter 1, together with 
+the string pointer and its length.
+Parameter 3 is 'forwarded' by _Xprintf exactly as received by the user.
+Parameter 4 is either 'forwarded' (by the _vXprintf functions) or points to the 
+stack (for 'normal' _Xprintf functions).
+
+Functions that send output to a file or to STDOUT also lock/unlock the stream. 
+Besides that, all the 'dirty job' is passed to ___vprinter.
+
+
+How ___vprinter works:
+[the disassembly of ___vprinter would show this better, but is far too large]
+
+1. Read (next) char from format string
+2. If char is NUL, finish
+3. If char is not a '%', output it verbatim', loop back to [1]
+4. If char is '%' and next char is also '%', output a single '%' and loop to [1]
+5. Process the string up to a 'type_char'
+   If everything is ok, output the result, loop to [1]
+   If there is an unknown char, output the rest of the string verbatim, finish
+
+It is interesting to notice how ___vprinter does it's output:
+
+All output is performed character by character. To do this ___vprinter calls a
+nother routine (let's call it _storechar) passing it two parameters: the 
+character to store and a pointer to an 80-byte string in the stack of 
+___vprinter (actually in the C source that must have been a pointer to a local 
+structure, because _storechar also modifies locals after those 80 bytes). 
+_storechar writes the character in the sting and if the string is filled up, it 
+calls a second function (call it _writestring) that calls the function whose 
+pointer was passed to ___vprinter. Before returning, ___vprinter calls 
+_writestring directly to output whatever bytes where left. _writestring is also 
+responsible for setting a flag that will cause ___vprinter (and consequently 
+_Xprintf) to return -1 instead of the number of chars output.
+
+This way to perform output has the advantage of printing long strings without 
+allocating much memory, while printing small strings using the output function 
+only once. Actually this is the only advantage it has. Even if this solution 
+was written well (which is _not_), it would still be awful in _sprintf and 
+_vsprintf. In _(v)sprintf chars are written in the local buffer first, then, 
+when this fills up, the second function (_writestring) is called, which calls 
+a third function (included in the same .OBJ file with _sprintf) which finally 
+calls _memcpy. With careful re-writing of sprintf, this could be achieved just 
+by a simple, one-byte 'stosb'. Then printf and fprintf could be implemented 
+atop sprintf. The problem here is that those functions should 'know' how much 
+buffer space to allocate. Maybe the solution to this could be to leave 
+allocating buffers to the user, by just giving a sprintf function (actually 
+Microsoft thought this before me, and they give only wsprintf and wvsprintf 
+in the Win32 API).
+
+This article will actually focus on a vsprintf function, with all the format 
+specifiers in Borland C (EXCEPT floating point numbers, which would (and maybe 
+will) require a separate article. Also keep in mind that UNIX has a rather more 
+complicated Xprintf set, which I'm glad to ignore :)
+
+
+III. SOME COMMENTS ON THE CODE
+-----------------------------
+This is not exactly 'clear' code. This is because it was not written from 
+scratch, but is the result of hand-optimization applied to the disassembly of 
+___vprinter (Actually Borland could sue me for this, but they'd really have a 
+hard time trying to show that my code resembles theirs :)). That is, starting 
+from an uncomprehensible but working source code, I kept changing the source 
+code and compiling until I got a better source code (yet still uncomprehensible 
+:). That's also a reason the code is poorly commented. Anyway if you're just 
+interested in a simple _sprintf function, skip to the code section. For the 
+curious, here are some differences my version has:
+
+- A self-contained procedure
+  That is, there is only a _sprintf function, which calls nothing, while
+  _sprintf involves: ___vprinter, ___longtoa, ___strlen, plus three other
+  functions called by ___vprinter (_storechar, _writestring and another one
+  that converts pointers into hex)
+- Much smaller code
+- Much less stack used
+- Probably faster code (actually it is not a speed-optimized version, but yet 
+  it must be much faster)
+- It's home-made, and brand-new :)
+
+
+IV. THE CODE
+-------------
+Well, as I said, you're not expected to understand it at once. Yet, if you 
+insist, read and enjoy...
+
+; sprintf.asm ============================================================
+.386
+.model flat
+
+getarg	macro register
+	lea	eax, [a_argList]
+	mov	edx, [eax]
+	add	dword ptr [eax], 4
+	mov	register, [edx]
+	endm
+
+.data
+Null		db '(null)',0
+		align 4
+jumptable	dd offset BlankOrPlus	; 0
+		dd offset HashSign	; 1
+		dd offset Asterisk	; 2
+		dd offset MinusSign	; 3
+		dd offset Dot		; 4
+		dd offset Digit		; 5
+		dd offset h_shortint	; 6
+		dd offset d_decimal	; 7
+		dd offset o_octal	; 8
+		dd offset u_unsigned	; 9
+		dd offset x_Hexadecimal	; 10
+		dd offset p_pointer	; 11
+		dd offset unknown	; 12 = f_floating
+		dd offset c_char	; 13
+		dd offset s_string	; 14
+		dd offset n_CharsWritten ; 15
+		dd offset formatLoop	; 16 = Ignore character
+		dd offset unknown	; 17 = Unknown char
+		dd offset Percent	; 18
+
+	;       !   "   #   $   %   &   '   (   )   *   +   ,   -   .   /  
+xxlat	db  0, 17, 17,  1, 17, 18, 17, 17, 17, 17,  2,  0, 17,  3,  4, 17
+	;   0   1   2   3   4   5   6   7   8   9   :   ;   <   =   >   ?
+	db  5,  5,  5,  5,  5,  5,  5,  5,  5, 17, 17, 17, 17, 17, 17, 17
+	;   @   A   B   C   D   E   F   G   H   I   J   K   L   M   N   O  
+	db 17, 17, 17, 17, 17, 12, 16, 12,  8, 17, 17, 17, 16, 17, 16, 17
+	;   P   Q   R   S   T   U   V   W   X   Y   Z   [   \   ]   ^   _
+	db 17, 17, 17, 17, 17, 17, 17, 17, 10, 17, 17, 17, 17, 17, 17, 17
+	;   `   a   b   c   d   e   f   g   h   i   j   k   l   m   n   o
+	db 17, 17, 17, 13,  7, 12, 12, 12,  6,  7, 17, 17, 16, 17, 15,  8
+	;   p   q   r   s   t   u   v   w   x   y   z   {   |   }   ~ DEL
+	db 11, 17, 17, 14, 17,  9, 17, 17, 10, 17, 17, 17, 17, 17, 17, 17
+
+
+.code
+_vsprintf	proc C near uses ebx edi esi, a_output:dword, a_format:dword, \
+                                              a_argList:dword
+
+		local v_width:dword, v_prec:dword, v_zeroLen:dword, \
+                      v_sign:dword, v_strbuf:byte:12, v_strLen:dword
+
+		mov	esi, [a_format]
+		mov	edi, [a_output]
+
+mainLoop:	lodsb				; get character
+		cmp	al, '%'			; test if it is '%'
+		je	short controlChar	
+		stosb				; if not, just copy it
+		test	al, al
+		jnz	short mainLoop		; if char is not NULL, loop
+		jmp	EndOfString		; jump if char is null
+; ---------------------------------------------------------------------------
+
+controlChar:	xor	ecx, ecx		; set stage to 0
+		or	eax, -1
+		xor	ebx, ebx		; no flags set
+		mov	[v_width], eax		; no width given
+		mov	[v_zeroLen], ecx	; 0
+		mov	[v_prec], eax		; no .prec given
+		mov	[v_sign], ecx		; 0, no sign prefix
+
+formatLoop:	xor	eax, eax
+		lodsb
+		cmp	al, ' '
+		jl	unknown			; char below ' '
+		movzx	edx, byte ptr xxlat - ' '[eax]
+		jmp	jumptable[edx*4]	; we jump with the char in AL
+; ---------------------------------------------------------------------------
+n_CharsWritten:	getarg	eax
+		mov	edx, edi
+		sub	edx, [a_output]		; calculate length
+
+		test	ebx, 16
+		jnz	short nchars_short
+
+		mov	[eax], edx
+		jmp	short fw_mainloop
+
+nchars_short:	mov	[eax], dx
+fw_mainloop:	jmp	mainLoop
+; ---------------------------------------------------------------------------
+Percent:	cmp	byte ptr [esi-2], al	; al='%'
+		jne	unknown
+		stosb
+		jmp	mainLoop		
+; ---------------------------------------------------------------------------
+; flag characters
+HashSign:	or	ebx, 1
+		jmp	short chkflags
+MinusSign:	or	ebx, 2
+		jmp	short chkflags
+BlankOrPlus:	or	byte ptr [v_sign], al	; ' ' will become '+'
+chkflags:	or	ecx, ecx
+		jnz	unknown
+		jmp	formatLoop
+; ---------------------------------------------------------------------------
+Asterisk:	getarg	eax
+
+		cmp	ecx, 2
+		jge	short asterisk_prec
+		test	eax, eax
+		jge	short width_positive
+		neg	eax
+		or	ebx, 2
+
+width_positive:	mov	[v_width], eax
+		mov	ecx, 3
+		jmp	short fwwB
+; - - - - - - - - - - - - - - - - - - - - - - -
+asterisk_prec:	cmp	ecx, 4
+		jnz	unknown
+		inc	ecx			; set stage to 5
+		mov	[v_prec], eax
+
+fwwB:		jmp	formatLoop
+; ---------------------------------------------------------------------------
+Dot:		cmp	ecx, 4
+		jge	unknown
+		mov	ecx, 4
+		inc	[v_prec]		; set .prec to 0
+		jmp	formatLoop
+; ---------------------------------------------------------------------------
+Digit:		sub	al, '0'			; convert ASCII to value
+		jnz	short digit2
+		or	ecx, ecx
+		jnz	short digit2
+		test	ebx, 2			; we come here if width=0n
+		jnz	short fwwC
+		or	ebx, 8
+		inc	ecx			; set stage to 1
+		jmp	fwwC
+; - - - - - - - - - - - - - - - - - - - - - - -
+digit2:		cmp	ecx, 2
+		jg	short digit_prec
+		mov	ecx, 2
+		cmp	[v_width], 0
+		jge	short digit_width
+		mov	[v_width], eax
+		jmp	short fwwC
+; - - - - - - - - - - - - - - - - - - - - - - -
+digit_width:	imul	edx, [v_width], 10
+		add	eax, edx
+		mov	[v_width], eax
+		jmp	short fwwC
+; - - - - - - - - - - - - - - - - - - - - - - -
+digit_prec:	cmp	ecx, 4
+		jnz	unknown
+		imul	edx, [v_prec], 10
+		add	eax, edx
+		mov	[v_prec], eax
+
+fwwC:		jmp	formatLoop
+; ---------------------------------------------------------------------------
+h_shortint:	or	ebx, 16
+		mov	ecx, 5
+		jmp	formatLoop
+; ---------------------------------------------------------------------------
+o_octal:	mov	ecx, 8			; radix
+		test	ebx, 1
+		jz	short unsigned
+		mov	byte ptr [v_sign], '0'
+		jmp	short integer
+
+u_unsigned:	mov	ecx, 10			; radix
+unsigned:	mov	byte ptr [v_sign], 0	; no sign
+		jmp	short integer
+
+x_Hexadecimal:	mov	ecx, 16			; radix
+		mov	ah, al
+		xor	al, 'X'			; AL is the char ('x' or 'X')
+		mov	bh, al
+		test	ebx, 1
+		jz	short integer
+		mov	al, '0'
+		mov	word ptr [v_sign], ax
+		jmp	short integer
+
+d_decimal:	mov	ecx, 10			; radix
+		or	ebx, 32
+
+integer:	getarg	eax
+		test	ebx, 16
+		jz	short integer_cnvt	; if not short, don't change
+
+short_integer:	test	ebx, 32			; is integer signed?
+		jnz	short short_signed
+		and	eax, 0FFFFh		; zero extend 16 to 32
+		jmp	short nosign
+short_signed:	cwde				; sign extend 16 to 32
+
+integer_cnvt:	test	ebx, 32
+		jz	nosign
+		or	eax, eax
+		jns	nosign
+		neg	eax
+		mov	byte ptr [v_sign], '-'
+
+nosign:		lea	edx, [offset v_strbuf + 11]
+		or	eax, eax
+		jnz	short ltoa
+		cmp	[v_prec], eax		; eax is 0 if we are here
+		jnz	short zero
+		mov	byte ptr [edx], al	; value 0 with .0 prec
+		mov	[v_strLen], eax		; means no string
+		jmp	printit			; so output no digits
+
+zero:		cmp	byte ptr [v_sign], '0'
+		jnz	short ltoa
+		mov	byte ptr[v_sign], 0	; we don't want 0x0, nor '00'
+
+	; convert EAX into ASCII
+ltoa:		push	edi
+		push	esi
+		xor	esi, esi
+		mov	edi, edx
+		mov	byte ptr [edi], 0
+ 		
+ltoaLoop:	xor	edx, edx
+		div	ecx			; ecx is the radix
+		xchg	eax, edx
+		add	al,90h
+		daa
+		adc	al,40h
+		daa
+		or	al, bh			; switch case if needed
+		dec	edi
+		inc	esi
+		mov	[edi], al
+		xchg	eax, edx
+		or	eax, eax
+		jnz	short ltoaLoop
+
+		mov	eax, esi
+		mov	edx, edi
+		pop	esi
+		pop	edi
+
+		mov	[v_strLen], eax
+		mov	ecx, [v_prec]
+		or	ecx, ecx
+		js	noprec
+
+	; A precision was given
+		sub	ecx, eax
+		jle	short skipzerolen
+		mov	[v_zeroLen], ecx	; if prec>digits then
+						; add (prec-digits) '0' 
+		jmp	short skipzerolen
+
+noprec:		test	ebx, 8
+		jz	short skipzerolen
+		cmp	[v_width], 0
+		jle	short skipzerolen
+
+;------------------
+; we come here if width=0n
+		mov	ecx, [v_width]
+		sub	ecx, eax		; EAX=[v_strLen]
+		jle	short skipzerolen
+		mov	eax, dword ptr [v_sign]
+		or	al, al
+		jz	short setzerolen
+		dec	ecx
+		shr	eax, 8
+		jz	short setzerolen
+		dec	ecx
+		js	short skipzerolen
+setzerolen:	mov	[v_zeroLen], ecx
+
+skipzerolen:	mov	eax, dword ptr [v_sign]
+		or	al, al
+		jz	short finishint
+		dec	[v_width]
+		shr	eax, 8
+		jz	short finishint
+		dec	[v_width]
+
+finishint:	mov	eax, [v_zeroLen]
+		add	[v_strLen], eax
+		jmp	printit
+
+; ---------------------------------------------------------------------------
+; Pointer: same as %.8X
+
+p_pointer:	getarg	ecx
+
+		lea	edx, [v_strbuf]
+		push	ebx
+		mov	ebx, 7
+loopPointer:	mov	al, cl
+		shr	ecx, 4
+		and	al, 0Fh
+		add     al,90h
+		daa
+		adc     al,40h
+		daa
+		mov	[edx+ebx], al
+		dec	ebx
+		jns	loopPointer
+		pop	ebx
+
+		mov	byte ptr [edx+8], 0
+		mov	[v_strLen], 8
+		jmp	printit
+; ---------------------------------------------------------------------------
+c_char:		getarg	eax
+		lea	edx, [v_strbuf]
+		mov	[edx], eax		; stores char (rest of EAX is
+						; not important)
+		mov	[v_strLen], 1		; set length to one char
+		jmp	printit
+; ---------------------------------------------------------------------------
+s_string:	getarg	edx
+		or	eax, -1
+		test	edx, edx
+		jnz	short strlen_I
+		mov	edx, offset Null	; Pointer 0 prints 'Null'
+strlen_I:	inc	eax
+		cmp	byte ptr [edx+eax], 0
+		jnz	short strlen_I
+
+		cmp	eax, [v_prec]
+		jle	short setLen
+		cmp	[v_prec], 0
+		jl	short setLen
+		mov	eax, [v_prec]
+
+setLen:		mov	[v_strLen], eax
+
+; ---------------------------------------------------------------------------
+; we must arrive here with EDX pointing to the string to print
+; and it's length in [v_strLen]
+
+	; left pad with spaces IF necessary
+printit:	test	ebx, 2			; Is it left justified?
+		mov	ebx, [v_width]
+		jnz	short printPrefix	; if yes, don't pad left
+		mov	ecx, ebx
+		sub	ecx, [v_strLen]
+		jle	printPrefix
+		mov	al, ' '
+		rep stosb			; >>> left pad
+		mov	ebx, [v_strLen]
+
+	; print one- or two-chars PREFIX
+printPrefix:	mov	eax, [v_sign]
+		or	al, al
+		jz	short padZero
+		stosb				; print the sign prefix
+		shr	eax, 8			; AL=AH, AH=0
+		jz	short padZero
+		stosb				; print the sign prefix
+
+	; pad with zeroes IF necessary
+padZero:	mov	ecx, [v_zeroLen]	; we are sure that ecx>=0
+		sub	[v_strLen], ecx
+		sub	ebx, ecx
+		mov	al, '0'			; ECX=[v_zeroLen]
+		rep stosb			; >>> pad with 0s
+		mov	ecx, [v_strLen]
+		sub	ebx, ecx
+		xchg	esi, edx
+		rep movsb			; >>> copy string
+		xchg	esi, edx
+		js	short skipRightpad	; refers to SUB EBX, ECX
+		mov	ecx, ebx
+		mov	al, ' '
+		rep stosb			; >>> right pad with ' '
+skipRightpad:	jmp	mainLoop
+; ---------------------------------------------------------------------------
+;
+; If an	unknown	specification character is found, _vsprintf enters the
+; following loop. This loop copies verbatim all the rest of the string
+; (from the '%' on)
+
+unknown:	mov	al, '%'
+scanback:	dec	esi
+		cmp	[esi], al
+		jne	short scanback
+copyrest:	lodsb
+		stosb
+		test	al, al
+		jnz	short copyrest
+;
+; ---------------------------
+; return the number of chars written
+
+EndOfString:	mov	eax, edi
+		sub	eax, [a_output]
+		dec	eax
+		ret
+endp
+
+ends
+end
+; EOF ====================================================================
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                         X-Windows in Assembly Language: Part I
+                                         by mammon_
+
+
+The sensible way to write programs for X-Windows is to use a toolkit such as Xt
+or Gtk; the easy way would be to use a scripting package such as Python or 
+Tcl/Tk. Modern assembly language coders, however, are known for sacrificing 
+ease and sensibility in the name of curiosity and execution speed; it is in 
+this spirit that the potential for programming X-Windows in assembly language 
+will now be investigated.
+
+
+X-Windows Programming
+---------------------
+Like other GUIs, X-Windows uses an event-driven programming style in which an 
+application registers itself with the system, displays its main user interface, 
+and waits for system events signalling that the user has interacted with the 
+program. There are four main 'levels' of X-Windows Programming: XProtocol, 
+XLib, Xt or 'toolkit' programming, and scripting.
+
+XProtocol
+X-Windows consists of the X Server which handles graphics output, keyboard and 
+mouse input, event signalling, and commands sent from client programs (Window 
+Managers, applications). Clients communicate with the X Server using XProtocol, 
+which consists of byte streams exchanged between the client and the server -- 
+in a sense, like the packets that a network client exchanges with a network
+server. XProtocol is virtually useless for application programming, for the 
+coding overhead for each server request makes development impractical. The 
+details of XProtocol requests can be found in '/usr/include/X11/Xproto.h'.
+
+XLib
+The equivalent of the Win32 API in X-Windows is XLib. Even if one uses toolkits
+for application coding, there is no way to escape XLib coding. XLib serves as 
+an interface between the client programs and the X Server; essentially, it is a 
+library of XProtocol functions exported for use by applications.
+
+Xt
+Toolkit programming is similar to using class libraries (like MFC, OWL, or VCL)
+on the Win32 platform. There are a number of toolkits available, such as Qt, 
+Gtk, Xt Intrinsics, Athena, and the Motif toolkit. Each toolkit consists of 
+extensible widgets (like resources in Win32) that define basic window types: 
+buttons, scrollbars, dialogs, edit windows, etc.
+
+Scripting
+A wide variety of scripting languages are available for the Unix platorm, and 
+many of these have windowing toolkits that enable them to produce X-Windows 
+applications. The most popular are Tcl/Tk, Python, and Java; needless to say, 
+these programming methods may not be implemented in assembly language.
+
+
+The XLib Programming Model
+--------------------------
+An application written for the XLib interface demonstrates the basic principles 
+of X-Windows programming as a whole. These principles make up a 5-step method:
+
+Step I : Connect to the Display
+The first step of an X-Windows application is also the most simple: a call is 
+made to XOpenDisplay; the result --returned in eax of course-- is a pointer to 
+a Display structure. This should be saved, as it will be required for just 
+about every subsequent call: 
+  p_disp = XOpenDisplay( NULL );
+Note: I am providing the sample source in C for this section; the assembler 
+reconstruction will be presented later.
+
+Step II : Initialize Application Resources (Colors and Fonts)
+Before a window can be displayed, it requires a Graphic Context (similar to the 
+Win32 DC); before the GC can be created, it requires that the colors and fonts 
+to be used by the window be initialized.
+
+The simplest way to do this is to use the XLoadQueryFont and the WhitePixel and 
+BlackPixel macros: 
+  mfontstruct = XLoadQueryFont( p_disp, "fixed");
+  WhitePix = WhitePixel( p_disp, DefaultScreen(p_disp));
+  BlackPix = BlackPixel( p_disp, DefaultScreen(p_disp));
+Once again, the values are saved for later use. Note that a more complex method 
+of allocating colors will be used in the assembly code later; there, a handle 
+to the default X Windows colormap is obtained via a call to XDefaultColormap, 
+and XAllocNamedColor is used to allocate white and black pixel values: this 
+accomplishes the same as the above code, but without using the macros.
+
+Step III : Create Window(s)
+There are four things that must be done to create a window: the window itself 
+is registered with the X Server and given a Resource ID, the GC is registered 
+with the X Server and given its own Resource ID, the window must specify which 
+events it will respond to, and finally the window must be mapped into the X 
+display.
+
+Creating the window requires a call to XCreateWindow or XCreateSimpleWindow. 
+XCreateSimpleWindow, used below, requires the display, parent window, x and y 
+screen coordinates, window width and height, border width, border pixel value, 
+and background pixel value. XCreateWindow, used in the assembly version, is
+passed the display, parent window, x & y, width & height, border width, color 
+depth, window class, visual attribute, value mask, and an XSetWindowAttributes 
+structure. A handle to the created window is returned.
+  Main = XCreateSimpleWindow( p_disp, DefaultRootWindow( p_disp ), 100, 100,
+                       100, 50, 1, BlackPix, WhitePix);
+Creating a GC is not strictly necessary; however doing without one causes the 
+application appearance to be unpredicatable (I found that the background of my 
+window became transparent). A GC is created by calling XCreateGC, which is 
+passed the display, window handle, value mask, and a GraphicsContextValues 
+structure:
+  theGC = XCreateGC(p_disp, Main,(GCFont | GCForeground | GCBackground), &gcv);
+Input events are selected using the XSelectInput function, which is passed the 
+display, window handle, and the ORed values of event masks:
+  XSelectInput( p_disp, Main, ExposureMask );
+Finally, the window is mapped onto the display (and therefore displayed) with 
+the XMapWindow call, which is relatively self-explanatory:
+  XMapWindow( p_disp, Main );
+
+At this point, the procedure must be created for each child window (buttons, 
+scrollbars, etc); the following shows the creation of a button with its own GC,
+and selection of the Exposure and ButtonPress event masks:
+  Exit = XCreateSimpleWindow(p_disp, Main, 15, 1, 60, 15, 1,
+                             WhitePix, BlackPix);
+  XSelectInput(p_disp, Exit, ExposureMask | ButtonPressMask );
+  XMapWindow(p_disp, Exit);
+  exitGC = XCreateGC(p_disp, Exit,(GCFont | GCForeground | GCBackground),&gcv);
+Note that a separate GC is not needed for each window if they will be sharing 
+the same background, foreground, and font colors.
+
+Step IV : Event Loop
+The event loop is the 'meat' of the program, where the application responds to 
+user events. This loop calls XNextEvent to get the next system event, and 
+responds to the ones sent to its windows. The following loop catches the Expose
+event and draws text into each window using XDrawString on the initial exposure 
+of each window (xexpose.count ==0). In addition, when the Exit button is 
+pressed, the while loop exits and the application terminates.
+  while( !Done ){
+    XNextEvent(p_disp, &theEvent);
+    if( theEvent.xany.window == Main){
+      if( theEvent.type == Expose && theEvent.xexpose.count == 0){
+        XDrawString(p_disp, Main, theGC, 1, 40, msgtext, strlen(msgtext));
+      }  }
+    if( theEvent.xany.window == Exit){
+      switch(theEvent.type){
+       case Expose:
+         if( theEvent.xexpose.count == 0){
+           XDrawString(p_disp, Exit, exitGC, 2, 11, extext, strlen(extext) );
+         }
+         break;
+       case ButtonPress:
+         Done = 1; }  }  }
+
+Step V : Clean Up and Close Display
+At this point the application is over; the various handles must be freed, the 
+windows destroyed, and the display closed. The functions typically used for 
+this are demonstrated below:
+  XFreeGC(p_disp, theGC);
+  XFreeGC(p_disp, exitGC);
+  XUnloadFont(p_disp, mfontstruct->fid);
+  XDestroyWindow(p_disp, Main);
+  XCloseDisplay(p_disp);
+  exit(0);
+
+Note that sll of the functions, structures, and messages used above are defined 
+in '/usr/include/X11/Xlib.h', './X11/Xutil.h' and './X11/X.h'.
+
+
+Inline Assembler With GCC
+-------------------------
+Due to the presence of the GAS assembler within GCC, inline assembler is pretty
+straightforward. In GCC, the 'asm' keyword is used to prefix a block of asm 
+instructions; the format of 'asm' is as follows:
+   asm( statements : output vars : input vars : modified registers);
+Note that the last three parameters are usually used only if you are writing an 
+entire function in assembly language, or if you are modifying registers that 
+you do not save (it is better to save all the registers that you will modify, 
+if they contain values that will be needed later).
+
+The asm statements are passed directly to GAS, and thus they need to be in a 
+format that GAS will recognize. For this reason, multiline asm statements will 
+require a newline (and, optionally, a tab) after each statement, like so:
+
+  asm(  "
+        statement1 \n
+        statement2 \n
+        statement3 \n
+        statement4"
+    : "g" (outvar)
+    : "g" (invar)
+    : eax, ebx, ecx
+    );
+or, as I have used below:
+  asm(  "statement1 \n\t"
+        "statement2 \n\t"
+        "statement3 \n\t"
+        "statement4 \n\t");
+Other than that there are no real restrictions. Structures do not pass well 
+between C and GAS; if you need to reference specific structure variables from 
+inline assembly code, it is better to place those variables into temporary C 
+variables, whcih can then be accessed from the assembler block as normal. The 
+following demonstrates this:
+    fid = mfontstruct->fid;
+    asm(    "
+            push fid\n
+            push mainGC\n
+            push p_disp\n
+            call XSetFont\n
+            add $12, %esp");
+More information on the GCC inline assembler can be found at: 
+Avly's Programming Page (http://www.castle.net/~avly/djasm.html)
+CodeX Software (http://www.gameprog.com/codex/tut/att_asm.html)
+Brennan's DGPP Resources (http://brennan.home.ml.org/djgpp/) [Currently Down]
+
+
+The XHell Sample Program
+------------------------
+In order to be able to use the C header files for X-Windows, the following 
+program has been written in C for GCC, using C code for the data declarations 
+and assembler for the 'meat' of the program. In Part II of this article (next 
+issue) I will convert this program to the Xt model and implement it in NASM.
+// xhell.c ============================================================
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+/* ==================== Global Variable Declarations ===================== */
+char	*msgtext = "You are in XHell",
+        *extext = "Exit XHell",
+		*m_font = "fixed",
+        *app_name = "xhello",
+        *window_title = "XHell",
+        *szWhite = "white",
+        *szBlack = "black";
+XFontStruct *mfontstruct;
+Display *p_disp;
+Window Main, Exit;
+GC mainGC, exitGC;
+XEvent theEvent;
+Font fid;
+Colormap cmap;
+int Done = 0;
+unsigned long pxBlack, pxWhite;
+XSetWindowAttributes xswa;
+XColor pixBlack, pixWhite;
+XGCValues gcv;
+/* ================ Start of Main Function ==================== */
+main()
+{
+/* ===== Connect to Display ===== */
+  asm(  "push $0\n\t"
+		  "call XOpenDisplay\n\t"
+		  "movl %eax, p_disp\n\t"
+		  "add $4, %esp\n\t");
+/* ===== Setup Colors n' Fonts ===== */
+	asm( "push m_font\n\t"
+		  "push p_disp\n\t"
+		  "call XLoadQueryFont\n\t"
+		  "add $8, %esp\n\t"
+		  "movl %eax, mfontstruct");
+/* ===== Prepare Main Window ===== */
+	fid = mfontstruct->fid;
+/* ===== Create Main Graphics Context ===== */
+	// Obtain Colormap Handle
+	asm(	"push p_disp\n\t"
+			"call XDefaultScreen\n\t"
+			"add $4, %esp\n\t"
+			"push %eax\n\t"
+			"push p_disp\n\t"
+			"call XDefaultColormap\n\t"
+			"add $8, %esp\n\t"
+			"movl %eax, cmap");
+	// Allocate White and Black Colors
+	asm(	"push $pixWhite\n\t"
+			"push $pixWhite\n\t"
+			"push szWhite\n\t"
+			"push cmap\n\t"
+			"push p_disp\n\t"
+			"call XAllocNamedColor\n\t"
+			"add $20, %esp");
+	asm(	"push $pixBlack\n\t"
+			"push $pixBlack\n\t"
+			"push szBlack\n\t"
+			"push cmap\n\t"
+			"push p_disp\n\t"
+			"call XAllocNamedColor\n\t"
+			"add $20, %esp");
+  xswa.background_pixel = pixWhite.pixel;
+  asm(    "push $xswa\n\t"
+            "movl $1, %ebx\n\t"
+            "shl $1, %ebx\n\t"        //CWBackPixel = 1 << 1
+            "push %ebx\n\t"
+            "push $0\n\t"            //CopyFromParent = 0 (X.h)
+            "push $1\n\t"            //InputOutput = 1 (X.h)
+            "push $0\n\t"            //CopyFromParent = 0 (X.h)
+            "push $1\n\t"
+            "push $50\n\t"
+            "push $100\n\t"
+            "push $100\n\t"
+            "push $100\n\t"
+            "push p_disp\n\t"
+            "call XDefaultRootWindow\n\t"
+            "add $4, %esp\n\t"
+            "push %eax\n\t"
+            "push p_disp\n\t"
+            "call XCreateWindow\n\t"
+            "add $48, %esp\n\t"
+            "movl %eax, Main");
+  	gcv.font = fid;
+    asm(    "push $gcv\n\t"
+			"movl $1, %ebx\n\t"
+		  	"shl $14, %ebx\n\t"		//GCFont = 1 << 14
+		  	"push %ebx\n\t"
+			"push  Main\n\t"
+			"push p_disp\n\t"
+			"call XCreateGC\n\t"
+			"add $16, %esp\n\t"
+			"movl %eax, mainGC");
+	pxBlack = pixBlack.pixel;
+	pxWhite = pixWhite.pixel;
+    asm(    "push fid\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetFont\n\t"
+            "push pxBlack\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetForeground\n\t"
+            "push pxWhite\n\t"
+            "push mainGC\n\t"
+            "push p_disp\n\t"
+            "call XSetBackground\n\t"
+            "add $36, %esp");
+	asm( 	"movl $1, %ebx\n\t"
+		  	"shl $15, %ebx\n\t"		//ExposureMask = 1 << 15
+		  	"push %ebx\n\t"
+			"push Main\n\t"
+			"push p_disp\n\t"
+			"call XSelectInput\n\t"
+			"add $12, %esp");
+    asm(    "push Main\n\t"
+			"push p_disp\n\t"
+			"call XMapWindow\n\t"
+			"add $8, %esp");
+/* ===== Create Child Windows ===== */
+	asm(	"push pxWhite\n\t"
+			"push pxBlack\n\t"
+			"push $1\n\t"
+			"push $15\n\t"
+			"push $60\n\t"
+			"push $1\n\t"
+			"push $15\n\t"
+			"push Main\n\t"
+			"push p_disp\n\t"
+			"call XCreateSimpleWindow\n\t"
+			"movl %eax, Exit\n\t"
+			"add $36, %esp");
+	asm(	"movl $1, %ebx\n\t"
+		  	"shl $15, %ebx\n\t"		//ExposureMask = 1 << 15
+			"movl $1, %ecx\n\t"
+			"shl $2, %ecx\n\t"		//ButtonPressMask = 1 << 2
+			"or %ecx, %ebx\n\t"
+		  	"push %ebx\n\t"
+			"push Exit\n\t"
+			"push p_disp\n\t"
+			"call XSelectInput\n\t"
+			"add $12, %esp");
+  	gcv.foreground = pxBlack;
+  	gcv.background = pxWhite;
+    asm(    "push $gcv\n\t"
+			"movl $1, %ebx\n\t"
+		  	"shl $14, %ebx\n\t"		//GCFont = 1 << 14
+			"movl $1, %ecx\n\t"
+			"shl $2, %ecx\n\t"		//GCForeground = 1 << 2
+			"or %ecx, %ebx\n\t"
+			"movl $1, %ecx\n\t"
+			"shl $3, %ecx\n\t"		//GCBackground = 1 << 3
+			"or %ecx, %ebx\n\t"
+		  	"push %ebx\n\t"
+			"push  Exit\n\t"
+			"push p_disp\n\t"
+			"call XCreateGC\n\t"
+			"add $16, %esp\n\t"
+			"movl %eax, exitGC");
+	asm(  "push Exit\n\t"
+			"push p_disp\n\t"
+			"call XMapWindow\n\t"
+			"add $8, %esp");
+  /* ===== Event Loop ===== */
+  while( !Done ){                 //Implemented in C to save space ;)
+    XNextEvent(p_disp, &theEvent);
+    if( theEvent.xany.window == Main){
+      if( theEvent.type == Expose && theEvent.xexpose.count == 0){
+			asm(	"push $16\n\t"
+					"push msgtext\n\t"
+					"push $40\n\t"
+					"push $1\n\t"
+					"push mainGC\n\t"
+					"push Main\n\t"
+					"push p_disp\n\t"
+					"call XDrawString\n\t"
+					"add $28, %esp");
+      }
+    }
+    if( theEvent.xany.window == Exit){
+      switch(theEvent.type){
+       case Expose:
+         if( theEvent.xexpose.count == 0){
+           XDrawString(p_disp, Exit, exitGC, 2, 11, extext, strlen(extext) );
+         }
+         break;
+       case ButtonPress:
+         Done = 1;
+      }
+    }
+  }
+/* ===== Close Display ===== */
+  asm(    "push mainGC\n\t"
+		  "push p_disp\n\t"
+		  "call XFreeGC\n\t"
+		  "add $8, %esp\n\t"
+		  "push exitGC\n\t"
+		  "push p_disp\n\t"
+		  "call XFreeGC\n\t"
+		  "add $8, %esp\n\t"
+		  "push fid\n\t"
+		  "push p_disp\n\t"
+		  "call XUnloadFont\n\t"
+		  "add $8, %esp\n\t"
+		  "push Main\n\t"
+		  "push p_disp\n\t"
+		  "call XDestroyWindow\n\t"
+		  "call XCloseDisplay\n\t"
+		  "add $8, %esp");
+}
+; EOF =================================================================
+As you can see, producing an XLib program in assembly language is rather 
+unwieldly. The code produced is primarily data manipulations and C calls; there
+is not a lot that assembly has to offer, even in the event loop. In fact, the 
+only real optimization --aside from overhead added by the compiler, which in 
+the above case we do not bypass-- is in the use of straight calls rather than 
+the macros my original C "hello world" relied on.
+
+While this in itself is somewhat of a triumph --for by coding the C application 
+in assembler you learn exactly how much superfluous code there was to get rid
+of-- it is not enough. In the next issue, I will cover Xt programming in 
+assembler, which will use widgets/resources rather than create windows from 
+scratch, therefore placing the bulk of the code in existing system libraries 
+and therefore making the resultant application much smaller.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................ASSEMBLY.LANGUAGE.SNIPPETS
+                                                                IsASCII?
+                                                                by Troy Benoist
+
+;Summary: Routine to test whether value in AH is ASCII or not (0-127d = ASCII)
+;Compatibility: All DOS versions
+;Notes: 4 BYTES! Input: AH=value to check.
+    cmp ah,80        ;8DFC80 Compare value in AH to 128 and set flags.   
+    salc             ;D6     Set AL=FF if CF=1, or set AL=0 if CF=0.
+;REGISTERS DESTROYED: AL    RETURNS: AL=0 if AH is not ASCII, FF is so.
+
+
+                                                                     ENUM
+                                                                     by mammon_
+;Summary: A NASM macro emulating the C 'ENUM" command
+;Assembler: NASM
+%macro ENUM 2-*     ;Usage: ENUM int SYMBOLS
+%assign i %1        ;  where int is the number to begin enumeration at [0]
+%rep %0             ;  SYMBOLS is a list of Symbols to define
+  %2 EQU 0xi        ;Example: ENUM 0 TRUE FALSE
+  %assign i i+1     ;  this EQUates TRUE to 0 and FALSE to 1
+  %rotate 1         ;Example: ENUM 11 JACK QUEEN KING
+%endrep             ;  this EQUs JACK to 11, QUEEN to 12, KING to 13
+%endmacro
+
+                                                                     CallTable
+                                                                     by mammon_
+;Summary: Error Handler to demonstrate call-tables
+;Compatibility:
+;Notes: The EQUs define offsets from the start of ErrorHandler. Thus,
+;       ERROR_FILE_NOT_FOUND is at offset 0, ERROR_FILE_READ_ONLY is
+;       at offset 4 ( one dword from offset 0), etc.
+;       Each entry in the call table contains the address of the 
+;       code label listed there...so, in order, ErrorHandler contains 
+;       the addresses for the functions ERROR1, ERROR2, ERROR3, and 
+;       ERROR4.
+;       The code to call an error handler uses as its base
+;           call [Errorhandler]
+;       or, call the function whose address is stored at location 
+;       ErrorHandler. By adding the EQUs to this base, one gets the 
+;       offset for each function within ErrorHandler.
+ERROR_FILE_NOT_FOUND    EQU     0
+ERROR_FILE_READ_ONLY    EQU     4
+ERROR_DISK_FULL         EQU     8
+ERROR_UNKNOWN           EQU     12
+
+ErrorHandler:
+;------------           Here lies the Call-Table
+DWORD ERROR1
+DWORD ERROR2
+DWORD ERROR3
+DWORD ERROR4
+;------------           Here ends the Call-Table
+
+;Handlers for various errors; offsets to these are stored in the Call-Table
+ERROR1:
+        ...Code to Create File...
+        ret
+ERROR2:
+        ...Code to CHMOD File...
+        ret
+ERROR3:
+        ...Code to Display Disk Full Message...
+        jmp Exit_Program
+ERROR4:
+        ...Code to Display Unknown System Error-Code...
+        jmp Exit_Program
+
+;Code to call Various errors
+        call dword ptr [ErrorHandler + ERROR_FILE_NOT_FOUND]
+        call dword ptr [ErrorHandler + ERROR_FILE_READ_ONLY]
+        jmp  dword ptr [ErrorHandler + ERROR_FILE_DISK_FULL]
+        jmp  dword ptr [ErrorHandler + ERROR_FILE_UNKNOWN]
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                           PE Program Displays Its Command Line
+                                           by Xbios2
+
+
+The Challenge
+-------------
+Write the smallest possible PE program (win32) that outputs it's command line.
+
+The Solution
+------------
+This problem looks like the one about the 11-byte .COM program solved on the  
+previous issue. Yet the method used to solve it is entirely different. This is  
+because while .COM files include just raw code and data, the PE files include a 
+header with information on the file. It is this header that must be 'tweaked'  
+to get a small file.
+
+Before going on, some things must be cleared:
+
+1. This article relies _heavily_ on "The PE File Format" by B.Luevelsmeyer  
+(whom I really thank). You are advised to find the .txt and read it. Of course  
+Microsoft provides it's own documentation but they would hardly ever say 'this  
+seems to be ignored' for their own format.
+
+2. If you think that PE (Portable Exexutable) is the format introduced by win95  
+you're wrong. Not only was PE created for winNT, but it also seems that win95  
+is not 100% PE compatible. Anyway, this article has been written for winNT, and 
+I don't think anything will run in windows 95.
+
+3. This article was based on a 'trial and error' method. Some solutions exist  
+only because they work. So don't ask why... (Actually the trial and error 
+resulted in two BSODs, thus proving that a program can crash windows NT without 
+even running it's own code)
+
+4. No, I'm not paranoid. I just like pushing things to their limit :)
+
+Now, on to the solution...
+
+The code to print the command line looks like this:
+----------------- normal.asm -----------------------
+.386
+.model flat
+
+extrn GetCommandLineA:proc
+extrn GetStdHandle:proc
+extrn WriteFile:proc
+
+.data?
+dummy	db ?
+
+.code
+start:
+	call	GetCommandLineA
+	xor	ecx, ecx
+	push	ecx
+loop1:	inc	ecx
+	cmp	byte ptr [eax+ecx], 0
+	jne	short loop1
+	push	esp
+	push	ecx
+	push	eax
+	 push	-11
+	 call	GetStdHandle
+	push	eax
+	call	WriteFile
+	ret
+ends
+end start
+----------------------------------------------------
+some comments on the code:
+- the .data? section is present because I can't make TASM work without any data
+- there is no ExitProcess. In it's place there is a simple 'ret'. This is 
+because the entry point is actually called by kernel32 with the following piece 
+of code:
+
+	call	[ebp+8]		; [ebp+8] holds the entry point address
+	push	eax
+	jmp	label:
+	...
+label:	call	ExitThread
+
+This program compiles under TASM to 4 KB long. Those 4096 bytes are divided 
+like this:
+
+Dos Stub             256
+PE Header            248
+4 section headers    160
+padding              872
+------------------------
+code                  50
+padding              462
+imports              132
+padding              380
+reloc                 16
+padding             1520
+
+This means that we have:
+16%  header
+ 5%  code / data
+79%  padding
+
+It seems that TASM can't create anything smaller. So, the code will have to be 
+written by hand in a hex editor. Actually you don't have to worry, as you'll 
+only have to write 192 bytes for the final program (believe it or not!).
+
+In order to shrink the file, the following steps must be taken: Remove Padding,
+Use a Single Section, Remove the DOS Stub, Tweak the PE Header, Squeeze the
+Code, Squeeze the Imports, and 'ReAssemble' the Program.
+
+1. Remove padding
+-----------------
+By changing the 'FileAlignment' field in the PE header, all the padding can be 
+discarded. (Actually it seems that win95 won't allow this)
+
+2. Use one section
+------------------
+TASM creates the following sections:
+
+.code	: code
+.data	: initialized and uninitialized data
+.idata	: imports
+.reloc	: relocation info
+
+-The .reloc section is not needed, as only DLLs get relocated
+-The .data sectionis only present because I can't have TASM create a normal 
+executable without a data section.
+-The .idata section can then be merged with the .code section. Remember that the 
+name of each section does not depend on what the section contains, since the OS 
+finds things like imports, relocations or resources from the directory in the 
+PE header.
+
+3. No DOS stub
+--------------
+All compilers that compile PE executables create a DOS stub that displays a 
+message like 'This program must be run under Win32'. Yet this is NOT required 
+by the PE format. What PE needs (as seen in [ntdll.dll]RtlImageNtHeader or 
+[imagehlp.dll]ImageNtHeader) is:
+
+PIECE I: DOS HEADER
+---------------------------------------------
+0000| 4D5A **** **** **** **** **** **** ****
+0010| **** **** **** **** **** **** **** ****
+0020| **** **** **** **** **** **** **** ****
+0030| **** **** **** **** **** **** ???? ????
+
+where ???? is the offset of the PE header from the beginning of the file
+
+4. Tweaked PE header
+--------------------
+The PE header consists of the following structures:
+
+IMAGE_NT_SIGNATURE: 00004550h
+IMAGE_FILE_HEADER:
+    WORD    Machine                 ; >> 014Ch for Intel 386
+    WORD    NumberOfSections		; 1 for this example
+    DWORD   TimeDateStamp           ; *
+    DWORD   PointerToSymbolTable	; *
+    DWORD   NumberOfSymbols         ; *
+    WORD    SizeOfOptionalHeader	; >> 70h (Opt. header + directories)
+    WORD    Characteristics         ; >> 0102h for 32bit executable
+IMAGE_OPTIONAL_HEADER:
+    WORD    Magic                   ; 0B01h
+    BYTE    MajorLinkerVersion		; *
+    BYTE    MinorLinkerVersion		; *
+    DWORD   SizeOfCode              ; *
+    DWORD   SizeOfInitializedData	; *
+    DWORD   SizeOfUninitializedData	; *
+    DWORD   AddressOfEntryPoint		; >> ???? RVA of entry point
+    DWORD   BaseOfCode              ; *
+    DWORD   BaseOfData              ; *
+    DWORD   ImageBase               ; >> 00100000h for this example
+    DWORD   SectionAlignment		; 2
+    DWORD   FileAlignment           ; 2
+    WORD    MajorOperatingSystemVersion     ; *
+    WORD    MinorOperatingSystemVersion     ; *
+    WORD    MajorImageVersion		; *
+    WORD    MinorImageVersion		; *
+    WORD    MajorSubsystemVersion	; >> 0004
+    WORD    MinorSubsystemVersion	; >> 0000
+    DWORD   Win32VersionValue		; *
+    DWORD   SizeOfImage             ; >> ????
+    DWORD   SizeOfHeaders           ; *
+    DWORD   CheckSum                ; *
+    WORD    Subsystem               ; 0003 for win32 console application
+    WORD    DllCharacteristics		; *
+    DWORD   SizeOfStackReserve		; 00100000h
+    DWORD   SizeOfStackCommit		; 00001000h
+    DWORD   SizeOfHeapReserve		; 00100000h
+    DWORD   SizeOfHeapCommit		; 00001000h
+    DWORD   LoaderFlags             ; *
+    DWORD   NumberOfRvaAndSizes		; 2 data directories (Exports & Imports)
+...a number (actually 2) of the following:
+IMAGE_DATA_DIRECTORY:
+    DWORD   VirtualAddress          ; 0 for exports, ???? for imports
+    DWORD   Size                    ; 0 for exports, ???? for imports
+...a number (actually 1) of the following:
+IMAGE_SECTION_HEADER:
+    BYTE    Name[8]                 ; * (Anything we like)
+    DWORD   VirtualSize             ; ?! (h.o. word must be zero??)
+    DWORD   VirtualAddress          ; >> ????
+    DWORD   SizeOfRawData           ; >> ????
+    DWORD   PointerToRawData		; >> ????
+    DWORD   PointerToRelocations	; *
+    DWORD   PointerToLinenumbers	; *
+    WORD    NumberOfRelocations		; *
+    WORD    NumberOfLinenumbers		; *
+    DWORD   Characteristics         ; *
+
+So the raw hex data for the PE header are:
+PIECE II: PE HEADER
+---------------------------------------------
+    | 5045 0000 4C01 0100 **** **** **** ****
+    | **** **** 7000 0201 0B01 **** **** ****
+    | **** **** **** **** ???? ???? **** ****
+    | **** **** 0000 1000 0200 0000 0200 0000
+    | **** **** **** **** 0400 0000 **** ****
+    | ???? ???? **** **** **** **** 0300 ****
+    | 0000 1000 0010 0000 0000 1000 0010 0000
+    | **** **** 0200 0000 0000 0000 0000 0000
+    | ???? ???? ???? ???? **** **** **** ****
+    | **** **** ???? ???? ???? ???? ???? ????
+    | **** **** **** **** **** **** **** ****
+
+NOTES:
+- ???? means that the value is needed but has to be filled in later as it 
+depends on the code
+- **** means that the value is either completely ignored or it can be set to 
+any value without raising an error
+- the main difference between this and a 'normal' PE header is that the size of 
+the optional header is 70h (112 bytes) instead of the standard 0E0h (224 bytes). 
+This is because there are only 2 directories instead of 16. This seems to be 
+the minimum number of directories possible, as there seems to be no way of 
+running an .exe that has no imports.
+
+5. Squeezed code
+----------------
+Even though the code we have is already tight, it has one major drawback: It 
+invokes three API functions. To realize what this means just think that the 
+names of the functions are included in the imports section as normal ASCII 
+which means that only the names would take 36 bytes...
+
+The solution here (since those functions are needed) is to call the functions 
+directly. This is possible because kernel32.dll is never relocated so the 
+function entry points are always the same (for a given version of windows).
+
+For NT4 those values are:
+GetStdHandle: 77F01CBB
+WriteFile   : 77F0D354
+
+GetCommandLine is a special case since it has the format:
+  GetCommandLineA proc near
+        mov     eax, [77F4657Ch]
+        retn
+  GetCommandLineA endp
+
+so the final code will look like:
+----------------- code.hex -----------------------
+A17C65F477	mov	eax, offset CommandLine
+BEBB1CF077	mov	esi, offset GetStdHandle
+33C9		xor	ecx, ecx
+51          push    ecx
+41          inc ecx
+803C0800	cmp	[eax+ecx], 0
+75F9		jnz	-07
+54          push    esp
+51          push    ecx
+50          push    eax
+6AF5        push   -11 ; StdOut
+FFD6        call   esi ; GetStdHandle
+50          push    eax
+B854D3F077	mov	eax, offset WriteFile
+FFD0		call	eax
+C3          ret
+--------------------------------------------------
+
+6. Squeezed imports
+-------------------
+[Comment: read a text on PE format to better understand what's going on]
+As mentioned earlier, the PE file must have an imports directory in order to 
+load properly. Yet, since we call API functions directly, we only have to 
+specify one dummy import. A good choice (since it really has a short name) is 
+'Arc' from 'gdi32.dll'. To specify this imported function we should need:
+
+IMAGE_IMPORT_DESCRIPTOR for gdi32.dll:
+  OriginalFirstThunk        ; *
+  TimeDateStamp             ; *
+  ForwarderChain            ; *
+  Name                      ; >> ???? RVA of ASCII string 'gdi32.dll',0
+  FirstThunk                ; >> ???? RVA described later... 
+IMAGE_IMPORT_DESCRIPTOR full of zeroes to specify end of imports
+  OriginalFirstThunk        ; *
+  TimeDateStamp             ; *
+  ForwarderChain            ; *
+  Name                      ; 0 This is checked to see if it is the end...
+  FirstThunk                ; *
+
+'FirstThunk' is the RVA of a 0-terminated list of RVAs, one for each function 
+in the specified DLL. For this example we only need one RVA followed by a null 
+dword. This RVA will point to a structure IMAGE_IMPORT_BY_NAME:
+    WORD    Hint            ; *
+    BYTE    Name[...]       ; 'Arc',0
+
+By putting all this together we would have:
+
+PIECE III: IMPORTS
+---------------------------------------------
+    | **** **** **** **** **** **** -dword 1-
+    | -dword 2- -dword 3- 0000 0000 **** **** 
+    | 0000 0000 **** **** 
+
+dwords 1 and 2 are the two RVAs for the IMAGE_IMPORT_DESCRIPTOR. dword 3 is the 
+RVA to the IMAGE_IMPORT_BY_NAME. So, dword 2 is the RVA of dword 3. We also 
+need space for the two strings 'gdi32.dll',0 and 'Arc',0.
+
+There is a way to use even less bytes for the imports. Just remember that the 
+imports are examined after the file has been mapped into memory. So, since 
+memory is allocated in blocks, after the end of the file there will be a space 
+full of zeroes. So by placing the three dwords in the last 12 bytes of the file, 
+there is no need for the two zeroes.
+
+7. 'Assemble' the program
+-------------------------
+The values marked as ???? will be:
+Offset of PE header     :   00000010
+AddressOfEntryPoint     :   00000002
+SizeOfImage             :   000000C0
+Imports RVA             :   000000A8
+Imports Size            :   00000028
+Section VirtualAddress  :   00000000
+Section SizeOfRawData   :   000000C0
+Section PointerToRawData:   00000000
+Dll Name RVA            :   00000098
+Dll FirstThunk RVA      :   000000BC
+Dll Function Hint/Name  :   000000AE
+
+Notice that the Section data and the Header (DOS and PE) are the same thing. 
+The section RVA is 0, so file offset and RVAs are the same. The code will be 
+broken in three pieces, connected by two jumps. The final result will be:
+
+THE PROGRAM
+---------------------------------------------
+0000| 4D5A A17C 65F4 77BE BB1C F077 33C9 EB08
+0010| 5045 0000 4C01 0100 5141 803C 0800 75F9
+0020| 5451 EB06 7000 0201 0B01 506A F5FF D650
+0030| B854 D3F0 77FF D0C3 0200 0000 1000 0000
+0040|           0000 1000 0200 0000 0200 0000
+0050|                     0400 0000
+0060| C000 0000                     0300
+0070| 0000 1000 0010 0000 0000 1000 0010 0000
+0080|           0200 0000 0000 0000 0000 0000
+0090| A800 0000 2800 0000 6764 6933 322E 646C
+00A0| 6C00 0000 0000 0000 C000 0000 0000 0000
+00B0| 4172 6300 9800 0000 BC00 0000 AE00 0000
+
+Blank bytes are meaningless, and can be set to any value.
+
+
+Wrapping Up
+-----------
+Well, if you managed to read up to here, and understood what happened, I guess 
+you need no more explanations. I just gave an idea (actually MANY ideas). Maybe 
+on another article I will start exploring the possibilities this 'experiment' 
+showed me... 
+ 
+Next Issue Challenge
+--------------------
+Write a routine for converting ASCII hex to binary in 6 bytes.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN

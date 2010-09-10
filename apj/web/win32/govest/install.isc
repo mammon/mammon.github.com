@@ -1,0 +1,45 @@
+[setup]
+"PACKAGENAME", "GoVest"
+"CAPTIONNAME","GoVest"
+"APPNAME", "GoVest"
+"RELEASESTRING", "Version 0.9"
+
+"BASEAPP", "GoVest"
+"COPYRIGHTSTR", "Copyright 1996, Computer Associates International"
+"PRODIDMATCH", "107130"
+"MAJORVERSION", "2"
+"MINORVERSION", "0"
+
+[products]
+"A","GoVest"
+
+[progman]
+"A","","","","GoVest","GoVest.GRP"
+[directories]
+"A","0","c:\GoVest","User App Program Directory"
+[files]
+"1","A","R","0","","CAINDREG.EXE","","","","","3000","3000"
+"1","A","R","0","","CATO3SPL.DLL","","","","","",""
+"1","A","R","0","","CAVO2GUI.DLL","","","","","",""
+"1","A","R","0","","README.TXT","","","","","",""
+"1","A","R","0","","CAVO2SYS.DLL","","","","","",""
+"1","A","R","0","","CAVONT20.DLL","","","","","",""
+"1","A","R","0","","CAVORT20.DLL","","","","","",""
+"1","A","RIA","0","","GoVest.exe","","GoVest","","","",""
+"1","A","RIA","0","","GoVestVO.exe","","GoVest VO","","","",""
+"1","A","R","0","","UIPRECAL.EXE","","","","","",""
+
+[disks]
+"1","A:\","Disk1"
+
+[registry]
+CASoftware: A
+Generic: A
+"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Uninstall\GoVest","UninstallString",REG_SZ,"%0%\caindreg.exe"
+"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Uninstall\GoVest","DisplayName",REG_SZ,"GoVest"
+"HKEY_LOCAL_MACHINE\Software\ComputerAssociates\GoVest","Uninstall_PreCall",REG_SZ,"%0%\uiprecal.exe %0%\caindreg.exe %0% %2% [User App]"
+"HKEY_CURRENT_USER\Software\ComputerAssociates\GoVest","Uninstall_PreCall",REG_SZ,"%0%\uiprecal.exe %0%\caindreg.exe %0% %2% [User App]"
+Classes: A
+"GoVestClass","",REG_SZ,"GoVest"
+"GoVestClass","DefaultIcon",REG_SZ,"%0%\C:\CAVO25\BIN\GoVest.exe"
+

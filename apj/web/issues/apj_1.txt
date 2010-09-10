@@ -1,0 +1,1859 @@
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.                                                Oct/Nov 98
+:::\_____\::::::::::.                                               Issue    1
+::::::::::::::::::::::.........................................................
+
+            A S S E M B L Y   P R O G R A M M I N G   J O U R N A L
+                      http://asmjournal.freeservers.com
+                           asmjournal@mailcity.com
+
+
+
+
+T A B L E   O F   C O N T E N T S
+----------------------------------------------------------------------
+Introduction...................................................mammon_
+
+"VGA Programming in Mode 13h".............................Lord Lucifer
+
+"SMC Techniques: The Basics"...................................mammon_
+
+"Going Ring0 in Windows 9x".....................................Halvar
+
+Column: Win32 Assembly Programming
+    "The Basics"..............................................Iczelion
+    "MessageBox"..............................................Iczelion
+
+Column: The C standard library in Assembly
+    "_itoa, _ltoa and _ultoa"...................................Xbios2
+
+Column: The Unix World
+    "x86 ASM Programming for Linux"............................mammon_
+
+Column: Issue Solution
+    "11-byte Solution"..........................................Xbios2
+----------------------------------------------------------------------
+      +++++++++++++++++++++++Issue Challenge++++++++++++++++++++
+      Write a program that displays its command line in 11 bytes
+----------------------------------------------------------------------
+
+
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::..............................................INTRODUCTION
+                                                                     by mammon_
+
+
+Welcome to the first issue of Assembly Programming Journal. Assembly language
+has become of renewed interest to a lot of programmers, in what must be a
+backlash to the surge of poor-quality RAD-developed programs (from Delphi, VB,
+etc) released as free/shareware over the past few years. Assembly language
+code is tight, fast, and often well-coded -- you tend to find fewer
+inexperienced coders writing in assembly language than you do writing in, say,
+Visual Basic.
+
+The selection of articles is somewhat eclectic and should demonstrate the
+focus of this magazine: i.e., it targets the assembly-language programming
+community, not any particular type of coding such as Win32, virus, or demo
+programmimg. As the magazine is newly born and much of its purpose may seem
+unclear, I will devote the rest of this column to the most common questions I
+have received via email regarding the mag.
+
+
+How often will an issue be released?
+------------------------------------
+Barring hazard, an issue will be released every other month.
+
+
+What types of articles will be accepted?
+----------------------------------------
+Anything to do with assembly language. Obviously repeats of previously
+presented material are not necessary unless they enhance or clarify the
+earlier material. The focus will be on Intel x86 instruction sets; however
+coding for other processors is acceptable (though out of courtesy it would be
+good point to an x86 emulator for the processor you write on).
+
+Personally I am looking for articles on the areas of asembly language that
+interest me: code optimization, demo/graphics programming, virus coding, unix
+and other-OS asm coding, and OS-internals.
+
+Demos (with source) and quality ASCII art (for issue covers, column logos,
+etc) are especially welcome.
+
+
+For what level of coding experience is the mag intended?
+--------------------------------------------------------
+The magazine is intended to appeal to asm coders of all levels. Each issue
+will contain mostly beginner and intermediate level code/techniques, as these
+will by nature be of the greatest demand; however one of the goals of APJ is
+to include enough advanced material to make the magazine appeal to "pros" as
+well.
+
+
+How will the mag be distributed?
+--------------------------------
+Assembly Programming Journal has its own web page at
+http://asmjournal.freeservers.com
+which will contain the current issue and an archive of previous issues. The
+page also contains a guestbook and a disucssion board for article writers and
+readers.
+
+An email subscription may be obtained by sending an email to
+asmjournal@mailcity.com
+with the subject "SUBSCRIBE"; starting with the next issue, Assembly
+Programming Journal will be emailed to the address you sent the mail from.
+
+
+Wrap-up
+-------
+That's the bulk of the "faq". Enjoy the mag!
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                    VGA Programming in Mode 13h
+                                                    by Lord Lucifer
+
+
+This article will describe how to program VGA graphics Mode 13h using assembly
+language.  Mode 13h is the 320x200x256 graphics mode, and is fast and very
+convenient from a programmer's perspective.
+
+The video buffer begins at address A000:0000 and ends at address A000:F9FF.
+This means the buffer is 64000 bytes long and that each pixel in mode 13h is
+represented by one byte.
+
+It is easy to set up mode 13h and the video buffer in assembly language:
+
+        mov     ax,0013h        ; Int 10 - Video BIOS Services
+        int     10h             ; ah = 00 - Set Video Mode
+                                ; al = 13 - Mode 13h (320x200x256)
+
+        mov     ax,0A000h       ; point segment register es to A000h
+        mov     es,ax           ; we can now access the video buffer as
+                                ; offsets from register es
+
+At the end of your program, you will probably want to restore the text mode.
+Here's how:
+
+        mov     ax,0003h        ; Int 10 - Video BIOS Services
+        int     10h             ; ah = 00 - Set Video Mode
+                                ; al = 03 - Mode 03h (80x25x16 text)
+
+Accessing a specific pixel int the buffer is also very easy:
+
+                                ; bx = x coordinate
+                                ; ax = y coordinate
+        mul     320             ; multiply y coord by 320 to get row
+        add     ax,bx           ; add this with the x coord to get offset
+
+        mov     cx,es:[ax]      ; now pixel x,y can be accessed as es:[ax]
+
+Hmm... That was easy, but that multiplication is slow and we should get rid of
+it.  That's easy to do too, simply by using bit shifting instead of multiplica-
+tion. Shifting a number to the left is the same as multiplying by 2. We want to
+multiply by 320, which is not a multiple of 2, but 320 = 256 + 64, and 256 and
+64 are both even multiples of 2.  So a faster way to access a pixel is:
+
+                                ; bx = x coordinate
+                                ; ax = y coordinate
+        mov     cx,bx           ; copy bx to cx, to save it temporatily
+        shl     cx,8            ; shift left by 8, which is the same as
+                                ; multiplying by 2^8 = 256
+        shl     bx,6            ; now shift left by 6, which is the same as
+                                ; multiplying by 2^6 = 64
+        add     bx,cx           ; now add those two together, whis is
+                                ; effectively multiplying by 320
+        add     ax,bx           ; finally add the x coord to this value
+        mov     cx,es:[ax]      ; now pixel x,y can be accessed as es:[ax]
+
+Well, the code is a little bit longer and looks more complicated, but I can
+guarantee it's much faster.
+
+To plot colors, we use a color look-up table.  This look-up table is a 768
+(3x256) array.  Each index of the table is really the offset index*3. The 3
+bytes at each index hold the corresponding values (0-63) of the red, green,
+and blue components.  This gives a total of 262144 total possible colors.
+However, since the table is only 256 elements big, only 256 different colors
+are possible at a given time.
+
+Changing the color palette is accomplished through the use of the I/O ports of
+the VGA card:
+
+        Port 03C7h is the Palette Register Read port.
+        Port 03C8h is the Palette Register Write port
+        Port 03C9h is the Palette Data port
+
+Here is how to change the color palette:
+
+                                ; ax = palette index
+                                ; bl = red component (0-63)
+                                ; cl = green component (0-63)
+                                ; dl = blue component (0-63)
+
+        mov     dx,03C8h        ; 03c8h = Palette Register Write port
+        out     dx,ax           ; choose index
+
+        mov     dx,03C9h        ; 03c8h = Palette Data port
+        out     dx,al
+        mov     bl,al           ; set red value
+        out     dx,al
+        mov     cl,al           ; set green value
+        out     dx,al
+        mov     dl,al           ; set blue value
+
+Thats all there is to it.  Reading the color palette is similar:
+
+                                ; ax = palette index
+                                ; bl = red component (0-63)
+                                ; cl = green component (0-63)
+                                ; dl = blue component (0-63)
+
+        mov     dx,03C7h        ; 03c7h = Palette Register Read port
+        out     dx,ax           ; choose index
+
+        mov     dx,03C9h        ; 03c8h = Palette Data port
+        in      al,dx
+        mov     bl,al           ; get red value
+        in      al,dx
+        mov     cl,al           ; get green value
+        in      al,dx
+        mov     dl,al           ; get blue value
+
+Now all we need to know is how to plot a pixel of a certain color at a certain
+location.  Its very easy, given what we already know:
+
+                                ; bx = x coordinate
+                                ; ax = y coordinate
+                                ; dx = color (0-255)
+        mov     cx,bx           ; copy bx to cx, to save it temporatily
+        shl     cx,8            ; shift left by 8, which is the same as
+                                ; multiplying by 2^8 = 256
+        shl     bx,6            ; now shift left by 6, which is the same as
+                                ; multiplying by 2^6 = 64
+        add     bx,cx           ; now add those two together, whis is
+                                ; effectively multiplying by 320
+        add     ax,bx           ; finally add the x coord to this value
+        mov     es:[ax],dx      ; copy color dx into memory location
+                                ; thats all there is to it
+
+Ok, we now know how to set up Mode 13h, set up the video buffer, plot a pixel,
+and edit the color palette.
+
+My next article will go on to show how to draw lines, utilize the vertical
+retrace for smoother rendering, and anything else I can figure out by that
+time...
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                     SMC Techniques: The Basics
+                                                     by mammon_
+
+
+One of the benefits of coding in assembly language is that you have the option
+to be as tricky as you like: the binary gymnastics of viral code demonstrate
+this above all else. One of the viral "tricks" that has made its way into
+standard protection schemes is SMC: self-modifying code.
+
+In this article I will not be discussing polymorphic viruses or mutation
+engines; I will not go into any specific software protection scheme, or cover
+any anti-debugger/anti-disassembler tricks, or even touch on the matter of the
+PIQ. This is intended to be a simple primer on self-modifying code, for those
+new to the concept and/or implementation.
+
+
+Episode 1: Opcode Alteration
+----------------------------
+One of the purest forms of self-modifying code is to change the value of an
+instruction before it is executed...sometimes as the result of a comparison,
+and sometimes to hide the code from prying eyes. This technique essentially
+has the following pattern:
+        mov reg1, code-to-write
+        mov [addr-to-write-to], reg1
+where 'reg1' would be any register, and where '[addr-to-write-to]' would be a
+pointer to the address to be changed. Note that 'code-to-write- would ideally
+be an instruction in hexadecimal format, but by placing the code elsewhere in
+the program--in an uncalled subroutine, or in a different segment--it is
+possible to simply transfer the compiled code from one location to another via
+indirect addressing, as follows:
+          call changer
+          mov dx, offset [string]     ;this will be performed but ignored
+label:    mov ah, 09                  ;this will never be perfomed
+          int 21h                     ;this will exit the program
+          ....
+changer:  mov di, offset to_write     ;load address of code-to-write in DI
+          mov byte ptr [label], [di]  ;write code to location 'label:'
+          ret                         ;return from call
+to_write: mov ah, 4Ch                 ;terminate to DOS function
+
+this small routine will cause the program to exit, though in a disassembler it
+at first appears to be a simple print string routine. Note that by combining
+indirect addressing with loops, entire subroutines--even programs--can be
+overwritten, and the code to be written--which may be stored in the program as
+data--can be encrypted with a simple XOR to disguise it from a disassembler.
+
+The following is a complete asm program to demonstrate patching "live" code;
+it asks the user for a password, then changes the string to be printed
+depending on whether or not the password is correct:
+; smc1.asm ==================================================================
+.286
+.model small
+.stack 200h
+.DATA
+;buffer for Keyboard Input, formatted for easy reference:
+MaxKbLength  db 05h
+KbLength     db 00h
+KbBuffer     dd 00h
+
+;strings: note the password is not encrypted, though it should be...
+szGuessIt        db     'Care to guess the super-secret password?',0Dh,0Ah,'$'
+szString1        db     'Congratulations! You solved it!',0Dh,0Ah, '$'
+szString2        db     'Ah, damn, too bad eh?',0Dh,0Ah,'$'
+secret_word      db     "this"
+
+.CODE
+;===========================================
+start:
+        mov     ax,@data                ; set segment registers
+        mov     ds, ax                  ; same as "assume" directive
+        mov     es, ax
+        call Query                      ; prompt user for password
+        mov     ah, 0Ah                 ; DOS 'Get Keyboard Input' function
+        mov     dx, offset MaxKbLength  ; start of buffer
+        int     21h
+        call Compare                    ; compare passwords and patch
+exit:
+        mov ah,4ch                      ; 'Terminate to DOS' function
+        int 21h
+;===========================================
+Query            proc
+        mov  dx, offset szGuessIt       ; Prompt string
+        mov  ah, 09h                    ; 'Display String' function
+        int  21h
+        ret
+Query            endp
+;===========================================
+Reply            proc
+PatchSpot:
+        mov  dx, offset szString2       ; 'You failed' string
+        mov  ah, 09h                    ; 'Display String' function
+        int  21h
+        ret
+Reply            endp
+;===========================================
+Compare            proc
+        mov     cx, 4                   ; # of bytes in password
+        mov     si, offset KbBuffer     ; start of password-input in Buffer
+        mov     di, offset secret_word  ; location of real password
+        rep cmpsb                       ; compare them
+        or cx, cx                       ; are they equal?
+        jnz     bad_guess               ; nope, do not patch
+        mov word ptr cs:PatchSpot[1], offset szString1  ;patch to GoodString
+bad_guess:
+        call Reply                      ; output string to display result
+        ret
+Compare            endp
+end     start
+; EOF =======================================================================
+
+
+Episode 2: Encryption
+---------------------
+Encryption is undoubtedly the most common form of SMC code used today. It is
+used by packers and exe-encryptors to either compress or hide code, by viruses
+to disguise their contents, by protection schemes to hide data. The basic
+format of encryption SMC would be:
+        mov reg1, addr-to-write-to
+        mov reg2, [reg1]
+        manipulate reg2
+        mov [reg1], reg2
+where 'reg1' would be a register containing the address (offset) of the
+location to write to, and reg2 would be a temporary register which loads the
+contents of the first and then modifies them via mathematical (ROL) or logical
+(XOR) operations. The address to be patched is stored in reg1, its contents
+modified within reg2, and then written back to the original location still
+stored in reg1.
+
+The program given in the preceding section can be modified so that it
+unencrypts the password by overwriting it (so that it remains unencrypted
+until the program is terminated) by first changing the 'secret_word' value as
+follows:
+secret_word      db     06Ch, 04Dh, 082h, 0D0h
+
+and then by changing the 'Compare' routine to patch the 'secret_word' location
+in the data segment:
+;===========================================
+magic_key        db     18h, 25h, 0EBh, 0A3h ;not very secure!
+
+Compare            proc    ;Step 1: Unencrypt password
+        mov     al, [magic_key]              ; put byte1 of XOR mask in al
+        mov     bl, [secret_word]            ; put byte1 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word, al     ; patch byte1 of password
+        mov     al, [magic_key+1]            ; put byte2 of XOR mask in al
+        mov     bl, [secret_word+1]          ; put byte2 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[1], al  ; patch byte2 of password
+        mov     al, [magic_key+2]            ; put byte3 of XOR mask in al
+        mov     bl, [secret_word+2]          ; put byte3 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[2], al  ; patch byte3 of password
+        mov     al, [magic_key+3]            ; put byte4 of XOR mask in al
+        mov     bl, [secret_word+3]          ; put byte4 of password in bl
+        xor     al, bl
+        mov     byte ptr secret_word[3], al  ; patch byte4 of password
+        mov     cx, 4      ;Step 2: Compare Passwords...no changes from here
+        mov     si,offset KbBuffer
+        mov     di, offset secret_word
+        rep     cmpsb
+        or      cx, cx
+        jnz     bad_guess
+        mov     word ptr cs:PatchSpot[1], offset szString1
+bad_guess:
+        call Reply
+        ret
+Compare            endp
+
+Note the addition of the 'magic_key' location which contains the XOR mask for
+the password. This whole thing could have been made more sophisticated with a
+loop, but with only four bytes the above speeds debugging time (and, thereby,
+article-writing time). Note how the password is loaded, XORed, and re-written
+one byte at a time; using 32-bit code, the whole (dword) password could be
+written, XORed and an re-written at once.
+
+
+Episode 3. Fooling with the stack
+---------------------------------
+This is a trick I learned while decompiling some of SunTzu's code. What
+happens here is pretty interesting: the stack is moved into the code segment
+of the program, such that the top of the stack is set to the first address to
+be patched (which, BTW, should be the one closest to the end of the program
+due to the way the stack works); the byte at this address is the POPed into a
+register, manipulated, and PUSHed back to its original location. The stack
+pointer (SP) is then decremented so that the next address to be patched (i
+byte lower in memory) is now at the top of the stack.
+
+In addition, the bytes are being XORed with a portion of the program's own
+code, which disguises somewhat the actual value of the XOR mask. In the
+following code, I chose to use the bytes from Start: (200h when compiled)
+up to --but not including-- Exit: (214h when compiled; Exit-1 = 213h).
+However, as with SunTzu's original code I kept the "reverse" sequence of the
+XOR mask such that byte 213h is the first byte of the XOR mask, and byte 200h
+is the last. After some experimentation I found this was the easiest way to
+sync a patch program--or a hex editor--to the stack-manipulative code; since
+the stack moves backwards (a forward-moving stack is more trouble than it is
+worth), using a "reverse" XOR mask allows both filepointers in a patcher to be
+INCed or DECed in sync.
+
+Why is this an issue? Unlike the previous two examples, the following does not
+contain the encrypted version of the code-to-be-patched. It simply contains
+the source code which, when compiled, results in the unencrypted bytes which
+are then run through the XOR routine, encrypted, and then executed (which, if
+you have followed thus far, will immediately demonstrate to be no good...
+though it is a fantastic way of crashing the DOS VM!).
+
+Once the program is compiled you must either patch the bytes-to-be-decrypted
+manually, or write a patcher to do the job for you. The former is more
+expedient, the latter is more certain and is a must if you plan on maintaining
+the code. In the following example I have embedded 2 CCh's (Int3) in the code
+at the fore and aft end of the bytes-to-be-decrypted section; a patcher need
+simply search for these, count the bytes in between, and then XOR with the
+bytes between 200-213h.
+
+Once again, this sample is a continuation of the previous example. In it, I
+have written a routine to decrypt the entire 'Compare' routine of the previous
+section by XORing it with the bytes between 'Start' and 'Exit'. This is
+accomplished by seeting the stack segment equal to the code segment, then
+setting the stack pointer equal to the end (highest) address of the code to be
+modified. A byte is POPed from the stack (i.e. it's original location), XORed,
+and PUSHed back to its original location. The next byte is loaded by
+decrementing the stack pointer. Once all of the code it decrypted, control is
+returned to the newly-decrypted 'Compare' routine and normal execution
+resumes.
+
+;===========================================
+magic_key        db     18h, 25h, 0EBh, 0A3h
+
+Compare            proc
+         mov cx, offset EndPatch[1]    ;start addr-to-write-to + 1
+         sub cx, offset patch_pwd      ;end addr-to-write-to
+         mov ax, cs
+         mov dx, ss                    ;save stack segment--important!
+         mov ss, ax                    ;set stack segment to code segment
+         mov bx, sp                    ;save stack pointer
+         mov sp, offset EndPatch       ;start addr-to-write-to
+         mov si, offset Exit-1         ;start sddr of XOR mask
+XorLoop:
+         pop ax                        ;get byte-to-patch into AL
+         xor al, [si]                  ;XOR al with XorMask
+         push ax                       ;write byte-to-patch back to memory
+         dec sp                        ;load next byte-to-patch
+         dec si                        ;load next byte of XOR mask
+         cmp si, offset Start          ;end sddr of XOR mask
+         jae GoLoop                    ;if not at end of mask, keep going
+         mov si, offset Exit-1         ;start XOR mask over
+GoLoop:
+         loop XorLoop                  ;XOR next byte
+         mov sp, bx                    ;restore stack pointer
+         mov ss, dx                    ;restore stack segment
+         jmp    patch_pwd
+         db     0CCh,0CCh              ;Identifcation mark: START
+patch_pwd:                             ;no changes from here
+        mov     al, [magic_key]
+        mov     bl, [secret_word]
+        xor     al, bl
+        mov     byte ptr secret_word, al
+        mov     al, [magic_key+1]
+        mov     bl, [secret_word+1]
+        xor     al, bl
+        mov     byte ptr secret_word[1], al
+        mov     al, [magic_key+2]
+        mov     bl, [secret_word+2]
+        xor     al, bl
+        mov     byte ptr secret_word[2], al
+        mov     al, [magic_key+3]
+        mov     bl, [secret_word+3]
+        xor     al, bl
+        mov     byte ptr secret_word[3], al
+;compare password
+        mov     cx, 4
+        mov     si, offset KbBuffer
+        mov     di, offset secret_word
+        rep cmpsb
+        or cx, cx
+        jnz     bad_guess
+        mov word ptr cs:PatchSpot[1], offset szString1
+bad_guess:
+        call Reply
+        ret
+Compare            endp
+EndPatch:
+        db 0CCh, 0CCh                  ;Identification Mark: END
+
+This kind of program is very hard to debug. For testing, I substituted 'xor
+al, [si]' first with 'xor al, 00h', which would cause no encryption and is
+useful for testing code for final bugs, and then with 'xor al, EBh', which
+allowed me to verify that the correct bytes were being encrypted (it never
+hurts to check, after all).
+
+
+Episode 4: Summation
+--------------------
+That should demonstrate the basics of self-modifying code. There are a few
+techniques to consider to make development easier, though really any SMC
+programs will be tricky.
+
+The most important thing is to get your program running completely before you
+start overwriting any of its code segments. Next, always create a program that
+performs the reverse of any decryption/encryption code--not only does this
+speed up comilation and testing by automating the encryption of code areas
+that will be decrypted at runtime, it also provides a good tool for error
+checking using a disassembler (i.e. encrypt the code, disassemble, decrypt the
+code, disassemble, compare). In fact, it is a good idea to encapsulate the SMC
+portion of your program in a separate executable and test it on the compiled
+"release product" until all of the bugs are out of the decryption routine, and
+only then add the decryption routine to your final code. The CCh 'landmarks'
+(codemarks?) are extremely useful as well.
+
+Finally, do your debugging with debug.com for DOS applications--the debugger
+is quick, small, and if it crashes you simply lose a Windows DOS box. The
+ability to view the program address space after the program has terminated but
+before it is unloaded is another distinct advantage.
+
+More complex examples of SMC programs can be found in Dark Angel's code, the
+Rhince engine, or in any of the permutation engines used in ploymorphic
+viruses. Acknowledgements go to Sun-Tzu for the stack technique used in his
+ghf-crackme program.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................FEATURE.ARTICLE
+                                                      Going Ring0 in Windows 9x
+                                                      by Halvar Flake
+
+
+This article gives a short overview over two ways to go Ring0 in Windows 9x in
+an undocumented way, exploiting the fact that none of the important system
+tables in Win9x are on pages which are protected from low-privilege access.
+
+A basic knowledge of Protected Mode and OS Internals are required, refer to
+your Assembly Book for that :-) The techniques presented here are in no way a
+good/clean way to get to a higher privilege level, but since they require only
+a minimal coding effort, they are sometimes more desirable to implement than a
+full-fledged VxD.
+
+ 1. Introduction
+ ---------------
+Under all modern Operating Systems, the CPU runs in protected mode, taking
+advantage of the special features of this mode to implementvirtual memory,
+multitasking etc. To manage access to system-critical resources (and to thus
+provide stability) a OS is in need of privilege levels, so that a program can't
+just switch out of protected mode etc. These privilege levels are represented
+on the x86 (I refer to x86 meaning 386 and following) CPU by 'Rings', with
+Ring0 being the most privileged and Ring3 being the least privileged level.
+Theoretically, the x86 is capable of 4 privilege levels, but Win32 uses only
+two of them, Ring0 as 'Kernel Mode' and Ring3 as 'User Mode'.
+
+Since Ring0 is not needed by 99% of all applications, the only documented way
+to use Ring0 routines in Win9x is through VxDs. But VxDs, while being the only
+stable and recommended way, are work to write and big, so in a couple of
+specialized situations, other ways to go Ring0 are useful.
+
+The CPU itself handles privilege level transitions in two ways: Through
+Exceptions/Interrupts and through Callgates. Callgates can be put in the LDT or
+ GDT, Interrupt-Gates are found in the IDT.
+
+We'll take advantage of the fact that these tables can be freely written to
+from Ring3 in Win9x (NOT IN NT !).
+
+
+2. The IDT method
+-----------------
+If an exception occurs (or is triggered), the CPU looks in the IDT to the
+corresponding descriptor. This descriptor gives the CPU an Address and Segment
+to transfer control to. An Interrupt Gate descriptor looks like this:
+
+     --------------------------------- ---------------------------------
+                                          D D
+           1.Offset (16-31)             P P P 0 1 1 1 0 0 0 0 R R R R R   +4
+                                          L L
+     --------------------------------- ---------------------------------
+           2.Segment Selector               3.Offset (0-15)                0
+     --------------------------------- ---------------------------------
+          DPL == Two bits containing the Descriptor Privilege Level
+          P   == Present bit
+          R   == Reserved bits
+
+The first word (Nr.3) contains the lower word of the 32-bit address of the
+Exception Handler. The word at +6 contains the high-order word. The word at +2
+is the selector of the segment in which the handler resides.
+
+The word at +4 identifies the descriptor as Interrupt Gate, contains its
+privilege and the present bit. Now, to use the IDT to go Ring0, we'll create a
+new Interrupt Gate which points to our Ring0 procedure, save an old one and
+replace it with ours.
+
+Then we'll trigger that exception. Instead of passing control to Window's own
+handler, the CPU will now execute our Ring0 code. As soon as we're done, we'll
+restore the old Interrupt Gate.
+
+In Win9x, the selector 0028h always points to a Ring0-Code Segment, which spans
+the entire 4 GB address range. We'll use this as our Segment selector.
+
+The DPL has to be 3, as we're calling from Ring3, and the present bit must be
+set. So the word at +4 will be 1110111000000000b => EE00h. These values can
+be hardcoded into our program, we have to just add the offset of our Ring0
+Procedure to the descriptor. As exception, you should preferrably use one that
+rarely occurs, so do not use int 14h ;-)
+
+I'll use int 9h, since it is (to my knowledge) not used on 486+.
+
+Example code follows (to be compiled with TASM 5):
+
+-------------------------------- bite here -----------------------------------
+
+.386P
+LOCALS
+JUMPS
+.MODEL FLAT, STDCALL
+
+EXTRN ExitProcess : PROC
+
+.data
+
+IDTR        df 0            ; This will receive the contents of the IDTR
+                            ; register
+
+SavedGate   dq 0            ; We save the gate we replace in here
+
+OurGate     dw 0            ; Offset low-order word
+            dw 028h         ; Segment selector
+            dw 0EE00h       ;
+            dw 0            ; Offset high-order word
+
+
+
+.code
+
+Start:
+      mov      eax, offset Ring0Proc
+      mov      [OurGate], ax              ; Put the offset words
+      shr      eax, 16                    ; into our descriptor
+      mov      [OurGate+6], ax
+
+      sidt     fword ptr IDTR
+      mov      ebx, dword ptr [IDTR+2]    ; load IDT Base Address
+      add      ebx, 8*9                   ; Address of int9 descriptor in ebx
+
+      mov      edi, offset SavedGate
+      mov      esi, ebx
+      movsd                               ; Save the old descriptor
+      movsd                               ; into SavedGate
+
+      mov      edi, ebx
+      mov      esi, offset OurGate
+      movsd                               ; Replace the old handler
+      movsd                               ; with our new one
+
+      int      9h                         ; Trigger the exception, thus
+                                          ; passing control to our Ring0
+                                          ; procedure
+
+      mov      edi, ebx
+      mov      esi, offset SavedGate
+      movsd                               ; Restore the old handler
+      movsd
+
+      call     ExitProcess, LARGE -1
+
+Ring0Proc PROC
+      mov      eax, CR0
+      iretd
+Ring0Proc ENDP
+
+end Start
+
+-------------------------------- bite here -----------------------------------
+
+
+3. The LDT Method
+-----------------
+Another possibility of executing Ring0-Code is to install a so- called callgate
+in either the GDT or LDT. Under Win9x it is a little bit easier to use the LDT,
+since the first 16 descriptors in it are always empty, so I will only give
+source for that method here.
+
+A Callgate is similar to a Interrupt Gate and is used in order to transfer
+control from a low-privileged segment to a high-privileged segment using a CALL
+instruction.
+
+The format of a callgate is:
+
+     --------------------------------- ---------------------------------
+                                          D D                   D D D D
+           1.Offset (16-31)             P P P 0 1 1 0 0 0 0 0 0 W W W W   +4
+                                          L L                   C C C C
+     --------------------------------- ---------------------------------
+           2.Segment Selector               3.Offset (0-15)                0
+     --------------------------------- ---------------------------------
+          P   == Present bit
+          DPL == Descriptor Privilege Level
+          DWC == Dword Count, number of arguments copied to the ring0 stack
+
+So all we have to do is to create such a callgate, write it into one of the
+first 16 descriptors, then do a far call to that descriptor to execute our
+Ring0 code.
+
+Example Code:
+
+-------------------------------- bite here -----------------------------------
+
+.386P
+LOCALS
+JUMPS
+.MODEL FLAT, STDCALL
+
+EXTRN ExitProcess : PROC
+
+.data
+
+GDTR        df 0            ; This will receive the contents of the IDTR
+                            ; register
+
+CallPtr     dd 00h          ; As we're using the first descriptor (8) and
+            dw 0Fh          ; its located in the LDT and the privilege level
+                            ; is 3, our selector will be 000Fh.
+                            ; That is because the low-order two bits of the
+                            ; selector are the privilege level, and the 3rd
+                            ; bit is set if the selector is in the LDT.
+
+OurGate     dw 0            ; Offset low-order word
+            dw 028h         ; Segment selector
+            dw 0EC00h       ;
+            dw 0            ; Offset high-order word
+
+.code
+
+Start:
+      mov      eax, offset Ring0Proc
+      mov      [OurGate], ax              ; Put the offset words
+      shr      eax, 16                    ; into our descriptor
+      mov      [OurGate+6], ax
+
+      xor      eax, eax
+
+      sgdt     fword ptr GDTR
+      mov      ebx, dword ptr [GDTR+2]    ; load GDT Base Address
+      sldt     ax
+      add      ebx, eax                   ; Address of the LDT descriptor in
+                                          ; ebx
+      mov      al, [ebx+4]                ; Load the base address
+      mov      ah, [ebx+7]                ; of the LDT itself into
+      shl      eax, 16                    ; eax, refer to your pmode
+      mov      ax, [ebx+2]                ; manual for details
+
+      add      eax, 8                     ; Skip NULL Descriptor
+
+      mov      edi, eax
+      mov      esi, offset OurGate
+      movsd                               ; Move our custom callgate
+      movsd                               ; into the LDT
+
+      call     fword ptr [CallPtr]        ; Execute the Ring0 Procedure
+
+      xor      eax, eax                   ; Clean up the LDT
+      sub      edi, 8
+      stosd
+      stosd
+
+      call     ExitProcess, LARGE -1
+
+Ring0Proc PROC
+      mov      eax, CR0
+      retf
+Ring0Proc ENDP
+
+end Start
+
+-------------------------------- bite here -----------------------------------
+
+Well, that's all for now folks. This method can be easily changedto use the GDT
+instead which would save a few bytes in case you have to optimize heavily.
+
+Anyways, do use these methods with care, they will NOT run on NT and are
+generally not exactly a clean or stable way to do these things.
+
+
+Credits & Thanks
+----------------
+The IDT-Method taken from the CIH virus & Stone's example source at
+http://www.cracking.net.
+The LDT-Method was done by me, but without IceMans & The_Owls help I would
+still be stuck, so all credits go to them.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     Win32 ASM: The Basics
+                                                     by Iczelion
+
+
+The required tools:
+        -Microsoft Macro Assembler 6.1x : MASM support of Win32 programming
+          starts from version 6.1. The latest version is 6.13 which
+          is a patch to previous version of 6.11. Win98 DDK includes MASM
+          6.11d which you can download from Microsoft at
+          http://www.microsoft.com/hwdev/ddk/download/win98ddk.exe
+          But be warned, this monstrosity is huge, 18.5 MB in size. MASM 6.13
+          patch can also be downloaded from
+          ftp://ftp.microsoft.com/softlib/mslfiles/ml613.exe
+        -Microsoft import libraries : You can use the import libraries from
+          Visual C++. Some are included in Win98 DDK.
+        -Win32 API Reference : You can download it from Borland's site:
+         ftp://ftp.borland.com/pub/delphi/techpubs/delphi2/win32.zip
+
+Here's a brief description of the assembly process.
+
+MASM 6.1x comes with two essential tools: ml.exe and link.exe. ml.exe is the
+assembler. It takes in the assembly source code (.asm) and produces an object
+file (.obj) . An object file is an intermediate file between the source code
+and the executable file. It needs some address fixups which are the services
+provided by link.exe. Link.exe makes an object file into an executable file by
+several means such as adding the codes from other modules to the object files
+or providing the address fixups, addingr esouces, etc.
+
+For example:
+        ml skeleton.asm    ---&gt; this produces skeleton.obj
+        link skeleton.obj  ---&gt; this produces skeleton.exe
+
+The above lines are simplification of course. In the real world, you must add
+several switches to ml.exe and link.exe to customize your application. Also
+there will be several files you must link with the object file in order to
+create your application.
+
+Win32 programs run in protected mode which is available since 80286. But 80286
+is now history. So we only have to concern ourselves with 80386 and its
+descendants. Windows run each Win32 program in separated virtual space. That
+means each Win32 program will have its own 4 GB address space. Each program is
+alone in its address space. This is in contrast to the situation in Win16. All
+Win16 programs can *see* each other. Not so in Win32. This feature helps reduce
+the chance of one program writing over other program's code/data.
+
+Memory model is also drastically different from the old days of the 16-bit
+world. Under Win32, we need not be concerned with memory model or segment
+anymore! There's only one memory model: Flat memory model. There's no more 64K
+segments. The memory is a  large continuous space of 4 GB. That also means you
+don't have to play with segment registers. You can use any segment register to
+address any point in the memory space. That's a GREAT help to programmers. This
+is what makes Win32 assembly programming as easy as C.
+
+We will examine a miminal skeleton of a Win32 assembly program. We'll add more
+flesh to it later. Here's the skeleton program. If you don't understand some of
+the codes, don't panic. I'll explain each of them later.
+
+.386
+.MODEL Flat, STDCALL
+.DATA
+    <Your initialized data>
+    ......
+.DATA?
+   &lt;Your uninitialized data>
+   ......
+.CONST
+   <Your constants>
+   ......
+.CODE
+   <label>
+    <Your code>
+   .....
+    end <label>
+That's all! Let's analyze this skeleton program.
+
+.386
+This is an assembler directive, telling the assembler to use 80386 instruction
+set. You can also use .486, .586 but the safest bet is to stick to .386.
+
+.MODEL FLAT, STDCALL
+.MODEL is an assembler directive that specifies memory model of your program.
+Under Win32, there's only on model, FLAT model. STDCALL tells MASM about
+parameter passing convention. Parameter passing convention specifies the order
+of  parameter passing, left-to-right or right-to-left, and also who will
+balance the stack frame after the function call.
+
+Under Win16, there are two types of calling convention, C and PASCAL C calling
+convention passes parameters to the function from right to left, that is , the
+rightmost parameter is pushed on the stack first. The caller is responsible for
+balancing the stack frame after the call. For example, in order to call a
+function named foo(int first_param, int second_param, int third_param) in C
+calling convention the asm codes will look like this:
+
+     push  [third_param]               ; Push the third parameter
+     push  [second_param]              ; Followed by the second
+     push  [first_param]               ; And the first
+     call    foo
+     add    sp, 12                     ; The caller balances the stack frame
+
+PASCAL calling convention is the reverse of C calling convention. It pushes
+parameters on the stack from left to right and the callee is responsible for
+the stack balancing after the call.
+
+Win16 adopts PASCAL convention because it produces smaller codes. C convention
+is useful when you don't know how many parameters will be passed to the
+function as in the case of wsprintf(). In the case of wsprintf(), the function
+has no way to determine beforehand how many parameters will be pushed on the
+stack, so it cannot balance the stack correctly. The caller is the one who
+knows how many bytes are pushed on the stack so it's right and proper that it's
+also the one who balances the stack frame after the call.
+
+STDCALL is the hybrid of C and PASCAL convention. It pushes parameters on the
+stack from right to left but the callee is responsible for stack balancing
+after the call. Win32 platform use STDCALL exclusively. Except in one case:
+wsprintf(). You must use C calling convention with wsprintf().
+
+.DATA
+.DATA?
+.CONST
+.CODE
+All four directives are what are called sections. You don't have segments in
+Win32 anymore, remember? But you can divide your entire address space into
+logical sections. The start of one section denotes the end of the previous
+section. There are two groups of section: data and code. Data sections are
+divided into 3 categories:
+
+   * .DATA    This section contains initialized data of your program.
+   * .DATA?  This section contains uninitialized data of your program.
+     Sometimes you just want to preallocate some memory but doesn't want to
+     initialize it. This section exists for that purpose.
+   * .CONST  This section contains declaration of constants used by your
+     program. Constants in this section can never be modified in your
+     program. They are just *constant*.
+
+You don't have to use all three sections in your program. Declare only the
+section(s) you want to use.
+
+There's only one section for code: .CODE. This is where your codes reside.
+Example:
+
+<label>
+end <label>
+
+...where <label> is any arbitrary label is used to specify the extent of your
+code. Both labels must be identical.  All your codes must reside between
+<label> and end <label>
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::................................WIN32.ASSEMBLY.PROGRAMMING
+                                                     MessageBox Display
+                                                     by Iczelion
+
+
+We will create a fully functional Windows program that displays a message box
+saying "Win32 assembly is great!".
+
+Windows prepares a wealth of resources for use by Windows programs. Central to
+this is the Windows API (Application Programming Interface). Windows API is a
+huge collection of very useful functions that resides in Windows itself, ready
+to be used by any Windows programs.
+
+These functions are stored in several dynamic-linked libraries (DLLs) such as
+kernel32.dll, user32.dll and gdi32.dll, to name a few. Kernel32.dll contains
+API functions that deal with memory and process management. User32.dll controls
+the user interface aspects of your programs. Gdi32.dll is responsible for
+graphics operation. Other than "the main three", there are other DLLs that your
+program can make use of, provided you have enough information about the desired
+API functions stored in them.
+
+Windows programs dynamically link to these DLLs, i.e. the codes of API
+functions are not included in the executable file. This is very different from
+what's called static linking in which actual codes from software libraries are
+included in the executable files. In order for programs to know where to find
+the desired API functions at runtime, enough information must be embedded into
+the executable file for it to be able to select the correct DLLs and correct
+functions. That information is in import libraries. You must link your
+programs with the correct import libraries or it will not be able to locate
+the desired API functions.
+
+There are two types of API functions: One for ANSI and the other for Unicode.
+The name of API functions for ANSI are postfixed with "A", eg. MessageBoxA.
+Those for Unicode are postfixed with "W" (for Wide Char, I think).
+
+Windows 95 natively supports ANSI and Windows NT Unicode. But most of the time,
+you will use an include file which can determine and select the appropriate API
+functions for your platform. Just refer to the API function name without the
+postfix.
+
+I'll present the bare program skeleton below. We will fill it out later.
+
+.386
+.model flat, stdcall
+.data
+.code
+    Main:
+    end Main
+
+Every Windows program must call an API function, ExitProcess, when it wants to
+quit to Windows. In this respect, ExitProcess is equivalent to int 21h, ah=4Ch
+in DOS.
+
+Here's the function prototype of ExitProcess from winbase.h:
+
+void WINAPI ExitProcess(UINT uExitCode);
+
+-void means the function does not return any value to the caller.
+-WINAPI is an alias of STDCALL calling convention.
+-UINT is a data type, "unsigned integer", which is a 32-bit value under Win32
+(it's a 16-bit value under Win16)
+-uExitCode is the 32-bit return code to Windows. This value is not used by
+Windows as of now.
+
+In order to call ExitProcess from an assembly program, you must first declare
+the function prototype for ExitProcess.
+
+.386
+.model flat, stdcall
+ ExitProcess     PROTO  :DWORD
+.data
+.code
+Main:
+    invoke    ExitProcess, 0
+end Main
+
+That's it. Your first working Win32 program. Save it under the name msgbox.asm.
+Assuming ml.exe is in your path, assemble msgbox.asm with:
+
+     ml  /c  /coff  /Cp msgbox.asm
+
+/c tells MASM to assemble the source file into an object file only. Do not
+   invoke Link.exe automatically.
+/coff tells MASM to create .obj file in COFF format.
+/Cp tells MASM to preserve case of user identifiers
+
+Then go on with link:
+
+     link /SUBSYSTEM:WINDOWS  /LIBPATH:c:\masm\lib  msgbox.obj
+     kernel32.lib
+
+/SUBSYSTEM:WINDOWS  informs Link.exe on which platform the executable is
+      intended to run
+/LIBPATH:<path to import library> tells Link where the import libraries
+      are. In my PC, they're located in c:\masm\lib.
+
+Now that you get msgbox.exe. Go on, run it. You'll find that it does nothing.
+Well, we haven't put anything interesting in it yet. But it's a Windows
+program nonetheless. And look at its size! In my PC, it is 1,536 bytes.
+The line:
+
+     ExitProcess     PROTO     :DWORD
+
+is a function prototype. You create one by declaring the function name followed
+by the keyword "PROTO" and lists of data types of the parameters prefixed by
+colons. MASM uses function prototypes to type checking which will prevent nasty
+stack errors that may pass unnoticed otherwise.
+
+The best place for function prototypes is in an include file. You can create an
+include file full of frequently used function prototypes and data structures
+and include it at the beginning of your asm source code.
+
+You call the API function by using "invoke" keyword:
+
+          invoke  ExitProcess, 0
+
+INVOKE is really a kind of high-level call. It checks number and types of
+parameters and pushes parameters on the stack according to the specified
+calling convention (in this case, stdcall). By using INVOKE instead of a normal
+call, you can prevent stack errors from incorrect parameter passing. Very
+useful. The syntax is:
+
+          INVOKE  expression [,arguments]
+
+where expression is a label or function name.
+
+Next we're going to put a message box in our program. Its function declaration
+is:
+
+int WINAPI MessageBoxA(HWND hwnd, LPCSTR lpText, LPCSTR lpCaption, UINT
+uType);
+
+-hwnd is the handle to parent window
+-lpText is a pointer to the text you want to display in the client area of the
+message box
+-lpCaption is a pointer to the caption of the message box
+-uType specifies the icon and the number and type of buttons on the message
+box
+
+Under Win32 , HWND, LPCSTR, and UINT are all 32 bits in size.
+
+Let's modify msgbox.asm to include the message box.
+
+.386
+.model flat, stdcall
+ExitProcess      PROTO      :DWORD
+MessageBoxA PROTO      :DWORD, :DWORD, :DWORD, :DWORD
+.data
+MsgBoxCaption  db "Our First Program",0
+MsgBoxText     db "Win32 Assembly is Great!",0
+.const
+NULL        equ  0
+MB_OK       equ  0
+.code
+Main:
+     INVOKE    MessageBoxA, NULL, ADDR MsgBoxText, ADDR MsgBoxCaption, MB_OK
+     INVOKE    ExitProcess, NULL
+end Main
+
+Assemble it by:
+        ml /c /coff /Cp msgbox.asm
+        link /SUBSYSTEM:WINDOWS /LIBPATH:c:\masm\lib msgbox kernl32.lib
+user32.lib
+
+You have to include user32.lib in your Link parameter, since link info of
+MessageBoxA is in user32.lib.
+
+You'll see a message box displaying the text "Win32 Assembly is Great!". Let's
+look again at the source code:
+
+We define two zero-terminated strings in .data section. Remember that all
+strings in Windows must be terminated with zero (ASCIIZ).
+
+We define two constants in .const section. We use constants to improve the
+clarity of the source code.
+
+Look at the parameters of MessageBoxA. The first parameter is NULL. This
+means that there's no window that *owns* this message box.
+
+The operator "ADDR" is used to pass the address of the label to the function.
+This operator is specific to MASM. No TASM-equivalent exists. It functions like
+"OFFSET" operator but with some differences:
+        1. It doesn't accept forward reference. If you want to use "ADDR foo",
+           you have to declare "foo" before using ADDR operator.
+        2. It can be used with a local variable. A local variable is the
+           variable that is created on the stack. OFFSET operator cannot be
+           used in this situation because the assembler doesn't know the true
+           address of the local variable at assemble time.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::........................THE.C.STANDARD.LIBRARY.IN.ASSEMBLY
+                                         The _itoa, _ltoa and _ultoa functions
+                                         by Xbios2
+
+
+ATTENTION I:
+This is based on Borland's C++ 4.02. Whenever possible I've checked it with any
+other library / program containing the specific functions, but differences may
+exist between this and your version of C. Also this is strictly 32-bit code,
+Windows compiler. No DOS or UNIX.]
+
+ATTENTION II:
+Size comparisons are extremely easy to do. Speed comparison's aren't. The diff-
+erences in speed I give are based on RDTSC timings, but they DON'T take into
+account extreme cases. That's why I don't give exact clock cycles. Of course if
+you need exact clock cycles for your Pentium II, you can always buy me one :)
+
+
+The C language offers three functions to convert an integer to ASCII:
+
+char *itoa(int value, char *string, int radix);
+char *ltoa(long value, char *string, int radix);
+char *ultoa(unsigned long value, char *string, int radix);
+
+_itoa and _ltoa do _exactly_ the same thing. This is because an integer _is_ a
+long in 32-bit code. Yet they are different: _itoa has some _completely_
+useless code in it (in 16bit this code would sign-extend value if radix=10).
+Yet the result is always the same, so _ltoa from here on means both _ltoa and
+_itoa. _ultoa is exactly the same as _ltoa and _itoa, except when radix=10 and
+value < 0.
+
+Anyway all these functions call this function:
+
+___longtoa(value, *string, radix, signed, char10)
+
+The first three parameters are passed 'as is', signed is set to 1 by _ltoa if
+radix=10 else it is set to 0 and char10 is the character that corresponds to 10
+if radix>10, and is always set to 'a' (___longtoa is also used by printf, which
+has an option to have uppercase chars in Hex).
+
+___longtoa does the following (and it does it with badly written code):
+
+1. Checks that 2<=radix<=36, if it isn't returns '0'
+2. If signed=1 and value<0 add a '-' to the string and neg the value
+3. Loop1: create a pseudo-string in the stack, reversed
+4. Loop2: convert and copy the pseudo-string into string
+
+The check on radix is necessary because:
+radix=0 would generate an INT0 (divide by zero)
+radix=1 would put the program in an infinite loop, destroying the stack
+radix=37 for value=36 would return '}', the character after 'z'
+
+The two loops are necessary because of the way the conversion is done (see code
+later). To implement a single-loop conversion, the number of digits should be
+calculated in advance, which results in less efficient code (the number of
+digits in value is n=(int)(log(value)/log(radix))+1, but using one more loop is
+much faster).
+
+Including the disassembly of C's functions would create a really large article,
+and anyway they're just examples of really bad code. So straight to the result:
+
+ltoa	proc
+	cmp	dword ptr [esp+0Ch], 10
+	sete	ch
+	mov	cl, 'a'-'0'-10
+	jmp	short longtoa
+
+ultoa:
+	mov	cx, 'a'-'0'-10
+
+longtoa:
+	push	ebx
+	push	edi
+	push	esi
+	sub	esp, 24h
+	mov	ebx, [esp+3Ch]		; radix
+	mov	eax, [esp+34h]		; value
+	mov	edi, [esp+38h]		; string
+	cmp	ebx, 2
+	jl	short _ret
+	cmp	ebx, 36
+	jg	short _ret
+	or	eax, eax
+	jge	short skip
+	cmp	byte ptr ch, 0		; _ltoa ?
+	jz	short skip
+	mov	byte ptr [edi],	'-'
+	inc	edi
+	neg	eax
+skip:	mov	esi, esp
+
+loop1:	xor	edx, edx
+	div	ebx
+	mov	[esi], dl
+	inc	esi
+	or	eax, eax
+	jnz	loop1
+
+loop2:	dec	esi
+	mov	al, [esi]
+	cmp	al, 10
+	jl	short nochar
+	add	al, cl
+nochar:	add	al, '0'
+	stosb
+	cmp	esi, esp
+	jg	short loop2
+
+_ret:	mov	byte ptr [edi],	0
+	mov	eax, [esp+38h]
+	add	esp, 24h
+	pop	esi
+	pop	edi
+	pop	ebx
+	ret
+ltoa	endp
+
+This is a 3 into 1 procedure. ltoa and ultoa take the same parameters as the
+standard C functions. longtoa was changed to take from the stack the same
+parameters as ltoa and ultoa, while signed and char10 are passed in CH and CL
+respectively. This way ltoa and ultoa 'see' longtoa as 'their' code, not as a
+different procedure (this is to avoid a common problem in C, procedures that
+just 'forward' their parameters to another function).
+
+This code compiles to 102 bytes (and it could be optimized to gain some more
+bytes) whereas the standard C code takes 270 bytes. Specifically:
+
+function   C size     Asm size
+------------------------------
+itoa          60           0
+ltoa          40          12
+ultoa         27           4
+longtoa      143          86
+            ------      ------
+     total   270         102
+
+It also runs 2x faster than ltoa. And of course, this is a fully C-compatible
+version of ltoa and ultoa. Of course it can be changed from C-compatible to
+suit specific needs (e.g make it stdcall instead of cdecl, or if speed and size
+are needed remove the check for the radix, and so on...)
+
+Anyway, it is rather strange that you'll ever use values of radix other than 2,
+8, 10 or 16. So if speed or size is of essence, a better, more specific routine
+can be written. For example, consider this routine which stores the value of
+EAX as a binary number at the address specified by EDI:
+
+ultob	proc
+	mov	ecx, 32
+more1:	shl	eax, 1
+	dec	ecx
+	jc	more2
+	jnl	more1
+more2:	setc	dl
+	add	dl, '0'
+	shl	eax, 1
+        mov     [edi], dl
+        inc     edi
+        dec     ecx
+	jnl	more2
+	mov	[edi], al
+	ret
+ultob	endp
+
+This runs 14x faster than C ltoa, and 7x faster than Asm ltoa, and is only 29
+bytes long. But this article is long enough, so wait for another article on
+specific 'ltoa' functions (who knows, maybe if I decide to write a 'printf'
+function in Asm, which would use them...).
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::............................................THE.UNIX.WORLD
+                                                  x86 ASM Programming for Linux
+                                                  by mammon_
+
+
+Essentially this article is an excuse to combine two of my favorite coding
+interests: the Linux operating system and assembly language programming. Both
+of these need (or should need) no introduction; like Win32 assembly, Linux
+assembly runs in 32-bit protected mode...however it has the distinct advantage
+of allowing you to call the C standard library functions as well as any of the
+usual Linux "shared" library functions. I have begun with a brief introduction
+on compiling assembly language programs in Linux; for greater readability you
+may want to skip over this to the "Basics" section.
+
+
+Compiling And Linking
+---------------------
+The two main assemblers for Linux are Nasm, the (free) Netwide Assembler, and
+GAS, the (also free) Gnu Assembler which is integrated into GCC. I will focus
+on Nasm in this article and leave GAS for a later date, as it uses the AT&T
+syntax and thus would require a lengthy introduction.
+
+Nasm should be invoked with the ELF format option ("nasm -f elf hello.asm");
+the resulting object is linked with GCC ("gcc hello.o") to produce the final
+ELF binary. The following script can be used to compile ASM modules; I wrote
+it to be very simple, so all it does is take the first filename passed to it
+(I recommend naming it with a ".asm" extension), compile it with nasm, and
+link it with gcc.
+
+#!/bin/sh
+# assemble.sh =========================================================
+outfile=${1%%.*}
+tempfile=asmtemp.o
+nasm -o $tempfile -f elf $1
+gcc $tempfile -o $outfile
+rm $tempfile -f
+#EOF ==================================================================
+
+
+The Basics
+----------
+It is best, of course, to start off with an example before launching into the
+OS details. Here is a very basic, "hello-world"-style program:
+; asmhello.asm ========================================================
+global main
+extern printf
+
+section .data
+msg	db	"Helloooooo, nurse!",0Dh,0Ah,0
+section .text
+main:
+	push dword msg
+	call printf
+	pop eax
+        ret
+; EOF =================================================================
+A quick rundown: the "global main" must be declared global--and since we are
+using the GCC linker, the entrypoint must be named "main"--for the OS loader.
+The "extern printf" is simply a declaration for the call later in the program;
+note that this is all that is needed; the parameter sizes do not need to be
+declared. I have sectioned this example into the standard .data and .text
+sections, though this is not strictly necessary--one could get by with only a
+.text segment, just as in DOS.
+
+In the body of the code, note that you must push the parameters to the call,
+and in Nasm you must declare the size of all ambiguous (i.e. non-register)
+data: hence the "dword" qualifier. Note that just as inother assemblers, Nasm
+assumes that any memory/label reference is intended to mean the address of the
+memory location or label, not its contents. Thus, to specify the address of
+the string 'msg' you would use 'push dword msg', while to specify the contents
+of the string 'msg' you would use 'push dword [msg]' (note this will only
+contain the first 4 bytes of 'msg'). As printf requires a pointer to a string,
+we will specify the address of 'msg'.
+
+The call to printf is pretty straightforward. Note that you must clean up the
+stack after every call you make (see below); thus, having PUSHed a dword, I
+POP a dword from the stack into a "throwaway" register. Linux programs end
+simply with a RET to the OS, as each process is spawned from the shell (or PID
+1 ;) and ends by returning control to it.
+
+Notice that in Linux you use the standard shared libraries that are shipped
+with the OS in lieu of an "API" or Interrupt Services. All external references
+will be taken care of by the GCC linker which takes a lot of the workload off
+the asm coder. Once you get used to the basic quirks, coding assembly in Linux
+is actually easier than on a DOS-based machine!
+
+
+The C Calling Syntax
+--------------------
+Linux uses the C calling convention--meaning that arguments are pushed onto the
+stack in reverse order (last arg first), and that the caller must cleanup the
+stack. You can do this either by popping values from the stack:
+     push dword szText
+     call puts
+     pop ecx
+or by directly modifying ESP:
+     push dword szText
+     call puts
+     add esp, 4
+
+Results from the call are returned in eax or edx:eax if the value is greater
+than 32-bit. EBP, ESI, EDI, and EBX are all saved and restored by the caller.
+Note that you must preserve any other registers you use, as the following will
+illustrate:
+; loop.asm =================================================================
+global main
+extern printf
+section .text
+msg	db	"HoodooVoodoo WeedooVoodoo",0Dh,0Ah,0
+main:
+   mov ecx, 0Ah
+   push dword msg
+looper:
+   call printf
+   loop looper
+   pop eax
+   ret
+; EOF ======================================================================
+On first glance this looks pretty simple: since you are going to use the same
+string on the 10 printf() calls, you do not need to clean up the stack. Yet
+when you compile this, the loop never stops. Why? Because somewhere in the
+printf() call ECX is being used and isn't saved. So to make your loop work
+properly you must save the count value in ECX before the call and restoe it
+afterwards, as so:
+; loop.asm ================================================================
+global main
+extern printf
+
+section .text
+msg	db	"HoodooVoodoo WeedooVoodoo",0Dh,0Ah,0
+main:
+   mov ecx, 0Ah
+looper:
+   push ecx          ;save Count
+   push dword msg
+   call printf
+   pop eax            ;cleanup stack
+   pop ecx            ;restore Count
+   loop looper
+   ret
+; EOF ======================================================================
+
+
+I/O Port Programming
+--------------------
+But what about direcr hardware access? In Linux you need a kernel-mode driver
+to do anything really tricky...this means your program will end up being two
+parts, one kernel-mode that provides the direct-hardware functionality, the
+other user-mode to provide an interface. The good news is that you can still
+access ports using the IN/OUT commands from a user-mode program.
+
+To access the I/O ports your program must be granted permission by the OS; to
+do that, you must make an ioperm() call. This function can only be called by a
+user with root access, so you must either setuid() the program to root or run
+the program as root. The ioperm() has the following syntax:
+
+      ioperm( long StartingPort#, long #Ports, BOOL ToggleOn-Off)
+
+which means that 'StartingPort#' specifies the first port number to access (0
+is port 0h, 40h is port 40h, etc), '#Ports' specifies how many ports to access
+(i.e., 'StartingPort# = 30h' and '#Ports = 10' would provide access to ports
+30h-39h), and 'ToggleOn-Off' enables access if TRUE (1) or disables access if
+FALSE (0).
+
+Once the call to ioperm() is made, the requested ports may be access as
+normal. The program can call ioperm() any number of times and does not need to
+make a subsequent ioperm() call (though the example below does so) as the OS
+will take care of this.
+
+; io.asm ====================================================================
+BITS 32
+GLOBAL szHello
+GLOBAL main
+EXTERN printf
+EXTERN ioperm
+
+SECTION .data
+szText1 db 'Enabling I/O Port Access',0Ah,0Dh,0
+szText2 db 'Disabling I/O Port Acess',0Ah,0Dh,0
+szDone  db 'Done!',0Ah,0Dh,0
+szError db 'Error in ioperm() call!',0Ah,0Dh,0
+szEqual db 'Output/Input bytes are equal.',0Ah,0Dh,0
+szChange db 'Output/Input bytes changed.',0Ah,0Dh,0
+
+SECTION .text
+
+main:
+   push dword szText1
+   call printf
+   pop ecx
+enable_IO:
+   push word 1    ; enable mode
+   push dword 04h ; four ports
+   push dword 40h ; start with port 40
+   call ioperm    ; Must be SUID "root" for this call!
+   add ESP, 10    ; cleanup stack (method 1)
+   cmp eax, 0     ; check ioperm() results
+   jne Error
+
+;---------------------------------------Port Programming Part--------------
+SetControl:
+   mov al, 96     ; R/W low byte of Counter2, mode 3
+   out 43h, al    ; port 43h = control register
+WritePort:
+   mov bl, 0EEh   ; value to send to speaker timer
+   mov al, bl
+   out 42h, al    ; port 42h = speaker timer
+ReadPort:
+   in al, 42h
+   cmp al, bl     ; byte should have changed--this IS a timer :)
+   jne ByteChanged
+BytesEqual:
+   push dword szEqual
+   call printf
+   pop ecx
+   jmp disable_IO
+ByteChanged:
+   push dword szChange
+   call printf
+   pop ecx
+;---------------------------------------End Port Programming Part----------
+
+disable_IO:
+   push dword szText2
+   call printf
+   pop ecx
+   push word 0    ; disable mode
+   push dword 04h ; four ports
+   push dword 40h ; start with port 40h
+   call ioperm
+   pop ecx        ;cleanup stack (method 2)
+   pop ecx
+   pop cx
+   cmp eax, 0     ; check ioperm() results
+   jne Error
+   jmp Exit
+Error:
+   push dword szError
+   call printf
+   pop ecx
+Exit:
+   ret
+; EOF ======================================================================
+
+
+Using Interrupts In Linux
+-------------------------
+Linux is a shared-library environment running in protected mode, meaning there
+are no interrupt services. Right?
+
+Wrong. I noticed an INT 80 call on some GAS sample source code with the
+comment "sys_write(ebx, ecx, edx)". This function is part of the Linux syscall
+interface, which means that the interrupt 80 must be a gate into the syscall
+services. Poking around in the Linux source code (and ignoring warnings to
+NEVER use the INT 80 interface as the function numbers may be changed at any
+time), I found the "system call numbers" --that is, what function # to pass on
+to INT 80 for each syscall routine-- in the file UNISTD.H. There are 189 of
+them, so I will not list them here...but if you are going to be doing Linux
+assembly, do yourself a favor and print this file out.
+
+When calling INT 80h, eax must be set to the desired function number. Any
+parameters to the syscall routine must be placed in the following registers in
+order:
+
+    ebx, ecx, edx, esi, edi
+
+so that parameter one is placed in ebx, parameter 2 in ecx, etc. Note that
+there is no stack used to pass values to a syscall routine. The result of the
+call will be returned in eax.
+
+Other than that, the INT 80 interface is the same as regular calls (only a bit
+more fun ;). The following program demonstrates a simple INT 80h call in which
+a program checks and display its own PID. Note the use of printf() format
+string-- it is best to psuedocode this as a C call first, then make the format
+string a DB and to push each variable passed (%s, %d, etc). The C structure
+for this call would be
+
+     printf( "%d\n", curr_PID);
+
+Note also that the escape sequences ("\n") are not all that reliable in
+assembly; I had to use the hex values (0Ah,0Dh) for the CR\LF.
+
+;pid.asm====================================================================
+BITS 32
+GLOBAL main
+EXTERN printf
+
+SECTION .data
+szText1 db 'Getting Current Process ID...',0Ah,0Dh,0
+szDone  db 'Done!',0Ah,0Dh,0
+szError db 'Error in int 80!',0Ah,0Dh,0
+szOutput db '%d',0Ah,0Dh,0           ;weird formatting is for printf()
+
+SECTION .text
+main:
+        push dword szText1    ;opening message
+	call printf
+	pop ecx
+GetPID:
+	mov eax, dword 20     ; getpid() syscall
+        int 80h               ; syscall INT
+        cmp eax, 0            ; there will never be PID 0 ! :)
+	jb Error
+        push eax              ; pass return value to printf
+        push dword szOutput   ; pass format string to printf
+	call printf
+        pop ecx               ; cleanup stack
+	pop ecx
+        push dword szDone     ; ending message
+	call printf
+	pop ecx
+        jmp Exit
+Error:
+        push dword szError
+	call printf
+	pop ecx
+Exit:
+        ret
+; EOF =====================================================================
+
+
+Final Words
+-----------
+Most of the trouble is going to come from getting used to Nasm itself. While
+nasm does come with a man page, it does not by default install it, so you must
+move it (cp or mv) from
+/usr/local/bin/nasm-0.97/nasm.man
+to
+/usr/local/man/man1/nasm.man
+The formatting is a little messed up, but that is easily fixed using the nroff
+directives. It still does not give you the entire Nasm documentation, however;
+for that, copy nasmdoc.txt from
+/usr/local/bin/nasm-0.97/doc/nasmdoc.txt
+to
+/usr/local/man/man1/nasmdoc.man
+Now you cam invoke the nasm man page with 'man nasm' and the nasm documentation
+with 'man nasmdoc'.
+
+For further information, check out the following:
+Linux Assembly Language HOWTO
+Linux I/O Port Programming Mini-HOWTO
+Jan's Linux & Assembler HomePage (bewoner.dma.be/JanW/eng.html)
+
+Also I owe a bit of thanks to Jeff Weeks at code^x software (gameprog.com/codex)
+for forwarding me a couple of GAS hello-world's in the dark days before I
+found Jan's page.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::...........................................ISSUE.CHALLENGE
+                                      11-byte Program Displays Its Command-Line
+                                      by Xbios2
+
+
+The Challenge
+-------------
+Write an 11-byte program that displays its command line.
+
+
+The Solution
+------------
+Before saying that these programs won't work, try them. Some of them work only
+after you've run them twice. Anyway, they' ve been tested both under Windows
+and plain DOS and they work. Believe it or not, these are the first programs
+I've ever written in DOS, so I just tried various ideas until some worked, even
+thought I thought they wouldn't... :)
+
+The command line in DOS is found in the PSP (Program Segment Prefix) which in
+.COM files occupies the first 100h bytes in the segment. At offset 80h, a
+<count, char> string (first byte is length of string, and n bytes follow)
+contains everything typed after the filename. The last character in this string
+is a CR (carriage return).
+
+The requested program should be composed of three parts:
+
+1. set up pointers to data
+2. display data
+3. exit
+
+Actually all the following programs DON'T include part 3, but read on. The
+data (command line) can be printed either as a single string, or character by
+character.
+
+
+APPROACH 1: Print single string
+-------------------------------
+For the first approach there are two interrupts:
+1. INT 21, 9	; write $ terminated string
+2. INT 21, 40	; write to file using handle
+
+For the first case, part 2 would be:
+	mov	ah, 9
+	mov	dx, 81h
+	int	21h
+that makes 7 bytes, leaving only 4 bytes to replace the last CR with a '$',
+which are too few. (Actually, if the user would type a $ as the last character
+in the comand line, this would make the smallest possible program.) The short-
+est program I managed to write is:
+	shr	si,1			; D1 EE
+	lodsb				; AC
+	push	si			; 56
+	add	si,ax			; 03 F0
+	mov	byte ptr [si],'$'	; C6 04 24
+	xcgh	bp,ax			; 95
+	pop	dx			; 5A
+	int	21			; CD 21
+
+For the second case, the smallest program would be this:
+	; Solution I
+	mov	dx, 81h			; BA 81 00
+	mov	cl, ds:[80h]		; 8A 0E 80 00
+	mov	ah, 40h			; B4 40
+	int	21h			; CD 21
+
+The first two lines are part 1 (set up pointers) and the other two are part 2
+(display string). If you think that something is missing you're right: we don't
+set BX (the handle).
+
+
+APPROACH 2: Print char by char
+------------------------------
+For the second approach there are two interrupts:
+1. INT 21, 2	; write char in dl
+2. INT 29	; write char in al
+
+Of course the second interrupt is better, since there is no need to load ah
+with a function value. In addition, INT 29 reads the char from AL, so it can be
+used together with LODSB.
+
+The first way to implement this approach is to minimize part 2 (display loop).
+A program that does this is the following:
+	; Solution II
+	mov	si, 80h	; BE 80 00
+	lodsb		; AC
+	mov	cl, al	; 8A C8
+more:	lodsb		; AC
+	int	29h	; CD 29
+	loop	more	; E2 FB
+
+This program printed CX characters. The second way to print the string is to print up to the CR. Here is how:
+	; Solution III
+	mov	si, 81h		; BE 81 00
+more:	lodsb			; AC
+	int	29h		; CD 29
+	cmp	al, 13		; 3C 0D
+	jne	more		; 75 F9
+	nop			; 90
+
+Yes, the last instruction IS a NOP. So we have an 11-byte program that works,
+and even has a NOP in it. Removing the NOP creates an even crazier program that
+is 10 bytes long, displays it's command line AND waits for a key press before
+terminating... Actually solution II, by substituting MOV SI,80h with SHR SI,1,
+does the same thing (10 bytes that display the command line and wait for the
+user to press a key).
+
+BTW: I really don't know why these programs work, though I have one or two
+theories...
+
+
+Next Issue Challenge
+--------------------
+Write the smallest possible PE program (win32) that outputs it's command line.
+
+
+::/ \::::::.
+:/___\:::::::.
+/|    \::::::::.
+:|   _/\:::::::::.
+:| _|\  \::::::::::.
+:::\_____\:::::::::::.......................................................FIN
+
+
