@@ -4,20 +4,20 @@ out of date and of only historical interest.
 Contents:
 
 	/		
-	/gdb_init.txt	"GDB made useful"
-	/Lost		Various things from various people from the 90s
+	/gdb_init.txt	"GDB made usefully"
+	/Lost		Various things from various people from the 1990s
 	/Old		Pretty lame 'eccentrica' incarnation
-	/RE		RE HQ. Whatever happened to that?
-	/Text		Various papers from various people
+	/RE		RE HQ. Whatever things happened to that?
+	/Text		Various papers from various people.
 	/apj		Assembly Programming Journal. Those were the days.
-	/eccentrix	Final, 'eccentrix' incarnation
-	/fortune	The infamous HCUnix fortune file
-	/idc		Very, very old IDC scripts for IDA
+	/eccentrix	Finally, 'eccentrix' incarnation
+	/fortune	The infamous HCUnix fortune file.
+	/idc		Very, very old IDC scripts for IDA.
 	/objdump	"Objdump made useful"
-	/share		Some fortunes, some ancient BB themes
-	/sprawl		The eccentrica 'sprawl' incarnation
+	/share		Some fortunes, some ancient BB themes.
+	/sprawl		The eccentrica 'sprawl' incarnation.
 	/src		Old and useless examples (x86 asm and C)
-	/tales		Mammon_'s Tales to his Grandson
-	/x86_64		Old and out of date 'linux on x86-64' stuff
+	/tales		Mammon_'s Tales to his Grandson.
+	/x86_64		Old and out of date 'linux on x86-64' stuff.
 
 Note: Not affiliated with http://lethalfeedback.blogspot.com .
